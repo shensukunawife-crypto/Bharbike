@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= BRAND_NAME %> Admin - <%= title %></title>
+    <link rel="stylesheet" href="/admin/static/css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      window.__BRAND_NAME__ = "<%= BRAND_NAME %>";
+      window.__BRAND_PRODUCT_NAME__ = "<%= BRAND_PRODUCT_NAME %>";
+    </script>
+  </head>
+  <body>
+    <div class="admin-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">◆</span>
+          <span><%= BRAND_NAME.substring(0, 3) %><span style="color: #F26D21;"><%= BRAND_NAME.substring(3) %></span> Admin</span>
+        </div>
+        <nav class="nav">
+          <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin">
+            <span class="nav-icon">📊</span><span>Dashboard</span>
+          </a>
+          <a class="nav-link <%= active === 'system-workflow' ? 'active' : '' %>" href="/admin/system-workflow">
+            <span class="nav-icon">🔭</span><span>System Workflow</span>
+          </a>
+          <a class="nav-link <%= active === 'backend-monitor' ? 'active' : '' %>" href="/admin/backend">
+            <span class="nav-icon">⚙️</span><span>Backend Monitor</span>
+          </a>
+          <a class="nav-link <%= active === 'users' ? 'active' : '' %>" href="/admin/users">
+            <span class="nav-icon">👥</span><span>Users</span>
+          </a>
+          <a class="nav-link <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes">
+            <span class="nav-icon">🚲</span><span>Bikes</span>
+          </a>
+          <a class="nav-link <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders">
+            <span class="nav-icon">📦</span><span>Orders</span>
+          </a>
+          <a class="nav-link <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
+            <span class="nav-icon">🧾</span><span>Bookings</span>
+          </a>
+          <a class="nav-link <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents">
+            <span class="nav-icon">📄</span><span>KYC Documents</span>
+          </a>
+          <a class="nav-link <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners">
+            <span class="nav-icon">🛵</span><span>Delivery</span>
+          </a>
+          <a class="nav-link <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days">
+            <span class="nav-icon">📅</span><span>Skipped Days</span>
+          </a>
+          <a class="nav-link <%= active === 'earnings' ? 'active' : '' %>" href="/admin/earnings">
+            <span class="nav-icon">💸</span><span>Earnings</span>
+          </a>
+          <a class="nav-link <%= active === 'analytics' ? 'active' : '' %>" href="/admin/analytics">
+            <span class="nav-icon">📈</span><span>Analytics</span>
+          </a>
+          <a class="nav-link <%= active === 'maintenance' ? 'active' : '' %>" href="/admin/maintenance">
+            <span class="nav-icon">🧰</span><span>Maintenance</span>
+          </a>
+          <a class="nav-link <%= active === 'support' ? 'active' : '' %>" href="/admin/support">
+            <span class="nav-icon">🎫</span><span>Support</span>
+          </a>
+          <a class="nav-link <%= active === 'notifications' ? 'active' : '' %>" href="/admin/notifications">
+            <span class="nav-icon">🔔</span><span>Notifications</span>
+          </a>
+          <a class="nav-link <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments">
+            <span class="nav-icon">💳</span><span>Payments</span>
+          </a>
+          <a class="nav-link <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings">
+            <span class="nav-icon">⚙️</span><span>Settings</span>
+          </a>
+        </nav>
+      </aside>
+      <main class="content main-content">
+        <header class="topbar">
+          <div class="topbar-title-group">
+            <h1><%= title %></h1>
+            <p>Startup SaaS Admin Dashboard</p>
+          </div>
+          <div class="topbar-profile">
+            <button id="admin-logout-btn" class="btn btn-sm">Logout</button>
+            <span class="admin-name">Admin</span>
+            <span class="profile-circle">A</span>
+          </div>
+        </header>
+        <section class="panel">
+          <%- include(bodyView) %>
+        </section>
+      </main>
+    </div>
+    <div id="toast-container" class="toast-container"></div>
+    <script>
+      (() => {
+        const token = localStorage.getItem("adminToken");
+        if (!token) {
+          window.location.href = "/admin/login";
+          return;
+        }
+        const logoutBtn = document.getElementById("admin-logout-btn");
+        if (logoutBtn) {
+          logoutBtn.addEventListener("click", () => {
+            localStorage.removeItem("adminToken");
+            document.cookie = "admin_token=; Path=/; Max-Age=0; SameSite=Lax";
+            window.location.href = "/admin/login";
+          });
+        }
+      })();
+    </script>
+    <script src="/admin/static/js/admin.js"></script>
+  </body>
+</html>

@@ -1,0 +1,217 @@
+<style>
+  .delivery-shell { animation: fadeInUp .35s ease; }
+  .delivery-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #e5e7eb; }
+  .delivery-head h2 { margin:0; font-size:24px; font-weight:800; color:#111827; }
+  .delivery-head p { margin:4px 0 0; font-size:13px; color:#6b7280; }
+  .premium-stats { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:14px; margin-bottom:14px; }
+  .premium-stat { border-radius:16px; padding:16px; background:linear-gradient(180deg,#fff,#f8fafc); border:1px solid #e5e7eb; box-shadow:0 8px 20px rgba(2,6,23,.06); transition:.2s; }
+  .premium-stat:hover { transform:scale(1.02); }
+  .premium-stat .top { display:flex; gap:8px; color:#64748b; font-size:13px; }
+  .premium-stat .val { margin-top:8px; font-size:30px; font-weight:800; color:#111827; }
+  .delivery-filter-bar { display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+  .delivery-search { min-width:260px; border:1px solid #e5e7eb; border-radius:12px; padding:9px 11px; }
+  .delivery-select { border:1px solid #e5e7eb; border-radius:12px; padding:9px 11px; background:#fff; }
+  .delivery-apply { border:0; border-radius:999px; padding:10px 16px; font-weight:700; background:#111827; color:#fff; cursor:pointer; }
+  .premium-table-wrap { border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; box-shadow:0 8px 22px rgba(2,6,23,.06); background:#fff; }
+  .premium-table { width:100%; border-collapse:collapse; }
+  .premium-table thead tr { background:#f8fafc; }
+  .premium-table th, .premium-table td { padding:13px 14px; border-bottom:1px solid #eef2f7; text-align:left; }
+  .premium-table tbody tr:nth-child(even) { background:#fcfdff; }
+  .premium-table tbody tr:hover { background:#f8fbff; }
+  .partner-name { font-weight:700; color:#111827; }
+  .phone-muted { color:#6b7280; }
+  .city-light { color:#9ca3af; }
+  .status-pill { border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700; border:1px solid; }
+  .status-pending { background:#fffbeb; color:#a16207; border-color:#fde68a; }
+  .status-approved { background:#f0fdf4; color:#15803d; border-color:#bbf7d0; }
+  .status-rejected { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
+  .action-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .btn-doc { border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:10px; padding:7px 10px; cursor:pointer; }
+  .btn-approve { border:0; background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border-radius:10px; padding:7px 10px; cursor:pointer; }
+  .btn-reject { border:1px solid #fecaca; background:#fef2f2; color:#b91c1c; border-radius:10px; padding:7px 10px; cursor:pointer; }
+  .btn-doc:hover,.btn-approve:hover,.btn-reject:hover { transform:translateY(-1px); }
+  .empty-state { padding:36px 16px; text-align:center; color:#6b7280; }
+  .empty-state .icon { font-size:30px; display:block; margin-bottom:8px; }
+  .doc-grid { display:grid; grid-template-columns:repeat(3,minmax(90px,1fr)); gap:10px; margin-top:12px; }
+  .doc-item { border:1px solid #e5e7eb; border-radius:12px; padding:8px; text-align:center; background:#f8fafc; }
+  .doc-thumb { width:100%; height:90px; border-radius:8px; object-fit:cover; cursor:zoom-in; background:#fff; }
+  .doc-link { display:inline-block; margin-top:6px; font-size:12px; color:#2563eb; }
+  .zoom-overlay { position:fixed; inset:0; background:rgba(15,23,42,.7); display:none; align-items:center; justify-content:center; z-index:40; }
+  .zoom-overlay.show { display:flex; }
+  .zoom-overlay img { max-width:90vw; max-height:90vh; border-radius:14px; }
+  .modal-card.modal-pop { animation: popIn .18s ease; width:min(760px,94vw); }
+  @keyframes fadeInUp { from {opacity:0; transform:translateY(6px);} to {opacity:1; transform:translateY(0);} }
+  @keyframes popIn { from {opacity:0; transform:scale(.97);} to {opacity:1; transform:scale(1);} }
+  @media (max-width: 1100px) { .premium-stats{grid-template-columns:repeat(2,minmax(180px,1fr));} .doc-grid{grid-template-columns:1fr;} }
+</style>
+
+<div class="delivery-shell">
+  <div class="delivery-head">
+    <div>
+      <h2>Delivery Partner Applications</h2>
+      <p>Review, verify documents, and approve/reject partner onboarding requests.</p>
+    </div>
+  </div>
+
+  <div class="premium-stats">
+    <div class="premium-stat"><div class="top"><span>📊</span><span>Total</span></div><div class="val"><%= stats.total %></div></div>
+    <div class="premium-stat"><div class="top"><span>🟡</span><span>Pending</span></div><div class="val"><%= stats.pending %></div></div>
+    <div class="premium-stat"><div class="top"><span>🟢</span><span>Approved</span></div><div class="val"><%= stats.approved %></div></div>
+    <div class="premium-stat"><div class="top"><span>🔴</span><span>Rejected</span></div><div class="val"><%= stats.rejected %></div></div>
+  </div>
+
+  <form class="delivery-filter-bar" method="get" action="/admin/delivery-partners">
+    <input class="delivery-search" type="text" name="q" placeholder="Search name, phone, city..." />
+    <select name="status" class="delivery-select">
+      <option value="all" <%= filter === "all" ? "selected" : "" %>>All</option>
+      <option value="pending" <%= filter === "pending" ? "selected" : "" %>>Pending</option>
+      <option value="approved" <%= filter === "approved" ? "selected" : "" %>>Approved</option>
+      <option value="rejected" <%= filter === "rejected" ? "selected" : "" %>>Rejected</option>
+    </select>
+    <button type="submit" class="delivery-apply">Apply</button>
+  </form>
+
+  <div class="premium-table-wrap">
+    <table class="premium-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>City</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!applications.length) { %>
+        <tr><td colspan="5">
+          <div class="empty-state">
+            <span class="icon">📭</span>
+            <strong>No applications found</strong>
+          </div>
+        </td></tr>
+        <% } %>
+        <% applications.forEach((item) => { %>
+        <tr>
+          <td class="partner-name"><%= item.full_name || "-" %></td>
+          <td class="phone-muted"><%= item.phone || "-" %></td>
+          <td class="city-light"><%= item.city || "-" %></td>
+          <td>
+            <span class="status-pill <%= item.status === 'approved' ? 'status-approved' : item.status === 'rejected' ? 'status-rejected' : 'status-pending' %>">
+              <%= (item.status || "pending").toUpperCase() %>
+            </span>
+          </td>
+          <td>
+            <div class="action-row">
+              <button
+                type="button"
+                class="btn-doc open-delivery-docs"
+                data-modal-target="delivery-doc-modal"
+                data-license-url="<%= item.license_url || '' %>"
+                data-aadhar-url="<%= item.aadhar_url || '' %>"
+                data-photo-url="<%= item.photo_url || '' %>"
+              >👁 View Docs</button>
+              <button class="btn-approve delivery-status-btn" data-id="<%= item.id %>" data-status="approved">✅ Approve</button>
+              <button class="btn-reject delivery-status-btn" data-id="<%= item.id %>" data-status="rejected">⛔ Reject</button>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal" id="delivery-doc-modal">
+  <div class="modal-card modal-pop">
+    <h3>Application Documents</h3>
+    <div class="doc-grid">
+      <div class="doc-item">
+        <img id="doc-license-img" class="doc-thumb" src="" alt="License" />
+        <a id="doc-license" class="doc-link" href="#" target="_blank">Open License</a>
+      </div>
+      <div class="doc-item">
+        <img id="doc-aadhar-img" class="doc-thumb" src="" alt="Aadhar" />
+        <a id="doc-aadhar" class="doc-link" href="#" target="_blank">Open Aadhar</a>
+      </div>
+      <div class="doc-item">
+        <img id="doc-photo-img" class="doc-thumb" src="" alt="Photo" />
+        <a id="doc-photo" class="doc-link" href="#" target="_blank">Open Photo</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="zoom-overlay" id="doc-zoom">
+  <img id="doc-zoom-img" src="" alt="Document Preview" />
+</div>
+
+<script>
+  (() => {
+    const zoom = document.getElementById("doc-zoom");
+    const zoomImg = document.getElementById("doc-zoom-img");
+    
+    // View Modal Logic
+    document.querySelectorAll(".open-delivery-docs").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const license = btn.getAttribute("data-license-url");
+        const aadhar = btn.getAttribute("data-aadhar-url");
+        const photo = btn.getAttribute("data-photo-url");
+        
+        document.getElementById("doc-license-img").src = license || "https://via.placeholder.com/150?text=No+License";
+        document.getElementById("doc-license").href = license || "#";
+        
+        document.getElementById("doc-aadhar-img").src = aadhar || "https://via.placeholder.com/150?text=No+Aadhar";
+        document.getElementById("doc-aadhar").href = aadhar || "#";
+        
+        document.getElementById("doc-photo-img").src = photo || "https://via.placeholder.com/150?text=No+Photo";
+        document.getElementById("doc-photo").href = photo || "#";
+        
+        document.getElementById("delivery-doc-modal").classList.add("show");
+      });
+    });
+
+    // Zoom Logic
+    document.querySelectorAll(".doc-thumb").forEach((img) => {
+      img.addEventListener("click", () => {
+        if (!img.src || img.src.includes("placeholder")) return;
+        zoomImg.src = img.src;
+        zoom.classList.add("show");
+      });
+    });
+    
+    if (zoom) {
+      zoom.addEventListener("click", () => zoom.classList.remove("show"));
+    }
+
+    // Status Action Logic
+    document.querySelectorAll(".delivery-status-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        const status = btn.getAttribute("data-status");
+        const endpoint = status === "approved" ? `/admin/delivery-partner/${id}/approve` : `/admin/delivery-partner/${id}/reject`;
+        
+        if(!confirm(`Are you sure you want to ${status} this partner?`)) return;
+        
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+        
+        try {
+          const res = await fetch(endpoint, { method: "POST" });
+          const data = await res.json();
+          if (data.success) {
+            alert(data.message);
+            location.reload();
+          } else {
+            alert("Error: " + data.message);
+            btn.disabled = false;
+            btn.innerText = status === "approved" ? "✅ Approve" : "⛔ Reject";
+          }
+        } catch (err) {
+          alert("Network error occurred");
+          btn.disabled = false;
+        }
+      });
+    });
+  })();
+</script>

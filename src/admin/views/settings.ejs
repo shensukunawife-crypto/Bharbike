@@ -1,0 +1,87 @@
+<div class="settings-grid">
+  <div class="settings-card">
+    <h3>🏢 Business Settings</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <input name="companyName" value="<%= settings.companyName %>" placeholder="Company Name" required />
+      <input name="supportEmail" value="<%= settings.supportEmail %>" placeholder="Support Email" required />
+      <input name="phone" value="<%= settings.phone %>" placeholder="Phone" required />
+      <textarea name="address" rows="2" placeholder="Address"><%= settings.address %></textarea>
+      <button type="submit" class="btn btn-gold glow">Save Business</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>💳 Payment Settings</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <label class="switch-row">COD <input type="checkbox" name="codEnabled" <%= settings.codEnabled ? "checked" : "" %> /><span class="switch"></span></label>
+      <label class="switch-row">Online Payment <input type="checkbox" name="onlinePaymentEnabled" <%= settings.onlinePaymentEnabled ? "checked" : "" %> /><span class="switch"></span></label>
+      <input type="number" name="minimumWalletBalance" value="<%= settings.minimumWalletBalance %>" placeholder="Minimum wallet balance" />
+      <button type="submit" class="btn btn-gold glow">Save Payment</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>🚲 Rental Settings</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <input type="number" name="bikePricePerHour" value="<%= settings.bikePricePerHour %>" placeholder="Price per hour" />
+      <input type="number" name="minimumRentalTime" value="<%= settings.minimumRentalTime %>" placeholder="Minimum rental time (min)" />
+      <input type="number" name="lateFeePerHour" value="<%= settings.lateFeePerHour %>" placeholder="Late fee per hour" />
+      <input type="number" name="securityDeposit" value="<%= settings.securityDeposit %>" placeholder="Security deposit" />
+      <button type="submit" class="btn btn-gold glow">Save Rental</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>🛵 Delivery Settings</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <input type="number" name="deliveryCharges" value="<%= settings.deliveryCharges %>" placeholder="Base delivery charge" />
+      <input type="number" name="perKmCharge" value="<%= settings.perKmCharge %>" placeholder="Per KM charge" />
+      <input type="number" name="maxDeliveryDistance" value="<%= settings.maxDeliveryDistance %>" placeholder="Max delivery distance" />
+      <button type="submit" class="btn btn-gold glow">Save Delivery</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>🔐 Security Settings</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <input type="password" name="adminPasswordUi" placeholder="Change admin password (UI only)" />
+      <input type="number" name="sessionTimeout" value="<%= settings.sessionTimeout %>" placeholder="Session timeout (minutes)" />
+      <label class="switch-row">OTP Login <input type="checkbox" name="otpLoginEnabled" <%= settings.otpLoginEnabled ? "checked" : "" %> /><span class="switch"></span></label>
+      <button type="submit" class="btn btn-gold glow">Save Security</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>🔔 Notification Settings</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <label class="switch-row">Push Notifications <input type="checkbox" name="pushEnabled" <%= settings.pushEnabled ? "checked" : "" %> /><span class="switch"></span></label>
+      <label class="switch-row">SMS <input type="checkbox" name="smsEnabled" <%= settings.smsEnabled ? "checked" : "" %> /><span class="switch"></span></label>
+      <label class="switch-row">Email <input type="checkbox" name="emailEnabled" <%= settings.emailEnabled ? "checked" : "" %> /><span class="switch"></span></label>
+      <button type="submit" class="btn btn-gold glow">Save Notifications</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>🎨 App Customization</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <input type="file" name="logoUiOnly" />
+      <label>Brand Color</label>
+      <input type="color" name="brandColor" value="<%= settings.brandColor %>" />
+      <select name="theme">
+        <option value="dark" <%= settings.theme === "dark" ? "selected" : "" %>>Dark</option>
+        <option value="light" <%= settings.theme === "light" ? "selected" : "" %>>Light</option>
+      </select>
+      <button type="submit" class="btn btn-gold glow">Save Customization</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>🧠 System Settings</h3>
+    <form class="admin-form ajax-form" data-url="/admin/settings/save">
+      <label class="switch-row">Maintenance Mode <input type="checkbox" name="maintenanceMode" <%= settings.maintenanceMode ? "checked" : "" %> /><span class="switch"></span></label>
+      <label class="switch-row">Debug Mode <input type="checkbox" name="debugMode" <%= settings.debugMode ? "checked" : "" %> /><span class="switch"></span></label>
+      <input type="text" name="appName" value="<%= settings.appName %>" placeholder="App Name" />
+      <button type="submit" class="btn btn-gold glow">Save System</button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+# MINIMAL entry: npm start → src/server.js (no DB). Full API: startCommand = "npm run start:full"
+#
+# --- Railway checklist (monorepo: repo root has NO package.json) ---
+# Service → Settings → Root Directory:
+#   bike rental system backend
+# Service → Settings → Deploy → Custom Start Command:
+#   node src/server.js
+# Service → Settings → Deploy → Healthcheck Path:
+#   /health
+# Do NOT set a manual PORT variable unless it matches the app; Railway injects PORT.
+#
+# If healthcheck keeps failing: open Deploy Logs and search for:
+#   - "Server running on port"  → app bound OK; then align Healthcheck Path / timeout.
+#   - "FATAL: module import"   → wrong Root Directory or missing files in deploy context.
+#
+# Temporary diagnosis: disable Healthcheck in service settings; redeploy; hit public URL GET /health.
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "node src/server.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 300

@@ -1,0 +1,84 @@
+<div class="toolbar">
+  <a href="/admin/analytics?filter=today" class="btn <%= filter === 'today' ? 'btn-gold' : 'btn-ghost' %>">Today</a>
+  <a href="/admin/analytics?filter=7d" class="btn <%= filter === '7d' ? 'btn-gold' : 'btn-ghost' %>">Last 7 Days</a>
+  <a href="/admin/analytics?filter=30d" class="btn <%= filter === '30d' ? 'btn-gold' : 'btn-ghost' %>">Last 30 Days</a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Total Revenue</span></div>
+    <strong class="stat-value">₹<%= Number(topCards.totalRevenue || 0).toFixed(2) %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">📦</span><span class="stat-label">Total Orders</span></div>
+    <strong class="stat-value"><%= topCards.totalOrders %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Active Bikes</span></div>
+    <strong class="stat-value"><%= topCards.activeBikes %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">🛵</span><span class="stat-label">Delivery Earnings</span></div>
+    <strong class="stat-value">₹<%= Number(topCards.deliveryEarnings || 0).toFixed(2) %></strong>
+  </div>
+</div>
+
+<div class="analytics-grid">
+  <div class="chart-card">
+    <h3>Revenue Graph</h3>
+    <div class="chart-skeleton"></div>
+    <canvas id="revenueChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Orders Graph</h3>
+    <div class="chart-skeleton"></div>
+    <canvas id="ordersBarChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Earnings Breakdown</h3>
+    <div class="chart-skeleton"></div>
+    <canvas id="earningsPieChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Extra Analytics</h3>
+    <div class="summary-list">
+      <div><span>Most Used Bike</span><strong><%= usage.mostUsedBike %></strong></div>
+      <div><span>Total Hours</span><strong><%= usage.totalHours %> hrs</strong></div>
+      <div><span>Order Status</span><strong>C:<%= orderStatus.completed %> P:<%= orderStatus.pending %> X:<%= orderStatus.cancelled %></strong></div>
+      <div><span>Delivery Stats</span><strong><%= deliveryStats.avgTime %> min avg / <%= deliveryStats.totalDeliveries %> total</strong></div>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Recent Activity (Last 5 Orders)</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Pickup</th>
+          <th>Drop</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!recentOrders.length) { %>
+        <tr><td colspan="4" class="empty">No recent orders</td></tr>
+        <% } %>
+        <% recentOrders.forEach((order) => { %>
+        <tr>
+          <td><%= order.id %></td>
+          <td><%= order.pickup_location %></td>
+          <td><%= order.drop_location %></td>
+          <td><span class="badge"><%= order.status %></span></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="application/json" id="analytics-revenue-data"><%- JSON.stringify(revenueSeries || []) %></script>
+<script type="application/json" id="analytics-orders-bar-data"><%- JSON.stringify(ordersSeries || []) %></script>
+<script type="application/json" id="analytics-pie-data"><%- JSON.stringify(pieSeries || []) %></script>

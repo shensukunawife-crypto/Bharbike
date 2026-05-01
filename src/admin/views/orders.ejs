@@ -1,0 +1,219 @@
+<div class="stats-grid stats-grid-4">
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">📦</span><span class="stat-label">Total</span></div><strong class="stat-value"><%= stats.total %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🕓</span><span class="stat-label">Pending</span></div><strong class="stat-value"><%= stats.pending %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🛵</span><span class="stat-label">Accepted</span></div><strong class="stat-value"><%= stats.accepted %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">✅</span><span class="stat-label">Completed</span></div><strong class="stat-value"><%= stats.completed %></strong></div>
+</div>
+
+<form class="toolbar" method="get" action="/admin/orders">
+  <input class="filter-input" type="text" name="search" placeholder="Search Order ID / code" value="<%= filters.search %>" />
+  <select name="status" class="filter-input">
+    <option value="all" <%= filters.status === "all" ? "selected" : "" %>>All</option>
+    <option value="pending" <%= filters.status === "pending" ? "selected" : "" %>>Pending</option>
+    <option value="accepted" <%= filters.status === "accepted" ? "selected" : "" %>>Accepted</option>
+    <option value="completed" <%= filters.status === "completed" ? "selected" : "" %>>Completed</option>
+  </select>
+  <input class="filter-input" type="date" name="date" value="<%= filters.date %>" />
+  <select name="payment" class="filter-input">
+    <option value="all" <%= filters.payment === "all" ? "selected" : "" %>>All payment</option>
+    <option value="paid" <%= filters.payment === "paid" ? "selected" : "" %>>Paid</option>
+    <option value="pending" <%= filters.payment === "pending" ? "selected" : "" %>>Pending</option>
+  </select>
+  <button type="submit" class="btn btn-gold">Apply</button>
+  <span class="admin-live-pill" id="admin-orders-live">Live sync</span>
+</form>
+
+<div class="chart-card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>User</th>
+          <th>Rider</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="admin-orders-tbody">
+        <% if (!orders.length) { %>
+        <tr><td colspan="7" class="empty">No orders match filters</td></tr>
+        <% } %>
+        <% orders.forEach((order) => { %>
+        <% 
+          const st = String(order.status || '').toLowerCase();
+          let badge = 'warning';
+          if (st === 'completed') badge = 'success';
+          else if (st === 'accepted') badge = 'accepted';
+          else if (st === 'rejected' || st === 'cancelled') badge = 'danger';
+        %>
+        <tr data-order-id="<%= order.id %>">
+          <td><strong><%= order.displayOrderId %></strong><br/><span class="muted"><%= order.id %></span></td>
+          <td><%= order.userName %></td>
+          <td><%= order.riderName %></td>
+          <td class="revenue-positive">₹<%= Number(order.amount || 0).toFixed(2) %></td>
+          <td><span class="badge <%= badge %>"><%= order.status %></span></td>
+          <td><%= order.createdAt ? String(order.createdAt).replace("T", " ").slice(0, 16) : "—" %></td>
+          <td class="actions">
+            <a class="btn btn-ghost" href="/admin/orders/<%= order.id %>">Details</a>
+            <form class="ajax-form inline-form" data-url="/admin/orders/<%= order.id %>/assign">
+              <select name="partnerId">
+                <option value="">Assign</option>
+                <% partners.forEach((partner) => { %>
+                <option value="<%= partner.id %>"><%= partner.name %></option>
+                <% }) %>
+              </select>
+              <button type="submit" class="btn btn-gold">Assign</button>
+            </form>
+            <button class="btn btn-ghost admin-action" data-url="/admin/orders/<%= order.id %>/ongoing" data-method="POST">Ongoing</button>
+            <button class="btn btn-gold admin-action" data-url="/admin/orders/<%= order.id %>/complete" data-method="POST">Complete</button>
+            <button class="btn btn-danger admin-action" data-url="/admin/orders/<%= order.id %>/reject" data-method="POST">Cancel</button>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if (typeof supabaseRealtimeEnabled !== 'undefined' && supabaseRealtimeEnabled && supabasePublicUrl && supabaseAnonKey) { %>
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  try {
+    var sb = createClient("<%= supabasePublicUrl %>", "<%= supabaseAnonKey %>");
+    sb.channel("admin-orders-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, function () {
+        if (typeof window.refreshAdminOrders === "function") window.refreshAdminOrders();
+      })
+      .subscribe();
+  } catch (e) {
+    console.warn("Realtime orders", e);
+  }
+</script>
+<% } %>
+<script>
+(function () {
+  function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function badgeClass(st) {
+    var s = String(st || "").toLowerCase();
+    if (s === "completed") return "success";
+    if (s === "accepted") return "accepted";
+    if (s === "rejected" || s === "cancelled") return "danger";
+    return "warning";
+  }
+  function wireOrdersRowActions(tb) {
+    if (typeof handleAction !== "function") return;
+    tb.querySelectorAll(".admin-action").forEach(function (btn) {
+      btn.onclick = function () {
+        handleAction(btn.dataset.url, btn.dataset.method || "POST");
+      };
+    });
+    tb.querySelectorAll(".ajax-form").forEach(function (form) {
+      form.onsubmit = async function (e) {
+        e.preventDefault();
+        var payload = Object.fromEntries(new FormData(form).entries());
+        await handleAction(form.dataset.url, "POST", payload);
+      };
+    });
+  }
+  window.refreshAdminOrders = async function () {
+    var token = localStorage.getItem("adminToken");
+    if (!token) return;
+    var pill = document.getElementById("admin-orders-live");
+    if (pill) pill.textContent = "Updating…";
+    try {
+      var qs = window.location.search || "";
+      var res = await fetch("/api/admin/orders" + qs, {
+        headers: { Authorization: "Bearer " + token },
+      });
+      var json = await res.json();
+      if (!json.success || !json.data || !json.data.orders) return;
+      var rows = json.data.orders;
+      var partners = json.data.partners || [];
+      var tbody = document.getElementById("admin-orders-tbody");
+      if (!tbody) return;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">No orders match filters</td></tr>';
+        return;
+      }
+      var partnerOpts =
+        '<option value="">Assign</option>' +
+        partners
+          .map(function (p) {
+            return '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + "</option>";
+          })
+          .join("");
+      tbody.innerHTML = rows
+        .map(function (order) {
+          var bc = badgeClass(order.status);
+          var created = order.createdAt
+            ? String(order.createdAt).replace("T", " ").slice(0, 16)
+            : "—";
+          return (
+            '<tr data-order-id="' +
+            escapeHtml(order.id) +
+            '">' +
+            "<td><strong>" +
+            escapeHtml(order.displayOrderId) +
+            '</strong><br/><span class="muted">' +
+            escapeHtml(order.id) +
+            "</span></td>" +
+            "<td>" +
+            escapeHtml(order.userName) +
+            "</td>" +
+            "<td>" +
+            escapeHtml(order.riderName) +
+            "</td>" +
+            '<td class="revenue-positive">₹' +
+            Number(order.amount || 0).toFixed(2) +
+            "</td>" +
+            '<td><span class="badge ' +
+            bc +
+            '">' +
+            escapeHtml(order.status) +
+            "</span></td>" +
+            "<td>" +
+            escapeHtml(created) +
+            '</td><td class="actions">' +
+            '<a class="btn btn-ghost" href="/admin/orders/' +
+            encodeURIComponent(order.id) +
+            '">Details</a>' +
+            '<form class="ajax-form inline-form" data-url="/admin/orders/' +
+            encodeURIComponent(order.id) +
+            '/assign"><select name="partnerId">' +
+            partnerOpts +
+            '</select><button type="submit" class="btn btn-gold">Assign</button></form>' +
+            '<button class="btn btn-ghost admin-action" data-url="/admin/orders/' +
+            encodeURIComponent(order.id) +
+            '/ongoing" data-method="POST">Ongoing</button>' +
+            '<button class="btn btn-gold admin-action" data-url="/admin/orders/' +
+            encodeURIComponent(order.id) +
+            '/complete" data-method="POST">Complete</button>' +
+            '<button class="btn btn-danger admin-action" data-url="/admin/orders/' +
+            encodeURIComponent(order.id) +
+            '/reject" data-method="POST">Cancel</button>' +
+            "</td></tr>"
+          );
+        })
+        .join("");
+      wireOrdersRowActions(tbody);
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      if (pill) pill.textContent = "Live sync";
+    }
+  };
+  setInterval(function () {
+    if (document.visibilityState === "visible") window.refreshAdminOrders();
+  }, 12000);
+})();
+</script>

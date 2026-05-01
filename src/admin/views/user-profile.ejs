@@ -1,0 +1,60 @@
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">👤</span><span class="stat-label">User</span></div><strong class="stat-value"><%= user.full_name || "N/A" %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🧾</span><span class="stat-label">Total Orders</span></div><strong class="stat-value"><%= user.totalOrders %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">💳</span><span class="stat-label">Total Spent</span></div><strong class="stat-value revenue-positive">₹<%= Number(user.totalSpent || 0).toFixed(2) %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Payment Method</span></div><strong class="stat-value"><%= user.paymentMethod %></strong></div>
+</div>
+
+<div class="analytics-grid">
+  <div class="chart-card">
+    <h3>User Details</h3>
+    <div class="summary-list">
+      <div><span>User ID</span><strong><%= user.id %></strong></div>
+      <div><span>Full name</span><strong><%= user.full_name || "N/A" %></strong></div>
+      <div><span>Phone</span><strong><%= user.phone || "N/A" %></strong></div>
+      <div><span>Email</span><strong><%= user.email || "N/A" %></strong></div>
+      <div><span>Location</span><strong><%= user.location || "N/A" %></strong></div>
+      <div><span>Joined Date</span><strong><%= String(user.joinedDate).slice(0, 10) %></strong></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>User Activity</h3>
+    <div class="summary-list">
+      <div><span>Last Login</span><strong><%= String(user.lastLogin).slice(0, 16).replace("T", " ") %></strong></div>
+      <div><span>Last Order</span><strong><%= user.lastOrder %></strong></div>
+      <div><span>Last Active</span><strong><%= user.lastActive %></strong></div>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Order History</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Pickup</th>
+          <th>Drop</th>
+          <th>Status</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!orderHistory.length) { %>
+        <tr><td colspan="5" class="empty">No orders found</td></tr>
+        <% } %>
+        <% orderHistory.forEach((order) => { %>
+        <tr>
+          <td><%= order.id %></td>
+          <td><%= order.pickup_location %></td>
+          <td><%= order.drop_location %></td>
+          <td><span class="badge"><%= order.status %></span></td>
+          <td class="revenue-positive">₹<%= Number(order.amount || 0).toFixed(2) %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,91 @@
+<div class="toolbar">
+  <button class="btn btn-gold" data-modal-target="add-bike-modal">+ Add Bike</button>
+  <form class="toolbar" method="get" action="/admin/bikes">
+    <input class="filter-input" type="text" name="search" placeholder="Search Bike ID" value="<%= filters.search %>" />
+    <select class="filter-input" name="status">
+      <option value="all" <%= filters.status === "all" ? "selected" : "" %>>All Status</option>
+      <option value="available" <%= filters.status === "available" ? "selected" : "" %>>Available</option>
+      <option value="in_use" <%= filters.status === "in_use" ? "selected" : "" %>>In Use</option>
+      <option value="maintenance" <%= filters.status === "maintenance" ? "selected" : "" %>>Maintenance</option>
+      <option value="offline" <%= filters.status === "offline" ? "selected" : "" %>>Offline</option>
+    </select>
+    <label class="switch-row">
+      Low Battery
+      <input type="checkbox" name="lowBattery" value="true" <%= filters.lowBattery ? "checked" : "" %> />
+      <span class="switch"></span>
+    </label>
+    <button type="submit" class="btn btn-gold">Apply</button>
+  </form>
+</div>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Bike ID</th>
+        <th>Status</th>
+        <th>Usage</th>
+        <th>Battery %</th>
+        <th>Location</th>
+        <th>Last Service</th>
+        <th>Health</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!bikes.length) { %>
+      <tr><td colspan="8" class="empty">No bikes found</td></tr>
+      <% } %>
+      <% bikes.forEach((bike) => { %>
+      <tr>
+        <td><%= bike.bike_code %></td>
+        <td>
+          <span class="badge <%= bike.status === 'available' ? 'success' : bike.status === 'in_use' ? 'warning' : bike.status === 'maintenance' ? 'danger' : '' %>">
+            <%= bike.statusLabel %>
+          </span>
+        </td>
+        <td><%= bike.usage %></td>
+        <td>
+          <div class="battery-wrap">
+            <div class="battery-bar">
+              <span class="battery-fill <%= bike.battery > 60 ? 'good' : bike.battery > 30 ? 'mid' : 'low' %>" style="width: <%= bike.battery %>%"></span>
+            </div>
+            <small><%= bike.battery %>%</small>
+          </div>
+        </td>
+        <td><%= bike.location %></td>
+        <td><%= bike.lastServiceDate %></td>
+        <td>
+          <span class="badge <%= bike.healthStatus === 'Good' ? 'success' : bike.healthStatus === 'Average' ? 'warning' : 'danger' %>">
+            <%= bike.healthStatus %>
+          </span>
+        </td>
+        <td class="actions">
+          <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>">View Details</a>
+          <button class="btn btn-gold admin-action" data-url="/admin/bikes/<%= bike.id %>/assign" data-method="POST">Assign Bike</button>
+          <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST">Send to Maintenance</button>
+          <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST">Disable Bike</button>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal" id="add-bike-modal">
+  <div class="modal-card">
+    <h3>Add Bike</h3>
+    <form class="admin-form ajax-form" data-url="/admin/bikes/add">
+      <input name="bike_code" placeholder="Bike ID" required />
+      <select name="status">
+        <option value="available">Available</option>
+        <option value="in_use">In Use</option>
+        <option value="maintenance">Maintenance</option>
+        <option value="offline">Offline</option>
+      </select>
+      <input type="number" name="battery" min="0" max="100" placeholder="Battery %" />
+      <input name="location" placeholder="Location" />
+      <input type="date" name="lastServiceDate" />
+      <button type="submit" class="btn btn-gold glow">Create</button>
+    </form>
+  </div>
+</div>

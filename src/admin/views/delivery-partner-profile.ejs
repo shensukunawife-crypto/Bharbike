@@ -1,0 +1,83 @@
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">👤</span><span class="stat-label">Partner</span></div>
+    <strong class="stat-value"><%= partner.name %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">📞</span><span class="stat-label">Phone</span></div>
+    <strong class="stat-value"><%= partner.phone %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">💸</span><span class="stat-label">Total Earnings</span></div>
+    <strong class="stat-value revenue-positive">₹<%= Number(total || 0).toFixed(2) %></strong>
+  </div>
+</div>
+
+<div class="analytics-grid">
+  <div class="chart-card">
+    <h3>Documents</h3>
+    <div class="summary-list">
+      <% docs.forEach((doc) => { %>
+      <div><span><%= doc %></span><strong>Verified</strong></div>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Earnings History</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!earningsHistory.length) { %>
+          <tr><td colspan="4" class="empty">No earnings history</td></tr>
+          <% } %>
+          <% earningsHistory.forEach((item) => { %>
+          <tr>
+            <td><%= item.id %></td>
+            <td><%= item.type %></td>
+            <td class="revenue-positive">₹<%= Number(item.amount).toFixed(2) %></td>
+            <td><%= item.date %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Orders History</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Pickup</th>
+          <th>Drop</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!orderHistory.length) { %>
+        <tr><td colspan="4" class="empty">No orders history</td></tr>
+        <% } %>
+        <% orderHistory.forEach((order) => { %>
+        <tr>
+          <td><%= order.id %></td>
+          <td><%= order.pickup_location %></td>
+          <td><%= order.drop_location %></td>
+          <td><span class="badge"><%= order.status %></span></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

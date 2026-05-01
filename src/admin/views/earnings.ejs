@@ -1,0 +1,179 @@
+<div class="toolbar">
+  <a href="/admin/earnings?filter=today" class="btn <%= filter === 'today' ? 'btn-gold' : 'btn-ghost' %>">Today</a>
+  <a href="/admin/earnings?filter=weekly" class="btn <%= filter === 'weekly' ? 'btn-gold' : 'btn-ghost' %>">Weekly</a>
+  <a href="/admin/earnings?filter=monthly" class="btn <%= filter === 'monthly' ? 'btn-gold' : 'btn-ghost' %>">Monthly</a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Total Revenue</span></div>
+    <strong class="stat-value">₹<%= Number(totals.total || 0).toFixed(2) %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Bike Rental</span></div>
+    <strong class="stat-value">₹<%= Number(totals.rental || 0).toFixed(2) %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">🛵</span><span class="stat-label">Delivery</span></div>
+    <strong class="stat-value">₹<%= Number(totals.delivery || 0).toFixed(2) %></strong>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">📅</span><span class="stat-label">Today Earnings</span></div>
+    <strong class="stat-value revenue-positive">₹<%= Number(financeCards.todayEarnings || 0).toFixed(2) %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">⏳</span><span class="stat-label">Pending Payout</span></div>
+    <strong class="stat-value">₹<%= Number(financeCards.pendingPayout || 0).toFixed(2) %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">✅</span><span class="stat-label">Total Paid Amount</span></div>
+    <strong class="stat-value revenue-positive">₹<%= Number(financeCards.totalPaidAmount || 0).toFixed(2) %></strong>
+  </div>
+</div>
+
+<div class="analytics-grid">
+  <div class="chart-card">
+    <h3>Revenue Over Time</h3>
+    <div class="chart-skeleton"></div>
+    <canvas id="earningsLineChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Earnings Breakdown</h3>
+    <div class="chart-skeleton"></div>
+    <canvas id="earningsBreakdownChart"></canvas>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Transactions</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Transaction ID</th>
+          <th>User</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!transactions.length) { %>
+        <tr><td colspan="6" class="empty">No transactions found</td></tr>
+        <% } %>
+        <% transactions.forEach((tx) => { %>
+        <tr>
+          <td><%= tx.id %></td>
+          <td><%= tx.user %></td>
+          <td><%= tx.type %></td>
+          <td class="revenue-positive">₹<%= Number(tx.amount || 0).toFixed(2) %></td>
+          <td><span class="badge <%= tx.status === 'Success' ? 'success' : 'warning' %>"><%= tx.status %></span></td>
+          <td><%= tx.date %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="analytics-grid">
+  <div class="chart-card">
+    <h3>Pending Payouts</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Payout ID</th>
+            <th>User</th>
+            <th>Amount</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!payoutQueue.length) { %>
+          <tr><td colspan="4" class="empty">No pending payouts</td></tr>
+          <% } %>
+          <% payoutQueue.forEach((item) => { %>
+          <tr>
+            <td><%= item.id %></td>
+            <td><%= item.user %></td>
+            <td>₹<%= Number(item.amount || 0).toFixed(2) %></td>
+            <td>
+              <button class="btn btn-gold admin-action" data-url="/admin/earnings/payout/<%= item.id %>/release" data-method="POST">Release Payment</button>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Payout History</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Payout ID</th>
+            <th>Txn</th>
+            <th>User</th>
+            <th>Amount</th>
+            <th>Paid Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!payoutHistory.length) { %>
+          <tr><td colspan="5" class="empty">No payout history</td></tr>
+          <% } %>
+          <% payoutHistory.forEach((item) => { %>
+          <tr>
+            <td><%= item.payoutId %></td>
+            <td><%= item.transactionId %></td>
+            <td><%= item.user %></td>
+            <td class="revenue-positive">₹<%= Number(item.amount || 0).toFixed(2) %></td>
+            <td><%= item.paidAt %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Recent Activity (Last 5 Transactions)</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Transaction</th>
+          <th>User</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!recentActivity.length) { %>
+        <tr><td colspan="5" class="empty">No recent activity</td></tr>
+        <% } %>
+        <% recentActivity.forEach((item) => { %>
+        <tr>
+          <td><%= item.id %></td>
+          <td><%= item.user %></td>
+          <td><%= item.type %></td>
+          <td class="revenue-positive">₹<%= Number(item.amount || 0).toFixed(2) %></td>
+          <td><%= item.date %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script type="application/json" id="earnings-chart-data"><%- JSON.stringify(chartSeries || []) %></script>
+<script type="application/json" id="earnings-pie-data"><%- JSON.stringify(pieSeries || []) %></script>

@@ -1,0 +1,172 @@
+<div class="stats-grid">
+  <div class="stat-card stat-card-orange"><p>Total Bikes in Maintenance</p><h3><%= maintenanceStats?.total || 0 %></h3></div>
+  <div class="stat-card stat-card-blue"><p>In Progress</p><h3><%= maintenanceStats?.inProgress || 0 %></h3></div>
+  <div class="stat-card stat-card-green"><p>Completed</p><h3><%= maintenanceStats?.completed || 0 %></h3></div>
+  <div class="stat-card"><p>Total Repair Cost</p><h3>₹<%= maintenanceStats?.totalCost || 0 %></h3></div>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-gold" data-modal-target="add-maintenance-modal">+ Add Bike to Maintenance</button>
+  <a class="btn <%= filter === 'all' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=all">All</a>
+  <a class="btn <%= filter === 'active' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=active">Active</a>
+  <a class="btn <%= filter === 'completed' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=completed">Completed</a>
+  <form method="GET" action="/admin/maintenance" class="inline-form">
+    <input type="hidden" name="filter" value="<%= filter %>" />
+    <input class="filter-input" type="text" name="search" value="<%= search || '' %>" placeholder="Search Bike ID" />
+    <button class="btn btn-ghost" type="submit">Search</button>
+  </form>
+</div>
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Bike ID</th>
+        <th>Issue Type</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Technician</th>
+        <th>Repair Cost</th>
+        <th>Reported Date</th>
+        <th>Expected Fix Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!tickets.length) { %>
+      <tr><td colspan="9" class="empty">No maintenance tickets found</td></tr>
+      <% } %>
+      <% tickets.forEach((ticket, idx) => { %>
+      <tr class="<%= idx % 2 ? 'zebra' : '' %>">
+        <td>🛵 <%= ticket.bikeCode %></td>
+        <td><span class="badge badge-soft"><%= ticket.issueType %></span></td>
+        <td><%= ticket.description %></td>
+        <td>
+          <span class="badge <%= ticket.status === 'under_repair' ? 'danger' : ticket.status === 'in_progress' ? 'warning' : 'success' %>">
+            <%= ticket.status === 'under_repair' ? 'Under Repair' : ticket.status === 'in_progress' ? 'In Progress' : 'Completed' %>
+          </span>
+        </td>
+        <td><%= ticket.technicianName %></td>
+        <td>₹<%= ticket.repairCost %></td>
+        <td><%= ticket.reportedDate %></td>
+        <td><%= ticket.expectedFixDate %></td>
+        <td class="actions">
+          <button class="btn btn-success admin-action" data-url="/admin/maintenance/<%= ticket.bikeId %>/fixed" data-method="POST">🔧 Fix</button>
+          <button
+            class="btn btn-outline open-maintenance-status"
+            data-id="<%= ticket.id %>"
+            data-status="<%= ticket.status %>"
+            data-tech="<%= ticket.technicianName %>"
+            data-cost="<%= ticket.repairCost %>"
+            data-expected="<%= ticket.expectedFixDate %>"
+          >
+            ✏️ Update
+          </button>
+          <button class="btn btn-danger-ghost admin-action" data-url="/admin/maintenance/<%= ticket.id %>/remove" data-method="POST">🗑️ Delete</button>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="chart-card">
+  <h3>Maintenance History</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Bike ID</th>
+          <th>Issue</th>
+          <th>Cost</th>
+          <th>Fixed Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!history.length) { %>
+        <tr><td colspan="4" class="empty">No maintenance history found</td></tr>
+        <% } %>
+        <% history.forEach((item) => { %>
+        <tr>
+          <td><%= item.bikeCode %></td>
+          <td><%= item.issueType %></td>
+          <td>₹<%= item.repairCost %></td>
+          <td><%= item.fixedDate || '-' %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>User Support Requests</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ticket ID</th>
+          <th>Issue Type</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody id="maintenance-support-body">
+        <% if (!(supportTickets || []).length) { %>
+        <tr><td colspan="5" class="empty">No support tickets found</td></tr>
+        <% } %>
+        <% (supportTickets || []).forEach((ticket, idx) => { %>
+        <tr>
+          <td><% if (ticket.ticket_number != null && ticket.ticket_number !== undefined) { %>#<%= ticket.ticket_number %><% } else { %>—<% } %> <button class="btn btn-ghost copy-ticket-id" data-value="<%= (ticket.ticket_number != null && ticket.ticket_number !== undefined) ? ticket.ticket_number : '' %>">📋</button></td>
+          <td><span class="badge badge-soft"><%= ticket.issue_type || '-' %></span></td>
+          <td title="<%= ticket.description || '' %>"><%= String(ticket.description || '-').slice(0, 60) %><%= String(ticket.description || '').length > 60 ? '...' : '' %></td>
+          <td>
+            <span class="badge <%= ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'warning' : 'danger' %>">
+              <%= ticket.status === 'in_progress' ? 'In Progress' : ticket.status === 'resolved' ? 'Resolved' : 'Pending' %>
+            </span>
+          </td>
+          <td><%= String(ticket.created_at || '').slice(0, 19).replace('T', ' ') %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal" id="add-maintenance-modal">
+  <div class="modal-card">
+    <h3>Add Bike to Maintenance</h3>
+    <form class="admin-form ajax-form" data-url="/admin/maintenance/add">
+      <select name="bikeId" required>
+        <% bikes.forEach((bike) => { %>
+        <option value='<%- JSON.stringify({ id: bike.id, bike_code: bike.bike_code }) %>'><%= bike.bike_code %></option>
+        <% }) %>
+      </select>
+      <input name="issueType" placeholder="Issue Type" required />
+      <textarea name="description" rows="3" placeholder="Description" required></textarea>
+      <input type="text" name="technicianName" placeholder="Technician Name" />
+      <input type="number" name="repairCost" placeholder="Repair Cost" />
+      <input type="date" name="reportedDate" required />
+      <input type="date" name="expectedFixDate" required />
+      <button type="submit" class="btn btn-gold glow">Add Maintenance</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="update-maintenance-modal">
+  <div class="modal-card">
+    <h3>Update Maintenance Status</h3>
+    <form class="admin-form ajax-form" id="update-maintenance-form" data-url="">
+      <select name="status" id="maintenance-status">
+        <option value="under_repair">Under Repair</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+      </select>
+      <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" />
+      <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" />
+      <input type="date" name="expectedFixDate" id="maintenance-expected" />
+      <button type="submit" class="btn btn-gold glow">Update</button>
+    </form>
+  </div>
+</div>

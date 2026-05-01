@@ -1,0 +1,512 @@
+<div class="payments-dashboard-v2">
+  <div class="dashboard-container">
+    <!-- SECTION 1: LIVE STATS (Supabase payments table) -->
+    <div class="row mb-4 pay-stats-row">
+      <div class="col-md-3">
+        <div class="premium-card stat-card hover-lift">
+          <div class="stat-icon-circle" style="background: #eff6ff; color: #3b82f6;">💰</div>
+          <div>
+            <div class="stat-label">Success revenue</div>
+            <div class="stat-value" id="pay-stat-revenue">₹<%= Number(payStats.revenue || 0).toLocaleString("en-IN") %></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="premium-card stat-card hover-lift">
+          <div class="stat-icon-circle" style="background: #ecfdf5; color: #10b981;">✅</div>
+          <div>
+            <div class="stat-label">Successful</div>
+            <div class="stat-value" id="pay-stat-success"><%= payStats.success %></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="premium-card stat-card hover-lift">
+          <div class="stat-icon-circle" style="background: #f5f3ff; color: #8b5cf6;">💳</div>
+          <div>
+            <div class="stat-label">Total records</div>
+            <div class="stat-value" id="pay-stat-total"><%= payStats.total %></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="premium-card stat-card hover-lift">
+          <div class="stat-icon-circle" style="background: #fef2f2; color: #ef4444;">🔴</div>
+          <div>
+            <div class="stat-label">Failed</div>
+            <div class="stat-value" id="pay-stat-failed"><%= payStats.failed %></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <form method="get" action="/admin/payments" class="pay-toolbar">
+      <label class="form-label" style="margin:0;">Status filter</label>
+      <select name="pay_status" class="form-control-custom pay-filter-select">
+        <option value="all" <%= payFilter === 'all' ? 'selected' : '' %>>All</option>
+        <option value="success" <%= payFilter === 'success' ? 'selected' : '' %>>Success</option>
+        <option value="failed" <%= payFilter === 'failed' ? 'selected' : '' %>>Failed</option>
+      </select>
+      <button type="submit" class="btn-primary-large pay-apply-btn">Apply</button>
+      <span id="admin-payments-live" class="admin-live-pill-alt">Live sync</span>
+    </form>
+
+    <div class="premium-card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2 class="card-title">Payment transactions</h2>
+        <p class="card-subtitle">From Supabase <code>payments</code> + linked orders.</p>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Order</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Razorpay payment_id</th>
+              <th>Razorpay order_id</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="admin-payments-tbody">
+            <% if (!paymentsList || !paymentsList.length) { %>
+            <tr><td colspan="7" style="text-align:center;padding:28px;color:#64748b;">No payment rows yet</td></tr>
+            <% } %>
+            <% (paymentsList || []).forEach(function(p) { %>
+            <% var st = String(p.status||'').toLowerCase(); var isOk = st === 'success'; var isFail = st === 'failed' || st === 'failure'; %>
+            <tr>
+              <td><span class="code-badge"><%= p.id %></span></td>
+              <td><strong><%= p.order_code %></strong><br/><span class="muted-small"><%= p.order_id %></span></td>
+              <td style="font-weight:600;">₹<%= Number(p.amount||0).toFixed(2) %></td>
+              <td>
+                <% if (isOk) { %>
+                  <span class="pay-badge pay-badge-success"><%= p.status %></span>
+                <% } else if (isFail) { %>
+                  <span class="pay-badge pay-badge-failed"><%= p.status %></span>
+                <% } else { %>
+                  <span class="pay-badge pay-badge-pending"><%= p.status %></span>
+                <% } %>
+              </td>
+              <td><span class="code-badge"><%= p.razorpay_payment_id %></span></td>
+              <td><span class="code-badge"><%= p.razorpay_order_id %></span></td>
+              <td><%= p.created_at ? String(p.created_at).replace('T',' ').slice(0,19) : '—' %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3 class="gateway-section-title">Gateway configuration</h3>
+
+    <!-- SECTION 2: GRID -->
+    <div class="grid-layout">
+      <!-- LEFT: 60% -->
+      <div class="col-60">
+        <div class="premium-card">
+          <div class="card-header">
+            <h2 class="card-title">Razorpay Configuration</h2>
+            <p class="card-subtitle">Manage API keys securely.</p>
+          </div>
+          <form id="compact-form">
+            <div class="form-group">
+              <label class="form-label">Key ID</label>
+              <input type="text" id="key_id" class="form-control-custom" placeholder="rzp_test_..." required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Key Secret</label>
+              <div class="input-with-icon">
+                <input type="password" id="key_secret" class="form-control-custom" placeholder="••••••••••••••••" required />
+                <button type="button" class="toggle-eye" id="toggle-secret">👁</button>
+              </div>
+            </div>
+            
+            <div class="action-row">
+              <div class="pill-switch">
+                <button type="button" class="pill-btn active">Test</button>
+                <button type="button" class="pill-btn">Live</button>
+              </div>
+              <div style="display: flex; gap: 12px;">
+                <button type="reset" class="btn-outline-secondary">Reset</button>
+                <button type="submit" class="btn-primary-large" id="save-btn">Save Configuration</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- RIGHT: 40% -->
+      <div class="col-40">
+        <!-- Active Config -->
+        <% const activeKey = configs.find(c => c.is_active); %>
+        <div class="premium-card" style="margin-bottom: 24px;">
+          <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            <div class="status-dot" style="background: <%= activeKey ? '#10b981' : '#ef4444' %>;"></div>
+            <span style="font-size: 13px; font-weight: 700; color: #334155;">Active Configuration</span>
+          </div>
+          <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 12px 0;">
+            <%= activeKey ? activeKey.key_id.substring(0, 15) + '...' : 'No Active Key' %>
+          </h3>
+          <span class="mode-badge"><%= ((activeKey && activeKey.mode) || 'test').toUpperCase() %> MODE</span>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="premium-card">
+          <div class="form-label" style="margin-bottom: 16px;">Quick Actions</div>
+          <button class="btn-small-primary" id="test-connection-btn">🧪 Test Connection</button>
+          <button class="btn-small-danger" id="deactivate-all">🚫 Deactivate All</button>
+          <div id="test-result" style="margin-top: 12px; text-align: center; font-size: 12px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: TABLE -->
+    <div class="premium-card" style="margin-bottom: 40px;">
+      <div class="card-header">
+        <h2 class="card-title">Configured Keys Repository</h2>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="table-custom" id="payment-config-keys-table">
+          <thead>
+            <tr>
+              <th>Key ID</th>
+              <th>Mode</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% configs.forEach(config => { %>
+            <tr>
+              <td><span class="code-badge"><%= config.key_id %></span></td>
+              <td><span class="mode-badge"><%= (config.mode || 'test').toUpperCase() %></span></td>
+              <td>
+                <% if (config.is_active) { %>
+                  <span class="status-badge active"><span class="status-dot" style="background: #10b981;"></span> Active</span>
+                <% } else { %>
+                  <span class="status-badge inactive"><span class="status-dot" style="background: #94a3b8;"></span> Inactive</span>
+                <% } %>
+              </td>
+              <td style="text-align: right;">
+                <% if (!config.is_active) { %>
+                  <button class="action-icon activate activate-btn" data-id="<%= config.id %>" title="Activate">✓</button>
+                <% } %>
+                <button class="action-icon delete delete-btn" data-id="<%= config.id %>" title="Delete">🗑</button>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  body { background: #f8fafc; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+  .premium-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 24px; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .hover-lift:hover { transform: scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 2; position: relative; }
+
+  .stat-card { height: 104px; display: flex; align-items: center; padding: 0 20px; margin-bottom: 16px; }
+  .stat-icon-circle { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 16px; flex-shrink: 0; }
+  .stat-label { font-size: 13px; color: #64748b; margin-bottom: 4px; font-weight: 500; }
+  .stat-value { font-size: 24px; font-weight: 700; color: #0f172a; line-height: 1; margin: 0; }
+
+  @media (min-width: 992px) {
+    .grid-layout { display: flex; gap: 24px; margin-bottom: 24px; align-items: flex-start; }
+    .col-60 { flex: 0 0 calc(60% - 12px); width: calc(60% - 12px); }
+    .col-40 { flex: 0 0 calc(40% - 12px); width: calc(40% - 12px); position: sticky; top: 24px; }
+    .stat-card { margin-bottom: 0; }
+  }
+  @media (max-width: 991px) {
+    .grid-layout { display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px; }
+    .col-60, .col-40 { width: 100%; flex: 1; position: relative; top: 0; }
+  }
+
+  .card-header { padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; margin-bottom: 24px; }
+  .card-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }
+  .card-subtitle { font-size: 13px; color: #64748b; margin: 0; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+  .form-control-custom { width: 100%; height: 44px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 16px; font-size: 14px; color: #1e293b; transition: all 0.2s; outline: none; background: #fff; }
+  .form-control-custom:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+  .input-with-icon { position: relative; }
+  .input-with-icon .toggle-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; outline: none; transition: color 0.2s; }
+  .input-with-icon .toggle-eye:hover { color: #475569; }
+
+  .pill-switch { display: flex; background: #f1f5f9; border-radius: 24px; padding: 4px; width: fit-content; }
+  .pill-btn { border: none; background: transparent; padding: 6px 16px; font-size: 13px; font-weight: 600; color: #64748b; border-radius: 20px; transition: all 0.2s; cursor: pointer; outline: none; }
+  .pill-btn.active { background: #fff; color: #0f172a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+  .action-row { margin-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .btn-primary-large { background: #2563eb; color: white; border: none; padding: 0 24px; height: 44px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(37,99,235,0.2); }
+  .btn-primary-large:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 8px -1px rgba(37,99,235,0.3); }
+  .btn-outline-secondary { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 0 20px; height: 44px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; outline: none; }
+  .btn-outline-secondary:hover { background: #f8fafc; border-color: #94a3b8; color: #0f172a; }
+
+  .btn-small-primary { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: center; display: block; margin-bottom: 12px; outline: none; }
+  .btn-small-primary:hover { background: #dbeafe; }
+  .btn-small-danger { background: white; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; width: 100%; text-align: center; display: block; outline: none; }
+  .btn-small-danger:hover { background: #fef2f2; border-color: #ef4444; }
+
+  .table-custom { width: 100%; border-collapse: collapse; }
+  .table-custom th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }
+  .table-custom td { padding: 16px; font-size: 14px; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: middle; transition: background 0.2s; }
+  .table-custom tr:hover td { background: #f8fafc; }
+  .table-custom tr:last-child td { border-bottom: none; }
+
+  .status-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .status-badge.active { background: #ecfdf5; color: #10b981; }
+  .status-badge.inactive { background: #f1f5f9; color: #64748b; }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+  .action-icon { background: none; border: none; font-size: 14px; cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; outline: none; }
+  .action-icon.activate { color: #10b981; background: #ecfdf5; margin-right: 8px; }
+  .action-icon.activate:hover { background: #d1fae5; transform: scale(1.1); }
+  .action-icon.delete { color: #ef4444; background: #fef2f2; }
+  .action-icon.delete:hover { background: #fee2e2; transform: scale(1.1); }
+
+  .code-badge { background: #f1f5f9; color: #475569; font-family: monospace; padding: 4px 8px; border-radius: 6px; font-size: 13px; border: 1px solid #e2e8f0; }
+  .mode-badge { display: inline-block; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+
+  .pay-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .pay-filter-select { max-width: 240px; }
+  .pay-apply-btn { height: 44px; }
+  .pay-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pay-badge-success { background: #ecfdf5; color: #15803d; }
+  .pay-badge-failed { background: #fef2f2; color: #b91c1c; }
+  .pay-badge-pending { background: #fffbeb; color: #a16207; }
+  .muted-small { font-size: 11px; color: #94a3b8; }
+  .gateway-section-title { font-size: 18px; font-weight: 700; margin: 8px 0 16px; color: #0f172a; }
+  .admin-live-pill-alt { font-size: 12px; color: #64748b; font-weight: 600; }
+</style>
+
+<% if (typeof supabaseRealtimeEnabled !== 'undefined' && supabaseRealtimeEnabled && supabasePublicUrl && supabaseAnonKey) { %>
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  try {
+    var sb = createClient("<%= supabasePublicUrl %>", "<%= supabaseAnonKey %>");
+    sb.channel("admin-payments-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, function () {
+        if (typeof window.refreshAdminPayments === "function") window.refreshAdminPayments();
+      })
+      .subscribe();
+  } catch (e) {
+    console.warn("Realtime payments", e);
+  }
+</script>
+<% } %>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const toggleSecret = document.getElementById('toggle-secret');
+  const keySecret = document.getElementById('key_secret');
+  const testBtn = document.getElementById('test-connection-btn');
+  const testResult = document.getElementById('test-result');
+
+  if (toggleSecret && keySecret) {
+    toggleSecret.addEventListener('click', () => {
+      const type = keySecret.getAttribute('type') === 'password' ? 'text' : 'password';
+      keySecret.setAttribute('type', type);
+      toggleSecret.textContent = type === 'password' ? '👁' : '🕶';
+    });
+  }
+
+  const pillBtns = document.querySelectorAll('.pill-btn');
+  let selectedMode = 'test';
+  pillBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      pillBtns.forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      selectedMode = e.target.textContent.trim().toLowerCase();
+    });
+  });
+
+  const compactForm = document.getElementById('compact-form');
+  if (compactForm) {
+  compactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/admin/payment/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
+        body: JSON.stringify({
+          key_id: document.getElementById('key_id').value,
+          key_secret: keySecret.value,
+          mode: selectedMode
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if(typeof showToast === 'function') showToast('Saved', 'success');
+        const tableBody = document.querySelector('#payment-config-keys-table tbody');
+        const activeConfigTitle = document.querySelector('h3');
+        const activeModeBadge = document.querySelector('.col-40 .mode-badge');
+        if (activeConfigTitle) activeConfigTitle.textContent = `${data.data.key_id.substring(0, 15)}...`;
+        if (activeModeBadge) activeModeBadge.textContent = `${(data.data.mode || 'test').toUpperCase()} MODE`;
+        if (tableBody) {
+          const rows = tableBody.querySelectorAll('tr');
+          rows.forEach(row => {
+            const badge = row.querySelector('.status-badge.active');
+            if (badge) {
+              badge.classList.remove('active');
+              badge.classList.add('inactive');
+              badge.innerHTML = '<span class="status-dot" style="background: #94a3b8;"></span> Inactive';
+            }
+          });
+          const newRow = document.createElement('tr');
+          newRow.innerHTML = `
+            <td><span class="code-badge">${data.data.key_id}</span></td>
+            <td><span class="mode-badge">${(data.data.mode || 'test').toUpperCase()}</span></td>
+            <td><span class="status-badge active"><span class="status-dot" style="background: #10b981;"></span> Active</span></td>
+            <td style="text-align: right;">
+              <button class="action-icon delete delete-btn" data-id="${data.data.id}" title="Delete">🗑</button>
+            </td>
+          `;
+          tableBody.insertAdjacentElement('afterbegin', newRow);
+        }
+      } else {
+        if(typeof showToast === 'function') showToast(data.message || 'Error', 'error');
+      }
+    } catch (err) { 
+      if(typeof showToast === 'function') showToast('Error', 'error'); 
+    }
+    finally { btn.disabled = false; }
+  });
+  }
+
+  document.querySelectorAll('.activate-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const res = await fetch(`/api/admin/payment/configs/${btn.dataset.id}/activate`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      if ((await res.json()).success) location.reload();
+    });
+  });
+
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to delete this configuration?')) return;
+      const res = await fetch(`/api/admin/payment/configs/${btn.dataset.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+      });
+      if ((await res.json()).success) location.reload();
+    });
+  });
+
+  if (testBtn && testResult) {
+    testBtn.addEventListener('click', async () => {
+      testBtn.disabled = true;
+      testBtn.textContent = '...';
+      try {
+        const res = await fetch('/api/admin/payment/test-connection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
+          body: JSON.stringify({ key_id: document.getElementById('key_id').value || '<%= activeKey?.key_id %>', key_secret: keySecret.value })
+        });
+        const data = await res.json();
+        testResult.innerHTML = `<span style="color: ${data.success ? '#10b981' : '#ef4444'}; font-weight: 600;">${data.success ? '✅ Success' : '❌ Failed'}</span>`;
+      } catch (err) { testResult.innerHTML = '<span style="color: #ef4444; font-weight: 600;">Network Error</span>'; }
+      finally { testBtn.disabled = false; testBtn.textContent = '🧪 Test Connection'; }
+    });
+  }
+});
+</script>
+
+<script>
+(function () {
+  function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  window.refreshAdminPayments = async function () {
+    var token = localStorage.getItem("adminToken");
+    if (!token) return;
+    var pill = document.getElementById("admin-payments-live");
+    if (pill) pill.textContent = "Updating…";
+    try {
+      var qs = window.location.search || "";
+      var res = await fetch("/api/admin/payments" + qs, {
+        headers: { Authorization: "Bearer " + token },
+      });
+      var json = await res.json();
+      if (!json.success || !json.data) return;
+      var rows = json.data.paymentsList || [];
+      var ps = json.data.payStats || {};
+      var elR = document.getElementById("pay-stat-revenue");
+      var elS = document.getElementById("pay-stat-success");
+      var elT = document.getElementById("pay-stat-total");
+      var elF = document.getElementById("pay-stat-failed");
+      if (elR) elR.textContent = "₹" + Number(ps.revenue || 0).toLocaleString("en-IN");
+      if (elS) elS.textContent = String(ps.success ?? 0);
+      if (elT) elT.textContent = String(ps.total ?? 0);
+      if (elF) elF.textContent = String(ps.failed ?? 0);
+      var tbody = document.getElementById("admin-payments-tbody");
+      if (!tbody) return;
+      if (!rows.length) {
+        tbody.innerHTML =
+          '<tr><td colspan="7" style="text-align:center;padding:28px;color:#64748b;">No payment rows yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows
+        .map(function (p) {
+          var st = String(p.status || "").toLowerCase();
+          var isOk = st === "success";
+          var isFail = st === "failed" || st === "failure";
+          var badgeClass = isOk ? "pay-badge-success" : isFail ? "pay-badge-failed" : "pay-badge-pending";
+          var created = p.created_at
+            ? String(p.created_at).replace("T", " ").slice(0, 19)
+            : "—";
+          return (
+            "<tr>" +
+            '<td><span class="code-badge">' +
+            escapeHtml(p.id) +
+            "</span></td>" +
+            "<td><strong>" +
+            escapeHtml(p.order_code) +
+            '</strong><br/><span class="muted-small">' +
+            escapeHtml(p.order_id) +
+            "</span></td>" +
+            '<td style="font-weight:600;">₹' +
+            Number(p.amount || 0).toFixed(2) +
+            "</td>" +
+            '<td><span class="pay-badge ' +
+            badgeClass +
+            '">' +
+            escapeHtml(p.status) +
+            "</span></td>" +
+            '<td><span class="code-badge">' +
+            escapeHtml(p.razorpay_payment_id) +
+            "</span></td>" +
+            '<td><span class="code-badge">' +
+            escapeHtml(p.razorpay_order_id) +
+            "</span></td>" +
+            "<td>" +
+            escapeHtml(created) +
+            "</td>" +
+            "</tr>"
+          );
+        })
+        .join("");
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      if (pill) pill.textContent = "Live sync";
+    }
+  };
+  setInterval(function () {
+    if (document.visibilityState === "visible") window.refreshAdminPayments();
+  }, 12000);
+})();
+</script>

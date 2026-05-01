@@ -1,0 +1,15 @@
+<link rel="stylesheet" href="/admin/static/css/system-workflow.css" />
+<% if (typeof mapboxAccessToken !== 'undefined' && mapboxAccessToken) { %>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.js"></script>
+<% } %>
+
+<div class="sw-vertical-escape">
+  <div id="sw-story-root" data-mapbox-token="<%- typeof mapboxAccessToken !== 'undefined' ? mapboxAccessToken : '' %>">
+    <noscript>
+      <p style="padding: 24px; color: #fafafa;">JavaScript चालू करें — यह interactive story React से चलती है।</p>
+    </noscript>
+  </div>
+</div>
+
+<script type="module" src="/admin/static/js/system-workflow-app.js"></script>

@@ -1,0 +1,83 @@
+<div class="settings-grid">
+  <div class="settings-card">
+    <h3>🎯 Audience & Content</h3>
+    <form class="admin-form ajax-form notification-form" data-url="/admin/notifications/send" data-loading-text="Sending...">
+      <input name="title" placeholder="Notification title" required />
+      <textarea name="message" placeholder="Write your message..." rows="4" required></textarea>
+      <select name="audience" required>
+        <option value="All Users">All Users</option>
+        <option value="Delivery Partners">Delivery Partners</option>
+        <option value="Active Users">Active Users</option>
+        <option value="Inactive Users">Inactive Users</option>
+      </select>
+
+      <div class="inline-options">
+        <label class="switch-row">Push <input type="checkbox" name="push" checked /><span class="switch"></span></label>
+        <label class="switch-row">SMS <input type="checkbox" name="sms" /><span class="switch"></span></label>
+        <label class="switch-row">Email <input type="checkbox" name="email" checked /><span class="switch"></span></label>
+      </div>
+
+      <select name="priority" required>
+        <option value="Normal">Normal</option>
+        <option value="Important">Important</option>
+        <option value="Urgent">Urgent</option>
+      </select>
+
+      <label class="switch-row">
+        Schedule Later
+        <input type="checkbox" id="schedule-toggle" name="scheduleLater" />
+        <span class="switch"></span>
+      </label>
+
+      <div id="schedule-fields" class="hidden">
+        <input type="date" name="scheduledDate" />
+        <input type="time" name="scheduledTime" />
+      </div>
+
+      <input type="file" name="mediaImage" />
+      <input type="url" name="ctaLink" placeholder="CTA link (optional)" />
+
+      <button type="submit" class="btn btn-gold glow" id="send-notification-btn">Send Notification</button>
+    </form>
+  </div>
+
+  <div class="settings-card">
+    <h3>📨 Delivery Summary</h3>
+    <div class="summary-list">
+      <div><span>Default Mode</span><strong>Send Now</strong></div>
+      <div><span>System</span><strong>Marketing + Transactional</strong></div>
+      <div><span>Provider Style</span><strong>Firebase / OneSignal UI</strong></div>
+      <div><span>Status Toast</span><strong>Enabled</strong></div>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>📜 Notification History</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Audience</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% history.forEach((item) => { %>
+        <tr>
+          <td><%= item.title %></td>
+          <td><%= item.audience %></td>
+          <td><%= item.type %></td>
+          <td>
+            <span class="badge <%= item.status === 'Sent' ? 'success' : '' %>"><%= item.status %></span>
+          </td>
+          <td><%= item.time %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,175 @@
+<style>
+  .backend-monitor-wrap {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 1.25rem 0.5rem 0.25rem;
+  }
+  .backend-monitor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .backend-monitor-title {
+    margin: 0;
+    color: #111827;
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+  .backend-refresh-btn {
+    border: 0;
+    background: #3b82f6;
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 0.58rem 0.95rem;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .backend-refresh-btn:hover {
+    background: #1d4ed8;
+  }
+  .backend-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .backend-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease;
+  }
+  .backend-card:hover {
+    transform: translateY(-3px);
+  }
+  .backend-label {
+    margin: 0 0 0.2rem;
+    color: #374151;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .backend-value {
+    margin: 0.1rem 0 0.2rem;
+    color: #111827;
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+  .backend-subtext {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.8rem;
+  }
+  .status-green { color: #22c55e; }
+  .status-blue { color: #3b82f6; }
+  .status-orange { color: #f59e0b; }
+</style>
+
+<div class="backend-monitor-wrap">
+  <div class="backend-monitor-head">
+    <h2 class="backend-monitor-title">Backend Monitor</h2>
+    <button id="backend-refresh-btn" class="backend-refresh-btn">Refresh</button>
+  </div>
+
+  <div class="backend-grid">
+    <div class="backend-card">
+      <p class="backend-label">🟢 Server</p>
+      <p id="backend-status" class="backend-value status-green">Loading...</p>
+      <p class="backend-subtext">Current server state</p>
+    </div>
+    <div class="backend-card">
+      <p class="backend-label">⏱ Uptime</p>
+      <p id="backend-uptime" class="backend-value">Loading...</p>
+      <p class="backend-subtext">Running duration</p>
+    </div>
+    <div class="backend-card">
+      <p class="backend-label">💾 Memory</p>
+      <p id="backend-memory" class="backend-value status-orange">Loading...</p>
+      <p class="backend-subtext">RAM usage</p>
+    </div>
+    <div class="backend-card">
+      <p class="backend-label">⚡ CPU</p>
+      <p id="backend-cpu" class="backend-value status-blue">Loading...</p>
+      <p class="backend-subtext">Current load</p>
+    </div>
+    <div class="backend-card">
+      <p class="backend-label">👤 Users</p>
+      <p id="backend-users" class="backend-value">Loading...</p>
+      <p class="backend-subtext">Registered accounts</p>
+    </div>
+    <div class="backend-card">
+      <p class="backend-label">🚲 Bikes</p>
+      <p id="backend-bikes" class="backend-value">Loading...</p>
+      <p class="backend-subtext">Active fleet items</p>
+    </div>
+    <div class="backend-card">
+      <p class="backend-label">📦 Rentals</p>
+      <p id="backend-rentals" class="backend-value">Loading...</p>
+      <p class="backend-subtext">Total rental records</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const fields = [
+      "backend-status",
+      "backend-uptime",
+      "backend-memory",
+      "backend-cpu",
+      "backend-users",
+      "backend-bikes",
+      "backend-rentals",
+    ];
+
+    const setError = () => {
+      fields.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = "Server not responding ❌";
+      });
+    };
+
+    const loadStats = async () => {
+      try {
+        const token = localStorage.getItem("adminToken");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const responseWithAuth = await fetch("/api/admin/health", { headers });
+        if (!responseWithAuth.ok) {
+          if (responseWithAuth.status === 401) {
+            localStorage.removeItem("adminToken");
+            window.location.href = "/admin/login";
+            return;
+          }
+          setError();
+          return;
+        }
+        const data = await responseWithAuth.json();
+        const statusEl = document.getElementById("backend-status");
+        statusEl.textContent = data.status || "-";
+        statusEl.classList.toggle("status-green", String(data.status).toLowerCase() === "running");
+        document.getElementById("backend-uptime").textContent = `${Math.floor(data.uptime || 0)} sec`;
+        document.getElementById("backend-memory").textContent = `${((data.memory || 0) / 1024 / 1024).toFixed(2)} MB`;
+        document.getElementById("backend-cpu").textContent = Number(data.cpu || 0).toFixed(2);
+        document.getElementById("backend-users").textContent = data.users ?? 0;
+        document.getElementById("backend-bikes").textContent = data.bikes ?? 0;
+        document.getElementById("backend-rentals").textContent = data.rentals ?? 0;
+      } catch (error) {
+        setError();
+      }
+    };
+
+    const refreshBtn = document.getElementById("backend-refresh-btn");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", loadStats);
+    }
+
+    loadStats();
+    setInterval(loadStats, 5000);
+  })();
+</script>

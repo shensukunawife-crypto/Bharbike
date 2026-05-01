@@ -1,0 +1,130 @@
+<div class="stats-grid support-stats">
+  <div class="stat-card stat-card-orange">
+    <div class="stat-head"><span class="stat-icon">🎫</span><span class="stat-label">Total Tickets</span></div>
+    <h3 id="support-stat-total"><%= stats?.total || 0 %></h3>
+  </div>
+  <div class="stat-card stat-card-orange">
+    <div class="stat-head"><span class="stat-icon">🟠</span><span class="stat-label">Pending</span></div>
+    <h3 id="support-stat-pending"><%= stats?.pending || 0 %></h3>
+  </div>
+  <div class="stat-card stat-card-blue">
+    <div class="stat-head"><span class="stat-icon">🔄</span><span class="stat-label">In Progress</span></div>
+    <h3 id="support-stat-inprogress"><%= stats?.inProgress || 0 %></h3>
+  </div>
+  <div class="stat-card stat-card-green">
+    <div class="stat-head"><span class="stat-icon">✅</span><span class="stat-label">Resolved</span></div>
+    <h3 id="support-stat-resolved"><%= stats?.resolved || 0 %></h3>
+  </div>
+</div>
+
+<div class="toolbar">
+  <form method="GET" action="/admin/support" class="inline-form support-filter-form">
+    <input class="filter-input" type="text" name="search" value="<%= search || '' %>" placeholder="Search # / 6-digit / User" />
+    <select name="status" class="filter-input">
+      <option value="all" <%= filter === 'all' ? 'selected' : '' %>>All Status</option>
+      <option value="pending" <%= filter === 'pending' ? 'selected' : '' %>>Pending</option>
+      <option value="in_progress" <%= filter === 'in_progress' ? 'selected' : '' %>>In Progress</option>
+      <option value="resolved" <%= filter === 'resolved' ? 'selected' : '' %>>Resolved</option>
+    </select>
+    <select name="sort" class="filter-input">
+      <option value="newest" <%= sort !== 'oldest' ? 'selected' : '' %>>Newest</option>
+      <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest</option>
+    </select>
+    <button class="btn btn-gold" type="submit">Apply</button>
+  </form>
+</div>
+
+<div class="table-wrap" id="support-table-root" data-filter="<%= filter %>" data-search="<%= search || '' %>" data-sort="<%= sort || 'newest' %>">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Ticket ID</th>
+        <th>Bike</th>
+        <th>Issue</th>
+        <th>User</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Image</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="support-table-body">
+      <% if (!(tickets || []).length) { %>
+      <tr><td colspan="8" class="empty">No support tickets found</td></tr>
+      <% } %>
+      <% (tickets || []).forEach((ticket) => { %>
+      <tr>
+        <td><%= (ticket.ticket_number != null && ticket.ticket_number !== undefined) ? ('#' + ticket.ticket_number) : '—' %> <button class="btn btn-ghost copy-ticket-id" data-value="<%= (ticket.ticket_number != null && ticket.ticket_number !== undefined) ? ticket.ticket_number : '' %>">📋</button></td>
+        <td>🛵 <%= ticket.bike_name || '-' %></td>
+        <td>
+          <div>
+            <strong>
+              <span class="badge <%= ticket.issue_type === 'battery' ? 'warning' : ticket.issue_type === 'brake' ? 'danger' : ticket.issue_type === 'engine' ? 'info' : 'badge-soft' %>">
+                <%= ticket.issue_type || '-' %>
+              </span>
+            </strong>
+          </div>
+          <div class="table-subtext" title="<%= ticket.description || '' %>">
+            <%= String(ticket.description || '-').slice(0, 64) %><%= String(ticket.description || '').length > 64 ? '...' : '' %>
+          </div>
+        </td>
+        <td><%= String(ticket.user_id || '-').slice(0, 8) %></td>
+        <td>
+          <span class="badge <%= ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'warning' : 'danger' %>">
+            <%= ticket.status === 'in_progress' ? 'In Progress' : ticket.status === 'resolved' ? 'Resolved' : 'Pending' %>
+          </span>
+        </td>
+        <td title="<%= String(ticket.created_at || '').slice(0, 19).replace('T', ' ') %>"><%= ticket.relativeCreatedAt || String(ticket.created_at || '').slice(0, 19).replace('T', ' ') %></td>
+        <td>
+          <% if (ticket.image_url) { %>
+            <img src="<%= ticket.image_url %>" alt="ticket" style="width:40px;height:40px;border-radius:8px;object-fit:cover;" />
+          <% } else { %>
+            <span class="table-subtext">No image</span>
+          <% } %>
+        </td>
+        <td class="actions">
+          <button class="btn btn-outline support-view-btn" data-ticket='<%- JSON.stringify(ticket).replace(/'/g, "&apos;") %>'>👁️ View</button>
+          <button class="btn btn-info support-status-btn" data-id="<%= ticket.id %>" data-status="in_progress">🔄 Progress</button>
+          <button class="btn btn-success support-status-btn" data-id="<%= ticket.id %>" data-status="resolved">✔ Resolve</button>
+          <button class="btn btn-gradient support-convert-btn" data-id="<%= ticket.id %>">⚙ Convert</button>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal" id="support-view-modal">
+  <div class="modal-card">
+    <h3>Ticket Details</h3>
+    <div class="summary-list">
+      <div><span>ID</span><strong id="support-view-id">-</strong></div>
+      <div><span>User</span><strong id="support-view-user">-</strong></div>
+      <div><span>Issue</span><strong id="support-view-issue">-</strong></div>
+      <div><span>Status</span><strong id="support-view-status">-</strong></div>
+      <div><span>Created</span><strong id="support-view-created">-</strong></div>
+    </div>
+    <div class="inline-form" style="margin-top:10px;">
+      <select id="support-view-status-select" class="filter-input">
+        <option value="pending">Pending</option>
+        <option value="in_progress">In Progress</option>
+        <option value="resolved">Resolved</option>
+      </select>
+      <button id="support-view-update-btn" class="btn btn-gold" data-ticket-id="">Update Status</button>
+    </div>
+    <p id="support-view-desc" style="margin-top:12px;color:#4b5563;">-</p>
+    <a id="support-view-image-link" class="btn btn-ghost" href="#" target="_blank" rel="noreferrer">Open Image</a>
+    <img id="support-view-image" src="" alt="ticket image" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;margin-top:10px;display:none;" />
+  </div>
+</div>
+
+<div class="modal" id="support-convert-modal">
+  <div class="modal-card">
+    <h3>Convert to Maintenance</h3>
+    <p style="color:#6b7280;">Convert this ticket to maintenance and mark it in progress?</p>
+    <div class="actions" style="margin-top:12px;">
+      <button id="support-convert-confirm" class="btn btn-gradient" data-ticket-id="">Yes, Convert</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('support-convert-modal').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>

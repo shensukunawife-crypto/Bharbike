@@ -1,0 +1,68 @@
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Bike ID</span></div><strong class="stat-value"><%= bike.bike_code %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">📍</span><span class="stat-label">Location</span></div><strong class="stat-value"><%= bike.location %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🛠️</span><span class="stat-label">Health</span></div><strong class="stat-value"><%= bike.healthStatus %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🔋</span><span class="stat-label">Battery</span></div><strong class="stat-value"><%= bike.battery %>%</strong></div>
+</div>
+
+<div class="analytics-grid">
+  <div class="chart-card">
+    <h3>Usage History</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Rental ID</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+        <tbody>
+          <% if (!usageHistory.length) { %><tr><td colspan="4" class="empty">No usage history</td></tr><% } %>
+          <% usageHistory.forEach((row) => { %>
+          <tr>
+            <td><%= row.id %></td>
+            <td><%= String(row.startTime || row.start_time || "-").replace("T", " ").slice(0, 16) %></td>
+            <td><%= String(row.endTime || row.end_time || "-").replace("T", " ").slice(0, 16) %></td>
+            <td><span class="badge"><%= row.status || "-" %></span></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Orders History</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Order ID</th><th>Pickup</th><th>Drop</th><th>Status</th></tr></thead>
+        <tbody>
+          <% if (!ordersHistory.length) { %><tr><td colspan="4" class="empty">No orders history</td></tr><% } %>
+          <% ordersHistory.forEach((row) => { %>
+          <tr>
+            <td><%= row.id %></td>
+            <td><%= row.pickup_location %></td>
+            <td><%= row.drop_location %></td>
+            <td><span class="badge"><%= row.status %></span></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>Maintenance Logs</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Issue</th><th>Status</th><th>Cost</th><th>Date</th></tr></thead>
+      <tbody>
+        <% if (!maintenanceLogs.length) { %><tr><td colspan="4" class="empty">No maintenance logs</td></tr><% } %>
+        <% maintenanceLogs.forEach((log) => { %>
+        <tr>
+          <td><%= log.issue %></td>
+          <td><span class="badge"><%= log.status %></span></td>
+          <td>₹<%= Number(log.cost || 0).toFixed(2) %></td>
+          <td><%= log.date %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

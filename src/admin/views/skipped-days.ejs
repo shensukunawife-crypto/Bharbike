@@ -1,0 +1,572 @@
+<style>
+  /* Remove outer .panel frame on this page only (avoids double-box / blue-tint moiré) */
+  main.main-content > section.panel:has(.skipped-page) {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  .skipped-page {
+    --skipped-ring: rgba(234, 179, 8, 0.45);
+    animation: skippedFade 0.35s ease-out;
+    accent-color: #ca8a04;
+  }
+  .skipped-page .skipped-card--form,
+  .skipped-page #skipped-days-form,
+  .skipped-page section.skipped-card {
+    outline: none !important;
+  }
+  .skipped-page #skipped-days-form:focus-within {
+    outline: none !important;
+  }
+  @keyframes skippedFade {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .skipped-hero {
+    margin-bottom: 1.5rem;
+  }
+  .skipped-hero h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .skipped-hero p {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .skipped-split {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  @media (min-width: 1024px) {
+    .skipped-split {
+      grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    }
+  }
+  /* Single premium card shell — gray border only (no blue debug frame) */
+  .skipped-card {
+    background: #ffffff;
+    border-radius: 1rem;
+    border: 1px solid #e5e7eb;
+    box-shadow:
+      0 4px 6px -1px rgb(15 23 42 / 0.07),
+      0 2px 4px -2px rgb(15 23 42 / 0.05);
+    padding: 1.5rem;
+    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.2s ease;
+  }
+  .skipped-card:hover {
+    border-color: #d1d5db;
+    box-shadow:
+      0 10px 15px -3px rgb(15 23 42 / 0.08),
+      0 4px 6px -4px rgb(15 23 42 / 0.05);
+  }
+  .skipped-card.skipped-card--form:focus-within {
+    outline: none !important;
+    border-color: #e5e7eb;
+    box-shadow:
+      0 4px 6px -1px rgb(15 23 42 / 0.07),
+      0 2px 4px -2px rgb(15 23 42 / 0.05);
+  }
+  .skipped-card-title {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .skipped-form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .skipped-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+  .skipped-input,
+  .skipped-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: #ffffff;
+    outline: none;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .skipped-input::-moz-focus-inner,
+  .skipped-btn::-moz-focus-inner {
+    border: 0;
+  }
+  .skipped-textarea {
+    min-height: 3.75rem;
+    resize: vertical;
+  }
+  .skipped-input:focus,
+  .skipped-textarea:focus {
+    border-color: #eab308;
+    box-shadow: 0 0 0 3px var(--skipped-ring);
+    outline: none;
+  }
+  .skipped-input:focus-visible,
+  .skipped-textarea:focus-visible {
+    outline: none;
+    border-color: #eab308;
+    box-shadow: 0 0 0 3px var(--skipped-ring);
+  }
+  .skipped-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.85rem 1.25rem;
+    border: none;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #ffffff;
+    background: linear-gradient(90deg, #facc15 0%, #eab308 100%);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.12);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      filter 0.2s ease;
+  }
+  .skipped-btn:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 10px 15px -3px rgb(234 179 8 / 0.35);
+    transform: translateY(-1px);
+  }
+  .skipped-btn:active {
+    transform: translateY(0);
+  }
+  .skipped-btn:focus {
+    outline: none;
+  }
+  .skipped-btn:focus-visible {
+    outline: 2px solid #ca8a04;
+    outline-offset: 3px;
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.12),
+      0 0 0 4px rgba(234, 179, 8, 0.25);
+  }
+  .skipped-stats-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .skipped-stat-mini {
+    background: #ffffff;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #f3f4f6;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+    transition:
+      transform 0.25s ease,
+      border-color 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .skipped-stat-mini:hover {
+    transform: translateY(-2px);
+    border-color: rgba(234, 179, 8, 0.35);
+    box-shadow: 0 8px 15px -4px rgb(0 0 0 / 0.1);
+  }
+  .skipped-stat-mini .label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    margin-bottom: 0.35rem;
+  }
+  .skipped-stat-mini .value {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+  }
+  .skipped-stat-mini .hint {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+  }
+  .skipped-table-wrap {
+    margin-top: 1.5rem;
+    background: #ffffff;
+    border-radius: 1rem;
+    border: 1px solid #f3f4f6;
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.08),
+      0 4px 6px -4px rgb(0 0 0 / 0.06);
+    padding: 1rem;
+    transition: box-shadow 0.3s ease;
+  }
+  .skipped-table-inner {
+    overflow-x: auto;
+  }
+  .skipped-table-wrap .table {
+    margin: 0;
+  }
+  .skipped-table-wrap .table thead tr {
+    background: #f3f4f6;
+  }
+  .skipped-table-wrap .table th {
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: #374151 !important;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+  .skipped-table-wrap .table tbody tr {
+    transition: background 0.2s ease;
+  }
+  .skipped-table-wrap .table tbody tr:hover {
+    background: #fffbeb !important;
+  }
+  .skipped-status {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .skipped-status--inactive {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  .skipped-status--active {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  .skipped-status--other {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+  .skipped-empty {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #6b7280;
+    transition: opacity 0.3s ease;
+  }
+  .skipped-empty-icon {
+    font-size: 2.75rem;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    opacity: 0.85;
+  }
+  .skipped-empty h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #374151;
+  }
+  .skipped-empty p {
+    margin: 0.35rem 0 0;
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+</style>
+
+<% var _rows = skippedRows || []; %>
+<% function _uniqRiders(arr) { var m = {}; arr.forEach(function(r){ if (r.rider_name) m[r.rider_name]=1; }); return Object.keys(m).length; } %>
+<% var _totalDays = _rows.reduce(function(s,r){ return s + (parseInt(r.days_skipped,10)||0); }, 0); %>
+<% function escSkipped(v) {
+  return String(v == null ? "" : v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+} %>
+<% function statusBadgeSkipped(st) {
+  var s = String(st || "").toLowerCase();
+  var cls = "skipped-status skipped-status--other";
+  if (s === "inactive") cls = "skipped-status skipped-status--inactive";
+  else if (s === "active") cls = "skipped-status skipped-status--active";
+  return '<span class="' + cls + '">' + escSkipped(st || "—") + "</span>";
+} %>
+
+<div class="skipped-page">
+  <div class="skipped-hero skipped-animate">
+    <h1>Rider skipped days</h1>
+    <p>Log suspensions and absences — synced to Supabase in real time.</p>
+  </div>
+
+  <div class="skipped-split">
+    <section class="skipped-card skipped-card--form skipped-animate" aria-labelledby="skipped-form-heading">
+      <h2 id="skipped-form-heading" class="skipped-card-title">Add entry</h2>
+      <form id="skipped-days-form" class="skipped-form-stack" autocomplete="off">
+        <div>
+          <label class="skipped-label" for="sd-rider-name">Rider name</label>
+          <input id="sd-rider-name" name="rider_name" class="skipped-input" type="text" placeholder="e.g. Rahul Sharma" required />
+        </div>
+        <div>
+          <label class="skipped-label" for="sd-bike-id">Bike ID</label>
+          <input id="sd-bike-id" name="bike_id" class="skipped-input" type="text" placeholder="Bike / fleet ID" required />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <label class="skipped-label" for="sd-start">Start date</label>
+            <input id="sd-start" name="skipped_start_date" class="skipped-input" type="date" required />
+          </div>
+          <div>
+            <label class="skipped-label" for="sd-end">End date</label>
+            <input id="sd-end" name="skipped_end_date" class="skipped-input" type="date" required />
+          </div>
+        </div>
+        <div>
+          <label class="skipped-label" for="sd-reason">Reason</label>
+          <textarea id="sd-reason" name="reason" class="skipped-textarea" placeholder="Leave, maintenance, holiday…"></textarea>
+        </div>
+        <button type="submit" class="skipped-btn" id="sd-submit">
+          <span aria-hidden="true">✨</span>
+          Save to Supabase
+        </button>
+      </form>
+    </section>
+
+    <aside class="skipped-stats-stack skipped-animate" aria-label="Summary statistics">
+      <div class="skipped-stat-mini">
+        <div class="label">Total records</div>
+        <div class="value" id="stat-total-records"><%= _rows.length %></div>
+        <div class="hint">All logged entries</div>
+      </div>
+      <div class="skipped-stat-mini">
+        <div class="label">Active riders</div>
+        <div class="value" id="stat-active-riders"><%= _uniqRiders(_rows) %></div>
+        <div class="hint">Unique rider names</div>
+      </div>
+      <div class="skipped-stat-mini">
+        <div class="label">Sum (day units)</div>
+        <div class="value" id="stat-total-days"><%= _totalDays %></div>
+        <div class="hint">Σ duration values</div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="skipped-table-wrap skipped-animate">
+    <h2 class="skipped-card-title" style="margin: 0 0 0.75rem">Registry</h2>
+    <div id="skipped-table-container">
+      <% if (!_rows.length) { %>
+      <div id="skipped-empty" class="skipped-empty">
+        <div class="skipped-empty-icon" aria-hidden="true">📋</div>
+        <h3>No records found</h3>
+        <p>Add your first entry using the form on the left.</p>
+      </div>
+      <div id="skipped-table-inner" class="skipped-table-inner" style="display: none;"></div>
+      <% } else { %>
+      <div id="skipped-empty" class="skipped-empty" style="display: none"></div>
+      <div id="skipped-table-inner" class="skipped-table-inner">
+        <div class="table-wrap">
+          <table class="table" id="skipped-days-table">
+            <thead>
+              <tr>
+                <th>Rider name</th>
+                <th>Bike ID</th>
+                <th>Start date</th>
+                <th>End date</th>
+                <th>Span (days)</th>
+                <th>Reason</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="skipped-days-tbody">
+              <% _rows.forEach(function(row) { %>
+              <tr>
+                <td><%= row.rider_name || "—" %></td>
+                <td><%= row.bike_id != null ? row.bike_id : "—" %></td>
+                <td><%= row.skipped_start_date ?? "—" %></td>
+                <td><%= row.skipped_end_date ?? "—" %></td>
+                <td><%= row.days_skipped ?? "—" %></td>
+                <td><%= row.reason || "—" %></td>
+                <td><%- statusBadgeSkipped(row.status) %></td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var tbody = document.getElementById("skipped-days-tbody");
+    var emptyEl = document.getElementById("skipped-empty");
+    var tableInner = document.getElementById("skipped-table-inner");
+    var form = document.getElementById("skipped-days-form");
+
+    function escapeHtml(s) {
+      var d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function statusBadgeHtml(status) {
+      var st = String(status || "").toLowerCase();
+      var cls = "skipped-status skipped-status--other";
+      if (st === "inactive") cls = "skipped-status skipped-status--inactive";
+      else if (st === "active") cls = "skipped-status skipped-status--active";
+      return '<span class="' + cls + '">' + escapeHtml(status || "—") + "</span>";
+    }
+
+    function computeStats(rows) {
+      var total = rows.length;
+      var riders = {};
+      rows.forEach(function (r) {
+        if (r.rider_name) riders[r.rider_name] = 1;
+      });
+      var riderCount = Object.keys(riders).length;
+      var sumDays = rows.reduce(function (a, r) {
+        return a + (parseInt(r.days_skipped, 10) || 0);
+      }, 0);
+      var elR = document.getElementById("stat-total-records");
+      var elA = document.getElementById("stat-active-riders");
+      var elD = document.getElementById("stat-total-days");
+      if (elR) elR.textContent = String(total);
+      if (elA) elA.textContent = String(riderCount);
+      if (elD) elD.textContent = String(sumDays);
+    }
+
+    function renderRows(rows) {
+      computeStats(rows);
+      if (!tableInner || !emptyEl) return;
+
+      if (!rows || !rows.length) {
+        emptyEl.style.display = "block";
+        tableInner.style.display = "none";
+        tableInner.innerHTML = "";
+        tbody = null;
+        return;
+      }
+
+      emptyEl.style.display = "none";
+      tableInner.style.display = "block";
+      var html =
+        '<div class="table-wrap"><table class="table" id="skipped-days-table"><thead><tr>' +
+        "<th>Rider name</th><th>Bike ID</th><th>Start date</th><th>End date</th>" +
+        "<th>Span (days)</th><th>Reason</th><th>Status</th></tr></thead><tbody>";
+
+      rows.forEach(function (row) {
+        html +=
+          "<tr>" +
+          "<td>" +
+          escapeHtml(row.rider_name || "—") +
+          "</td><td>" +
+          escapeHtml(row.bike_id != null ? String(row.bike_id) : "—") +
+          "</td><td>" +
+          escapeHtml(row.skipped_start_date || "—") +
+          "</td><td>" +
+          escapeHtml(row.skipped_end_date || "—") +
+          "</td><td>" +
+          escapeHtml(row.days_skipped != null ? String(row.days_skipped) : "—") +
+          "</td><td>" +
+          escapeHtml(row.reason || "—") +
+          "</td><td>" +
+          statusBadgeHtml(row.status) +
+          "</td></tr>";
+      });
+
+      html += "</tbody></table></div>";
+      tableInner.innerHTML = html;
+      tbody = document.querySelector("#skipped-days-table tbody");
+    }
+
+    async function fetchData() {
+      try {
+        var res = await fetch("/api/skipped-days", { headers: { Accept: "application/json" } });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Fetch failed");
+        var rows = Array.isArray(data) ? data : [];
+        console.log("FETCH SKIPPED DAYS:", rows);
+        renderRows(rows);
+      } catch (e) {
+        console.log("FETCH ERROR:", e.message || e);
+        alert("Could not refresh table ❌");
+      }
+    }
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var rider_name = document.getElementById("sd-rider-name").value.trim();
+      var bike_id = document.getElementById("sd-bike-id").value.trim();
+      var skipped_start_date = document.getElementById("sd-start").value;
+      var skipped_end_date = document.getElementById("sd-end").value;
+      var reason = document.getElementById("sd-reason").value.trim();
+
+      var start = new Date(skipped_start_date);
+      var end = new Date(skipped_end_date);
+      if (end < start) {
+        alert("End date must be on or after start date");
+        return;
+      }
+
+      var days_skipped = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      if (days_skipped < 1) days_skipped = 1;
+
+      var payload = {
+        rider_name: rider_name,
+        bike_id: bike_id,
+        skipped_start_date: skipped_start_date,
+        skipped_end_date: skipped_end_date,
+        days_skipped: days_skipped,
+        reason: reason,
+        status: "Inactive",
+      };
+
+      try {
+        var res = await fetch("/api/skipped-days", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload),
+        });
+        var data = await res.json().catch(function () {
+          return null;
+        });
+        if (!res.ok) {
+          console.log("INSERT ERROR:", data || res.statusText);
+          alert("Insert Failed ❌");
+          return;
+        }
+        console.log("INSERT SUCCESS:", data);
+        if (typeof showToast === "function") {
+          showToast("Data saved successfully");
+        } else {
+          alert("Data Added ✅");
+        }
+        form.reset();
+        await fetchData();
+      } catch (err) {
+        console.log("INSERT ERROR:", err.message || err);
+        alert("Insert Failed ❌");
+      }
+    });
+  })();
+</script>

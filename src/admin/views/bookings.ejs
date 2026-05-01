@@ -1,0 +1,33 @@
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Booking ID</th>
+        <th>User ID</th>
+        <th>Bike ID</th>
+        <th>Duration</th>
+        <th>Status</th>
+        <th>Start Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!bookings.length) { %>
+      <tr><td colspan="6" class="empty">No bookings found</td></tr>
+      <% } %>
+      <% bookings.forEach((booking) => { %>
+      <tr>
+        <td><%= booking.id || "-" %></td>
+        <td><%= booking.user_id || "-" %></td>
+        <td><%= booking.bike_id || "-" %></td>
+        <td><%= booking.duration || "-" %></td>
+        <td>
+          <span class="badge <%= String(booking.status || '').toLowerCase() === 'active' ? 'success' : 'warning' %>">
+            <%= booking.status || "-" %>
+          </span>
+        </td>
+        <td><%= booking.start_time ? String(booking.start_time).replace("T", " ").slice(0, 16) : "-" %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

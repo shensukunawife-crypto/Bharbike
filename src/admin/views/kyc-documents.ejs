@@ -1,0 +1,84 @@
+<style>
+  .kyc-shell { animation: fadeInUp .35s ease; }
+  .kyc-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #e5e7eb; }
+  .kyc-head h2 { margin:0; font-size:24px; font-weight:800; color:#111827; }
+  .kyc-head p { margin:4px 0 0; font-size:13px; color:#6b7280; }
+  .premium-stats { display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:14px; margin-bottom:14px; }
+  .premium-stat { border-radius:16px; padding:16px; background:linear-gradient(180deg,#fff,#f8fafc); border:1px solid #e5e7eb; box-shadow:0 8px 20px rgba(2,6,23,.06); }
+  .premium-stat .top { display:flex; gap:8px; color:#64748b; font-size:13px; }
+  .premium-stat .val { margin-top:8px; font-size:30px; font-weight:800; color:#111827; }
+  .premium-table-wrap { border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; box-shadow:0 8px 22px rgba(2,6,23,.06); background:#fff; }
+  .premium-table { width:100%; border-collapse:collapse; }
+  .premium-table thead tr { background:#f8fafc; }
+  .premium-table th, .premium-table td { padding:13px 14px; border-bottom:1px solid #eef2f7; text-align:left; vertical-align:top; }
+  .action-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .btn-doc { border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:10px; padding:7px 10px; cursor:pointer; text-decoration:none; }
+  .empty-state { padding:36px 16px; text-align:center; color:#6b7280; }
+  @keyframes fadeInUp { from {opacity:0; transform:translateY(6px);} to {opacity:1; transform:translateY(0);} }
+</style>
+
+<div class="kyc-shell">
+  <div class="kyc-head">
+    <div>
+      <h2>KYC Documents</h2>
+      <p>User documents from Supabase Storage.</p>
+    </div>
+  </div>
+
+  <div class="premium-stats">
+    <div class="premium-stat"><div class="top"><span>📊</span><span>Total</span></div><div class="val"><%= stats.total %></div></div>
+    <div class="premium-stat"><div class="top"><span>🪪</span><span>Aadhaar</span></div><div class="val"><%= stats.aadhaar %></div></div>
+    <div class="premium-stat"><div class="top"><span>💳</span><span>PAN</span></div><div class="val"><%= stats.pan %></div></div>
+    <div class="premium-stat"><div class="top"><span>🏠</span><span>Bill</span></div><div class="val"><%= stats.bill %></div></div>
+  </div>
+
+  <div class="premium-table-wrap">
+    <table class="premium-table">
+      <thead>
+        <tr>
+          <th>User Name</th>
+          <th>Aadhaar</th>
+          <th>PAN</th>
+          <th>Bill</th>
+          <th>Selfie</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!documents.length) { %>
+        <tr><td colspan="5"><div class="empty-state"><strong>No KYC documents found</strong></div></td></tr>
+        <% } %>
+        <% documents.forEach((item) => { %>
+        <tr>
+          <td>
+            <strong><%= item.user_name || "-" %></strong>
+            <div class="sub-note"><%= item.id %></div>
+          </td>
+          <td>
+            <%- item.aadhaar_front_url || item.aadhaar_back_url
+              ? `<div class="action-row">
+                  ${item.aadhaar_front_url ? `<a class="btn-doc" href="${item.aadhaar_front_url}" target="_blank" rel="noreferrer">View Front</a><a class="btn-doc" href="${item.aadhaar_front_url}" download>Download</a>` : ""}
+                  ${item.aadhaar_back_url ? `<a class="btn-doc" href="${item.aadhaar_back_url}" target="_blank" rel="noreferrer">View Back</a><a class="btn-doc" href="${item.aadhaar_back_url}" download>Download</a>` : ""}
+                </div>`
+              : "-" %>
+          </td>
+          <td>
+            <%- item.pan_card_url
+              ? `<div class="action-row"><a class="btn-doc" href="${item.pan_card_url}" target="_blank" rel="noreferrer">View</a><a class="btn-doc" href="${item.pan_card_url}" download>Download</a></div>`
+              : "-" %>
+          </td>
+          <td>
+            <%- item.electricity_bill_url
+              ? `<div class="action-row"><a class="btn-doc" href="${item.electricity_bill_url}" target="_blank" rel="noreferrer">View</a><a class="btn-doc" href="${item.electricity_bill_url}" download>Download</a></div>`
+              : "-" %>
+          </td>
+          <td>
+            <%- item.selfie_url
+              ? `<div class="action-row"><a class="btn-doc" href="${item.selfie_url}" target="_blank" rel="noreferrer">View</a><a class="btn-doc" href="${item.selfie_url}" download>Download</a></div>`
+              : "-" %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

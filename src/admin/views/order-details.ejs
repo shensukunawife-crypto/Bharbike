@@ -1,0 +1,32 @@
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🧾</span><span class="stat-label">Order ID</span></div><strong class="stat-value"><%= order.id %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">👤</span><span class="stat-label">User</span></div><strong class="stat-value"><%= order.userName %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Bike</span></div><strong class="stat-value"><%= order.bikeId %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">💳</span><span class="stat-label">Payment</span></div><strong class="stat-value"><%= order.paymentStatus %> / ₹<%= Number(order.amount || 0).toFixed(2) %></strong></div>
+</div>
+
+<div class="analytics-grid">
+  <div class="chart-card">
+    <h3>Route Tracking</h3>
+    <div class="summary-list">
+      <div><span>Pickup</span><strong><%= order.pickup_location %></strong></div>
+      <div><span>Drop</span><strong><%= order.drop_location %></strong></div>
+      <div><span>Route</span><strong><%= tracking.route %></strong></div>
+      <div><span>Delivery Partner Status</span><strong><%= tracking.partnerStatus %></strong></div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h3>Timeline</h3>
+    <div class="timeline">
+      <% timeline.forEach((item) => { %>
+      <div class="timeline-item <%= item.done ? 'done' : '' %>">
+        <span class="dot"></span>
+        <div>
+          <strong><%= item.label %></strong>
+          <p><%= item.time %></p>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>

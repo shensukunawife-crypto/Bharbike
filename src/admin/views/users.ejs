@@ -1,0 +1,102 @@
+<div class="toolbar">
+  <button class="btn btn-gold" data-modal-target="add-user-modal">+ Add User</button>
+  <form class="toolbar" method="get" action="/admin/users">
+    <input class="filter-input" type="text" name="search" placeholder="Search name / email / phone / location" value="<%= filters.search %>" />
+    <select class="filter-input" name="status">
+      <option value="all" <%= filters.status === "all" ? "selected" : "" %>>All Status</option>
+      <option value="active" <%= filters.status === "active" ? "selected" : "" %>>Active</option>
+      <option value="blocked" <%= filters.status === "blocked" ? "selected" : "" %>>Blocked</option>
+    </select>
+    <input class="filter-input" type="date" name="date" value="<%= filters.date %>" />
+    <button type="submit" class="btn btn-gold">Apply</button>
+  </form>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">👥</span><span class="stat-label">Total Users</span></div><strong class="stat-value"><%= stats.total %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🟢</span><span class="stat-label">Active Users</span></div><strong class="stat-value"><%= stats.active %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🆕</span><span class="stat-label">New Users (Today)</span></div><strong class="stat-value"><%= stats.newToday %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">⛔</span><span class="stat-label">Blocked Users</span></div><strong class="stat-value"><%= stats.blocked %></strong></div>
+</div>
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Location</th>
+        <th>Status</th>
+        <th>Total Orders</th>
+        <th>Total Spent</th>
+        <th>Joined Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!users.length) { %>
+      <tr><td colspan="10" class="empty">No users found</td></tr>
+      <% } %>
+      <% users.forEach((user) => { %>
+      <tr>
+        <td><%= user.id %></td>
+        <td><%= user.full_name || "N/A" %></td>
+        <td><%= user.email || "N/A" %></td>
+        <td><%= user.phone || "N/A" %></td>
+        <td><%= user.location || "N/A" %></td>
+        <td>
+          <span class="badge <%= user.isBlocked ? 'danger' : 'success' %>">
+            <%= user.statusLabel %>
+          </span>
+        </td>
+        <td><%= user.totalOrders %></td>
+        <td class="revenue-positive">₹<%= Number(user.totalSpent || 0).toFixed(2) %></td>
+        <td><%= String(user.joinedDate).slice(0, 10) %></td>
+        <td class="actions">
+          <a class="btn btn-ghost" href="/admin/users/<%= user.id %>">View</a>
+          <button
+            type="button"
+            class="btn btn-ghost open-edit-user"
+            data-id="<%= user.id %>"
+            data-full-name="<%= user.full_name || '' %>"
+            data-phone="<%= user.phone || '' %>"
+            data-email="<%= user.email || '' %>"
+            data-location="<%= user.location || '' %>"
+          >Edit</button>
+          <button class="btn <%= user.isBlocked ? 'btn-gold' : 'btn-danger' %> admin-action" data-url="/admin/users/<%= user.id %>/block" data-method="POST">
+            <%= user.isBlocked ? "Unblock" : "Block" %>
+          </button>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal" id="add-user-modal">
+  <div class="modal-card">
+    <h3>Add User</h3>
+    <form class="admin-form ajax-form" data-url="/admin/users/add">
+      <input name="full_name" placeholder="Full name" required />
+      <input name="phone" placeholder="Phone" required />
+      <input name="email" placeholder="Email" />
+      <input name="location" placeholder="Location" />
+      <button type="submit" class="btn btn-gold glow">Create</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="edit-user-modal">
+  <div class="modal-card">
+    <h3>Edit User</h3>
+    <form class="admin-form ajax-form" id="edit-user-form" data-url="">
+      <input name="full_name" id="edit-user-full-name" placeholder="Full name" required />
+      <input name="phone" id="edit-user-phone" placeholder="Phone" required />
+      <input name="email" id="edit-user-email" placeholder="Email" />
+      <input name="location" id="edit-user-location" placeholder="Location" />
+      <button type="submit" class="btn btn-gold glow">Update</button>
+    </form>
+  </div>
+</div>

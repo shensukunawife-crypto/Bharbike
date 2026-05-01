@@ -1,6 +1,6 @@
 /**
  * MINIMAL server — no DB / Supabase / Razorpay (Railway healthcheck first).
- * PORT: Railway injects process.env.PORT; local fallback 3000 only.
+ * PORT: Railway injects process.env.PORT; local fallback 8000.
  * Restore full API: npm run start:full → src/server.full.js
  */
 import cors from "cors";
@@ -19,12 +19,12 @@ app.head("/health", (_req, res) => {
   res.status(200).end();
 });
 
-app.get("/", (_req, res) => {
-  res.status(200).send("Backend running successfully 🚀");
+app.get("/", (req, res) => {
+  res.send("Server is running");
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });

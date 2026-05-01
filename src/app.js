@@ -17,7 +17,7 @@ const healthPlain = (_req, res) => {
   res.status(200).type("text/plain").send("ok");
 };
 const rootPlain = (_req, res) => {
-  res.status(200).type("text/plain").send("Backend running successfully 🚀");
+  res.send("Server is running");
 };
 
 app.get("/health", healthPlain);

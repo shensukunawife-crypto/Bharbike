@@ -53,9 +53,9 @@ async function main() {
 
     assertEnv();
 
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 8000;
 
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
       console.log("[bootstrap] ready for Railway healthcheck GET /health");
     });

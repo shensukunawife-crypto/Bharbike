@@ -1,0 +1,216 @@
+<% 
+  const gOperations = ['orders', 'bookings', 'delivery-partners', 'skipped-days'].includes(active);
+  const gVehicle = ['bikes', 'maintenance'].includes(active);
+  const gUsers = ['users', 'kyc-documents'].includes(active);
+  const gFinancial = ['earnings', 'analytics'].includes(active);
+  const gSystem = ['system-workflow', 'backend-monitor'].includes(active);
+  const gComm = ['support', 'notifications'].includes(active);
+  const gAdmin = ['payments', 'settings'].includes(active);
+%>
+<nav class="nav nav--grouped" id="admin-sidebar-nav" aria-label="Admin navigation">
+  <div class="nav-block nav-block--dashboard nav-block--hero">
+    <p class="nav-section-label">Overview</p>
+    <a
+      class="nav-link <%= active === 'dashboard' ? 'active' : '' %>"
+      href="/admin"
+    >
+      <span class="nav-icon">📊</span><span>Dashboard Overview</span>
+    </a>
+  </div>
+
+  <div class="nav-group <%= gOperations ? 'has-active' : '' %>" data-group-id="operations">
+    <p class="nav-section-label">Operations</p>
+    <button
+      type="button"
+      class="nav-group__toggle"
+      aria-expanded="<%= gOperations ? 'true' : 'false' %>"
+      id="nav-group-toggle-operations"
+    >
+      <span class="nav-group__meta">
+        <span class="nav-group__icon" aria-hidden="true">🧭</span>
+        <span class="nav-group__title">Rental Ops</span>
+      </span>
+      <span class="nav-group__chev" aria-hidden="true"></span>
+    </button>
+    <div class="nav-group__panel">
+      <div class="nav-group__inner">
+        <a class="nav-link nav-link--sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders">
+          <span class="nav-icon">📦</span><span>Orders</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
+          <span class="nav-icon">🧾</span><span>Bookings</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners">
+          <span class="nav-icon">🛵</span><span>Delivery</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days">
+          <span class="nav-icon">📅</span><span>Skipped Days</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-group <%= gVehicle ? 'has-active' : '' %>" data-group-id="vehicle-management">
+    <p class="nav-section-label">Fleet</p>
+    <button
+      type="button"
+      class="nav-group__toggle"
+      aria-expanded="<%= gVehicle ? 'true' : 'false' %>"
+      id="nav-group-toggle-vehicle-management"
+    >
+      <span class="nav-group__meta">
+        <span class="nav-group__icon" aria-hidden="true">🚲</span>
+        <span class="nav-group__title">Vehicle Control</span>
+      </span>
+      <span class="nav-group__chev" aria-hidden="true"></span>
+    </button>
+    <div class="nav-group__panel">
+      <div class="nav-group__inner">
+        <a class="nav-link nav-link--sub <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes">
+          <span class="nav-icon">🚲</span><span>Bikes</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'maintenance' ? 'active' : '' %>" href="/admin/maintenance">
+          <span class="nav-icon">🧰</span><span>Maintenance</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-group <%= gUsers ? 'has-active' : '' %>" data-group-id="user-management">
+    <p class="nav-section-label">Accounts</p>
+    <button
+      type="button"
+      class="nav-group__toggle"
+      aria-expanded="<%= gUsers ? 'true' : 'false' %>"
+      id="nav-group-toggle-user-management"
+    >
+      <span class="nav-group__meta">
+        <span class="nav-group__icon" aria-hidden="true">👥</span>
+        <span class="nav-group__title">User Governance</span>
+      </span>
+      <span class="nav-group__chev" aria-hidden="true"></span>
+    </button>
+    <div class="nav-group__panel">
+      <div class="nav-group__inner">
+        <a class="nav-link nav-link--sub <%= active === 'users' ? 'active' : '' %>" href="/admin/users">
+          <span class="nav-icon">👥</span><span>Users</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents">
+          <span class="nav-icon">📄</span><span>KYC Documents</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-group <%= gFinancial ? 'has-active' : '' %>" data-group-id="financial">
+    <p class="nav-section-label">Finance</p>
+    <button
+      type="button"
+      class="nav-group__toggle"
+      aria-expanded="<%= gFinancial ? 'true' : 'false' %>"
+      id="nav-group-toggle-financial"
+    >
+      <span class="nav-group__meta">
+        <span class="nav-group__icon" aria-hidden="true">💹</span>
+        <span class="nav-group__title">Financial</span>
+      </span>
+      <span class="nav-group__chev" aria-hidden="true"></span>
+    </button>
+    <div class="nav-group__panel">
+      <div class="nav-group__inner">
+        <a class="nav-link nav-link--sub <%= active === 'earnings' ? 'active' : '' %>" href="/admin/earnings">
+          <span class="nav-icon">💸</span><span>Earnings</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'analytics' ? 'active' : '' %>" href="/admin/analytics">
+          <span class="nav-icon">📈</span><span>Analytics</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-group <%= gSystem ? 'has-active' : '' %>" data-group-id="system-monitoring">
+    <p class="nav-section-label">Infrastructure</p>
+    <button
+      type="button"
+      class="nav-group__toggle"
+      aria-expanded="<%= gSystem ? 'true' : 'false' %>"
+      id="nav-group-toggle-system-monitoring"
+    >
+      <span class="nav-group__meta">
+        <span class="nav-group__icon" aria-hidden="true">🛡️</span>
+        <span class="nav-group__title">System &amp; Monitoring</span>
+      </span>
+      <span class="nav-group__chev" aria-hidden="true"></span>
+    </button>
+    <div class="nav-group__panel">
+      <div class="nav-group__inner">
+        <a class="nav-link nav-link--sub <%= active === 'system-workflow' ? 'active' : '' %>" href="/admin/system-workflow">
+          <span class="nav-icon">🔭</span><span>System Workflow</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'backend-monitor' ? 'active' : '' %>" href="/admin/backend">
+          <span class="nav-icon">⚙️</span><span>Backend Monitor</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-group <%= gComm ? 'has-active' : '' %>" data-group-id="communication">
+    <p class="nav-section-label">Engagement</p>
+    <button
+      type="button"
+      class="nav-group__toggle"
+      aria-expanded="<%= gComm ? 'true' : 'false' %>"
+      id="nav-group-toggle-communication"
+    >
+      <span class="nav-group__meta">
+        <span class="nav-group__icon" aria-hidden="true">💬</span>
+        <span class="nav-group__title">Communication</span>
+      </span>
+      <span class="nav-group__chev" aria-hidden="true"></span>
+    </button>
+    <div class="nav-group__panel">
+      <div class="nav-group__inner">
+        <a class="nav-link nav-link--sub <%= active === 'support' ? 'active' : '' %>" href="/admin/support">
+          <span class="nav-icon">🎫</span><span>Support</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'notifications' ? 'active' : '' %>" href="/admin/notifications">
+          <span class="nav-icon">🔔</span><span>Notifications</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-group <%= gAdmin ? 'has-active' : '' %>" data-group-id="administration">
+    <p class="nav-section-label">Configuration</p>
+    <button
+      type="button"
+      class="nav-group__toggle"
+      aria-expanded="<%= gAdmin ? 'true' : 'false' %>"
+      id="nav-group-toggle-administration"
+    >
+      <span class="nav-group__meta">
+        <span class="nav-group__icon" aria-hidden="true">⚙️</span>
+        <span class="nav-group__title">Administration</span>
+      </span>
+      <span class="nav-group__chev" aria-hidden="true"></span>
+    </button>
+    <div class="nav-group__panel">
+      <div class="nav-group__inner">
+        <a class="nav-link nav-link--sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments">
+          <span class="nav-icon">💳</span><span>Payments</span>
+        </a>
+        <a class="nav-link nav-link--sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings">
+          <span class="nav-icon">⚙️</span><span>Settings</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-footer">
+    <div class="nav-footer__status">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>System Healthy</span>
+    </div>
+    <a class="nav-footer__action" href="/admin/system-workflow">Open Control Center</a>
+  </div>
+</nav>

@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
-import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../../config/branding.js";
+import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../config/branding.js";
 
 export function adminLoginPage(req, res) {
   return res.render("admin-login", { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand });

@@ -6,9 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "start:full": "node src/server.full.js",
-    "dev": "node --watch src/server.js",
-    "dev:full": "node --watch src/server.full.js"
+    "dev": "node --watch src/server.js"
   },
   "engines": {
     "node": ">=18"

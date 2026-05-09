@@ -15,6 +15,7 @@ import * as paymentController from "../controllers/paymentController.js";
 import * as paymentAdminController from "../controllers/paymentAdminController.js";
 import adminPaymentRoutes from "./adminPaymentRoutes.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import supabase from "../utils/supabaseClient.js";
 import os from "os";
 import { adminApiLogin } from "../controllers/adminAuthController.js";
@@ -65,13 +66,17 @@ api.use("/", bookingRoutes);
 api.get("/bookings", authMiddleware, rentalController.bookings);
 
 // Payment Routes
-api.post("/payment/create-order", authMiddleware, paymentController.createOrder);
-api.post("/payment/verify", authMiddleware, paymentController.verifyPayment);
-api.post("/create-order", paymentController.createOrder);
-api.post("/verify-payment", paymentController.verifyPayment);
+api.post("/payment/create-order", authMiddleware, asyncHandler(paymentController.createOrder));
+api.post("/payment/verify", authMiddleware, asyncHandler(paymentController.verifyPayment));
+api.post("/create-order", asyncHandler(paymentController.createOrder));
+api.post("/verify-payment", asyncHandler(paymentController.verifyPayment));
 
 /** Workflow story page — unlock demo tied to latest verified payment + order status */
-api.post("/workflow/story-unlock", requireAdminAuth, workflowStoryController.postStoryUnlock);
+api.post(
+  "/workflow/story-unlock",
+  requireAdminAuth,
+  asyncHandler(workflowStoryController.postStoryUnlock),
+);
 
 // Delivery orders endpoints (DB-driven)
 api.get("/orders", async (req, res) => {
@@ -91,6 +96,26 @@ api.get("/orders", async (req, res) => {
   } catch (error) {
     console.error("[GET /api/orders] error:", error);
     return res.status(500).json({ success: false, message: "Unable to fetch orders" });
+  }
+});
+
+// Delivery alias endpoint for clients expecting /api/deliveries
+api.get("/deliveries", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[GET /api/deliveries] failed:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+
+    return res.json({ success: true, data: data || [] });
+  } catch (error) {
+    console.error("[GET /api/deliveries] error:", error);
+    return res.status(500).json({ success: false, message: "Unable to fetch deliveries" });
   }
 });
 
@@ -254,7 +279,7 @@ api.get("/admin/payments", apiJsonAdminPayments);
 
 // Payment Admin Routes
 api.use("/admin/payment", adminPaymentRoutes);
-api.post("/admin/payment-config", paymentAdminController.addConfig);
+api.post("/admin/payment-config", asyncHandler(paymentAdminController.addConfig));
 
 api.get("/admin/health", async (req, res) => {
   try {
@@ -405,6 +430,47 @@ api.get("/admin/delivery", async (req, res) => {
     return res.json({ success: true, data: data || [] });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// Admin alias endpoint for delivery records
+api.get("/admin/deliveries", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[GET /api/admin/deliveries] failed:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+
+    return res.json({ success: true, data: data || [] });
+  } catch (error) {
+    console.error("[GET /api/admin/deliveries] error:", error);
+    return res.status(500).json({ success: false, message: "Unable to fetch admin deliveries" });
+  }
+});
+
+// Delivery partner focused endpoint (all active lifecycle states except completed/cancelled/rejected)
+api.get("/delivery-partner/orders", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .in("status", ["pending", "accepted", "pickup_started", "in_transit", "paid"])
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[GET /api/delivery-partner/orders] failed:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+
+    return res.json({ success: true, data: data || [] });
+  } catch (error) {
+    console.error("[GET /api/delivery-partner/orders] error:", error);
+    return res.status(500).json({ success: false, message: "Unable to fetch delivery-partner orders" });
   }
 });
 

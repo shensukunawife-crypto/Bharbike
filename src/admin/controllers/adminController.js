@@ -3,7 +3,7 @@ import supabase from "../../config/supabase.js";
 import { shapePublicUser } from "../../utils/userShape.js";
 import { listInMemoryBookings } from "../../services/bookingStore.js";
 import * as paymentConfigService from "../../services/paymentConfigService.js";
-import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../../../config/branding.js";
+import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../config/branding.js";
 
 const dashboardSettings = {
   companyName: `${BRAND_NAME} Admin Pvt Ltd`,

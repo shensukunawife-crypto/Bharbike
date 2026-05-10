@@ -43,6 +43,16 @@ r.post(
   authController.signup
 );
 
+r.post(
+  "/email-login",
+  [
+    body("email").trim().isEmail().withMessage("Valid email required"),
+    body("password").trim().notEmpty().withMessage("Password is required"),
+  ],
+  validateRequest,
+  authController.emailLogin
+);
+
 r.post("/logout", authController.logout);
 r.get("/session", authController.session);
 

@@ -8,6 +8,17 @@ export const login = asyncHandler(async (req, res) => {
   res.json({ success: true, data: result });
 });
 
+export const emailLogin = asyncHandler(async (req, res) => {
+  const data = await authService.loginWithEmail({
+    email: req.body?.email,
+    password: req.body?.password,
+  });
+  if (data?.token) {
+    res.cookie("auth_token", data.token, cookieOptions());
+  }
+  res.json({ success: true, data });
+});
+
 function cookieOptions() {
   return {
     httpOnly: true,

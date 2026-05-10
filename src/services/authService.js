@@ -296,3 +296,36 @@ export async function signupWithEmail({ email, password, full_name }) {
       : null,
   };
 }
+
+export async function loginWithEmail({ email, password }) {
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const cleanPassword = String(password || "");
+  if (!cleanEmail) throw new AppError("Email is required", 422);
+  if (!cleanPassword) throw new AppError("Password is required", 422);
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password: cleanPassword,
+  });
+
+  if (error || !data?.user || !data?.session) {
+    throw new AppError(error?.message || "Invalid email or password", 401);
+  }
+
+  const profile = await upsertProfileFromAuthUser(data.user, null);
+  const appToken = signToken({
+    id: data.user.id,
+    phone: data.user.phone || null,
+  });
+
+  return {
+    token: appToken,
+    user: profile,
+    supabase: {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_at: data.session.expires_at,
+      token_type: data.session.token_type,
+    },
+  };
+}

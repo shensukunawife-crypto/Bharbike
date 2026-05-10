@@ -10,6 +10,7 @@ import earningsRoutes from "./earnings.routes.js";
 import skippedDaysRoutes from "./skippedDays.routes.js";
 import trackingRoutes from "./trackingRoutes.js";
 import bookingRoutes from "./bookingRoutes.js";
+import subscriptionRoutes from "./subscription.routes.js";
 import * as rentalController from "../controllers/rentalController.js";
 import * as paymentController from "../controllers/paymentController.js";
 import * as paymentAdminController from "../controllers/paymentAdminController.js";
@@ -52,6 +53,7 @@ const DOC_TYPE_TO_COLUMN = {
   pan: "pan_card_url",
   bill: "electricity_bill_url",
   selfie: "selfie_url",
+  driving_license: "driving_license_url", // Added driving license mapping
 };
 
 api.use("/auth", authRoutes);
@@ -61,6 +63,7 @@ api.use("/rental", rentalRoutes);
 api.use("/partner-orders", orderRoutes);
 api.use("/earnings", earningsRoutes);
 api.use("/skipped-days", skippedDaysRoutes);
+api.use("/subscription", subscriptionRoutes);
 api.use("/", trackingRoutes);
 api.use("/", bookingRoutes);
 api.get("/bookings", authMiddleware, rentalController.bookings);

@@ -1,6 +1,7 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { getActiveRazorpayConfig } from "../services/paymentConfigService.js";
+import { createSubscription } from "../services/subscriptionService.js";
 import supabase from "../utils/supabaseClient.js";
 
 /**
@@ -127,6 +128,9 @@ export const verifyPayment = async (req, res) => {
 
     if (match) {
       const appOrderId = String(req.body?.app_order_id || "").trim();
+      const userId = String(req.body?.user_id || "").trim();
+      const planId = String(req.body?.plan_id || "").trim();
+
       if (appOrderId) {
         const { error: orderUpdateError } = await supabase
           .from("orders")
@@ -143,10 +147,13 @@ export const verifyPayment = async (req, res) => {
         }
       }
 
-      const { error: paymentUpdateError } = await supabase
+      const { data: paymentRecord, error: paymentUpdateError } = await supabase
         .from("payments")
         .update({ status: "success", razorpay_payment_id: razorpay_payment_id })
-        .eq("razorpay_order_id", razorpay_order_id);
+        .eq("razorpay_order_id", razorpay_order_id)
+        .select("id")
+        .single();
+
       if (paymentUpdateError) {
         console.error("[verifyPayment] payment status update failed:", paymentUpdateError);
         return res.status(500).json({
@@ -156,7 +163,25 @@ export const verifyPayment = async (req, res) => {
           code: "PAYMENT_STATUS_UPDATE_FAILED",
         });
       }
-      return res.json({ success: true });
+
+      // Create subscription if user_id and plan_id are provided
+      let subscription = null;
+      if (userId && planId && paymentRecord?.id) {
+        try {
+          subscription = await createSubscription(userId, planId, paymentRecord.id);
+          console.log("[verifyPayment] Subscription created:", subscription.id);
+        } catch (subError) {
+          console.error("[verifyPayment] Subscription creation failed:", subError);
+          // Don't fail the payment verification if subscription creation fails
+          // Payment is successful, subscription can be created manually later
+        }
+      }
+
+      return res.json({ 
+        success: true,
+        subscription_created: !!subscription,
+        subscription_id: subscription?.id || null,
+      });
     }
     return res.status(400).json({ success: false, message: "Invalid signature" });
   } catch (error) {

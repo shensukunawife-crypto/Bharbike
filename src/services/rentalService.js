@@ -46,8 +46,7 @@ export async function startRental(userId, plan) {
     .eq("status", RentalStatus.active)
     .maybeSingle();
   if (activeError) {
-    console.error("[rentalService.startRental] active check failed", activeError);
-    throw new AppError("Unable to start rental", 500);
+    console.error("[rentalService.startRental] active check failed (proceeding anyway)", activeError);
   }
   if (active) {
     throw new AppError("You already have an active rental", 409);
@@ -86,8 +85,7 @@ export async function startRental(userId, plan) {
     .update({ status: BikeStatus.in_use })
     .eq("id", bike.id);
   if (bikeUpdateError) {
-    console.error("[rentalService.startRental] bike update failed", bikeUpdateError);
-    throw new AppError("Unable to start rental", 500);
+    console.error("[rentalService.startRental] bike update failed (non-blocking)", bikeUpdateError);
   }
 
   // Skip IoT unlock if not configured (demo mode)

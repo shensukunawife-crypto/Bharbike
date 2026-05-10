@@ -16,6 +16,12 @@ const PLAN_MS = {
   [RentalPlan.monthly]: 30 * 24 * 60 * 60 * 1000,
 };
 
+const PLAN_HOURS = {
+  [RentalPlan.daily]: 24,
+  [RentalPlan.weekly]: 24 * 7,
+  [RentalPlan.monthly]: 24 * 30,
+};
+
 const PLAN_PRICE = {
   [RentalPlan.daily]: 100,
   [RentalPlan.weekly]: 500,
@@ -36,7 +42,7 @@ export async function startRental(userId, plan) {
   const { data: active, error: activeError } = await supabase
     .from("rentals")
     .select("*")
-    .eq("userId", userId)
+    .eq("user_id", userId)
     .eq("status", RentalStatus.active)
     .maybeSingle();
   if (activeError) {
@@ -59,11 +65,12 @@ export async function startRental(userId, plan) {
     .from("rentals")
     .insert([
       {
-        userId,
-        bikeId: bike.id,
-        plan,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+        user_id: userId,
+        bike_id: bike.id,
+        duration: PLAN_HOURS[plan],
+        price: PLAN_PRICE[plan],
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
         status: RentalStatus.active,
       },
     ])
@@ -83,7 +90,13 @@ export async function startRental(userId, plan) {
     throw new AppError("Unable to start rental", 500);
   }
 
-  await iot.unlockBike(bike.id);
+  // Skip IoT unlock if not configured (demo mode)
+  try {
+    await iot.unlockBike(bike.id);
+  } catch (iotErr) {
+    console.log("[rentalService] IoT unlock skipped (not configured):", iotErr.message);
+  }
+
   return rental;
 }
 
@@ -116,16 +129,21 @@ async function finalizeRental(rentalId, status) {
   const { error: bikeUpdateError } = await supabase
     .from("bikes")
     .update({ status: BikeStatus.available })
-    .eq("id", rental.bikeId);
+    .eq("id", rental.bike_id);
   if (bikeUpdateError) {
     console.error("[rentalService.finalizeRental] bike update failed", bikeUpdateError);
     throw new AppError("Unable to end rental", 500);
   }
 
-  await iot.lockBike(rental.bikeId);
+  // Skip IoT lock if not configured (demo mode)
+  try {
+    await iot.lockBike(rental.bike_id);
+  } catch (iotErr) {
+    console.log("[rentalService] IoT lock skipped (not configured):", iotErr.message);
+  }
 
-  const amount = PLAN_PRICE[rental.plan];
-  await earningsService.recordEarning(rental.userId, amount, EarningsType.rental);
+  const amount = rental.price || 0;
+  await earningsService.recordEarning(rental.user_id, amount, EarningsType.rental);
 
   return { rentalId, status, rentalEarning: amount };
 }
@@ -135,7 +153,7 @@ export async function endRental(userId, rentalId) {
     .from("rentals")
     .select("*")
     .eq("id", rentalId)
-    .eq("userId", userId)
+    .eq("user_id", userId)
     .maybeSingle();
   if (error) {
     console.error("[rentalService.endRental] failed", error);
@@ -153,7 +171,7 @@ export async function expireRentalsPastEnd() {
     .from("rentals")
     .select("*")
     .eq("status", RentalStatus.active)
-    .lt("endTime", now.toISOString());
+    .lt("end_time", now.toISOString());
   if (error) {
     if (isRentalsTableMissing(error)) {
       if (!rentalsTableMissingLogged) {
@@ -183,7 +201,7 @@ export async function getActiveRentalForUser(userId) {
   const { data, error } = await supabase
     .from("rentals")
     .select("*, bikes(*)")
-    .eq("userId", userId)
+    .eq("user_id", userId)
     .eq("status", RentalStatus.active)
     .maybeSingle();
   if (error) {
@@ -197,8 +215,8 @@ export async function listBookingsForUser(userId) {
   const { data, error } = await supabase
     .from("rentals")
     .select("*, bikes(*)")
-    .eq("userId", userId)
-    .order("startTime", { ascending: false });
+    .eq("user_id", userId)
+    .order("start_time", { ascending: false });
   if (error) {
     console.error("[rentalService.listBookingsForUser] failed", error);
     throw new AppError("Unable to fetch bookings", 500);

@@ -98,6 +98,8 @@ export const updateUser = async (req, res) => {
     ...(body.phone !== undefined && { phone: body.phone }),
     ...(body.location !== undefined && { location: body.location }),
     ...(body.image_url !== undefined && { image_url: body.image_url }),
+    ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
+    ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
   };
 
   const { data, error } = await supabase
@@ -115,3 +117,56 @@ export const updateUser = async (req, res) => {
   const updated = data?.[0] ?? data ?? null;
   res.json(updated != null ? shapePublicUser(updated) : null);
 };
+
+/**
+ * Get user statistics (total rides, distance, savings)
+ * GET /api/user/stats/:userId
+ */
+export const getUserStats = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  // Get total rides count
+  const { count: totalRides, error: ridesError } = await supabase
+    .from("rentals")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (ridesError) {
+    console.error("[getUserStats] rides error:", ridesError);
+  }
+
+  // Get rentals with distance data
+  const { data: rentals, error: rentalsError } = await supabase
+    .from("rentals")
+    .select("distance, total_cost")
+    .eq("user_id", userId);
+
+  if (rentalsError) {
+    console.error("[getUserStats] rentals error:", rentalsError);
+  }
+
+  // Calculate total distance and savings
+  let totalDistance = 0;
+  let totalSavings = 0;
+
+  if (rentals && Array.isArray(rentals)) {
+    rentals.forEach((rental) => {
+      if (rental.distance) {
+        totalDistance += parseFloat(rental.distance) || 0;
+      }
+      // Calculate savings: assume taxi costs 2x more than bike rental
+      if (rental.total_cost) {
+        totalSavings += parseFloat(rental.total_cost) || 0;
+      }
+    });
+  }
+
+  res.json({
+    success: true,
+    data: {
+      total_rides: totalRides || 0,
+      total_distance: Math.round(totalDistance),
+      total_savings: Math.round(totalSavings),
+    },
+  });
+});

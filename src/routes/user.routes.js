@@ -6,5 +6,6 @@ const r = Router();
 
 r.use(authMiddleware);
 r.get("/profile", userController.profile);
+r.get("/stats/:userId", userController.getUserStats);
 
 export default r;

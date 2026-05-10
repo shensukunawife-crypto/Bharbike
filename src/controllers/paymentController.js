@@ -2,6 +2,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { getActiveRazorpayConfig } from "../services/paymentConfigService.js";
 import { createSubscription } from "../services/subscriptionService.js";
+import * as walletService from "../services/walletService.js";
 import supabase from "../utils/supabaseClient.js";
 
 /**
@@ -177,10 +178,40 @@ export const verifyPayment = async (req, res) => {
         }
       }
 
+      // Add money to wallet if it's a wallet recharge (no plan_id)
+      let walletAdded = false;
+      if (userId && !planId && appOrderId) {
+        try {
+          // Get order amount from database
+          const { data: orderData } = await supabase
+            .from("orders")
+            .select("amount, plan_name")
+            .eq("id", appOrderId)
+            .single();
+
+          if (orderData && orderData.amount) {
+            await walletService.addMoney(
+              userId,
+              orderData.amount,
+              orderData.plan_name || "Wallet Recharge",
+              razorpay_payment_id,
+              razorpay_order_id
+            );
+            walletAdded = true;
+            console.log("[verifyPayment] Wallet credited:", orderData.amount);
+          }
+        } catch (walletError) {
+          console.error("[verifyPayment] Wallet credit failed:", walletError);
+          // Don't fail the payment verification if wallet credit fails
+          // Payment is successful, wallet can be credited manually later
+        }
+      }
+
       return res.json({ 
         success: true,
         subscription_created: !!subscription,
         subscription_id: subscription?.id || null,
+        wallet_added: walletAdded,
       });
     }
     return res.status(400).json({ success: false, message: "Invalid signature" });

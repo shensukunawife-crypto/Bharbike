@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
-import { supabase } from "../utils/supabaseClient.js";
+import supabase from "../utils/supabaseClient.js";
 
 export async function authMiddleware(req, res, next) {
   const header = req.headers.authorization;

@@ -47,7 +47,6 @@ export const createOrder = async (req, res) => {
         order_id: appOrder.id,
         razorpay_order_id: mockRazorpayOrderId,
         status: "created",
-        amount: Math.round(normalizedAmount),
       },
     ]);
 

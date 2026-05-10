@@ -1,5 +1,11 @@
 import supabase from '../utils/supabaseClient.js';
 
+function isMissingTableError(error) {
+  if (!error) return false;
+  const msg = String(error.message || "").toLowerCase();
+  return msg.includes("could not find the table") || msg.includes("does not exist") || error.code === "42P01";
+}
+
 class PaymentMethodService {
   // Get all payment methods for a user
   async getPaymentMethods(userId) {
@@ -10,7 +16,10 @@ class PaymentMethodService {
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingTableError(error)) return [];
+      throw error;
+    }
     return data;
   }
 
@@ -97,7 +106,10 @@ class PaymentMethodService {
       return newData;
     }
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingTableError(error)) return { id: 'mock', user_id: userId, points: 0, cashback_value: 0 };
+      throw error;
+    }
     return data;
   }
 
@@ -176,7 +188,10 @@ class PaymentMethodService {
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingTableError(error)) return [];
+      throw error;
+    }
     return data;
   }
 
@@ -202,7 +217,10 @@ class PaymentMethodService {
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingTableError(error)) return [];
+      throw error;
+    }
 
     // Format invoices
     return data.map(payment => ({

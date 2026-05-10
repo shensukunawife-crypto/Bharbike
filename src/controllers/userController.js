@@ -34,6 +34,17 @@ export const getUserById = async (req, res) => {
     .single();
 
   if (error) {
+    // If profile not found, return a default instead of 500
+    if (error.code === "PGRST116" || error.message?.includes("No rows found") || error.message?.includes("0 rows")) {
+      return res.json(shapePublicUser({
+        id: req.params.id,
+        full_name: "Rider",
+        email: null,
+        phone: null,
+        location: null,
+        avatar_url: null,
+      }));
+    }
     console.error("[getUserById]", req.params.id, error);
     return res.status(500).json({
       message: "Fetch failed",

@@ -574,6 +574,11 @@ api.post("/support/create", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
+    // Demo users can't create real tickets — return mock success
+    if (isDemoUser(user_id)) {
+      return res.json({ success: true, data: { ticket_number: `DEMO-${Date.now()}`, status: "pending" } });
+    }
+
     const basePayload = {
       user_id: user_id || null,
       bike_name,
@@ -634,6 +639,9 @@ api.get("/support/user/:userId", async (req, res) => {
     const userId = String(req.params.userId || "");
     if (!userId) {
       return res.status(400).json({ success: false, message: "userId is required" });
+    }
+    if (isDemoUser(userId)) {
+      return res.json({ success: true, data: [] });
     }
     const { data, error } = await supabase
       .from("support_tickets")

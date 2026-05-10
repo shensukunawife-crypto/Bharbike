@@ -1,5 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
+
+/** Demo OTP users have non-UUID IDs like "demo-919325296264" — Supabase rejects these. */
+const isDemoUser = (id) => /^demo-/i.test(String(id || ""));
+
 import authRoutes from "./auth.routes.js";
 import userRoutes from "./user.routes.js";
 import bikeRoutes from "./bike.routes.js";
@@ -355,6 +359,11 @@ api.post("/delivery/apply", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
+    // Demo users can't be persisted — return mock success
+    if (isDemoUser(user_id)) {
+      return res.json({ success: true, message: "Application submitted (demo mode)", data: { status: "review" } });
+    }
+
     const resolvedName = full_name || name;
     const payload = {
       user_id,
@@ -413,6 +422,11 @@ api.get("/delivery/status", async (req, res) => {
     const userId = String(req.query.user_id || "");
     if (!userId) {
       return res.status(400).json({ success: false, message: "user_id is required" });
+    }
+
+    // Demo OTP users have non-UUID IDs — return mock status instead of querying Supabase
+    if (isDemoUser(userId)) {
+      return res.json({ success: true, status: null });
     }
 
     let { data, error } = await supabase
@@ -703,6 +717,12 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
     if (!file || !userId || !type) {
       return res.status(400).json({ success: false, message: "file, type and user_id are required" });
     }
+
+    // Demo users can't upload to Supabase storage — return mock success
+    if (isDemoUser(userId)) {
+      return res.json({ success: true, url: `https://demo.example.com/${type}_mock.jpg`, type });
+    }
+
     if (!Object.prototype.hasOwnProperty.call(DOC_TYPE_TO_COLUMN, type)) {
       return res.status(400).json({ success: false, message: "Invalid document type" });
     }
@@ -758,6 +778,10 @@ api.post("/kyc/electricity", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
+    if (isDemoUser(user_id)) {
+      return res.status(201).json({ success: true, data: { status: "pending", type: "electricity_bill" } });
+    }
+
     const payload = {
       user_id,
       type: "electricity_bill",
@@ -789,6 +813,10 @@ api.post("/kyc/driving-license", async (req, res) => {
     const { user_id, full_name, license_number, expiry_date, file_url, status = "pending" } = req.body || {};
     if (!user_id || !full_name || !license_number || !expiry_date || !file_url) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    if (isDemoUser(user_id)) {
+      return res.status(201).json({ success: true, data: { status: "pending", type: "driving_license" } });
     }
 
     const payload = {
@@ -823,6 +851,10 @@ api.get("/kyc/electricity/status", async (req, res) => {
       return res.status(400).json({ success: false, message: "user_id is required" });
     }
 
+    if (isDemoUser(userId)) {
+      return res.json({ success: true, data: null });
+    }
+
     let { data, error } = await supabase
       .from("kyc_documents")
       .select("*")
@@ -851,6 +883,10 @@ api.get("/kyc/summary", async (req, res) => {
     const userId = String(req.query.user_id || "");
     if (!userId) {
       return res.status(400).json({ success: false, message: "user_id is required" });
+    }
+
+    if (isDemoUser(userId)) {
+      return res.json({ success: true, data: { aadhaar: null, driving_license: null, electricity_bill: null } });
     }
 
     let { data, error } = await supabase

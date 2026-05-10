@@ -26,18 +26,35 @@ export const getUsers = async (req, res) => {
   res.json(rows.map(shapePublicUser));
 };
 
+const DEMO_ID_RE = /^demo-/i;
+
 export const getUserById = async (req, res) => {
+  const id = req.params.id;
+
+  // Demo OTP users have non-UUID IDs like "demo-919325296264"
+  // Supabase profiles table requires UUID, so return mock data for demo users
+  if (DEMO_ID_RE.test(id)) {
+    return res.json(shapePublicUser({
+      id,
+      full_name: "Demo Rider",
+      email: null,
+      phone: id.replace("demo-", ""),
+      location: null,
+      avatar_url: null,
+    }));
+  }
+
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", req.params.id)
+    .eq("id", id)
     .single();
 
   if (error) {
     // If profile not found, return a default instead of 500
     if (error.code === "PGRST116" || error.message?.includes("No rows found") || error.message?.includes("0 rows")) {
       return res.json(shapePublicUser({
-        id: req.params.id,
+        id,
         full_name: "Rider",
         email: null,
         phone: null,
@@ -45,7 +62,7 @@ export const getUserById = async (req, res) => {
         avatar_url: null,
       }));
     }
-    console.error("[getUserById]", req.params.id, error);
+    console.error("[getUserById]", id, error);
     return res.status(500).json({
       message: "Fetch failed",
       error,
@@ -102,6 +119,21 @@ export const createUser = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
+  const id = req.params.id;
+
+  // Demo users can't be persisted to Supabase (non-UUID id), return mock success
+  if (DEMO_ID_RE.test(id)) {
+    const body = req.body ?? {};
+    return res.json(shapePublicUser({
+      id,
+      full_name: body.full_name ?? "Demo Rider",
+      email: body.email ?? null,
+      phone: body.phone ?? id.replace("demo-", ""),
+      location: body.location ?? null,
+      image_url: body.image_url ?? null,
+    }));
+  }
+
   const body = req.body ?? {};
   const patch = {
     ...(body.full_name !== undefined && { full_name: body.full_name }),
@@ -135,6 +167,11 @@ export const updateUser = async (req, res) => {
  */
 export const getUserStats = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+
+  // Demo users can't query Supabase — return mock stats
+  if (DEMO_ID_RE.test(userId)) {
+    return res.json({ success: true, data: { total_rides: 0, total_distance: 0, total_savings: 0 } });
+  }
 
   // Get total rides count
   const { count: totalRides, error: ridesError } = await supabase

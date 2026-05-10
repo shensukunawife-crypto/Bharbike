@@ -1,5 +1,19 @@
 import supabase from "../utils/supabaseClient.js";
 
+const DEFAULT_SETTINGS = {
+    push_enabled: true,
+    sms_enabled: false,
+    email_enabled: true,
+    order_alerts_enabled: true,
+    promo_alerts_enabled: true,
+};
+
+function isMissingTableError(error) {
+    if (!error) return false;
+    const msg = String(error.message || "").toLowerCase();
+    return msg.includes("could not find the table") || msg.includes("does not exist") || error.code === "42P01";
+}
+
 /**
  * Get notification settings for a user
  */
@@ -11,6 +25,7 @@ export async function getNotificationSettings(userId) {
         .maybeSingle();
 
     if (error) {
+        if (isMissingTableError(error)) return { user_id: userId, ...DEFAULT_SETTINGS };
         // If settings don't exist, create default
         if (error.code === 'PGRST116') {
             return await createDefaultSettings(userId);
@@ -72,6 +87,9 @@ export async function updateNotificationSettings(userId, settings) {
         .select()
         .single();
 
-    if (error) throw error;
+    if (error) {
+        if (isMissingTableError(error)) return { user_id: userId, ...DEFAULT_SETTINGS, ...updateData };
+        throw error;
+    }
     return data;
 }

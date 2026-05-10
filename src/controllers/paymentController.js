@@ -10,222 +10,100 @@ import supabase from "../utils/supabaseClient.js";
  */
 export const createOrder = async (req, res) => {
   try {
-    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null } = req.body;
-    const config = await getActiveRazorpayConfig();
+    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, is_demo = true } = req.body;
     const numericAmount = Number(amount);
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({ success: false, message: "Valid amount is required" });
     }
-    const finalAmount = amount_in_paise ? Math.round(numericAmount) : Math.round(numericAmount * 100);
+    
+    // DEMO MODE: Skip Razorpay and create a mock order
+    console.log("[createOrder] DEMO MODE ACTIVE - Skipping Razorpay");
+    
+    const mockRazorpayOrderId = `order_demo_${Date.now()}`;
+    const normalizedAmount = amount_in_paise ? numericAmount / 100 : numericAmount;
 
-    const options = {
-      amount: finalAmount,
-      currency,
-      receipt: receipt || `receipt_${Date.now()}`,
-    };
-
-    const razorpay = new Razorpay({
-      key_id: config.key_id,
-      key_secret: config.key_secret,
-    });
-    const order = await razorpay.orders.create(options);
-
-    const normalizedAmount = Number(order.amount) / 100;
     const { data: appOrder, error: appOrderError } = await supabase
       .from("orders")
       .insert([
         {
           user_id: user_id || null,
           plan_name: plan_name || null,
-          amount: Number.isFinite(normalizedAmount) ? Math.round(normalizedAmount) : null,
+          amount: Math.round(normalizedAmount),
           status: "pending",
-          order_code: `ORD-${Date.now()}`,
+          order_code: `ORD-DEMO-${Date.now()}`,
         },
       ])
       .select("id")
       .single();
+
     if (appOrderError) {
-      console.error("[createOrder] app order insert failed:", appOrderError);
-      return res.status(500).json({
-        success: false,
-        message: appOrderError.message,
-        error: appOrderError.message,
-        code: "ORDER_DB_INSERT_FAILED",
-      });
+      console.error("[createOrder] demo order insert failed:", appOrderError);
+      return res.status(500).json({ success: false, message: appOrderError.message });
     }
 
     const { error: paymentInsertError } = await supabase.from("payments").insert([
       {
         order_id: appOrder.id,
-        razorpay_order_id: order.id,
+        razorpay_order_id: mockRazorpayOrderId,
         status: "created",
+        amount: Math.round(normalizedAmount),
       },
     ]);
+
     if (paymentInsertError) {
-      console.error("[createOrder] payment insert failed:", paymentInsertError);
-      return res.status(500).json({
-        success: false,
-        message: paymentInsertError.message,
-        error: paymentInsertError.message,
-        code: "PAYMENT_DB_INSERT_FAILED",
-      });
+      return res.status(500).json({ success: false, message: paymentInsertError.message });
     }
 
+    // Return mock data that looks like a Razorpay order
     return res.status(200).json({
       success: true,
-      id: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key_id: config.key_id,
+      id: mockRazorpayOrderId,
+      amount: Math.round(normalizedAmount * 100),
+      currency: "INR",
       app_order_id: appOrder.id,
+      is_demo: true
     });
   } catch (error) {
-    console.error("[createOrder]", {
-      statusCode: error?.statusCode,
-      code: error?.error?.code || error?.code,
-      description: error?.error?.description || error?.description || error?.message,
-    });
-    const errorMessage = error?.error?.description || error?.description || error?.message || "Order creation failed";
-    return res.status(500).json({
-      success: false,
-      message: errorMessage,
-      error: errorMessage,
-      code: error?.error?.code || error?.code || "ORDER_CREATE_FAILED",
-    });
+    console.error("[createOrder] Demo error:", error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 /**
- * Verifies Razorpay payment signature.
+ * Verifies Payment (Modified for Demo Mode)
  */
 export const verifyPayment = async (req, res) => {
   try {
-    const razorpay_order_id = String(req.body?.razorpay_order_id ?? "").trim();
-    const razorpay_payment_id = String(req.body?.razorpay_payment_id ?? "").trim();
-    const razorpay_signature = String(req.body?.razorpay_signature ?? "").trim();
+    const { razorpay_order_id, app_order_id, user_id, plan_id } = req.body;
+    const mockPaymentId = `pay_demo_${Date.now()}`;
 
-    const config = await getActiveRazorpayConfig();
+    console.log("[verifyPayment] DEMO MODE - Auto-verifying payment");
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ success: false, message: "Missing payment details" });
+    if (app_order_id) {
+      await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
     }
 
-    const payload = razorpay_order_id + "|" + razorpay_payment_id;
-    const generated_signature = crypto.createHmac("sha256", config.key_secret).update(payload).digest("hex");
+    const { data: paymentRecord } = await supabase
+      .from("payments")
+      .update({ status: "success", razorpay_payment_id: mockPaymentId })
+      .eq("razorpay_order_id", razorpay_order_id)
+      .select("id")
+      .single();
 
-    const a = generated_signature.toLowerCase();
-    const b = razorpay_signature.toLowerCase();
-    let match = false;
-    if (a.length === b.length && /^[0-9a-f]+$/.test(a) && /^[0-9a-f]+$/.test(b)) {
-      try {
-        match = crypto.timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
-      } catch {
-        match = a === b;
+    // Create subscription or add wallet money
+    if (user_id && plan_id) {
+      await createSubscription(user_id, plan_id, paymentRecord?.id);
+    } else if (user_id && app_order_id) {
+      const { data: orderData } = await supabase.from("orders").select("amount, plan_name").eq("id", app_order_id).single();
+      if (orderData?.amount) {
+        await walletService.addMoney(user_id, orderData.amount, orderData.plan_name || "Wallet Recharge", mockPaymentId, razorpay_order_id);
       }
-    } else {
-      match = a === b;
     }
 
-    if (match) {
-      const appOrderId = String(req.body?.app_order_id || "").trim();
-      const userId = String(req.body?.user_id || "").trim();
-      const planId = String(req.body?.plan_id || "").trim();
-
-      if (appOrderId) {
-        const { error: orderUpdateError } = await supabase
-          .from("orders")
-          .update({ status: "paid" })
-          .eq("id", appOrderId);
-        if (orderUpdateError) {
-          console.error("[verifyPayment] order status update failed:", orderUpdateError);
-          return res.status(500).json({
-            success: false,
-            message: orderUpdateError.message,
-            error: orderUpdateError.message,
-            code: "ORDER_STATUS_UPDATE_FAILED",
-          });
-        }
-      }
-
-      const { data: paymentRecord, error: paymentUpdateError } = await supabase
-        .from("payments")
-        .update({ status: "success", razorpay_payment_id: razorpay_payment_id })
-        .eq("razorpay_order_id", razorpay_order_id)
-        .select("id")
-        .single();
-
-      if (paymentUpdateError) {
-        console.error("[verifyPayment] payment status update failed:", paymentUpdateError);
-        return res.status(500).json({
-          success: false,
-          message: paymentUpdateError.message,
-          error: paymentUpdateError.message,
-          code: "PAYMENT_STATUS_UPDATE_FAILED",
-        });
-      }
-
-      // Create subscription if user_id and plan_id are provided
-      let subscription = null;
-      if (userId && planId && paymentRecord?.id) {
-        try {
-          subscription = await createSubscription(userId, planId, paymentRecord.id);
-          console.log("[verifyPayment] Subscription created:", subscription.id);
-        } catch (subError) {
-          console.error("[verifyPayment] Subscription creation failed:", subError);
-          // Don't fail the payment verification if subscription creation fails
-          // Payment is successful, subscription can be created manually later
-        }
-      }
-
-      // Add money to wallet if it's a wallet recharge (no plan_id)
-      let walletAdded = false;
-      if (userId && !planId && appOrderId) {
-        try {
-          // Get order amount from database
-          const { data: orderData } = await supabase
-            .from("orders")
-            .select("amount, plan_name")
-            .eq("id", appOrderId)
-            .single();
-
-          if (orderData && orderData.amount) {
-            await walletService.addMoney(
-              userId,
-              orderData.amount,
-              orderData.plan_name || "Wallet Recharge",
-              razorpay_payment_id,
-              razorpay_order_id
-            );
-            walletAdded = true;
-            console.log("[verifyPayment] Wallet credited:", orderData.amount);
-          }
-        } catch (walletError) {
-          console.error("[verifyPayment] Wallet credit failed:", walletError);
-          // Don't fail the payment verification if wallet credit fails
-          // Payment is successful, wallet can be credited manually later
-        }
-      }
-
-      return res.json({ 
-        success: true,
-        subscription_created: !!subscription,
-        subscription_id: subscription?.id || null,
-        wallet_added: walletAdded,
-      });
-    }
-    return res.status(400).json({ success: false, message: "Invalid signature" });
+    return res.json({ success: true, is_demo: true });
   } catch (error) {
-    console.error("[verifyPayment]", {
-      code: error?.error?.code || error?.code,
-      description: error?.error?.description || error?.description || error?.message,
-    });
-    const msg = error.message || "Verification failed";
-    return res.status(500).json({
-      success: false,
-      message: msg,
-      error: msg,
-      code: "VERIFY_FAILED",
-    });
+    console.error("[verifyPayment] Demo error:", error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -28,20 +28,29 @@ export const getUsers = async (req, res) => {
 
 const DEMO_ID_RE = /^demo-/i;
 
+// In-memory store for demo user profile edits (persists until server restart)
+const demoProfiles = new Map();
+
+function getDemoProfile(id) {
+  const stored = demoProfiles.get(id);
+  return {
+    id,
+    full_name: stored?.full_name ?? "Demo Rider",
+    email: stored?.email ?? null,
+    phone: stored?.phone ?? id.replace("demo-", ""),
+    location: stored?.location ?? null,
+    avatar_url: stored?.avatar_url ?? null,
+    image_url: stored?.image_url ?? null,
+  };
+}
+
 export const getUserById = async (req, res) => {
   const id = req.params.id;
 
   // Demo OTP users have non-UUID IDs like "demo-919325296264"
   // Supabase profiles table requires UUID, so return mock data for demo users
   if (DEMO_ID_RE.test(id)) {
-    return res.json(shapePublicUser({
-      id,
-      full_name: "Demo Rider",
-      email: null,
-      phone: id.replace("demo-", ""),
-      location: null,
-      avatar_url: null,
-    }));
+    return res.json(shapePublicUser(getDemoProfile(id)));
   }
 
   const { data, error } = await supabase
@@ -121,17 +130,20 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   const id = req.params.id;
 
-  // Demo users can't be persisted to Supabase (non-UUID id), return mock success
+  // Demo users can't be persisted to Supabase (non-UUID id), store in memory
   if (DEMO_ID_RE.test(id)) {
     const body = req.body ?? {};
-    return res.json(shapePublicUser({
-      id,
-      full_name: body.full_name ?? "Demo Rider",
-      email: body.email ?? null,
-      phone: body.phone ?? id.replace("demo-", ""),
-      location: body.location ?? null,
-      image_url: body.image_url ?? null,
-    }));
+    const existing = getDemoProfile(id);
+    const updated = {
+      ...existing,
+      ...(body.full_name !== undefined && { full_name: body.full_name }),
+      ...(body.email !== undefined && { email: body.email }),
+      ...(body.phone !== undefined && { phone: body.phone }),
+      ...(body.location !== undefined && { location: body.location }),
+      ...(body.image_url !== undefined && { image_url: body.image_url, avatar_url: body.image_url }),
+    };
+    demoProfiles.set(id, updated);
+    return res.json(shapePublicUser(updated));
   }
 
   const body = req.body ?? {};

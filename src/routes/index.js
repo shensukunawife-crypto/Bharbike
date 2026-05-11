@@ -755,6 +755,18 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       } catch (dbErr) {
         console.warn("[POST /api/upload-document] users column missing (non-blocking):", dbErr?.message);
       }
+      // Also insert into kyc_documents table so /kyc/summary can find it
+      try {
+        const kycType = type === "bill" ? "electricity_bill" : type === "aadhaar_front" || type === "aadhaar_back" ? "aadhaar" : type;
+        await supabase.from("kyc_documents").upsert({
+          user_id: userId,
+          type: kycType,
+          file_url: mockUrl,
+          status: "pending",
+        }, { onConflict: "user_id,type" });
+      } catch (kycErr) {
+        console.warn("[POST /api/upload-document] kyc_documents insert skipped (non-blocking):", kycErr?.message);
+      }
       return res.json({ success: true, data: { type, file_url: mockUrl }, warning: "Storage bucket missing — using mock URL" });
     }
 
@@ -768,6 +780,19 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       await supabase.from("users").update({ [column]: publicUrl }).eq("id", userId);
     } catch (dbErr) {
       console.warn("[POST /api/upload-document] users column missing (non-blocking):", dbErr?.message);
+    }
+
+    // Also insert into kyc_documents table so /kyc/summary can find it
+    try {
+      const kycType = type === "bill" ? "electricity_bill" : type === "aadhaar_front" || type === "aadhaar_back" ? "aadhaar" : type;
+      await supabase.from("kyc_documents").upsert({
+        user_id: userId,
+        type: kycType,
+        file_url: publicUrl,
+        status: "pending",
+      }, { onConflict: "user_id,type" });
+    } catch (kycErr) {
+      console.warn("[POST /api/upload-document] kyc_documents insert skipped (non-blocking):", kycErr?.message);
     }
 
     return res.json({ success: true, data: { type, file_url: publicUrl } });
@@ -809,13 +834,20 @@ api.post("/kyc/electricity", async (req, res) => {
       status,
     };
 
-    let { data, error } = await supabase.from("kyc_documents").insert([payload]).select().single();
+    let { data, error } = await supabase.from("kyc_documents").upsert([payload], { onConflict: "user_id,type" }).select().single();
     if (error?.message?.toLowerCase().includes("could not find the table 'public.kyc_documents'")) {
       data = addKycDocument(payload);
       error = null;
     }
     if (error) {
       return res.status(500).json({ success: false, message: error.message });
+    }
+
+    // Also update users table column for fallback
+    try {
+      await supabase.from("users").update({ electricity_bill_url: file_url }).eq("id", user_id);
+    } catch (dbErr) {
+      console.warn("[kyc/electricity] users column update skipped:", dbErr?.message);
     }
 
     return res.status(201).json({ success: true, data });
@@ -846,7 +878,7 @@ api.post("/kyc/driving-license", async (req, res) => {
       status,
     };
 
-    let { data, error } = await supabase.from("kyc_documents").insert([payload]).select().single();
+    let { data, error } = await supabase.from("kyc_documents").upsert([payload], { onConflict: "user_id,type" }).select().single();
     if (error?.message?.toLowerCase().includes("could not find the table 'public.kyc_documents'")) {
       data = addKycDocument(payload);
       error = null;
@@ -854,6 +886,14 @@ api.post("/kyc/driving-license", async (req, res) => {
     if (error) {
       return res.status(500).json({ success: false, message: error.message });
     }
+
+    // Also update users table column for fallback
+    try {
+      await supabase.from("users").update({ driving_license_url: file_url }).eq("id", user_id);
+    } catch (dbErr) {
+      console.warn("[kyc/driving-license] users column update skipped:", dbErr?.message);
+    }
+
     return res.status(201).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Server error" });
@@ -902,14 +942,14 @@ api.get("/kyc/summary", async (req, res) => {
     }
 
     if (isDemoUser(userId)) {
-      return res.json({ success: true, data: { aadhaar: null, driving_license: null, electricity_bill: null } });
+      return res.json({ success: true, data: { aadhaar: null, driving_license: null, electricity_bill: null, selfie: null } });
     }
 
     let { data, error } = await supabase
       .from("kyc_documents")
       .select("*")
       .eq("user_id", userId)
-      .in("type", ["aadhaar", "driving_license", "electricity_bill"])
+      .in("type", ["aadhaar", "driving_license", "electricity_bill", "selfie"])
       .order("created_at", { ascending: false });
 
     if (error?.message?.toLowerCase().includes("could not find the table 'public.kyc_documents'")) {
@@ -927,13 +967,14 @@ api.get("/kyc/summary", async (req, res) => {
         rows.find((x) => x.type === "driving_license") || getLatestKycByUserAndType(userId, "driving_license"),
       electricity_bill:
         rows.find((x) => x.type === "electricity_bill") || getLatestKycByUserAndType(userId, "electricity_bill"),
+      selfie: rows.find((x) => x.type === "selfie") || null,
     };
 
     // Also check users table columns for uploaded documents
     try {
       const { data: userProfile } = await supabase
         .from("users")
-        .select("driving_license_url, aadhaar_url, electricity_bill_url")
+        .select("driving_license_url, aadhaar_front_url, aadhaar_back_url, pan_card_url, electricity_bill_url, selfie_url")
         .eq("id", userId)
         .maybeSingle();
 
@@ -941,11 +982,14 @@ api.get("/kyc/summary", async (req, res) => {
         if (!latestByType.driving_license && userProfile.driving_license_url) {
           latestByType.driving_license = { type: "driving_license", status: "pending", file_url: userProfile.driving_license_url };
         }
-        if (!latestByType.aadhaar && userProfile.aadhaar_url) {
-          latestByType.aadhaar = { type: "aadhaar", status: "pending", file_url: userProfile.aadhaar_url };
+        if (!latestByType.aadhaar && (userProfile.aadhaar_front_url || userProfile.aadhaar_back_url)) {
+          latestByType.aadhaar = { type: "aadhaar", status: "pending", file_url: userProfile.aadhaar_front_url || userProfile.aadhaar_back_url };
         }
         if (!latestByType.electricity_bill && userProfile.electricity_bill_url) {
           latestByType.electricity_bill = { type: "electricity_bill", status: "pending", file_url: userProfile.electricity_bill_url };
+        }
+        if (!latestByType.selfie && userProfile.selfie_url) {
+          latestByType.selfie = { type: "selfie", status: "pending", file_url: userProfile.selfie_url };
         }
       }
     } catch (e) {

@@ -9,6 +9,8 @@ const r = Router();
 
 r.use(authMiddleware);
 
+r.get("/active", rentalController.active);
+
 r.post(
   "/start",
   [

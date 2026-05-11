@@ -157,6 +157,7 @@ export const updateUser = async (req, res) => {
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
   };
 
+  // Try updating profiles table
   const { data, error } = await supabase
     .from("profiles")
     .update(patch)
@@ -164,11 +165,37 @@ export const updateUser = async (req, res) => {
     .select();
 
   if (error) {
-    return res.status(500).json({
-      message: "Update failed",
-      error,
-    });
+    console.warn("[updateUser] profiles update failed:", error.message);
+    // Try users table as fallback
+    const usersPatch = { ...patch };
+    if (body.image_url !== undefined) usersPatch.avatar_url = body.image_url;
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .update(usersPatch)
+      .eq("id", req.params.id)
+      .select();
+
+    if (userError) {
+      console.warn("[updateUser] users update also failed:", userError.message);
+      return res.status(500).json({ message: "Update failed", error: userError });
+    }
+    const updated = userData?.[0] ?? userData ?? null;
+    return res.json(updated != null ? shapePublicUser(updated) : null);
   }
+
+  // Also update users table for image_url, email, phone sync
+  try {
+    const usersSync = {};
+    if (body.image_url !== undefined) { usersSync.image_url = body.image_url; usersSync.avatar_url = body.image_url; }
+    if (body.email !== undefined) usersSync.email = body.email;
+    if (body.phone !== undefined) usersSync.phone = body.phone;
+    if (Object.keys(usersSync).length > 0) {
+      await supabase.from("users").update(usersSync).eq("id", req.params.id);
+    }
+  } catch (e) {
+    console.warn("[updateUser] users sync skipped:", e?.message);
+  }
+
   const updated = data?.[0] ?? data ?? null;
   res.json(updated != null ? shapePublicUser(updated) : null);
 };

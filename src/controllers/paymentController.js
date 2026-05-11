@@ -113,13 +113,33 @@ export const verifyPayment = async (req, res) => {
       try {
         await createSubscription(user_id, plan_id, paymentRecordId);
       } catch (e) { console.warn("[verifyPayment] subscription skipped:", e?.message); }
-    } else if (user_id && app_order_id) {
-      try {
-        const { data: orderData } = await supabase.from("orders").select("amount, plan_name").eq("id", app_order_id).single();
-        if (orderData?.amount) {
-          await walletService.addMoney(user_id, orderData.amount, orderData.plan_name || "Wallet Recharge", mockPaymentId, razorpay_order_id);
+    } else if (user_id) {
+      // Add money to wallet — try RPC first, then direct insert fallback
+      const addAmount = Number(req.body.amount) || 0;
+      if (addAmount > 0) {
+        try {
+          await walletService.addMoney(user_id, addAmount, "Wallet Recharge", mockPaymentId, razorpay_order_id);
+        } catch (rpcErr) {
+          console.warn("[verifyPayment] wallet RPC failed, trying direct insert:", rpcErr?.message);
+          try {
+            // Upsert wallet_balances row
+            const { data: existing } = await supabase.from("wallet_balances").select("balance").eq("user_id", user_id).single();
+            const newBalance = (existing?.balance || 0) + addAmount;
+            const { error: upsertErr } = await supabase.from("wallet_balances").upsert(
+              { user_id: user_id, balance: newBalance, updated_at: new Date().toISOString() },
+              { onConflict: "user_id" }
+            );
+            if (upsertErr) console.warn("[verifyPayment] wallet upsert failed:", upsertErr.message);
+            // Insert transaction record
+            await supabase.from("wallet_transactions").insert({
+              user_id, amount: addAmount, type: "credit", title: "Wallet Recharge",
+              payment_id: mockPaymentId, order_id: razorpay_order_id, status: "completed"
+            }).then(r => { if (r.error) console.warn("[verifyPayment] tx insert failed:", r.error.message); });
+          } catch (directErr) {
+            console.warn("[verifyPayment] direct wallet insert also failed:", directErr?.message);
+          }
         }
-      } catch (e) { console.warn("[verifyPayment] wallet add skipped:", e?.message); }
+      }
     }
 
     return res.json({ success: true, is_demo: true });

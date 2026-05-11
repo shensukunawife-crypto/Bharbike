@@ -24,11 +24,39 @@ export async function getSubscriptionPlans() {
  */
 export async function getSubscriptionPlanById(planId) {
   try {
-    const { data, error } = await supabase
+    // Try UUID lookup first
+    let { data, error } = await supabase
       .from("subscription_plans")
       .select("*")
       .eq("id", planId)
       .single();
+
+    // If not found, try by name (payment flow may pass plan name as plan_id)
+    if (error || !data) {
+      const byName = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("name", planId)
+        .single();
+      if (!byName.error && byName.data) {
+        data = byName.data;
+        error = null;
+      }
+    }
+
+    // If still not found, try by display_name
+    if (error || !data) {
+      const byDisplay = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .ilike("display_name", `%${planId}%`)
+        .limit(1)
+        .single();
+      if (!byDisplay.error && byDisplay.data) {
+        data = byDisplay.data;
+        error = null;
+      }
+    }
 
     if (error) throw error;
     return data;
@@ -108,7 +136,7 @@ export async function createSubscription(userId, planId, paymentId = null) {
       .insert([
         {
           user_id: userId,
-          plan_id: planId,
+          plan_id: plan.id,
           status: "active",
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),

@@ -28,9 +28,42 @@ export const getActiveSubscription = async (req, res) => {
       return res.status(400).json({ success: false, message: "User ID required" });
     }
 
-    const subscription = await subscriptionService.getUserActiveSubscription(userId);
-    
+    let subscription = null;
+    try {
+      subscription = await subscriptionService.getUserActiveSubscription(userId);
+    } catch (e) {
+      console.warn("[getActiveSubscription] service failed:", e?.message);
+    }
+
     if (!subscription) {
+      // Check if user has any subscription record even without plan join
+      try {
+        const { data: rawSub } = await supabase
+          .from("user_subscriptions")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .gt("end_date", new Date().toISOString())
+          .order("end_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (rawSub) {
+          const endDate = new Date(rawSub.end_date);
+          const daysRemaining = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24));
+          return res.json({
+            success: true,
+            data: {
+              ...rawSub,
+              plan: { display_name: rawSub.plan_id || "Subscription", price: 0, duration_days: daysRemaining },
+              days_remaining: daysRemaining,
+            },
+          });
+        }
+      } catch (e2) {
+        console.warn("[getActiveSubscription] direct query also failed:", e2?.message);
+      }
+
       return res.json({ success: true, data: null, message: "No active subscription" });
     }
 

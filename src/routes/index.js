@@ -928,6 +928,30 @@ api.get("/kyc/summary", async (req, res) => {
       electricity_bill:
         rows.find((x) => x.type === "electricity_bill") || getLatestKycByUserAndType(userId, "electricity_bill"),
     };
+
+    // Also check users table columns for uploaded documents
+    try {
+      const { data: userProfile } = await supabase
+        .from("users")
+        .select("driving_license_url, aadhaar_url, electricity_bill_url")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (userProfile) {
+        if (!latestByType.driving_license && userProfile.driving_license_url) {
+          latestByType.driving_license = { type: "driving_license", status: "pending", file_url: userProfile.driving_license_url };
+        }
+        if (!latestByType.aadhaar && userProfile.aadhaar_url) {
+          latestByType.aadhaar = { type: "aadhaar", status: "pending", file_url: userProfile.aadhaar_url };
+        }
+        if (!latestByType.electricity_bill && userProfile.electricity_bill_url) {
+          latestByType.electricity_bill = { type: "electricity_bill", status: "pending", file_url: userProfile.electricity_bill_url };
+        }
+      }
+    } catch (e) {
+      console.warn("[kyc/summary] users table check skipped:", e?.message);
+    }
+
     return res.json({ success: true, data: latestByType });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Server error" });

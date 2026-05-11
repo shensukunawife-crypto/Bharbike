@@ -72,7 +72,8 @@ export const createOrder = async (req, res) => {
       amount: Math.round(normalizedAmount * 100),
       currency: "INR",
       app_order_id: appOrderId,
-      is_demo: true
+      is_demo: true,
+      plan_id: plan_name || null,
     });
   } catch (error) {
     console.error("[createOrder] Demo error:", error);
@@ -112,7 +113,32 @@ export const verifyPayment = async (req, res) => {
     if (user_id && plan_id) {
       try {
         await createSubscription(user_id, plan_id, paymentRecordId);
-      } catch (e) { console.warn("[verifyPayment] subscription skipped:", e?.message); }
+      } catch (e) {
+        console.warn("[verifyPayment] subscription service failed, trying direct insert:", e?.message);
+        // Fallback: insert subscription directly without plan lookup
+        try {
+          const durationDays = plan_id?.toLowerCase().includes("month") ? 30 :
+                               plan_id?.toLowerCase().includes("week") ? 7 :
+                               plan_id?.toLowerCase().includes("year") ? 365 : 30;
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(endDate.getDate() + durationDays);
+
+          await supabase.from("user_subscriptions").upsert({
+            user_id,
+            status: "active",
+            start_date: startDate.toISOString(),
+            end_date: endDate.toISOString(),
+            plan_id: plan_id,
+            payment_id: paymentRecordId,
+            auto_renew: false,
+            created_at: startDate.toISOString(),
+          }, { onConflict: "user_id" });
+          console.log("[verifyPayment] direct subscription insert succeeded");
+        } catch (directErr) {
+          console.warn("[verifyPayment] direct subscription insert also failed:", directErr?.message);
+        }
+      }
     } else if (user_id) {
       // Add money to wallet — try RPC first, then direct insert fallback
       const addAmount = Number(req.body.amount) || 0;

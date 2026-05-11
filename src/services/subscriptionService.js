@@ -122,15 +122,20 @@ export async function getUserSubscriptions(userId) {
   try {
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .select(`
-        *,
-        plan:subscription_plans(*)
-      `)
+      .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    // Enrich with plan data separately
+    const subs = data || [];
+    for (const sub of subs) {
+      try {
+        const plan = await getSubscriptionPlanById(sub.plan_id);
+        sub.plan = plan || { display_name: sub.plan_id, price: 0 };
+      } catch { sub.plan = { display_name: sub.plan_id, price: 0 }; }
+    }
+    return subs;
   } catch (error) {
     console.error("[subscriptionService] getUserSubscriptions failed:", error.message);
     throw error;
@@ -167,11 +172,15 @@ export async function createSubscription(userId, planId, paymentId = null) {
           auto_renew: false,
         },
       ])
-      .select(`
-        *,
-        plan:subscription_plans(*)
-      `)
+      .select("*")
       .single();
+
+    if (!error && data) {
+      try {
+        const plan = await getSubscriptionPlanById(data.plan_id);
+        data.plan = plan || { display_name: data.plan_id, price: 0 };
+      } catch { data.plan = { display_name: data.plan_id, price: 0 }; }
+    }
 
     if (error) throw error;
 
@@ -219,12 +228,7 @@ export async function getUserBillingHistory(userId, limit = 10) {
   try {
     const { data, error } = await supabase
       .from("subscription_billing")
-      .select(`
-        *,
-        subscription:user_subscriptions(
-          plan:subscription_plans(display_name)
-        )
-      `)
+      .select("*")
       .eq("user_id", userId)
       .order("billing_date", { ascending: false })
       .limit(limit);

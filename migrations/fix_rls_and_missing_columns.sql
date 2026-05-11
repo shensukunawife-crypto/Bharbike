@@ -36,47 +36,33 @@ CREATE TABLE IF NOT EXISTS public.payments (
 );
 
 -- 4. Add RLS policies that allow inserts (service role should bypass, but add for safety)
--- Rentals policies
-CREATE POLICY IF NOT EXISTS "Allow rental inserts"
-  ON public.rentals FOR INSERT
-  WITH CHECK (true);
+-- Drop first then recreate (Supabase doesn't support IF NOT EXISTS for policies)
 
-CREATE POLICY IF NOT EXISTS "Allow rental updates"
-  ON public.rentals FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+-- Rentals policies
+DROP POLICY IF EXISTS "Allow rental inserts" ON public.rentals;
+DROP POLICY IF EXISTS "Allow rental updates" ON public.rentals;
+CREATE POLICY "Allow rental inserts" ON public.rentals FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow rental updates" ON public.rentals FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Orders policies  
-CREATE POLICY IF NOT EXISTS "Allow order inserts"
-  ON public.orders FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "Allow order updates"
-  ON public.orders FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow order inserts" ON public.orders;
+DROP POLICY IF EXISTS "Allow order updates" ON public.orders;
+CREATE POLICY "Allow order inserts" ON public.orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow order updates" ON public.orders FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Payments policies
-CREATE POLICY IF NOT EXISTS "Allow payment inserts"
-  ON public.payments FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY IF NOT EXISTS "Allow payment updates"
-  ON public.payments FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow payment inserts" ON public.payments;
+DROP POLICY IF EXISTS "Allow payment updates" ON public.payments;
+CREATE POLICY "Allow payment inserts" ON public.payments FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow payment updates" ON public.payments FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Bikes policies (for status updates)
-CREATE POLICY IF NOT EXISTS "Allow bike updates"
-  ON public.bikes FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow bike updates" ON public.bikes;
+CREATE POLICY "Allow bike updates" ON public.bikes FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Users policies (for KYC document URL updates)
-CREATE POLICY IF NOT EXISTS "Allow user KYC updates"
-  ON public.users FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow user KYC updates" ON public.users;
+CREATE POLICY "Allow user KYC updates" ON public.users FOR UPDATE USING (true) WITH CHECK (true);
 
 -- 5. Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);

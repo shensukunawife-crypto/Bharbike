@@ -60,6 +60,24 @@ export const getUserById = async (req, res) => {
     .single();
 
   if (error) {
+    // If profile not found, try users table
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (userData) {
+        return res.json(shapePublicUser({
+          ...userData,
+          image_url: userData.image_url || userData.avatar_url || null,
+        }));
+      }
+    } catch (e) {
+      console.warn("[getUserById] users table fallback skipped:", e?.message);
+    }
+
     // If profile not found, return a default instead of 500
     if (error.code === "PGRST116" || error.message?.includes("No rows found") || error.message?.includes("0 rows")) {
       return res.json(shapePublicUser({
@@ -77,6 +95,23 @@ export const getUserById = async (req, res) => {
       error,
     });
   }
+
+  // Also check users table for image_url if profiles doesn't have it
+  if (!data.image_url) {
+    try {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("image_url, avatar_url")
+        .eq("id", id)
+        .maybeSingle();
+      if (userData?.image_url || userData?.avatar_url) {
+        data.image_url = userData.image_url || userData.avatar_url;
+      }
+    } catch (e) {
+      console.warn("[getUserById] users image check skipped:", e?.message);
+    }
+  }
+
   res.json(shapePublicUser(data));
 };
 

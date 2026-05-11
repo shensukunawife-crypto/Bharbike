@@ -6,6 +6,8 @@ const r = Router();
 
 r.use(authMiddleware);
 r.get("/profile", userController.profile);
+r.get("/:id", userController.getUserById);
+r.post("/", userController.createUser);
 r.get("/stats/:userId", userController.getUserStats);
 r.put("/:id", userController.updateUser);
 

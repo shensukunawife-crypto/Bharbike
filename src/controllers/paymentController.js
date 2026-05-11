@@ -111,13 +111,27 @@ export const verifyPayment = async (req, res) => {
 
     // Create subscription or add wallet money
     if (user_id && plan_id) {
+      // Deduct from wallet first
+      const subAmount = Number(req.body.amount) || 0;
+      if (subAmount > 0) {
+        try {
+          await walletService.deductMoney(user_id, subAmount, `Subscription: ${plan_id}`);
+          console.log("[verifyPayment] wallet deducted:", subAmount);
+        } catch (deductErr) {
+          console.warn("[verifyPayment] wallet deduct failed:", deductErr?.message);
+          // Continue anyway — subscription may still be created
+        }
+      }
+
       try {
         await createSubscription(user_id, plan_id, paymentRecordId);
+        console.log("[verifyPayment] subscription created via service");
       } catch (e) {
         console.warn("[verifyPayment] subscription service failed, trying direct insert:", e?.message);
         // Fallback: insert subscription directly — look up plan UUID first
         try {
           let planUuid = plan_id;
+          let durationDays = 30;
           try {
             const { data: planRow } = await supabase
               .from("subscription_plans")
@@ -127,29 +141,33 @@ export const verifyPayment = async (req, res) => {
               .single();
             if (planRow) {
               planUuid = planRow.id;
+              durationDays = planRow.duration_days || 30;
             }
           } catch (planErr) {
             console.warn("[verifyPayment] plan lookup skipped:", planErr?.message);
+            durationDays = plan_id?.toLowerCase().includes("month") ? 30 :
+                           plan_id?.toLowerCase().includes("week") ? 7 :
+                           plan_id?.toLowerCase().includes("year") ? 365 : 30;
           }
 
-          const durationDays = plan_id?.toLowerCase().includes("month") ? 30 :
-                               plan_id?.toLowerCase().includes("week") ? 7 :
-                               plan_id?.toLowerCase().includes("year") ? 365 : 30;
           const startDate = new Date();
           const endDate = new Date();
           endDate.setDate(endDate.getDate() + durationDays);
 
-          await supabase.from("user_subscriptions").upsert({
+          const { data: subData, error: subError } = await supabase.from("user_subscriptions").upsert({
             user_id,
             status: "active",
             start_date: startDate.toISOString(),
             end_date: endDate.toISOString(),
-            plan_id: planUuid,
-            payment_id: paymentRecordId,
+            plan_id: String(planUuid),
             auto_renew: false,
             created_at: startDate.toISOString(),
           }, { onConflict: "user_id" });
-          console.log("[verifyPayment] direct subscription insert succeeded");
+          if (subError) {
+            console.warn("[verifyPayment] direct subscription insert failed:", subError.message);
+          } else {
+            console.log("[verifyPayment] direct subscription insert succeeded");
+          }
         } catch (directErr) {
           console.warn("[verifyPayment] direct subscription insert also failed:", directErr?.message);
         }

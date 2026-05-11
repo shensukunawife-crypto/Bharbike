@@ -378,8 +378,6 @@ api.post("/delivery/apply", async (req, res) => {
       license_url: license_url || null,
       aadhar_url: aadhar_url || null,
       photo_url: photo_url || null,
-      pan_url: pan_url || null,
-      electricity_bill_url: electricity_bill_url || null,
       status: "review",
     };
 

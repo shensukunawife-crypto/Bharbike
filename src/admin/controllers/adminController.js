@@ -178,7 +178,7 @@ async function fetchNameMapForIds(ids) {
   const unique = [...new Set(ids.filter(Boolean))];
   const map = new Map();
   if (!unique.length) return map;
-  const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", unique);
+  const { data: profiles } = await supabase.from("users").select("id, full_name").in("id", unique);
   for (const p of safeData(profiles)) {
     if (p?.id) map.set(p.id, p.full_name || "");
   }
@@ -360,7 +360,7 @@ export async function dashboard(req, res) {
       { data: ordersData, error: ordersError },
       { data: earningsRows, error: earningsError },
     ] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("users").select("*", { count: "exact", head: true }),
       supabase.from("bikes").select("*", { count: "exact", head: true }),
       supabase
         .from("rentals")
@@ -509,7 +509,7 @@ export async function users(req, res) {
   try {
     const [{ data: usersData, error: usersError }, { data: ordersData, error: ordersError }] =
       await Promise.all([
-        supabase.from("profiles").select("*"),
+        supabase.from("users").select("*"),
         supabase.from("orders").select("*"),
       ]);
     if (usersError || ordersError) {
@@ -617,7 +617,7 @@ export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
     const [{ data: userRow }, { data: ordersData }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
     ]);
     if (!userRow) {
@@ -811,7 +811,7 @@ export async function kycDocumentsPage(req, res) {
         .from("users")
         .select("id, full_name, aadhaar_front_url, aadhaar_back_url, pan_card_url, electricity_bill_url, selfie_url, updated_at")
         .order("updated_at", { ascending: false }),
-      supabase.from("profiles").select("id, full_name"),
+      supabase.from("users").select("id, full_name"),
     ]);
     let data = usersData;
     let error = usersError;
@@ -1464,7 +1464,7 @@ export async function addUser(req, res) {
     const full_name = req.body.full_name ?? req.body.name ?? null;
     const { phone, email, location } = req.body;
     const id = typeof req.body.id === "string" && req.body.id.length >= 32 ? req.body.id : randomUUID();
-    await supabase.from("profiles").insert([
+    await supabase.from("users").insert([
       {
         id,
         full_name,
@@ -1504,14 +1504,14 @@ export async function editUser(req, res) {
 export async function blockUser(req, res) {
   try {
     const { userId } = req.params;
-    const { data: row } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    const { data: row } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
     if (!row) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
     const isBlocked = row.is_blocked === true || row.status === "blocked";
     const nextBlocked = !isBlocked;
     await supabase
-      .from("profiles")
+      .from("users")
       .update({
         is_online: nextBlocked ? false : row.is_online ?? false,
         is_blocked: nextBlocked,
@@ -1648,7 +1648,7 @@ export async function approvePartner(req, res) {
     // 1. Update applications table
     await supabase.from("delivery_partners").update({ status: "approved" }).eq("user_id", userId);
     // 2. Update user profile
-    await supabase.from("profiles").update({ is_delivery_partner: true, is_online: true }).eq("id", userId);
+    await supabase.from("users").update({ is_delivery_partner: true, is_online: true }).eq("id", userId);
     return res.json({ success: true, message: "Partner approved" });
   } catch (error) {
     console.error("[admin.approvePartner] failed", error);
@@ -1660,7 +1660,7 @@ export async function rejectPartner(req, res) {
   try {
     const { userId } = req.params;
     await supabase.from("delivery_partners").update({ status: "rejected" }).eq("user_id", userId);
-    await supabase.from("profiles").update({ is_delivery_partner: false, is_online: false }).eq("id", userId);
+    await supabase.from("users").update({ is_delivery_partner: false, is_online: false }).eq("id", userId);
     return res.json({ success: true, message: "Partner rejected" });
   } catch (error) {
     console.error("[admin.rejectPartner] failed", error);

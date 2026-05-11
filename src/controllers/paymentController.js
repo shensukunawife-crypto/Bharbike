@@ -115,8 +115,23 @@ export const verifyPayment = async (req, res) => {
         await createSubscription(user_id, plan_id, paymentRecordId);
       } catch (e) {
         console.warn("[verifyPayment] subscription service failed, trying direct insert:", e?.message);
-        // Fallback: insert subscription directly without plan lookup
+        // Fallback: insert subscription directly — look up plan UUID first
         try {
+          let planUuid = plan_id;
+          try {
+            const { data: planRow } = await supabase
+              .from("subscription_plans")
+              .select("id, duration_days")
+              .or(`name.eq.${plan_id},display_name.ilike.%${plan_id}%`)
+              .limit(1)
+              .single();
+            if (planRow) {
+              planUuid = planRow.id;
+            }
+          } catch (planErr) {
+            console.warn("[verifyPayment] plan lookup skipped:", planErr?.message);
+          }
+
           const durationDays = plan_id?.toLowerCase().includes("month") ? 30 :
                                plan_id?.toLowerCase().includes("week") ? 7 :
                                plan_id?.toLowerCase().includes("year") ? 365 : 30;
@@ -129,7 +144,7 @@ export const verifyPayment = async (req, res) => {
             status: "active",
             start_date: startDate.toISOString(),
             end_date: endDate.toISOString(),
-            plan_id: plan_id,
+            plan_id: planUuid,
             payment_id: paymentRecordId,
             auto_renew: false,
             created_at: startDate.toISOString(),

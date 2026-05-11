@@ -84,7 +84,30 @@ export async function getUserActiveSubscription(userId) {
       .limit(1)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      // Join may fail if plan_id is not a valid UUID — try without join
+      const { data: rawData, error: rawError } = await supabase
+        .from("user_subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .gt("end_date", new Date().toISOString())
+        .order("end_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (rawError) throw rawError;
+      if (rawData) {
+        // Try to look up plan separately
+        let planData = null;
+        try {
+          const planLookup = await getSubscriptionPlanById(rawData.plan_id);
+          if (planLookup) planData = planLookup;
+        } catch {}
+        return { ...rawData, plan: planData || { display_name: rawData.plan_id, price: 0 } };
+      }
+      return null;
+    }
     return data;
   } catch (error) {
     console.error("[subscriptionService] getUserActiveSubscription failed:", error.message);

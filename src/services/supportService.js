@@ -43,7 +43,6 @@ export async function createTicket(userId, bikeId, bikeName, issueType, descript
     .insert([
       {
         user_id: userId,
-        bike_id: bikeId,
         bike_name: bikeName,
         issue_type: issueType,
         description: description,

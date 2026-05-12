@@ -22,4 +22,9 @@ r.post(
   deliveryController.setOnline
 );
 
+// Partner Dashboard endpoints
+r.get("/dashboard/:userId", deliveryController.getDashboard);
+r.get("/orders/:userId", deliveryController.getOrders);
+r.get("/earnings/:userId", deliveryController.getEarnings);
+
 export default r;

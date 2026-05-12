@@ -20,3 +20,21 @@ export const setOnline = asyncHandler(async (req, res) => {
   );
   res.json({ success: true, data });
 });
+
+export const getDashboard = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const data = await deliveryService.getPartnerDashboard(userId);
+  res.json({ success: true, data });
+});
+
+export const getOrders = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const data = await deliveryService.getPartnerOrders(userId);
+  res.json({ success: true, data });
+});
+
+export const getEarnings = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const data = await deliveryService.getPartnerEarnings(userId);
+  res.json({ success: true, data });
+});

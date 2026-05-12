@@ -101,3 +101,104 @@ export async function getDeliveryStatus(userId) {
 
   return { status: data?.status || null };
 }
+
+export async function getPartnerDashboard(userId) {
+  if (!userId) throw new AppError("user_id is required", 400);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Get partner info + online status
+  const { data: partner } = await supabase
+    .from("delivery_partners")
+    .select("full_name, status, is_online, city, vehicle_type, rating")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  // Get today's completed orders
+  const { data: todayOrders } = await supabase
+    .from("orders")
+    .select("id, earnings, status, created_at")
+    .eq("assigned_user_id", userId)
+    .eq("status", "completed")
+    .gte("created_at", today.toISOString());
+
+  // Get all-time completed orders count
+  const { count: totalOrders } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("assigned_user_id", userId)
+    .eq("status", "completed");
+
+  // Get active order if any
+  const { data: activeOrder } = await supabase
+    .from("orders")
+    .select("id, plan_name, pickup, drop_location, earnings, status")
+    .eq("assigned_user_id", userId)
+    .eq("status", "accepted")
+    .maybeSingle();
+
+  // Today's earnings
+  const todayEarnings = (todayOrders || []).reduce(
+    (sum, o) => sum + Number(o.earnings || 0), 0
+  );
+
+  // Get earnings from earnings table for total
+  const { data: earningsRows } = await supabase
+    .from("earnings")
+    .select("amount, created_at")
+    .eq("user_id", userId);
+
+  const totalEarnings = (earningsRows || []).reduce(
+    (sum, e) => sum + Number(e.amount || 0), 0
+  );
+
+  // This week's earnings
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEarnings = (earningsRows || [])
+    .filter(e => new Date(e.created_at) >= weekStart)
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+  return {
+    partner: partner || {},
+    todayEarnings: Number(todayEarnings.toFixed(2)),
+    weekEarnings: Number(weekEarnings.toFixed(2)),
+    totalEarnings: Number(totalEarnings.toFixed(2)),
+    todayOrders: (todayOrders || []).length,
+    totalOrders: totalOrders || 0,
+    activeOrder: activeOrder || null,
+    isOnline: partner?.is_online ?? false,
+  };
+}
+
+export async function getPartnerOrders(userId) {
+  if (!userId) throw new AppError("user_id is required", 400);
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, plan_name, pickup, drop_location, earnings, status, created_at")
+    .eq("assigned_user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) {
+    console.error("[deliveryService.getPartnerOrders] failed", error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getPartnerEarnings(userId) {
+  if (!userId) throw new AppError("user_id is required", 400);
+  const { data, error } = await supabase
+    .from("earnings")
+    .select("id, amount, type, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) {
+    console.error("[deliveryService.getPartnerEarnings] failed", error);
+    return [];
+  }
+  return data || [];
+}

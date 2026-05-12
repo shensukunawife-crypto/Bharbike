@@ -117,30 +117,75 @@ export async function getWalletSummary(userId) {
 }
 
 /**
- * Validate promo code (placeholder - implement your promo logic)
+ * Validate and apply promo code (DB-backed)
  */
 export async function validatePromoCode(userId, code) {
-  // TODO: Implement promo code validation with database
-  // For now, hardcoded validation
-  const validCodes = {
-    SAVE50: { amount: 50, description: "₹50 cashback" },
-    WELCOME100: { amount: 100, description: "₹100 welcome bonus" },
-    RIDE20: { amount: 20, description: "₹20 ride discount" },
-  };
-
   const upperCode = String(code).trim().toUpperCase();
-  const promo = validCodes[upperCode];
 
-  if (!promo) {
-    throw new AppError("Invalid promo code", 400);
+  // Lookup code in promo_codes table
+  const { data: promo, error } = await supabase
+    .from("promo_codes")
+    .select("*")
+    .eq("code", upperCode)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[walletService.validatePromoCode]", error);
+    throw new AppError("Unable to validate promo code", 500);
   }
 
-  // Add promo amount to wallet
-  await addMoney(userId, promo.amount, `Promo: ${upperCode}`, null, null);
+  if (!promo) {
+    throw new AppError("Invalid or expired promo code", 400);
+  }
+
+  // Check expiry
+  if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+    throw new AppError("This promo code has expired", 400);
+  }
+
+  // Check max uses
+  if (promo.max_uses && promo.uses_count >= promo.max_uses) {
+    throw new AppError("This promo code has reached its usage limit", 400);
+  }
+
+  // Check if user already used this code
+  const { data: existing } = await supabase
+    .from("promo_uses")
+    .select("id")
+    .eq("promo_id", promo.id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing) {
+    throw new AppError("You have already used this promo code", 400);
+  }
+
+  // Calculate discount amount
+  const discountAmount = promo.discount_type === "percent"
+    ? Math.min(promo.discount_value, 500) // cap at ₹500
+    : promo.discount_value;
+
+  // Add discount to wallet
+  await addMoney(userId, discountAmount, `Promo: ${upperCode} — ${promo.description || "Discount"}`, null, null);
+
+  // Record usage
+  await supabase.from("promo_uses").insert([{ promo_id: promo.id, user_id: userId }]).catch(() => {});
+
+  // Increment uses count
+  await supabase.from("promo_codes")
+    .update({ uses_count: (promo.uses_count || 0) + 1 })
+    .eq("id", promo.id)
+    .catch(() => {});
+
+  const label = promo.discount_type === "percent"
+    ? `${promo.discount_value}% off (₹${discountAmount} added to wallet)`
+    : `₹${discountAmount} added to wallet`;
 
   return {
     success: true,
-    message: `Promo applied: ${promo.description} added to wallet`,
-    amount: promo.amount,
+    message: `🎉 Promo applied! ${label}`,
+    amount: discountAmount,
+    code: upperCode,
   };
 }

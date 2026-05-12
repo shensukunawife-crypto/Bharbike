@@ -25,53 +25,65 @@
 
 <div class="analytics-grid">
   <div class="chart-card">
-    <h3>Revenue Graph</h3>
-    <div class="chart-skeleton"></div>
-    <canvas id="revenueChart"></canvas>
+    <h3>📈 Revenue Over Time</h3>
+    <canvas id="revenueChart" height="120"></canvas>
+    <% if (!revenueSeries || !revenueSeries.length) { %>
+      <p style="color:#9ca3af;text-align:center;padding:20px 0;font-size:13px;">No revenue data for this period</p>
+    <% } %>
   </div>
   <div class="chart-card">
-    <h3>Orders Graph</h3>
-    <div class="chart-skeleton"></div>
-    <canvas id="ordersBarChart"></canvas>
+    <h3>📊 Orders Breakdown</h3>
+    <canvas id="ordersBarChart" height="120"></canvas>
+    <% if (!ordersSeries || !ordersSeries.length) { %>
+      <p style="color:#9ca3af;text-align:center;padding:20px 0;font-size:13px;">No order data for this period</p>
+    <% } %>
   </div>
   <div class="chart-card">
-    <h3>Earnings Breakdown</h3>
-    <div class="chart-skeleton"></div>
-    <canvas id="earningsPieChart"></canvas>
+    <h3>🍩 Earnings Breakdown</h3>
+    <canvas id="earningsPieChart" height="120"></canvas>
   </div>
   <div class="chart-card">
-    <h3>Extra Analytics</h3>
+    <h3>📋 Summary</h3>
     <div class="summary-list">
       <div><span>Most Used Bike</span><strong><%= usage.mostUsedBike %></strong></div>
-      <div><span>Total Hours</span><strong><%= usage.totalHours %> hrs</strong></div>
-      <div><span>Order Status</span><strong>C:<%= orderStatus.completed %> P:<%= orderStatus.pending %> X:<%= orderStatus.cancelled %></strong></div>
-      <div><span>Delivery Stats</span><strong><%= deliveryStats.avgTime %> min avg / <%= deliveryStats.totalDeliveries %> total</strong></div>
+      <div><span>Total Ride Hours</span><strong><%= usage.totalHours %> hrs</strong></div>
+      <div><span>Completed Orders</span><strong style="color:#16a34a"><%= orderStatus.completed %></strong></div>
+      <div><span>Pending Orders</span><strong style="color:#f59e0b"><%= orderStatus.pending %></strong></div>
+      <div><span>Cancelled</span><strong style="color:#dc2626"><%= orderStatus.cancelled %></strong></div>
+      <div><span>Total Deliveries</span><strong><%= deliveryStats.totalDeliveries %></strong></div>
+      <div><span>Avg Delivery Time</span><strong><%= deliveryStats.avgTime %> min</strong></div>
     </div>
   </div>
 </div>
 
 <div class="chart-card">
-  <h3>Recent Activity (Last 5 Orders)</h3>
+  <h3>🕐 Recent Activity (Last 5 Orders)</h3>
   <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
           <th>Order ID</th>
+          <th>Plan</th>
           <th>Pickup</th>
           <th>Drop</th>
+          <th>Amount</th>
           <th>Status</th>
+          <th>Date</th>
         </tr>
       </thead>
       <tbody>
         <% if (!recentOrders.length) { %>
-        <tr><td colspan="4" class="empty">No recent orders</td></tr>
+        <tr><td colspan="7" class="empty">No recent orders</td></tr>
         <% } %>
         <% recentOrders.forEach((order) => { %>
         <tr>
-          <td><%= order.id %></td>
-          <td><%= order.pickup_location %></td>
-          <td><%= order.drop_location %></td>
-          <td><span class="badge"><%= order.status %></span></td>
+          <td><code style="font-size:11px"><%= String(order.id || '-').slice(0,8) %>...</code></td>
+          <td><%= order.plan_name || '-' %></td>
+          <td><%= order.pickup || order.pickup_location || '-' %></td>
+          <td><%= order.drop_location || '-' %></td>
+          <td>₹<%= Number(order.earnings || order.price || order.amount || 0).toFixed(0) %></td>
+          <td><span class="badge <%= order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'danger' %>"><%= order.status %></span></td>
+          <td><%= order.created_at ? String(order.created_at).slice(0,10) : '-' %></td>
         </tr>
         <% }) %>
       </tbody>
@@ -79,6 +91,7 @@
   </div>
 </div>
 
+<!-- Chart data (IDs match admin.js parseJsonScript calls) -->
 <script type="application/json" id="analytics-revenue-data"><%- JSON.stringify(revenueSeries || []) %></script>
 <script type="application/json" id="analytics-orders-bar-data"><%- JSON.stringify(ordersSeries || []) %></script>
 <script type="application/json" id="analytics-pie-data"><%- JSON.stringify(pieSeries || []) %></script>

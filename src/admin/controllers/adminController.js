@@ -1392,12 +1392,104 @@ export function systemWorkflowPage(req, res, next) {
 }
 
 export async function settingsPage(req, res) {
+  // Load promo codes from DB
+  let promoCodes = [];
+  try {
+    const { data } = await supabase.from("promo_codes").select("*").order("created_at", { ascending: false });
+    promoCodes = data || [];
+  } catch (_) {}
+
   return renderPage(res, {
     title: "Settings",
     active: "settings",
     bodyView: "settings",
     settings: dashboardSettings,
+    promoCodes,
   });
+}
+
+// Booking actions
+export async function completeBooking(req, res) {
+  try {
+    const { bookingId } = req.params;
+    const { error } = await supabase
+      .from("rentals")
+      .update({ status: "completed", end_time: new Date().toISOString() })
+      .eq("id", bookingId);
+    if (error) throw error;
+    return res.json({ success: true, message: "Booking marked as completed" });
+  } catch (err) {
+    console.error("[admin.completeBooking]", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed" });
+  }
+}
+
+export async function cancelBooking(req, res) {
+  try {
+    const { bookingId } = req.params;
+    const { error } = await supabase
+      .from("rentals")
+      .update({ status: "cancelled" })
+      .eq("id", bookingId);
+    if (error) throw error;
+    return res.json({ success: true, message: "Booking cancelled" });
+  } catch (err) {
+    console.error("[admin.cancelBooking]", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed" });
+  }
+}
+
+// Promo code management
+export async function addPromoCode(req, res) {
+  try {
+    const { code, discount_type, discount_value, max_uses, expires_at, description } = req.body;
+    if (!code || !discount_type || !discount_value) {
+      return res.status(400).json({ success: false, message: "code, discount_type and discount_value are required" });
+    }
+    const { data, error } = await supabase.from("promo_codes").insert([{
+      code: String(code).toUpperCase().trim(),
+      discount_type,
+      discount_value: Number(discount_value),
+      max_uses: max_uses ? Number(max_uses) : null,
+      expires_at: expires_at || null,
+      description: description || null,
+      is_active: true,
+      uses_count: 0,
+    }]).select().single();
+    if (error) throw error;
+    return res.json({ success: true, message: "Promo code created", data });
+  } catch (err) {
+    console.error("[admin.addPromoCode]", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed to create promo code" });
+  }
+}
+
+export async function togglePromoCode(req, res) {
+  try {
+    const { promoId } = req.params;
+    const { data: existing, error: fetchErr } = await supabase
+      .from("promo_codes").select("is_active").eq("id", promoId).maybeSingle();
+    if (fetchErr) throw fetchErr;
+    const { error } = await supabase
+      .from("promo_codes").update({ is_active: !existing?.is_active }).eq("id", promoId);
+    if (error) throw error;
+    return res.json({ success: true, message: `Promo code ${existing?.is_active ? "disabled" : "enabled"}` });
+  } catch (err) {
+    console.error("[admin.togglePromoCode]", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed" });
+  }
+}
+
+export async function deletePromoCode(req, res) {
+  try {
+    const { promoId } = req.params;
+    const { error } = await supabase.from("promo_codes").delete().eq("id", promoId);
+    if (error) throw error;
+    return res.json({ success: true, message: "Promo code deleted" });
+  } catch (err) {
+    console.error("[admin.deletePromoCode]", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed" });
+  }
 }
 
 export async function paymentsPage(req, res) {

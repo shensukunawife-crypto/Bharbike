@@ -85,3 +85,72 @@
     </form>
   </div>
 </div>
+
+<!-- Promo Codes Section -->
+<div style="margin-top:32px">
+  <h2 style="font-size:1.1rem;margin-bottom:16px">🎟️ Promo Codes</h2>
+
+  <!-- Add New Promo -->
+  <div class="settings-card" style="margin-bottom:20px">
+    <h3>Add New Promo Code</h3>
+    <form class="admin-form ajax-form" data-url="/admin/promo/add" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <input name="code" placeholder="Code e.g. WELCOME50" required style="text-transform:uppercase" />
+      <select name="discount_type" required>
+        <option value="percent">Percentage (%)</option>
+        <option value="flat">Flat Amount (₹)</option>
+      </select>
+      <input type="number" name="discount_value" placeholder="Discount value" required min="1" />
+      <input type="number" name="max_uses" placeholder="Max uses (blank = unlimited)" min="1" />
+      <input type="date" name="expires_at" placeholder="Expiry date (optional)" />
+      <input name="description" placeholder="Description (optional)" />
+      <button type="submit" class="btn btn-gold glow" style="grid-column:1/-1">➕ Create Promo Code</button>
+    </form>
+  </div>
+
+  <!-- Existing Codes Table -->
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Type</th>
+          <th>Discount</th>
+          <th>Uses</th>
+          <th>Max Uses</th>
+          <th>Expires</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!promoCodes || !promoCodes.length) { %>
+        <tr><td colspan="8" class="empty">No promo codes yet. Create one above.</td></tr>
+        <% } %>
+        <% (promoCodes || []).forEach((promo) => { %>
+        <tr>
+          <td><code><strong><%= promo.code %></strong></code></td>
+          <td><span class="badge badge-soft"><%= promo.discount_type %></span></td>
+          <td><strong><%= promo.discount_type === 'percent' ? promo.discount_value + '%' : '₹' + promo.discount_value %></strong></td>
+          <td><%= promo.uses_count || 0 %></td>
+          <td><%= promo.max_uses || '∞' %></td>
+          <td style="font-size:12px"><%= promo.expires_at ? String(promo.expires_at).slice(0,10) : 'No expiry' %></td>
+          <td><span class="badge <%= promo.is_active ? 'success' : 'danger' %>"><%= promo.is_active ? 'Active' : 'Disabled' %></span></td>
+          <td class="actions">
+            <button class="btn <%= promo.is_active ? 'btn-ghost' : 'btn-success' %> admin-action"
+              data-url="/admin/promo/<%= promo.id %>/toggle"
+              data-method="POST">
+              <%= promo.is_active ? '🚫 Disable' : '✔ Enable' %>
+            </button>
+            <button class="btn btn-danger admin-action"
+              data-url="/admin/promo/<%= promo.id %>/delete"
+              data-method="POST"
+              onclick="return confirm('Delete promo code <%= promo.code %>?')">
+              🗑 Delete
+            </button>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

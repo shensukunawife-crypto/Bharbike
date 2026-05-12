@@ -58,6 +58,15 @@ router.post("/notifications/send", adminController.sendNotification);
 router.post("/earnings/payout/:payoutId/release", adminController.releasePayout);
 router.post("/settings/save", adminController.saveSettings);
 
+// Booking actions
+router.post("/bookings/:bookingId/complete", adminController.completeBooking);
+router.post("/bookings/:bookingId/cancel", adminController.cancelBooking);
+
+// Promo Code management
+router.post("/promo/add", adminController.addPromoCode);
+router.post("/promo/:promoId/toggle", adminController.togglePromoCode);
+router.post("/promo/:promoId/delete", adminController.deletePromoCode);
+
 // Sub-Admins Management
 router.get("/admins", requirePermission("manage_admins"), adminController.adminsPage);
 router.post("/admins/add", requirePermission("manage_admins"), adminController.addAdmin);

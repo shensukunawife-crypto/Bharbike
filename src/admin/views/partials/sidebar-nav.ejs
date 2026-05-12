@@ -202,7 +202,7 @@
         <a class="nav-link nav-link--sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings">
           <span class="nav-icon">⚙️</span><span>Settings</span>
         </a>
-        <% if (locals.admin && locals.admin.role === 'master_admin') { %>
+        <% if (locals.admin && (locals.admin.role === 'master_admin' || locals.admin.role === 'admin')) { %>
         <a class="nav-link nav-link--sub <%= active === 'admins' ? 'active' : '' %>" href="/admin/admins">
           <span class="nav-icon">🛡️</span><span>Sub-Admins</span>
         </a>

@@ -47,8 +47,8 @@ export function requirePermission(permission) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     
-    // Master admin gets everything
-    if (req.admin.role === "master_admin" || (req.admin.permissions && req.admin.permissions.includes("*"))) {
+    // Master admin gets everything (both old 'admin' and new 'master_admin' tokens)
+    if (req.admin.role === "master_admin" || req.admin.role === "admin" || (req.admin.permissions && req.admin.permissions.includes("*"))) {
       return next();
     }
     

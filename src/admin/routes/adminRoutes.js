@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as adminController from "../controllers/adminController.js";
 import { adminLoginPage } from "../../controllers/adminAuthController.js";
-import { requireAdminAuth } from "../middleware/adminAuth.js";
+import { requireAdminAuth, requirePermission } from "../middleware/adminAuth.js";
 
 const router = Router();
 
@@ -58,4 +58,9 @@ router.post("/notifications/send", adminController.sendNotification);
 router.post("/earnings/payout/:payoutId/release", adminController.releasePayout);
 router.post("/settings/save", adminController.saveSettings);
 
+// Sub-Admins Management
+router.get("/admins", requirePermission("manage_admins"), adminController.adminsPage);
+router.post("/admins/add", requirePermission("manage_admins"), adminController.addAdmin);
+router.post("/admins/:id/edit", requirePermission("manage_admins"), adminController.editAdmin);
+router.post("/admins/:id/toggle", requirePermission("manage_admins"), adminController.toggleAdmin);
 export default router;

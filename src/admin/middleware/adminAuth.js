@@ -31,6 +31,7 @@ export function requireAdminAuth(req, res, next) {
   try {
     const payload = jwt.verify(token, env.jwtSecret);
     req.admin = payload;
+    res.locals.admin = payload;
     return next();
   } catch {
     if (onAdminSite && req.method === "GET") {
@@ -38,4 +39,23 @@ export function requireAdminAuth(req, res, next) {
     }
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
+}
+
+export function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!req.admin) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    
+    // Master admin gets everything
+    if (req.admin.role === "master_admin" || (req.admin.permissions && req.admin.permissions.includes("*"))) {
+      return next();
+    }
+    
+    if (req.admin.permissions && req.admin.permissions.includes(permission)) {
+      return next();
+    }
+    
+    return res.status(403).json({ success: false, message: "Forbidden: You don't have permission to perform this action" });
+  };
 }

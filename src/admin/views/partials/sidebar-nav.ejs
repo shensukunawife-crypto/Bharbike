@@ -5,7 +5,7 @@
   const gFinancial = ['earnings', 'analytics'].includes(active);
   const gSystem = ['system-workflow', 'backend-monitor'].includes(active);
   const gComm = ['support', 'notifications'].includes(active);
-  const gAdmin = ['payments', 'settings'].includes(active);
+  const gAdmin = ['payments', 'settings', 'admins'].includes(active);
 %>
 <nav class="nav nav--grouped" id="admin-sidebar-nav" aria-label="Admin navigation">
   <div class="nav-block nav-block--dashboard nav-block--hero">
@@ -202,6 +202,11 @@
         <a class="nav-link nav-link--sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings">
           <span class="nav-icon">⚙️</span><span>Settings</span>
         </a>
+        <% if (locals.admin && locals.admin.role === 'master_admin') { %>
+        <a class="nav-link nav-link--sub <%= active === 'admins' ? 'active' : '' %>" href="/admin/admins">
+          <span class="nav-icon">🛡️</span><span>Sub-Admins</span>
+        </a>
+        <% } %>
       </div>
     </div>
   </div>

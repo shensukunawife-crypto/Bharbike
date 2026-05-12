@@ -1846,3 +1846,87 @@ export async function saveSettings(req, res) {
 
   return res.json({ success: true, message: "Settings saved", settings: dashboardSettings });
 }
+
+export async function adminsPage(req, res) {
+  try {
+    const { data: admins, error } = await supabase.from("admin_users").select("*").order("created_at", { ascending: false });
+    return renderPage(res, {
+      title: "Sub-Admins",
+      active: "settings",
+      bodyView: "admins",
+      admins: safeData(admins),
+    });
+  } catch (error) {
+    console.error("[admin.adminsPage] failed", error);
+    return renderPage(res, { title: "Sub-Admins", active: "settings", bodyView: "admins", admins: [] });
+  }
+}
+
+export async function addAdmin(req, res) {
+  try {
+    const { email, full_name, password, role, permissions } = req.body;
+    if (!email || !full_name || !password) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const bcrypt = require("bcryptjs");
+    const password_hash = await bcrypt.hash(password, 10);
+    
+    const { error } = await supabase.from("admin_users").insert([{
+      email: email.trim(),
+      full_name: full_name.trim(),
+      password_hash,
+      role: role || "sub_admin",
+      permissions: permissions || [],
+      is_active: true
+    }]);
+
+    if (error) throw error;
+    return res.json({ success: true, message: "Admin created successfully" });
+  } catch (error) {
+    console.error("[admin.addAdmin] failed", error);
+    return res.status(500).json({ success: false, message: "Failed to create admin" });
+  }
+}
+
+export async function editAdmin(req, res) {
+  try {
+    const { id } = req.params;
+    const { full_name, password, role, permissions } = req.body;
+    
+    const updates = {
+      full_name: full_name.trim(),
+      role: role || "sub_admin",
+      permissions: permissions || [],
+    };
+
+    if (password && password.trim().length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const bcrypt = require("bcryptjs");
+      updates.password_hash = await bcrypt.hash(password, 10);
+    }
+
+    const { error } = await supabase.from("admin_users").update(updates).eq("id", id);
+    if (error) throw error;
+    return res.json({ success: true, message: "Admin updated successfully" });
+  } catch (error) {
+    console.error("[admin.editAdmin] failed", error);
+    return res.status(500).json({ success: false, message: "Failed to update admin" });
+  }
+}
+
+export async function toggleAdmin(req, res) {
+  try {
+    const { id } = req.params;
+    const { data: admin } = await supabase.from("admin_users").select("is_active").eq("id", id).single();
+    if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
+
+    const { error } = await supabase.from("admin_users").update({ is_active: !admin.is_active }).eq("id", id);
+    if (error) throw error;
+    return res.json({ success: true, message: `Admin ${admin.is_active ? "blocked" : "unblocked"}` });
+  } catch (error) {
+    console.error("[admin.toggleAdmin] failed", error);
+    return res.status(500).json({ success: false, message: "Failed to toggle admin status" });
+  }
+}

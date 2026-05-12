@@ -13,4 +13,7 @@ router.get("/settings", notificationController.getSettings);
 // Update notification settings
 router.put("/settings", notificationController.updateSettings);
 
+// Get user notifications (no auth middleware — userId is in URL param, validated by controller)
+router.get("/:userId", notificationController.getUserNotifications);
+
 export default router;

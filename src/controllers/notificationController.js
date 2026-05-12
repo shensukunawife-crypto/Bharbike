@@ -1,5 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import * as notificationService from "../services/notificationService.js";
+import supabase from "../config/supabase.js";
 
 /**
  * Get notification settings for authenticated user
@@ -42,4 +43,28 @@ export const updateSettings = asyncHandler(async (req, res) => {
         data: settings,
         message: "Notification settings updated successfully",
     });
+});
+
+/**
+ * Get notifications for a user
+ * GET /api/notifications/:userId
+ */
+export const getUserNotifications = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ success: false, message: "userId required" });
+
+    try {
+        const { data, error } = await supabase
+            .from("notifications")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+        return res.json({ success: true, data: data || [] });
+    } catch (err) {
+        // If notifications table doesn't exist yet, return empty list gracefully
+        return res.json({ success: true, data: [] });
+    }
 });

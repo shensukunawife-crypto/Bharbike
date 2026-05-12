@@ -178,13 +178,13 @@ async function fetchNameMapForIds(ids) {
   const unique = [...new Set(ids.filter(Boolean))];
   const map = new Map();
   if (!unique.length) return map;
-  const { data: profiles } = await supabase.from("users").select("id, full_name").in("id", unique);
+  const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", unique);
   for (const p of safeData(profiles)) {
     if (p?.id) map.set(p.id, p.full_name || "");
   }
   const missing = unique.filter((id) => !map.get(id));
   if (missing.length) {
-    const { data: users } = await supabase.from("users").select("id, full_name").in("id", missing);
+    const { data: users } = await supabase.from("profiles").select("id, full_name").in("id", missing);
     for (const u of safeData(users)) {
       if (u?.id) map.set(u.id, u.full_name || "");
     }

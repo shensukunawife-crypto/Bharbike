@@ -231,7 +231,6 @@ export async function createSubscription(userId, planId, paymentId = null) {
           status: "active",
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
-          payment_id: paymentId,
           auto_renew: false,
         },
       ])
@@ -254,7 +253,6 @@ export async function createSubscription(userId, planId, paymentId = null) {
           status: "active",
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
-          payment_id: paymentId,
           auto_renew: false,
           plan: plan
         };

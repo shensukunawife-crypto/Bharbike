@@ -257,25 +257,22 @@ export const getUserStats = asyncHandler(async (req, res) => {
     console.error("[getUserStats] rides error:", ridesError);
   }
 
-  // Get rentals with distance data
+  // Get rentals with cost data (distance column may not exist in all schemas)
   const { data: rentals, error: rentalsError } = await supabase
     .from("rentals")
-    .select("distance, total_cost")
+    .select("total_cost")
     .eq("user_id", userId);
 
   if (rentalsError) {
     console.error("[getUserStats] rentals error:", rentalsError);
   }
 
-  // Calculate total distance and savings
+  // Calculate total savings (distance not available in all schemas)
   let totalDistance = 0;
   let totalSavings = 0;
 
   if (rentals && Array.isArray(rentals)) {
     rentals.forEach((rental) => {
-      if (rental.distance) {
-        totalDistance += parseFloat(rental.distance) || 0;
-      }
       // Calculate savings: assume taxi costs 2x more than bike rental
       if (rental.total_cost) {
         totalSavings += parseFloat(rental.total_cost) || 0;

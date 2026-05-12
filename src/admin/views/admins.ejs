@@ -1,0 +1,127 @@
+<div class="toolbar">
+  <button class="btn btn-gold" data-modal-target="add-admin-modal">+ Add Sub-Admin</button>
+</div>
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Full Name</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Last Login</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!admins.length) { %>
+      <tr><td colspan="6" class="empty">No sub-admins found</td></tr>
+      <% } %>
+      <% admins.forEach((admin) => { %>
+      <tr>
+        <td><%= admin.email %></td>
+        <td><%= admin.full_name %></td>
+        <td><span class="badge info"><%= admin.role %></span></td>
+        <td>
+          <span class="badge <%= admin.is_active ? 'success' : 'danger' %>">
+            <%= admin.is_active ? 'Active' : 'Blocked' %>
+          </span>
+        </td>
+        <td><%= admin.last_login ? new Date(admin.last_login).toLocaleString() : 'Never' %></td>
+        <td class="actions">
+          <button
+            type="button"
+            class="btn btn-ghost open-edit-admin"
+            data-id="<%= admin.id %>"
+            data-full-name="<%= admin.full_name %>"
+            data-email="<%= admin.email %>"
+            data-role="<%= admin.role %>"
+            data-permissions="<%= JSON.stringify(admin.permissions || []) %>"
+          >Edit</button>
+          <button class="btn <%= admin.is_active ? 'btn-danger' : 'btn-gold' %> admin-action" data-url="/admin/admins/<%= admin.id %>/toggle" data-method="POST">
+            <%= admin.is_active ? "Block" : "Unblock" %>
+          </button>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal" id="add-admin-modal">
+  <div class="modal-card">
+    <h3>Add Sub-Admin</h3>
+    <form class="admin-form ajax-form" data-url="/admin/admins/add">
+      <input name="email" type="email" placeholder="Email Address" required />
+      <input name="full_name" placeholder="Full Name" required />
+      <input name="password" type="password" placeholder="Password" required />
+      <select name="role" required>
+        <option value="sub_admin">Sub Admin</option>
+        <option value="manager">Manager</option>
+        <option value="support">Support Agent</option>
+      </select>
+      
+      <div style="margin-top: 15px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 8px;">Permissions</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <label><input type="checkbox" name="permissions[]" value="manage_users"> Manage Users</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_bikes"> Manage Bikes</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_orders"> Manage Orders</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_finance"> Finance & Payouts</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_support"> Support Tickets</label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-gold glow" style="margin-top: 20px;">Create Admin</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="edit-admin-modal">
+  <div class="modal-card">
+    <h3>Edit Sub-Admin</h3>
+    <form class="admin-form ajax-form" id="edit-admin-form" data-url="">
+      <input name="email" id="edit-admin-email" type="email" placeholder="Email Address" required readonly />
+      <input name="full_name" id="edit-admin-full-name" placeholder="Full Name" required />
+      <input name="password" type="password" placeholder="New Password (leave blank to keep current)" />
+      <select name="role" id="edit-admin-role" required>
+        <option value="sub_admin">Sub Admin</option>
+        <option value="manager">Manager</option>
+        <option value="support">Support Agent</option>
+      </select>
+      
+      <div style="margin-top: 15px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 8px;">Permissions</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <label><input type="checkbox" name="permissions[]" value="manage_users" class="edit-perm"> Manage Users</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_bikes" class="edit-perm"> Manage Bikes</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_orders" class="edit-perm"> Manage Orders</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_finance" class="edit-perm"> Finance & Payouts</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_support" class="edit-perm"> Support Tickets</label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-gold glow" style="margin-top: 20px;">Update Admin</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.open-edit-admin').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      document.getElementById('edit-admin-form').dataset.url = '/admin/admins/' + id + '/edit';
+      document.getElementById('edit-admin-email').value = btn.dataset.email;
+      document.getElementById('edit-admin-full-name').value = btn.dataset.fullName;
+      document.getElementById('edit-admin-role').value = btn.dataset.role;
+      
+      const perms = JSON.parse(btn.dataset.permissions || '[]');
+      document.querySelectorAll('.edit-perm').forEach(cb => {
+        cb.checked = perms.includes(cb.value);
+      });
+      
+      document.getElementById('edit-admin-modal').classList.add('active');
+    });
+  });
+</script>

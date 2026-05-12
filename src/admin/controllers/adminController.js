@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
 import supabase from "../../config/supabase.js";
 import { shapePublicUser } from "../../utils/userShape.js";
 import { listInMemoryBookings } from "../../services/bookingStore.js";
@@ -368,7 +369,7 @@ export async function dashboard(req, res) {
         .eq("status", "active"),
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("*"),
-      supabase.from("earnings").select("amount, created_at, createdAt"),
+      supabase.from("earnings").select("amount, created_at"),
     ]);
 
     if (usersError || bikesError || rentalsError || earningsError || bikesDataError || ordersError) {
@@ -1869,8 +1870,6 @@ export async function addAdmin(req, res) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const bcrypt = require("bcryptjs");
     const password_hash = await bcrypt.hash(password, 10);
     
     const { error } = await supabase.from("admin_users").insert([{
@@ -1902,8 +1901,6 @@ export async function editAdmin(req, res) {
     };
 
     if (password && password.trim().length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const bcrypt = require("bcryptjs");
       updates.password_hash = await bcrypt.hash(password, 10);
     }
 

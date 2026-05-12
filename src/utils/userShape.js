@@ -10,7 +10,7 @@ export function shapePublicUser(row) {
     email: row.email ?? null,
     phone: row.phone ?? null,
     location: row.location ?? null,
-    image_url: row.image_url ?? null,
+    image_url: row.image_url || row.avatar_url ?? null,
     created_at: row.created_at ?? null,
   };
 }

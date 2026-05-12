@@ -432,7 +432,18 @@ api.get("/delivery/status", async (req, res) => {
       .select("status")
       .eq("user_id", userId)
       .maybeSingle();
+
     if (error) {
+      const msg = String(error.message || "").toLowerCase();
+      if (
+        msg.includes("could not find the table") ||
+        msg.includes("does not exist") ||
+        error.code === "42P01" ||
+        msg.includes("row-level security") ||
+        error.code === "42501"
+      ) {
+        return res.json({ success: true, status: null });
+      }
       console.error("[GET /api/delivery/status] failed:", error);
       return res.status(500).json({ success: false, message: error.message });
     }

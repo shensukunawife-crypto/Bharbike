@@ -187,7 +187,7 @@ export const updateUser = async (req, res) => {
     ...(body.email !== undefined && { email: body.email }),
     ...(body.phone !== undefined && { phone: body.phone }),
     ...(body.location !== undefined && { location: body.location }),
-    ...(body.image_url !== undefined && { image_url: body.image_url }),
+    ...(body.image_url !== undefined && { avatar_url: body.image_url }),
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
   };

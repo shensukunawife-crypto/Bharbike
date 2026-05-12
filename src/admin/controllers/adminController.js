@@ -360,7 +360,7 @@ export async function dashboard(req, res) {
       { data: ordersData, error: ordersError },
       { data: earningsRows, error: earningsError },
     ] = await Promise.all([
-      supabase.from("users").select("*", { count: "exact", head: true }),
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("bikes").select("*", { count: "exact", head: true }),
       supabase
         .from("rentals")
@@ -509,7 +509,7 @@ export async function users(req, res) {
   try {
     const [{ data: usersData, error: usersError }, { data: ordersData, error: ordersError }] =
       await Promise.all([
-        supabase.from("users").select("*"),
+        supabase.from("profiles").select("*"),
         supabase.from("orders").select("*"),
       ]);
     if (usersError || ordersError) {
@@ -617,7 +617,7 @@ export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
     const [{ data: userRow }, { data: ordersData }] = await Promise.all([
-      supabase.from("users").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
     ]);
     if (!userRow) {

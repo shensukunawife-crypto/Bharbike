@@ -805,6 +805,37 @@ api.post("/kyc/driving-license", async (req, res) => {
   }
 });
 
+api.post("/kyc/upload", async (req, res) => {
+  try {
+    const { image_base64, file_name, content_type } = req.body || {};
+    if (!image_base64) {
+      return res.status(400).json({ success: false, message: "image_base64 is required" });
+    }
+    
+    // Use root of kyc-documents bucket
+    const safeName = String(file_name || `kyc-${Date.now()}.jpg`).replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${Date.now()}-${safeName}`;
+    
+    const base64Data = String(image_base64).replace(/^data:image\/[a-zA-Z+]+;base64,/, "");
+    const buffer = Buffer.from(base64Data, "base64");
+
+    const { error } = await supabase.storage
+      .from("kyc-documents")
+      .upload(path, buffer, { contentType: content_type || "image/jpeg", upsert: true });
+      
+    if (error) {
+      console.error("[POST /api/kyc/upload] upload failed:", error);
+      return res.status(500).json({ success: false, message: error.message || "Upload failed" });
+    }
+
+    const { data } = supabase.storage.from("kyc-documents").getPublicUrl(path);
+    return res.json({ success: true, url: data?.publicUrl || null });
+  } catch (err) {
+    console.error("[POST /api/kyc/upload] unexpected:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 api.get("/kyc/electricity/status", async (req, res) => {
   try {
     const userId = String(req.query.user_id || "");

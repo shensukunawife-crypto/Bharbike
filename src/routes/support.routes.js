@@ -16,9 +16,9 @@ r.post(
     body("bike_name").notEmpty().withMessage("Bike name is required"),
     body("issue_type").notEmpty().withMessage("Issue type is required"),
     body("description").notEmpty().withMessage("Description is required"),
-    body("image_url").optional().isString(),
-    body("bike_id").optional().isUUID(),
-    body("user_id").optional().isUUID(),
+    body("image_url").optional({ nullable: true, checkFalsy: true }).isString(),
+    body("bike_id").optional({ nullable: true, checkFalsy: true }).isUUID(),
+    body("user_id").optional({ nullable: true, checkFalsy: true }).isUUID(),
   ],
   validateRequest,
   supportController.createTicket

@@ -134,14 +134,5 @@ CREATE POLICY "Service role full access" ON public.delivery_partners FOR ALL USI
 CREATE POLICY "Service role full access" ON public.kyc_documents FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access" ON public.support_tickets FOR ALL USING (true) WITH CHECK (true);
 
--- Sync: when a user is created/updated in users table, upsert into profiles
--- This ensures the admin dashboard can find users via the profiles table
-INSERT INTO public.profiles (id, full_name, email, phone, image_url, created_at, updated_at)
-SELECT id, full_name, email, phone, image_url, created_at, COALESCE(updated_at, created_at)
-FROM public.users
-ON CONFLICT (id) DO UPDATE SET
-  full_name = EXCLUDED.full_name,
-  email = EXCLUDED.email,
-  phone = EXCLUDED.phone,
-  image_url = EXCLUDED.image_url,
-  updated_at = now();
+-- Note: Admin dashboard now queries users table directly, 
+-- so profiles sync is no longer needed.

@@ -1386,29 +1386,6 @@ export async function notificationsPage(req, res) {
   });
 }
 
-/** Static documentation / visual workflow (no DB). Sync handler — avoids Express 4 async rejection gaps. */
-export function systemWorkflowPage(req, res, next) {
-  try {
-    return res.render(
-      "layout",
-      {
-        BRAND_NAME,
-        BRAND_PRODUCT_NAME,
-        formatBrand,
-        title: "System Workflow",
-        active: "system-workflow",
-        bodyView: "system-workflow",
-        mapboxAccessToken: process.env.MAPBOX_ACCESS_TOKEN || "",
-      },
-      (err, html) => {
-        if (err) return next(err);
-        res.send(html);
-      },
-    );
-  } catch (err) {
-    return next(err);
-  }
-}
 
 export async function settingsPage(req, res) {
   // Load promo codes from DB

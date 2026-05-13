@@ -337,13 +337,6 @@ function renderPage(res, data) {
   });
 }
 
-export async function backendMonitor(req, res) {
-  return renderPage(res, {
-    title: "Backend Monitor",
-    active: "backend-monitor",
-    bodyView: "backend-monitor",
-  });
-}
 
 export async function dashboard(req, res) {
   try {

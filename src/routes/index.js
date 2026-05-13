@@ -949,6 +949,61 @@ api.get("/kyc/summary", async (req, res) => {
   }
 });
 
+// DELETE /kyc/:field — remove a specific KYC document for a user
+api.delete("/kyc/:field", async (req, res) => {
+  try {
+    const field = String(req.params.field || "").toLowerCase();
+    const userId = String(req.query.user_id || "").trim();
+
+    const ALLOWED_FIELDS = ["driving_license", "aadhaar_front", "aadhaar_back", "pan", "electricity_bill", "selfie"];
+    if (!ALLOWED_FIELDS.includes(field)) {
+      return res.status(400).json({ success: false, message: "Invalid document field" });
+    }
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "user_id is required" });
+    }
+    if (isDemoUser(userId)) {
+      return res.json({ success: true, message: "Deleted (demo mode)" });
+    }
+
+    // Map field name to kyc_documents type
+    const kycType = field === "electricity_bill" ? "electricity_bill"
+      : field === "aadhaar_front" || field === "aadhaar_back" ? "aadhaar"
+      : field;
+
+    // Delete from kyc_documents table (non-blocking)
+    try {
+      await supabase.from("kyc_documents").delete().eq("user_id", userId).eq("type", kycType);
+    } catch (e) {
+      console.warn("[DELETE /kyc/:field] kyc_documents delete skipped:", e?.message);
+    }
+
+    // Clear the URL column in users table (non-blocking)
+    const columnMap = {
+      driving_license: "driving_license_url",
+      aadhaar_front: "aadhaar_front_url",
+      aadhaar_back: "aadhaar_back_url",
+      pan: "pan_card_url",
+      electricity_bill: "electricity_bill_url",
+      selfie: "selfie_url",
+    };
+    const column = columnMap[field];
+    if (column) {
+      try {
+        await supabase.from("users").update({ [column]: null }).eq("id", userId);
+      } catch (e) {
+        console.warn("[DELETE /kyc/:field] users column clear skipped:", e?.message);
+      }
+    }
+
+    return res.json({ success: true, message: "Document removed" });
+  } catch (err) {
+    console.error("[DELETE /kyc/:field] unexpected:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
 api.get("/admin/kyc", async (req, res) => {
   try {
     let { data, error } = await supabase
@@ -1098,6 +1153,28 @@ api.get("/rentals", async (req, res) => {
   }
 
   return res.json(data || []);
+});
+
+api.get("/admin/health", async (req, res) => {
+  try {
+    const [users, bikes, rentals] = await Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("bikes").select("id", { count: "exact", head: true }),
+      supabase.from("rentals").select("id", { count: "exact", head: true }),
+    ]);
+
+    return res.json({
+      status: "Running",
+      uptime: process.uptime(),
+      memory: process.memoryUsage().rss,
+      cpu: process.cpuUsage().user / 1000000,
+      users: users.count || 0,
+      bikes: bikes.count || 0,
+      rentals: rentals.count || 0,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Health check failed" });
+  }
 });
 
 export default api;

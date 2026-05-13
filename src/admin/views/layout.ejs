@@ -43,8 +43,21 @@
           </div>
           <div class="topbar-profile">
             <button id="admin-logout-btn" class="btn btn-sm">Logout</button>
-            <span class="admin-name">Admin</span>
-            <span class="profile-circle">A</span>
+            <% const _adminInitial = (locals.admin && (locals.admin.full_name || locals.admin.email)) ? (locals.admin.full_name || locals.admin.email).charAt(0).toUpperCase() : 'A'; %>
+            <% if (locals.admin) { %>
+              <% const _badgeBg = (locals.admin.role === 'master_admin' || locals.admin.role === 'admin') ? '#F26D21' : '#4f46e5'; %>
+              <% const _badgeLabel = locals.admin.role === 'master_admin' ? 'MASTER' : (locals.admin.role || 'SUB').toUpperCase(); %>
+              <% const _adminDisplay = locals.admin.full_name || locals.admin.email || 'Admin'; %>
+              <span class="admin-name" style="display:flex;align-items:center;gap:6px;">
+                <%= _adminDisplay %>
+                <span class="role-badge" style="font-size:10px;background:<%= _badgeBg %>;color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.4px;">
+                  <%= _badgeLabel %>
+                </span>
+              </span>
+            <% } else { %>
+              <span class="admin-name">Admin</span>
+            <% } %>
+            <span class="profile-circle"><%= _adminInitial %></span>
           </div>
         </header>
         <section class="panel">

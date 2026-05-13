@@ -6,6 +6,12 @@
   const gSystem = ['system-workflow', 'backend-monitor'].includes(active);
   const gComm = ['support', 'notifications'].includes(active);
   const gAdmin = ['payments', 'settings', 'admins'].includes(active);
+
+  // Permission helpers
+  const _admin = locals.admin || {};
+  const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*'));
+  const _perms = Array.isArray(_admin.permissions) ? _admin.permissions : [];
+  const _can = (p) => _isMaster || _perms.includes(p);
 %>
 <nav class="nav nav--grouped" id="admin-sidebar-nav" aria-label="Admin navigation">
   <div class="nav-block nav-block--dashboard nav-block--hero">
@@ -18,6 +24,7 @@
     </a>
   </div>
 
+  <% if (_can('manage_orders')) { %>
   <div class="nav-group <%= gOperations ? 'has-active' : '' %>" data-group-id="operations">
     <p class="nav-section-label">Operations</p>
     <button
@@ -49,7 +56,9 @@
       </div>
     </div>
   </div>
+  <% } %>
 
+  <% if (_can('manage_bikes')) { %>
   <div class="nav-group <%= gVehicle ? 'has-active' : '' %>" data-group-id="vehicle-management">
     <p class="nav-section-label">Fleet</p>
     <button
@@ -75,7 +84,9 @@
       </div>
     </div>
   </div>
+  <% } %>
 
+  <% if (_can('manage_users')) { %>
   <div class="nav-group <%= gUsers ? 'has-active' : '' %>" data-group-id="user-management">
     <p class="nav-section-label">Accounts</p>
     <button
@@ -101,7 +112,9 @@
       </div>
     </div>
   </div>
+  <% } %>
 
+  <% if (_can('manage_finance')) { %>
   <div class="nav-group <%= gFinancial ? 'has-active' : '' %>" data-group-id="financial">
     <p class="nav-section-label">Finance</p>
     <button
@@ -127,6 +140,7 @@
       </div>
     </div>
   </div>
+  <% } %>
 
   <div class="nav-group <%= gSystem ? 'has-active' : '' %>" data-group-id="system-monitoring">
     <p class="nav-section-label">Infrastructure</p>
@@ -154,6 +168,7 @@
     </div>
   </div>
 
+  <% if (_can('manage_support')) { %>
   <div class="nav-group <%= gComm ? 'has-active' : '' %>" data-group-id="communication">
     <p class="nav-section-label">Engagement</p>
     <button
@@ -179,6 +194,7 @@
       </div>
     </div>
   </div>
+  <% } %>
 
   <div class="nav-group <%= gAdmin ? 'has-active' : '' %>" data-group-id="administration">
     <p class="nav-section-label">Configuration</p>

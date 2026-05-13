@@ -807,50 +807,69 @@ export async function bookingsPage(req, res) {
 
 export async function kycDocumentsPage(req, res) {
   try {
-    const [{ data: usersData, error: usersError }, { data: profilesData, error: profilesError }] = await Promise.all([
+    // Try kyc_documents table first (most accurate)
+    const [{ data: kycData, error: kycError }, { data: usersData, error: usersError }] = await Promise.all([
       supabase
-        .from("users")
-        .select("id, full_name, aadhaar_front_url, aadhaar_back_url, pan_card_url, electricity_bill_url, selfie_url, updated_at")
-        .order("updated_at", { ascending: false }),
-      supabase.from("users").select("id, full_name"),
+        .from("kyc_documents")
+        .select("id, user_id, type, file_url, status, created_at, updated_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("id, full_name, phone"),
     ]);
-    let data = usersData;
-    let error = usersError;
 
-    if (error) {
-      console.error("[admin.kycDocumentsPage] fetch failed", error);
-    }
-    if (profilesError) {
-      console.error("[admin.kycDocumentsPage] profiles fetch failed", profilesError);
-    }
+    if (kycError) console.error("[admin.kycDocumentsPage] kyc_documents fetch failed", kycError);
+    if (usersError) console.error("[admin.kycDocumentsPage] profiles fetch failed", usersError);
 
-    const profileNameMap = new Map(safeData(profilesData).map((p) => [String(p.id), p.full_name || null]));
-    const rows = safeData(data)
-      .filter(
-        (item) =>
-          item?.aadhaar_front_url ||
-          item?.aadhaar_back_url ||
-          item?.pan_card_url ||
-          item?.electricity_bill_url ||
-          item?.selfie_url
-      )
-      .map((item) => ({
-        ...item,
-        user_name: item.full_name || profileNameMap.get(String(item.id)) || "User",
+    const profileNameMap = new Map(safeData(usersData).map((p) => [String(p.id), p.full_name || p.phone || "User"]));
+
+    let documents = [];
+    if (safeData(kycData).length > 0) {
+      // Group by user_id to show one row per user with all their docs
+      const byUser = new Map();
+      for (const doc of safeData(kycData)) {
+        const uid = String(doc.user_id);
+        if (!byUser.has(uid)) {
+          byUser.set(uid, { id: uid, user_name: profileNameMap.get(uid) || "User", docs: [] });
+        }
+        byUser.get(uid).docs.push(doc);
+      }
+      documents = Array.from(byUser.values()).map((u) => ({
+        ...u,
+        aadhaar_front_url: u.docs.find((d) => d.type === "aadhaar")?.file_url || null,
+        pan_card_url: u.docs.find((d) => d.type === "pan")?.file_url || null,
+        electricity_bill_url: u.docs.find((d) => d.type === "electricity_bill")?.file_url || null,
+        selfie_url: u.docs.find((d) => d.type === "selfie")?.file_url || null,
+        driving_license_url: u.docs.find((d) => d.type === "driving_license")?.file_url || null,
+        updated_at: u.docs[0]?.updated_at || u.docs[0]?.created_at || null,
       }));
+    } else {
+      // Fallback: read from users/profiles table columns
+      const { data: usersKycData } = await supabase
+        .from("users")
+        .select("id, full_name, aadhaar_front_url, aadhaar_back_url, pan_card_url, electricity_bill_url, selfie_url, driving_license_url, updated_at")
+        .order("updated_at", { ascending: false });
+      documents = safeData(usersKycData)
+        .filter((item) => item?.aadhaar_front_url || item?.pan_card_url || item?.electricity_bill_url || item?.selfie_url || item?.driving_license_url)
+        .map((item) => ({
+          ...item,
+          user_name: item.full_name || profileNameMap.get(String(item.id)) || "User",
+        }));
+    }
+
     const stats = {
-      total: rows.length,
-      aadhaar: rows.filter((x) => x.aadhaar_front_url || x.aadhaar_back_url).length,
-      pan: rows.filter((x) => x.pan_card_url).length,
-      bill: rows.filter((x) => x.electricity_bill_url).length,
-      selfie: rows.filter((x) => x.selfie_url).length,
+      total: documents.length,
+      aadhaar: documents.filter((x) => x.aadhaar_front_url).length,
+      pan: documents.filter((x) => x.pan_card_url).length,
+      bill: documents.filter((x) => x.electricity_bill_url).length,
+      selfie: documents.filter((x) => x.selfie_url).length,
     };
 
     return renderPage(res, {
       title: "KYC Documents",
       active: "kyc-documents",
       bodyView: "kyc-documents",
-      documents: rows,
+      documents,
       stats,
     });
   } catch (error) {
@@ -932,13 +951,20 @@ export async function deliveryPartners(req, res) {
 export async function deliveryPartnerProfile(req, res) {
   try {
     const { partnerId } = req.params;
-    const [{ data: users }, { data: orders }, { data: earnings }] = await Promise.all([
-      supabase.from("users").select("*").eq("id", partnerId).maybeSingle(),
+    const [{ data: partnerData }, { data: orders }, { data: earnings }] = await Promise.all([
+      supabase.from("delivery_partners").select("*").eq("user_id", partnerId).maybeSingle(),
       supabase.from("orders").select("*").eq("assigned_user_id", partnerId),
-      supabase.from("earnings").select("*").eq("userId", partnerId),
+      supabase.from("earnings").select("*").eq("user_id", partnerId),
     ]);
 
-    if (!users) {
+    // Also try profiles table if delivery_partners record doesn't have full_name
+    let profile = partnerData;
+    if (!profile || !profile.full_name) {
+      const { data: profileRow } = await supabase.from("profiles").select("*").eq("id", partnerId).maybeSingle();
+      profile = { ...(profileRow || {}), ...(profile || {}) };
+    }
+
+    if (!profile) {
       return res.status(404).send("Partner not found");
     }
 
@@ -955,7 +981,7 @@ export async function deliveryPartnerProfile(req, res) {
       title: "Partner Profile",
       active: "delivery-partners",
       bodyView: "delivery-partner-profile",
-      partner: users,
+      partner: profile,
       docs: ["Driving License", "Vehicle RC", "Insurance", "ID Proof"],
       earningsHistory,
       orderHistory,
@@ -1335,29 +1361,29 @@ export async function convertSupportToMaintenance(req, res) {
 }
 
 export async function notificationsPage(req, res) {
-  const history = [
-    {
-      title: "Weekend Rental Offer",
-      audience: "All Users",
-      type: "Push, Email",
-      status: "Sent",
-      time: "2026-04-17 10:30 AM",
-    },
-    {
-      title: "Partner Incentive Update",
-      audience: "Delivery Partners",
-      type: "Push, SMS",
-      status: "Scheduled",
-      time: "2026-04-18 09:00 AM",
-    },
-    {
-      title: "Inactive User Reactivation",
-      audience: "Inactive Users",
-      type: "Email",
-      status: "Sent",
-      time: "2026-04-16 07:45 PM",
-    },
-  ];
+  let history = [];
+  try {
+    // Fetch real notification history from DB (admin-sent notifications)
+    const { data: notifRows } = await supabase
+      .from("admin_notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (Array.isArray(notifRows) && notifRows.length > 0) {
+      history = notifRows.map((row) => ({
+        title: row.title || "Untitled",
+        audience: row.audience || "All Users",
+        type: [row.push && "Push", row.sms && "SMS", row.email && "Email"].filter(Boolean).join(", ") || "Push",
+        status: row.status || "Sent",
+        time: row.scheduled_at
+          ? new Date(row.scheduled_at).toLocaleString("en-IN")
+          : new Date(row.created_at || Date.now()).toLocaleString("en-IN"),
+      }));
+    }
+  } catch (_) {
+    // Table may not exist yet — show empty history gracefully
+  }
 
   return renderPage(res, {
     title: "Notifications",
@@ -1895,8 +1921,66 @@ export async function removeMaintenanceTicket(req, res) {
 }
 
 export async function sendNotification(req, res) {
-  console.log("[admin.notification] sent", req.body);
-  return res.json({ success: true, message: "Notification sent" });
+  try {
+    const { title, message, audience, push, sms, email, priority, scheduleLater, scheduledDate, scheduledTime, ctaLink } = req.body || {};
+    if (!title || !message) {
+      return res.status(400).json({ success: false, message: "title and message are required" });
+    }
+
+    const scheduledAt = scheduleLater && scheduledDate
+      ? new Date(`${scheduledDate}T${scheduledTime || "09:00"}`).toISOString()
+      : null;
+
+    // Save notification record to admin_notifications table
+    try {
+      await supabase.from("admin_notifications").insert([{
+        title,
+        message,
+        audience: audience || "All Users",
+        push: push === true || push === "on" || push === "true",
+        sms: sms === true || sms === "on" || sms === "true",
+        email: email === true || email === "on" || email === "true",
+        priority: priority || "Normal",
+        cta_link: ctaLink || null,
+        scheduled_at: scheduledAt,
+        status: scheduledAt ? "Scheduled" : "Sent",
+        created_at: new Date().toISOString(),
+      }]);
+    } catch (dbErr) {
+      console.warn("[admin.sendNotification] admin_notifications insert failed (non-blocking):", dbErr?.message);
+    }
+
+    // Fan out to target users' notifications table
+    try {
+      let userQuery = supabase.from("profiles").select("id");
+      if (audience === "Delivery Partners") {
+        const { data: partners } = await supabase.from("delivery_partners").select("user_id").eq("status", "approved");
+        const ids = (partners || []).map((p) => p.user_id).filter(Boolean);
+        if (ids.length) userQuery = userQuery.in("id", ids);
+        else userQuery = null;
+      }
+      const { data: users } = userQuery ? await userQuery.limit(500) : { data: [] };
+      const rows = (users || []).map((u) => ({
+        user_id: u.id,
+        title,
+        body: message,
+        type: "admin_broadcast",
+        is_read: false,
+        created_at: new Date().toISOString(),
+      }));
+      if (rows.length > 0) {
+        await supabase.from("notifications").insert(rows);
+      }
+    } catch (fanErr) {
+      console.warn("[admin.sendNotification] fan-out to notifications table failed (non-blocking):", fanErr?.message);
+    }
+
+    console.log("[admin.notification] sent", { title, audience, push, sms, email });
+    return res.json({ success: true, message: scheduledAt ? "Notification scheduled" : "Notification sent" });
+  } catch (error) {
+    console.error("[admin.sendNotification] failed", error);
+    return res.status(500).json({ success: false, message: "Unable to send notification" });
+  }
 }
 
 export async function saveSettings(req, res) {
@@ -1977,7 +2061,11 @@ export async function addAdmin(req, res) {
     return res.json({ success: true, message: "Admin created successfully" });
   } catch (error) {
     console.error("[admin.addAdmin] failed", error);
-    return res.status(500).json({ success: false, message: "Failed to create admin" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to create admin",
+      details: error
+    });
   }
 }
 
@@ -2001,7 +2089,11 @@ export async function editAdmin(req, res) {
     return res.json({ success: true, message: "Admin updated successfully" });
   } catch (error) {
     console.error("[admin.editAdmin] failed", error);
-    return res.status(500).json({ success: false, message: "Failed to update admin" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to update admin",
+      details: error
+    });
   }
 }
 
@@ -2016,6 +2108,48 @@ export async function toggleAdmin(req, res) {
     return res.json({ success: true, message: `Admin ${admin.is_active ? "blocked" : "unblocked"}` });
   } catch (error) {
     console.error("[admin.toggleAdmin] failed", error);
-    return res.status(500).json({ success: false, message: "Failed to toggle admin status" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to toggle admin status",
+      details: error
+    });
   }
+}
+export async function backendMonitor(req, res) {
+  try {
+    const start = Date.now();
+    const { error: dbError } = await supabase.from("profiles").select("id").limit(1);
+    const dbLatency = Date.now() - start;
+
+    const stats = {
+      status: dbError ? "Critical" : "Healthy",
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      nodeVersion: process.version,
+      platform: process.platform,
+      dbLatency,
+      dbStatus: dbError ? "Disconnected" : "Connected",
+      dbError: dbError?.message || null,
+      environment: process.env.NODE_ENV || "production",
+      apiUrl: process.env.RENDER_EXTERNAL_URL || "Localhost",
+    };
+
+    return renderPage(res, {
+      title: "Backend Monitor",
+      active: "backend-monitor",
+      bodyView: "backend-monitor",
+      stats,
+    });
+  } catch (error) {
+    console.error("[admin.backendMonitor] failed", error);
+    return res.status(500).send("Unable to load backend monitor");
+  }
+}
+
+export async function systemWorkflowPage(req, res) {
+  return renderPage(res, {
+    title: "System Workflow",
+    active: "system-workflow",
+    bodyView: "system-workflow",
+  });
 }

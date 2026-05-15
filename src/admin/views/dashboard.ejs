@@ -575,7 +575,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
 
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target.value.trim().length > 0) {
-        window.location.href = "/admin/orders?q=" + encodeURIComponent(e.target.value.trim());
+        window.location.href = "/admin/orders?search=" + encodeURIComponent(e.target.value.trim());
       }
     });
   }

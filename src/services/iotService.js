@@ -2,8 +2,9 @@
  * IoT hardware integration — LocoNav GPS and Battery API
  */
 
-const LOCONAV_API_URL = "https://app.loconav.sensorise.net";
-const LOCONAV_TOKEN = "ctaSU6pp_7zJWTDH2YuS";
+const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://app.loconav.sensorise.net";
+const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN || "ctaSU6pp_7zJWTDH2YuS";
+
 
 export async function lockBike(bikeId) {
   console.log(`[IoT] LOCK bike_id=${bikeId}`);

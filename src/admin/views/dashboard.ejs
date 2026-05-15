@@ -559,5 +559,25 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
       }
     });
   }
+
+  // Dashboard Search Logic
+  const searchInput = document.getElementById("dash-search");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const term = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll(".db-table tbody tr");
+      rows.forEach((row) => {
+        if (row.cells.length === 1) return; // skip "No activity" row
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(term) ? "" : "none";
+      });
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target.value.trim().length > 0) {
+        window.location.href = "/admin/orders?q=" + encodeURIComponent(e.target.value.trim());
+      }
+    });
+  }
 })();
 </script>

@@ -385,7 +385,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
     <div>
       <p class="db-main-title">Recent Orders</p>
       <p class="db-main-sub">
-        <span><%= (recentOrders || orders || []).length %> orders</span> — latest activity on the platform
+        <span><%= (recentActivity || []).length %> orders</span> — latest activity on the platform
       </p>
     </div>
     <div class="db-main-metrics">
@@ -403,40 +403,34 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   <table class="db-table">
     <thead>
       <tr>
-        <th>Order</th>
-        <th>Customer</th>
-        <th>Route</th>
+        <th>Activity</th>
+        <th>Details</th>
         <th>Status</th>
-        <th>Amount</th>
-        <th>Date</th>
+        <th>Time</th>
       </tr>
     </thead>
     <tbody>
-      <% const recentList = (recentOrders || orders || []).slice(0, 8); %>
+      <% const recentList = (recentActivity || []).slice(0, 8); %>
       <% if (recentList.length === 0) { %>
       <tr>
-        <td colspan="6" style="text-align:center; color:var(--text-muted); padding: 32px;">
-          No recent orders found
+        <td colspan="4" style="text-align:center; color:var(--text-muted); padding: 32px;">
+          No recent activity found
         </td>
       </tr>
       <% } %>
-      <% recentList.forEach(order => { %>
+      <% recentList.forEach(item => { %>
       <tr>
-        <td><span style="font-weight:600; font-family:monospace;">#<%= order.order_code || order.id?.toString().slice(0,8) || '—' %></span></td>
-        <td style="color:var(--text-muted)"><%= order.customer_name || order.user_name || '—' %></td>
-        <td style="color:var(--text-muted); font-size:12px; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-          <%= order.pickup || '—' %> → <%= order.drop_location || order.destination || '—' %>
+        <td style="font-weight:600;"><%= item.title || '—' %></td>
+        <td style="color:var(--text-muted); font-size:12px; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          <%= item.subtitle || '—' %>
         </td>
         <td>
-          <% const st = (order.status || '').toLowerCase(); %>
-          <span class="status-dot <%= st === 'completed' ? 'status-completed' : st === 'accepted' || st === 'active' ? 'status-active' : st === 'cancelled' || st === 'rejected' ? 'status-cancelled' : 'status-pending' %>">
-            <%= order.status || 'pending' %>
+          <% const stText = (item.title || '').toLowerCase(); %>
+          <span class="status-dot <%= stText.includes('completed') ? 'status-completed' : stText.includes('accepted') || stText.includes('active') || stText.includes('ongoing') ? 'status-active' : stText.includes('cancelled') || stText.includes('rejected') ? 'status-cancelled' : 'status-pending' %>">
+            <%= stText.includes('completed') ? 'Completed' : stText.includes('accepted') || stText.includes('ongoing') ? 'Active' : stText.includes('cancelled') || stText.includes('rejected') ? 'Cancelled' : 'Pending' %>
           </span>
         </td>
-        <td style="font-weight:600;">₹<%= Number(order.amount || order.price || 0).toLocaleString('en-IN') %></td>
-        <td style="color:var(--text-muted); font-size:12px;">
-          <%= order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short'}) : '—' %>
-        </td>
+        <td style="color:var(--text-muted); font-size:12px;"><%= item.time || '—' %></td>
       </tr>
       <% }) %>
     </tbody>

@@ -1,131 +1,347 @@
-<div class="stats-grid stats-grid-4">
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">📦</span><span class="stat-label">Total</span></div><strong class="stat-value"><%= stats.total %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🕓</span><span class="stat-label">Pending</span></div><strong class="stat-value"><%= stats.pending %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🛵</span><span class="stat-label">Accepted</span></div><strong class="stat-value"><%= stats.accepted %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">✅</span><span class="stat-label">Completed</span></div><strong class="stat-value"><%= stats.completed %></strong></div>
+<%
+  const PAGE_SIZE = 10;
+%>
+
+<style>
+/* Orders page specific */
+.page-stat-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.page-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.page-stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.page-stat-accent .page-stat-value { color: var(--accent); }
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-bar input,
+.filter-bar select {
+  padding: 7px 11px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.filter-bar input:focus,
+.filter-bar select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.filter-bar input[type="text"] { min-width: 220px; flex: 1; }
+
+/* Create order card */
+.create-order-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+.create-order-card h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.create-order-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 120px 180px auto;
+  gap: 10px;
+  align-items: end;
+}
+
+/* Table card */
+.orders-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.orders-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.orders-table-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.orders-table-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--border-light);
+}
+
+.pagination-info {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pagination-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pg-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.pg-btn:hover { background: var(--border-light); color: var(--text); }
+.pg-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pg-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Status dots */
+.st-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.st-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.st-completed  { color: #6b7280; }
+.st-accepted   { color: #1d4ed8; }
+.st-pending    { color: #d97706; }
+.st-cancelled  { color: #dc2626; }
+.st-ongoing    { color: #059669; }
+.st-paid       { color: #16a34a; }
+
+/* Order ID cell */
+.order-id-main { font-weight: 600; font-size: 12px; color: var(--text); }
+.order-id-sub  { font-size: 11px; color: var(--text-light); margin-top: 2px; font-family: monospace; }
+
+/* Row actions */
+.row-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .create-order-fields { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+<!-- Stats row — auto-fit fills naturally -->
+<div class="page-stat-bar">
+  <div class="page-stat">
+    <p class="page-stat-label">Total</p>
+    <p class="page-stat-value"><%= stats.total %></p>
+  </div>
+  <div class="page-stat page-stat-accent">
+    <p class="page-stat-label">Pending</p>
+    <p class="page-stat-value"><%= stats.pending %></p>
+  </div>
+  <div class="page-stat">
+    <p class="page-stat-label">Accepted</p>
+    <p class="page-stat-value"><%= stats.accepted %></p>
+  </div>
+  <div class="page-stat">
+    <p class="page-stat-label">Completed</p>
+    <p class="page-stat-value"><%= stats.completed %></p>
+  </div>
+  <% if (stats.cancelled != null) { %>
+  <div class="page-stat">
+    <p class="page-stat-label">Cancelled</p>
+    <p class="page-stat-value"><%= stats.cancelled || 0 %></p>
+  </div>
+  <% } %>
 </div>
 
 <!-- Quick Create Order -->
-<div class="chart-card" style="margin-bottom: 24px; padding: 20px;">
-  <h3 style="margin-bottom: 16px; color: #D4AF37;">Quick Create Delivery Order</h3>
-  <form id="admin-create-order-form" class="toolbar" style="background: none; padding: 0;">
-    <input class="filter-input" type="text" name="pickup" placeholder="Pickup Location (e.g. Andheri)" required />
-    <input class="filter-input" type="text" name="drop_location" placeholder="Drop Location (e.g. Juhu)" required />
-    <input class="filter-input" type="number" name="price" placeholder="Price (₹)" required />
-    <select name="plan_name" class="filter-input">
-      <option value="Standard Delivery">Standard Delivery</option>
-      <option value="Express Delivery">Express Delivery</option>
-      <option value="Heavy Loader">Heavy Loader</option>
-    </select>
-    <button type="submit" class="btn btn-gold">Create Order</button>
+<div class="create-order-card">
+  <h3>Quick Create Delivery Order</h3>
+  <form id="admin-create-order-form">
+    <div class="create-order-fields">
+      <input type="text" name="pickup" placeholder="Pickup location" required
+        style="padding:8px 12px;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;font-family:inherit;" />
+      <input type="text" name="drop_location" placeholder="Drop location" required
+        style="padding:8px 12px;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;font-family:inherit;" />
+      <input type="number" name="price" placeholder="Price ₹" required
+        style="padding:8px 12px;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;font-family:inherit;" />
+      <select name="plan_name"
+        style="padding:8px 12px;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;font-family:inherit;">
+        <option value="Standard Delivery">Standard Delivery</option>
+        <option value="Express Delivery">Express Delivery</option>
+        <option value="Heavy Loader">Heavy Loader</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Create Order</button>
+    </div>
   </form>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const createForm = document.getElementById('admin-create-order-form');
-  if (createForm) {
-    createForm.onsubmit = async function(e) {
-      e.preventDefault();
-      const token = localStorage.getItem('adminToken');
-      const formData = new FormData(createForm);
-      const payload = Object.fromEntries(formData.entries());
-      
-      try {
-        const res = await fetch('/api/admin/orders/create', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify(payload)
-        });
-        const json = await res.json();
-        if (json.success) {
-          alert('Order Created Successfully!');
-          createForm.reset();
-          if (typeof window.refreshAdminOrders === 'function') window.refreshAdminOrders();
-        } else {
-          alert('Failed: ' + (json.message || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Network error while creating order');
-      }
-    };
-  }
-});
-</script>
-
-<form class="toolbar" method="get" action="/admin/orders">
-  <input class="filter-input" type="text" name="search" placeholder="Search Order ID / code" value="<%= filters.search %>" />
-  <select name="status" class="filter-input">
-    <option value="all" <%= filters.status === "all" ? "selected" : "" %>>All</option>
-    <option value="pending" <%= filters.status === "pending" ? "selected" : "" %>>Pending</option>
-    <option value="accepted" <%= filters.status === "accepted" ? "selected" : "" %>>Accepted</option>
-    <option value="completed" <%= filters.status === "completed" ? "selected" : "" %>>Completed</option>
+<!-- Filter bar -->
+<form class="filter-bar" method="get" action="/admin/orders">
+  <input type="text" name="search" placeholder="Search order ID / code…" value="<%= filters.search %>" />
+  <select name="status">
+    <option value="all"       <%= filters.status === 'all'       ? 'selected' : '' %>>All Status</option>
+    <option value="pending"   <%= filters.status === 'pending'   ? 'selected' : '' %>>Pending</option>
+    <option value="accepted"  <%= filters.status === 'accepted'  ? 'selected' : '' %>>Accepted</option>
+    <option value="ongoing"   <%= filters.status === 'ongoing'   ? 'selected' : '' %>>Ongoing</option>
+    <option value="completed" <%= filters.status === 'completed' ? 'selected' : '' %>>Completed</option>
+    <option value="cancelled" <%= filters.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
   </select>
-  <input class="filter-input" type="date" name="date" value="<%= filters.date %>" />
-  <select name="payment" class="filter-input">
-    <option value="all" <%= filters.payment === "all" ? "selected" : "" %>>All payment</option>
-    <option value="paid" <%= filters.payment === "paid" ? "selected" : "" %>>Paid</option>
-    <option value="pending" <%= filters.payment === "pending" ? "selected" : "" %>>Pending</option>
+  <input type="date" name="date" value="<%= filters.date %>" />
+  <select name="payment">
+    <option value="all"     <%= filters.payment === 'all'     ? 'selected' : '' %>>All Payment</option>
+    <option value="paid"    <%= filters.payment === 'paid'    ? 'selected' : '' %>>Paid</option>
+    <option value="pending" <%= filters.payment === 'pending' ? 'selected' : '' %>>Unpaid</option>
   </select>
-  <button type="submit" class="btn btn-gold">Apply</button>
+  <button type="submit" class="btn btn-primary">Apply</button>
   <span class="admin-live-pill" id="admin-orders-live">Live sync</span>
 </form>
 
-<div class="chart-card">
-  <div class="table-wrap">
-    <table class="table">
+<!-- Orders Table -->
+<div class="orders-table-card">
+  <div class="orders-table-head">
+    <span class="orders-table-title">All Orders</span>
+    <span class="orders-table-meta" id="orders-count-info"><%= orders.length %> orders</span>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;">
       <thead>
-        <tr>
-          <th>Order</th>
-          <th>User</th>
-          <th>Rider</th>
-          <th>Amount</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th>Actions</th>
+        <tr style="background:var(--border-light);border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Order</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">User</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Rider</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Amount</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Status</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Payment</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Created</th>
+          <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Actions</th>
         </tr>
       </thead>
       <tbody id="admin-orders-tbody">
         <% if (!orders.length) { %>
-        <tr><td colspan="7" class="empty">No orders match filters</td></tr>
+        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:48px;font-size:13px;">No orders match filters</td></tr>
         <% } %>
-        <% orders.forEach((order) => { %>
-        <% 
+        <% orders.forEach((order) => {
           const st = String(order.status || '').toLowerCase();
-          let badge = 'warning';
-          if (st === 'completed') badge = 'success';
-          else if (st === 'accepted') badge = 'accepted';
-          else if (st === 'rejected' || st === 'cancelled') badge = 'danger';
+          const stClass = st === 'completed' ? 'st-completed' : st === 'accepted' ? 'st-accepted' : st === 'ongoing' ? 'st-ongoing' : st === 'cancelled' || st === 'rejected' ? 'st-cancelled' : 'st-pending';
+          const payClass = String(order.paymentStatus || '').toLowerCase() === 'paid' ? 'st-paid' : 'st-pending';
         %>
-        <tr data-order-id="<%= order.id %>">
-          <td><strong><%= order.displayOrderId %></strong><br/><span class="muted"><%= order.id %></span></td>
-          <td><%= order.userName %></td>
-          <td><%= order.riderName %></td>
-          <td class="revenue-positive">₹<%= Number(order.amount || 0).toFixed(2) %></td>
-          <td><span class="badge <%= badge %>"><%= order.status %></span></td>
-          <td><%= order.createdAt ? String(order.createdAt).replace("T", " ").slice(0, 16) : "—" %></td>
-          <td class="actions">
-            <a class="btn btn-ghost" href="/admin/orders/<%= order.id %>">Details</a>
-            <form class="ajax-form inline-form" data-url="/admin/orders/<%= order.id %>/assign">
-              <select name="partnerId">
-                <option value="">Assign</option>
-                <% partners.forEach((partner) => { %>
-                <option value="<%= partner.id %>"><%= partner.name %></option>
-                <% }) %>
-              </select>
-              <button type="submit" class="btn btn-gold">Assign</button>
-            </form>
-            <button class="btn btn-ghost admin-action" data-url="/admin/orders/<%= order.id %>/ongoing" data-method="POST">Ongoing</button>
-            <button class="btn btn-gold admin-action" data-url="/admin/orders/<%= order.id %>/complete" data-method="POST">Complete</button>
-            <button class="btn btn-danger admin-action" data-url="/admin/orders/<%= order.id %>/reject" data-method="POST">Cancel</button>
+        <tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background=''" data-order-id="<%= order.id %>">
+          <td style="padding:13px 16px;">
+            <p class="order-id-main"><%= order.displayOrderId %></p>
+            <p class="order-id-sub"><%= order.id %></p>
+          </td>
+          <td style="padding:13px 16px;font-size:13px;color:var(--text);"><%= order.userName || '—' %></td>
+          <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);"><%= order.riderName || '—' %></td>
+          <td style="padding:13px 16px;font-size:13px;font-weight:600;color:#16a34a;">₹<%= Number(order.amount || 0).toFixed(2) %></td>
+          <td style="padding:13px 16px;"><span class="st-dot <%= stClass %>"><%= order.status %></span></td>
+          <td style="padding:13px 16px;"><span class="st-dot <%= payClass %>"><%= order.paymentStatus || 'pending' %></span></td>
+          <td style="padding:13px 16px;font-size:12px;color:var(--text-muted);white-space:nowrap;">
+            <%= order.createdAt ? String(order.createdAt).replace('T', ' ').slice(0, 16) : '—' %>
+          </td>
+          <td style="padding:13px 16px;">
+            <div class="row-actions">
+              <a class="btn btn-sm" href="/admin/orders/<%= order.id %>">Details</a>
+              <form class="ajax-form inline-form" data-url="/admin/orders/<%= order.id %>/assign" style="display:inline-flex;gap:4px;">
+                <select name="partnerId" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;">
+                  <option value="">Assign rider</option>
+                  <% partners.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary">Assign</button>
+              </form>
+              <button class="btn btn-sm admin-action" data-url="/admin/orders/<%= order.id %>/ongoing" data-method="POST">Ongoing</button>
+              <button class="btn btn-sm btn-primary admin-action" data-url="/admin/orders/<%= order.id %>/complete" data-method="POST">Complete</button>
+              <button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/<%= order.id %>/reject" data-method="POST">Cancel</button>
+            </div>
           </td>
         </tr>
         <% }) %>
       </tbody>
     </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="orders-pagination" style="display:none;">
+    <span class="pagination-info" id="pg-info"></span>
+    <div class="pagination-btns" id="pg-btns"></div>
   </div>
 </div>
 
@@ -139,132 +355,166 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof window.refreshAdminOrders === "function") window.refreshAdminOrders();
       })
       .subscribe();
-  } catch (e) {
-    console.warn("Realtime orders", e);
-  }
+  } catch (e) { console.warn("Realtime orders", e); }
 </script>
 <% } %>
+
 <script>
 (function () {
+  const PAGE_SIZE = 10;
+  let currentPage = 1;
+  let allRows = [];
+
+  function getRows() {
+    return Array.from(document.querySelectorAll('#admin-orders-tbody tr[data-order-id]'));
+  }
+
+  function renderPage(page) {
+    allRows = getRows();
+    const total = allRows.length;
+    if (total === 0) {
+      document.getElementById('orders-pagination').style.display = 'none';
+      return;
+    }
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    currentPage = Math.max(1, Math.min(page, totalPages));
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end   = Math.min(start + PAGE_SIZE, total);
+
+    allRows.forEach((row, i) => {
+      row.style.display = (i >= start && i < end) ? '' : 'none';
+    });
+
+    const pg = document.getElementById('orders-pagination');
+    const info = document.getElementById('pg-info');
+    const btns = document.getElementById('pg-btns');
+
+    if (totalPages <= 1) { pg.style.display = 'none'; return; }
+    pg.style.display = 'flex';
+    info.textContent = 'Showing ' + (start + 1) + '–' + end + ' of ' + total + ' orders';
+
+    // Build page buttons
+    let html = '<button class="pg-btn" onclick="window._pgGo(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + '>‹</button>';
+    for (let p = 1; p <= totalPages; p++) {
+      if (totalPages > 7 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) {
+        if (p === currentPage - 3 || p === currentPage + 3) html += '<span style="padding:0 4px;color:var(--text-light)">…</span>';
+        continue;
+      }
+      html += '<button class="pg-btn ' + (p === currentPage ? 'active' : '') + '" onclick="window._pgGo(' + p + ')">' + p + '</button>';
+    }
+    html += '<button class="pg-btn" onclick="window._pgGo(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + '>›</button>';
+    btns.innerHTML = html;
+
+    document.getElementById('orders-count-info').textContent = total + ' orders';
+  }
+
+  window._pgGo = function(p) { renderPage(p); };
+
+  // Init pagination on load
+  renderPage(1);
+
+  // Create order form
+  const createForm = document.getElementById('admin-create-order-form');
+  if (createForm) {
+    createForm.onsubmit = async function(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('adminToken');
+      const payload = Object.fromEntries(new FormData(createForm).entries());
+      try {
+        const res = await fetch('/api/admin/orders/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+          createForm.reset();
+          if (typeof window.refreshAdminOrders === 'function') window.refreshAdminOrders();
+        } else { alert('Failed: ' + (json.message || 'Unknown error')); }
+      } catch { alert('Network error'); }
+    };
+  }
+
+  // Row action wiring
   function escapeHtml(s) {
-    if (s == null) return "";
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function badgeClass(st) {
-    var s = String(st || "").toLowerCase();
-    if (s === "completed") return "success";
-    if (s === "accepted") return "accepted";
-    if (s === "rejected" || s === "cancelled") return "danger";
-    return "warning";
+  function stClass(st) {
+    var s = String(st||'').toLowerCase();
+    if (s==='completed') return 'st-completed';
+    if (s==='accepted') return 'st-accepted';
+    if (s==='ongoing') return 'st-ongoing';
+    if (s==='cancelled'||s==='rejected') return 'st-cancelled';
+    return 'st-pending';
   }
-  function wireOrdersRowActions(tb) {
-    if (typeof handleAction !== "function") return;
-    tb.querySelectorAll(".admin-action").forEach(function (btn) {
-      btn.onclick = function () {
-        handleAction(btn.dataset.url, btn.dataset.method || "POST");
-      };
+  function payClass(p) { return String(p||'').toLowerCase()==='paid' ? 'st-paid' : 'st-pending'; }
+
+  function wireActions(tb) {
+    if (typeof handleAction !== 'function') return;
+    tb.querySelectorAll('.admin-action').forEach(btn => {
+      btn.onclick = () => handleAction(btn.dataset.url, btn.dataset.method || 'POST');
     });
-    tb.querySelectorAll(".ajax-form").forEach(function (form) {
-      form.onsubmit = async function (e) {
+    tb.querySelectorAll('.ajax-form').forEach(form => {
+      form.onsubmit = async e => {
         e.preventDefault();
-        var payload = Object.fromEntries(new FormData(form).entries());
-        await handleAction(form.dataset.url, "POST", payload);
+        await handleAction(form.dataset.url, 'POST', Object.fromEntries(new FormData(form).entries()));
       };
     });
   }
-  window.refreshAdminOrders = async function () {
-    var token = localStorage.getItem("adminToken");
+  wireActions(document.getElementById('admin-orders-tbody'));
+
+  // Live refresh
+  window.refreshAdminOrders = async function() {
+    const token = localStorage.getItem('adminToken');
     if (!token) return;
-    var pill = document.getElementById("admin-orders-live");
-    if (pill) pill.textContent = "Updating…";
+    const pill = document.getElementById('admin-orders-live');
+    if (pill) pill.textContent = 'Updating…';
     try {
-      var qs = window.location.search || "";
-      var res = await fetch("/api/admin/orders" + qs, {
-        headers: { Authorization: "Bearer " + token },
-      });
-      var json = await res.json();
+      const qs = window.location.search || '';
+      const res = await fetch('/api/admin/orders' + qs, { headers: { Authorization: 'Bearer ' + token } });
+      const json = await res.json();
       if (!json.success || !json.data || !json.data.orders) return;
-      var rows = json.data.orders;
-      var partners = json.data.partners || [];
-      var tbody = document.getElementById("admin-orders-tbody");
+      const rows = json.data.orders;
+      const partners = json.data.partners || [];
+      const tbody = document.getElementById('admin-orders-tbody');
       if (!tbody) return;
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty">No orders match filters</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:48px;font-size:13px;">No orders match filters</td></tr>';
+        renderPage(1);
         return;
       }
-      var partnerOpts =
-        '<option value="">Assign</option>' +
-        partners
-          .map(function (p) {
-            return '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + "</option>";
-          })
-          .join("");
-      tbody.innerHTML = rows
-        .map(function (order) {
-          var bc = badgeClass(order.status);
-          var created = order.createdAt
-            ? String(order.createdAt).replace("T", " ").slice(0, 16)
-            : "—";
-          return (
-            '<tr data-order-id="' +
-            escapeHtml(order.id) +
-            '">' +
-            "<td><strong>" +
-            escapeHtml(order.displayOrderId) +
-            '</strong><br/><span class="muted">' +
-            escapeHtml(order.id) +
-            "</span></td>" +
-            "<td>" +
-            escapeHtml(order.userName) +
-            "</td>" +
-            "<td>" +
-            escapeHtml(order.riderName) +
-            "</td>" +
-            '<td class="revenue-positive">₹' +
-            Number(order.amount || 0).toFixed(2) +
-            "</td>" +
-            '<td><span class="badge ' +
-            bc +
-            '">' +
-            escapeHtml(order.status) +
-            "</span></td>" +
-            "<td>" +
-            escapeHtml(created) +
-            '</td><td class="actions">' +
-            '<a class="btn btn-ghost" href="/admin/orders/' +
-            encodeURIComponent(order.id) +
-            '">Details</a>' +
-            '<form class="ajax-form inline-form" data-url="/admin/orders/' +
-            encodeURIComponent(order.id) +
-            '/assign"><select name="partnerId">' +
-            partnerOpts +
-            '</select><button type="submit" class="btn btn-gold">Assign</button></form>' +
-            '<button class="btn btn-ghost admin-action" data-url="/admin/orders/' +
-            encodeURIComponent(order.id) +
-            '/ongoing" data-method="POST">Ongoing</button>' +
-            '<button class="btn btn-gold admin-action" data-url="/admin/orders/' +
-            encodeURIComponent(order.id) +
-            '/complete" data-method="POST">Complete</button>' +
-            '<button class="btn btn-danger admin-action" data-url="/admin/orders/' +
-            encodeURIComponent(order.id) +
-            '/reject" data-method="POST">Cancel</button>' +
-            "</td></tr>"
-          );
-        })
-        .join("");
-      wireOrdersRowActions(tbody);
-    } catch (e) {
-      console.warn(e);
-    } finally {
-      if (pill) pill.textContent = "Live sync";
-    }
+      const pOpts = '<option value="">Assign rider</option>' + partners.map(p => '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + '</option>').join('');
+      tbody.innerHTML = rows.map(order => {
+        const st = String(order.status||'').toLowerCase();
+        const sc = stClass(st);
+        const pc = payClass(order.paymentStatus);
+        const created = order.createdAt ? String(order.createdAt).replace('T',' ').slice(0,16) : '—';
+        return '<tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background=\'var(--border-light)\'" onmouseout="this.style.background=\'\'" data-order-id="' + escapeHtml(order.id) + '">' +
+          '<td style="padding:13px 16px;"><p class="order-id-main">' + escapeHtml(order.displayOrderId) + '</p><p class="order-id-sub">' + escapeHtml(order.id) + '</p></td>' +
+          '<td style="padding:13px 16px;font-size:13px;color:var(--text);">' + escapeHtml(order.userName||'—') + '</td>' +
+          '<td style="padding:13px 16px;font-size:13px;color:var(--text-muted);">' + escapeHtml(order.riderName||'—') + '</td>' +
+          '<td style="padding:13px 16px;font-size:13px;font-weight:600;color:#16a34a;">₹' + Number(order.amount||0).toFixed(2) + '</td>' +
+          '<td style="padding:13px 16px;"><span class="st-dot ' + sc + '">' + escapeHtml(order.status) + '</span></td>' +
+          '<td style="padding:13px 16px;"><span class="st-dot ' + pc + '">' + escapeHtml(order.paymentStatus||'pending') + '</span></td>' +
+          '<td style="padding:13px 16px;font-size:12px;color:var(--text-muted);white-space:nowrap;">' + escapeHtml(created) + '</td>' +
+          '<td style="padding:13px 16px;"><div class="row-actions">' +
+            '<a class="btn btn-sm" href="/admin/orders/' + encodeURIComponent(order.id) + '">Details</a>' +
+            '<form class="ajax-form inline-form" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/assign" style="display:inline-flex;gap:4px;"><select name="partnerId" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;">' + pOpts + '</select><button type="submit" class="btn btn-sm btn-primary">Assign</button></form>' +
+            '<button class="btn btn-sm admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/ongoing" data-method="POST">Ongoing</button>' +
+            '<button class="btn btn-sm btn-primary admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/complete" data-method="POST">Complete</button>' +
+            '<button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/reject" data-method="POST">Cancel</button>' +
+          '</div></td></tr>';
+      }).join('');
+      wireActions(tbody);
+      renderPage(currentPage);
+    } catch(e) { console.warn(e); }
+    finally { if (pill) pill.textContent = 'Live sync'; }
   };
-  setInterval(function () {
-    if (document.visibilityState === "visible") window.refreshAdminOrders();
+
+  setInterval(function() {
+    if (document.visibilityState === 'visible') window.refreshAdminOrders();
   }, 12000);
 })();
 </script>

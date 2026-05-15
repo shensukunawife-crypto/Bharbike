@@ -1999,7 +1999,7 @@ export async function adminsPage(req, res) {
     const { data: admins, error } = await supabase.from("admin_users").select("*").order("created_at", { ascending: false });
     return renderPage(res, {
       title: "Sub-Admins",
-      active: "settings",
+      active: "admins",
       bodyView: "admins",
       admins: safeData(admins),
     });

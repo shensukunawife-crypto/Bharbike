@@ -59,8 +59,8 @@
         <td>
           <div>
             <strong>
-              <span class="badge <%= ticket.issue_type === 'battery' ? 'warning' : ticket.issue_type === 'brake' ? 'danger' : ticket.issue_type === 'engine' ? 'info' : 'badge-soft' %>">
-                <%= ticket.issue_type || '-' %>
+              <span class="badge <%= ticket.issue_type === 'rsa' ? 'danger' : ticket.issue_type === 'at_hub' ? 'info' : ticket.issue_type === 'battery' ? 'warning' : ticket.issue_type === 'brake' ? 'danger' : ticket.issue_type === 'engine' ? 'info' : 'badge-soft' %>">
+                <%= ticket.issue_type === 'rsa' ? 'RSA (Road Side)' : ticket.issue_type === 'at_hub' ? 'At Hub' : ticket.issue_type || '-' %>
               </span>
             </strong>
           </div>

@@ -5,6 +5,57 @@
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">✅</span><span class="stat-label">Completed</span></div><strong class="stat-value"><%= stats.completed %></strong></div>
 </div>
 
+<!-- Quick Create Order -->
+<div class="chart-card" style="margin-bottom: 24px; padding: 20px;">
+  <h3 style="margin-bottom: 16px; color: #D4AF37;">Quick Create Delivery Order</h3>
+  <form id="admin-create-order-form" class="toolbar" style="background: none; padding: 0;">
+    <input class="filter-input" type="text" name="pickup" placeholder="Pickup Location (e.g. Andheri)" required />
+    <input class="filter-input" type="text" name="drop_location" placeholder="Drop Location (e.g. Juhu)" required />
+    <input class="filter-input" type="number" name="price" placeholder="Price (₹)" required />
+    <select name="plan_name" class="filter-input">
+      <option value="Standard Delivery">Standard Delivery</option>
+      <option value="Express Delivery">Express Delivery</option>
+      <option value="Heavy Loader">Heavy Loader</option>
+    </select>
+    <button type="submit" class="btn btn-gold">Create Order</button>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const createForm = document.getElementById('admin-create-order-form');
+  if (createForm) {
+    createForm.onsubmit = async function(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('adminToken');
+      const formData = new FormData(createForm);
+      const payload = Object.fromEntries(formData.entries());
+      
+      try {
+        const res = await fetch('/api/admin/orders/create', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('Order Created Successfully!');
+          createForm.reset();
+          if (typeof window.refreshAdminOrders === 'function') window.refreshAdminOrders();
+        } else {
+          alert('Failed: ' + (json.message || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Network error while creating order');
+      }
+    };
+  }
+});
+</script>
+
 <form class="toolbar" method="get" action="/admin/orders">
   <input class="filter-input" type="text" name="search" placeholder="Search Order ID / code" value="<%= filters.search %>" />
   <select name="status" class="filter-input">

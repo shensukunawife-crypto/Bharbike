@@ -16,7 +16,7 @@ export const env = {
   jwtSecret:
     process.env.JWT_SECRET ||
     (isProd ? "" : "dev-only-secret-change-in-production"),
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "30d",
   adminUsername: process.env.ADMIN_USERNAME || "admin",
   adminPassword: process.env.ADMIN_PASSWORD || "admin123",
   demoOtp: process.env.DEMO_OTP || "123456",

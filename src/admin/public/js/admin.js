@@ -71,13 +71,28 @@ document.querySelectorAll(".ajax-form").forEach((form) => {
       submitBtn.classList.add("loading");
       submitBtn.textContent = form.dataset.loadingText || "Saving...";
     }
-    const payload = Object.fromEntries(new FormData(form).entries());
-    form.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-      payload[checkbox.name] = checkbox.checked;
+
+    const formData = new FormData(form);
+    const payload = {};
+
+    formData.forEach((value, key) => {
+      // Handle array keys like "permissions[]"
+      if (key.endsWith("[]")) {
+        const cleanKey = key.slice(0, -2);
+        if (!payload[cleanKey]) payload[cleanKey] = [];
+        payload[cleanKey].push(value);
+      } else {
+        payload[key] = value;
+      }
     });
-    form.querySelectorAll('input[type="file"]').forEach((fileInput) => {
-      payload[fileInput.name] = fileInput.files?.length ? fileInput.files[0].name : "";
+
+    // Also handle single checkboxes that might not be in FormData (because they are unchecked)
+    form.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      if (!cb.name.endsWith("[]")) {
+        payload[cb.name] = cb.checked;
+      }
     });
+
     await handleAction(form.dataset.url, "POST", payload);
     if (submitBtn) {
       submitBtn.classList.remove("loading");
@@ -86,6 +101,33 @@ document.querySelectorAll(".ajax-form").forEach((form) => {
     const modal = form.closest(".modal");
     if (modal) modal.classList.remove("show");
   });
+});
+
+// Sub-Admin Edit Logic
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".open-edit-admin");
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const form = document.getElementById("edit-admin-form");
+  const modal = document.getElementById("edit-admin-modal");
+  if (!form || !modal) return;
+
+  form.dataset.url = "/admin/admins/" + id + "/edit";
+  const emailField = document.getElementById("edit-admin-email");
+  const nameField = document.getElementById("edit-admin-full-name");
+  const roleField = document.getElementById("edit-admin-role");
+
+  if (emailField) emailField.value = btn.dataset.email || "";
+  if (nameField) nameField.value = btn.dataset.fullName || "";
+  if (roleField) roleField.value = btn.dataset.role || "sub_admin";
+
+  const perms = JSON.parse(btn.dataset.permissions || "[]");
+  document.querySelectorAll(".edit-perm").forEach((cb) => {
+    cb.checked = perms.includes(cb.value);
+  });
+
+  modal.classList.add("show");
 });
 
 document.querySelectorAll(".open-edit-user").forEach((btn) => {
@@ -325,7 +367,7 @@ async function loadSupportTickets() {
             <td>${supportTicketLabel(ticket)} <button class="btn btn-ghost copy-ticket-id" data-value="${copyVal}">📋</button></td>
             <td>🛵 ${ticket.bike_name || "-"}</td>
             <td>
-              <div><strong><span class="badge ${ticket.issue_type === "battery" ? "warning" : ticket.issue_type === "brake" ? "danger" : ticket.issue_type === "engine" ? "info" : "badge-soft"}">${ticket.issue_type || "-"}</span></strong></div>
+              <div><strong><span class="badge ${ticket.issue_type === "rsa" ? "danger" : ticket.issue_type === "at_hub" ? "info" : ticket.issue_type === "battery" ? "warning" : ticket.issue_type === "brake" ? "danger" : ticket.issue_type === "engine" ? "info" : "badge-soft"}">${ticket.issue_type === "rsa" ? "RSA (Road Side)" : ticket.issue_type === "at_hub" ? "At Hub" : ticket.issue_type || "-"}</span></strong></div>
               <div class="table-subtext" title="${ticket.description || ""}">${String(ticket.description || "-").slice(0, 64)}${String(ticket.description || "").length > 64 ? "..." : ""}</div>
             </td>
             <td>${String(ticket.user_id || "-").slice(0, 8)}</td>
@@ -434,7 +476,7 @@ async function loadMaintenanceSupportTickets() {
         const copyM = (supportTicketCopyValue(ticket) || "").replace(/"/g, "&quot;");
         return `<tr>
           <td>${supportTicketLabel(ticket)} <button class="btn btn-ghost copy-ticket-id" data-value="${copyM}">📋</button></td>
-          <td><span class="badge badge-soft">${ticket.issue_type || "-"}</span></td>
+          <td><span class="badge badge-soft">${ticket.issue_type === "rsa" ? "RSA (Road Side)" : ticket.issue_type === "at_hub" ? "At Hub" : ticket.issue_type || "-"}</span></td>
           <td title="${ticket.description || ""}">${String(ticket.description || "-").slice(0, 60)}${String(ticket.description || "").length > 60 ? "..." : ""}</td>
           <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
           <td>${String(ticket.created_at || "").slice(0, 19).replace("T", " ")}</td>

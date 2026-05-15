@@ -380,6 +380,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   </div>
 </div>
 
+
 <!-- Recent Orders Table -->
 <div class="db-main">
   <div class="db-main-head">
@@ -407,22 +408,21 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
         <th>Activity</th>
         <th>Details</th>
         <th>Status</th>
-        <th>Time</th>
       </tr>
     </thead>
     <tbody>
       <% const recentList = (recentActivity || []).slice(0, 8); %>
       <% if (recentList.length === 0) { %>
       <tr>
-        <td colspan="4" style="text-align:center; color:var(--text-muted); padding: 32px;">
+        <td colspan="3" style="text-align:center; color:var(--text-muted); padding: 32px;">
           No recent activity found
         </td>
       </tr>
       <% } %>
       <% recentList.forEach(item => { %>
       <tr>
-        <td style="font-weight:600;"><%= item.title || '—' %></td>
-        <td style="color:var(--text-muted); font-size:12px; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        <td style="font-weight:600; color:var(--text);"><%= item.title || '—' %></td>
+        <td style="color:var(--text-muted); font-size:12px; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
           <%= item.subtitle || '—' %>
         </td>
         <td>
@@ -431,7 +431,6 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
             <%= stText.includes('completed') ? 'Completed' : stText.includes('accepted') || stText.includes('ongoing') ? 'Active' : stText.includes('cancelled') || stText.includes('rejected') ? 'Cancelled' : 'Pending' %>
           </span>
         </td>
-        <td style="color:var(--text-muted) !important; font-size:12px;"><%= item.time || '—' %></td>
       </tr>
       <% }) %>
     </tbody>

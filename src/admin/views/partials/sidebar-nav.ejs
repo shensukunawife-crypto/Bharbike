@@ -1,12 +1,18 @@
-<% const gOperations=['orders', 'bookings' , 'delivery-partners' , 'skipped-days' ].includes(active); const
-  gVehicle=['bikes', 'maintenance' ].includes(active); const gUsers=['users', 'kyc-documents' ].includes(active); const
-  gFinancial=['earnings', 'analytics' ].includes(active); const gSystem=['system-workflow', 'backend-monitor'
-  ].includes(active); const gComm=['support', 'notifications' ].includes(active); const gAdmin=['payments', 'settings'
-  , 'admins' ].includes(active); // Permission helpers const _admin=locals.admin || {}; const
-  _isMaster=_admin.role==='master_admin' || _admin.role==='admin' || (_admin.permissions &&
-  _admin.permissions.includes('*')); const _perms=Array.isArray(_admin.permissions) ? _admin.permissions : []; const
-  _can=(p)=> _isMaster || _perms.includes(p);
-  %>
+<% 
+  const gOperations = ['orders', 'bookings', 'delivery-partners', 'skipped-days'].includes(active); 
+  const gVehicle = ['bikes', 'maintenance'].includes(active); 
+  const gUsers = ['users', 'kyc-documents'].includes(active); 
+  const gFinancial = ['earnings', 'analytics'].includes(active); 
+  const gSystem = ['system-workflow', 'backend-monitor'].includes(active); 
+  const gComm = ['support', 'notifications'].includes(active); 
+  const gAdmin = ['payments', 'settings', 'admins'].includes(active); 
+  
+  // Permission helpers
+  const _admin = locals.admin || {}; 
+  const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*')); 
+  const _perms = Array.isArray(_admin.permissions) ? _admin.permissions : []; 
+  const _can = (p) => _isMaster || _perms.includes(p);
+%>
   <nav class="nav nav--grouped" id="admin-sidebar-nav" aria-label="Admin navigation">
     <div class="nav-block nav-block--dashboard nav-block--hero">
       <p class="nav-section-label">Overview</p>

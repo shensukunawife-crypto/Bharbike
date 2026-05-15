@@ -41,6 +41,7 @@ body.dark-mode {
 
 /* —— Reset —— */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+h1, h2, h3, h4, h5, h6, th { font-weight: 700; color: var(--text); }
 html { height: 100%; }
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;

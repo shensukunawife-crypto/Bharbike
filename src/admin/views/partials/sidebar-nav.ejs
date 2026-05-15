@@ -1,225 +1,220 @@
-<% 
-  const gOperations = ['orders', 'bookings', 'delivery-partners', 'skipped-days'].includes(active); 
-  const gVehicle = ['bikes', 'maintenance'].includes(active); 
-  const gUsers = ['users', 'kyc-documents'].includes(active); 
-  const gFinancial = ['earnings', 'analytics'].includes(active); 
-  const gSystem = ['system-workflow', 'backend-monitor'].includes(active); 
-  const gComm = ['support', 'notifications'].includes(active); 
-  const gAdmin = ['payments', 'settings', 'admins'].includes(active); 
-  
-  // Permission helpers
-  const _admin = locals.admin || {}; 
-  const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*')); 
-  const _perms = Array.isArray(_admin.permissions) ? _admin.permissions : []; 
-  const _can = (p) => _isMaster || _perms.includes(p);
+<%
+  const gOperations = ['orders', 'bookings', 'delivery-partners', 'skipped-days'].includes(active);
+  const gVehicle    = ['bikes', 'maintenance'].includes(active);
+  const gUsers      = ['users', 'kyc-documents'].includes(active);
+  const gFinancial  = ['earnings', 'analytics'].includes(active);
+  const gSystem     = ['system-workflow', 'backend-monitor'].includes(active);
+  const gComm       = ['support', 'notifications'].includes(active);
+  const gAdmin      = ['payments', 'settings', 'admins'].includes(active);
+
+  const _admin    = locals.admin || {};
+  const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*'));
+  const _perms    = Array.isArray(_admin.permissions) ? _admin.permissions : [];
+  const _can      = (p) => _isMaster || _perms.includes(p);
+
+  // SVG icon helper — using clean Feather-style icons
+  const icons = {
+    dashboard:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+    orders:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+    bookings:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    delivery:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+    skipped:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+    bike:       `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>`,
+    maintenance:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+    users:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+    kyc:        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
+    earnings:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+    analytics:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+    workflow:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+    monitor:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+    support:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+    notif:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+    payments:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+    settings:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+    admins:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+    chevron:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+    rental:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`,
+    vehicle:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>`,
+    accounts:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    finance:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
+    infra:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>`,
+    engage:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+    config:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`,
+  };
 %>
-  <nav class="nav nav--grouped" id="admin-sidebar-nav" aria-label="Admin navigation">
-    <div class="nav-block nav-block--dashboard nav-block--hero">
-      <p class="nav-section-label">Overview</p>
-      <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin">
-        <span class="nav-icon">📊</span><span>Dashboard Overview</span>
+
+<!-- OVERVIEW -->
+<div class="nav-section">
+  <p class="nav-label">Overview</p>
+  <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin">
+    <span class="nav-icon"><%- icons.dashboard %></span>
+    <span>Dashboard</span>
+  </a>
+</div>
+
+<!-- OPERATIONS -->
+<% if (_can('manage_orders')) { %>
+<div class="nav-section">
+  <p class="nav-label">Operations</p>
+  <div class="nav-group <%= gOperations ? 'is-open' : '' %>" data-group-id="operations">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-operations">
+      <span class="nav-icon"><%- icons.rental %></span>
+      <span>Rental Ops</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <a class="nav-link nav-link-sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders">
+        <span class="nav-icon"><%- icons.orders %></span><span>Orders</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
+        <span class="nav-icon"><%- icons.bookings %></span><span>Bookings</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners">
+        <span class="nav-icon"><%- icons.delivery %></span><span>Delivery</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days">
+        <span class="nav-icon"><%- icons.skipped %></span><span>Skipped Days</span>
       </a>
     </div>
+  </div>
+</div>
+<% } %>
 
-    <% if (_can('manage_orders')) { %>
-      <div class="nav-group <%= gOperations ? 'has-active' : '' %>" data-group-id="operations">
-        <p class="nav-section-label">Operations</p>
-        <button type="button" class="nav-group__toggle" aria-expanded="<%= gOperations ? 'true' : 'false' %>"
-          id="nav-group-toggle-operations">
-          <span class="nav-group__meta">
-            <span class="nav-group__icon" aria-hidden="true">🧭</span>
-            <span class="nav-group__title">Rental Ops</span>
-          </span>
-          <span class="nav-group__chev" aria-hidden="true"></span>
-        </button>
-        <div class="nav-group__panel">
-          <div class="nav-group__inner">
-            <a class="nav-link nav-link--sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders">
-              <span class="nav-icon">📦</span><span>Orders</span>
-            </a>
-            <a class="nav-link nav-link--sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
-              <span class="nav-icon">🧾</span><span>Bookings</span>
-            </a>
-            <a class="nav-link nav-link--sub <%= active === 'delivery-partners' ? 'active' : '' %>"
-              href="/admin/delivery-partners">
-              <span class="nav-icon">🛵</span><span>Delivery</span>
-            </a>
-            <a class="nav-link nav-link--sub <%= active === 'skipped-days' ? 'active' : '' %>"
-              href="/admin/skipped-days">
-              <span class="nav-icon">📅</span><span>Skipped Days</span>
-            </a>
-          </div>
-        </div>
-      </div>
+<!-- FLEET -->
+<% if (_can('manage_bikes')) { %>
+<div class="nav-section">
+  <p class="nav-label">Fleet</p>
+  <div class="nav-group <%= gVehicle ? 'is-open' : '' %>" data-group-id="vehicle">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-vehicle">
+      <span class="nav-icon"><%- icons.vehicle %></span>
+      <span>Vehicle Control</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <a class="nav-link nav-link-sub <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes">
+        <span class="nav-icon"><%- icons.bike %></span><span>Bikes</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'maintenance' ? 'active' : '' %>" href="/admin/maintenance">
+        <span class="nav-icon"><%- icons.maintenance %></span><span>Maintenance</span>
+      </a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- ACCOUNTS -->
+<% if (_can('manage_users')) { %>
+<div class="nav-section">
+  <p class="nav-label">Accounts</p>
+  <div class="nav-group <%= gUsers ? 'is-open' : '' %>" data-group-id="accounts">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-accounts">
+      <span class="nav-icon"><%- icons.accounts %></span>
+      <span>User Governance</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <a class="nav-link nav-link-sub <%= active === 'users' ? 'active' : '' %>" href="/admin/users">
+        <span class="nav-icon"><%- icons.users %></span><span>Users</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents">
+        <span class="nav-icon"><%- icons.kyc %></span><span>KYC Documents</span>
+      </a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- FINANCE -->
+<% if (_can('manage_finance')) { %>
+<div class="nav-section">
+  <p class="nav-label">Finance</p>
+  <div class="nav-group <%= gFinancial ? 'is-open' : '' %>" data-group-id="financial">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-financial">
+      <span class="nav-icon"><%- icons.finance %></span>
+      <span>Financial</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <a class="nav-link nav-link-sub <%= active === 'earnings' ? 'active' : '' %>" href="/admin/earnings">
+        <span class="nav-icon"><%- icons.earnings %></span><span>Earnings</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'analytics' ? 'active' : '' %>" href="/admin/analytics">
+        <span class="nav-icon"><%- icons.analytics %></span><span>Analytics</span>
+      </a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- INFRASTRUCTURE -->
+<div class="nav-section">
+  <p class="nav-label">Infrastructure</p>
+  <div class="nav-group <%= gSystem ? 'is-open' : '' %>" data-group-id="system">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-system">
+      <span class="nav-icon"><%- icons.infra %></span>
+      <span>System & Monitoring</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <a class="nav-link nav-link-sub <%= active === 'system-workflow' ? 'active' : '' %>" href="/admin/system-workflow">
+        <span class="nav-icon"><%- icons.workflow %></span><span>System Workflow</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'backend-monitor' ? 'active' : '' %>" href="/admin/backend">
+        <span class="nav-icon"><%- icons.monitor %></span><span>Backend Monitor</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ENGAGEMENT -->
+<% if (_can('manage_support')) { %>
+<div class="nav-section">
+  <p class="nav-label">Engagement</p>
+  <div class="nav-group <%= gComm ? 'is-open' : '' %>" data-group-id="communication">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-communication">
+      <span class="nav-icon"><%- icons.engage %></span>
+      <span>Communication</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <a class="nav-link nav-link-sub <%= active === 'support' ? 'active' : '' %>" href="/admin/support">
+        <span class="nav-icon"><%- icons.support %></span><span>Support</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'notifications' ? 'active' : '' %>" href="/admin/notifications">
+        <span class="nav-icon"><%- icons.notif %></span><span>Notifications</span>
+      </a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- CONFIGURATION -->
+<% if (_can('manage_finance') || _can('manage_settings') || _isMaster) { %>
+<div class="nav-section">
+  <p class="nav-label">Configuration</p>
+  <div class="nav-group <%= gAdmin ? 'is-open' : '' %>" data-group-id="administration">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-administration">
+      <span class="nav-icon"><%- icons.config %></span>
+      <span>Administration</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <% if (_can('manage_finance')) { %>
+      <a class="nav-link nav-link-sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments">
+        <span class="nav-icon"><%- icons.payments %></span><span>Payments</span>
+      </a>
       <% } %>
-
-        <% if (_can('manage_bikes')) { %>
-          <div class="nav-group <%= gVehicle ? 'has-active' : '' %>" data-group-id="vehicle-management">
-            <p class="nav-section-label">Fleet</p>
-            <button type="button" class="nav-group__toggle" aria-expanded="<%= gVehicle ? 'true' : 'false' %>"
-              id="nav-group-toggle-vehicle-management">
-              <span class="nav-group__meta">
-                <span class="nav-group__icon" aria-hidden="true">🚲</span>
-                <span class="nav-group__title">Vehicle Control</span>
-              </span>
-              <span class="nav-group__chev" aria-hidden="true"></span>
-            </button>
-            <div class="nav-group__panel">
-              <div class="nav-group__inner">
-                <a class="nav-link nav-link--sub <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes">
-                  <span class="nav-icon">🚲</span><span>Bikes</span>
-                </a>
-                <a class="nav-link nav-link--sub <%= active === 'maintenance' ? 'active' : '' %>"
-                  href="/admin/maintenance">
-                  <span class="nav-icon">🧰</span><span>Maintenance</span>
-                </a>
-              </div>
-            </div>
-          </div>
-          <% } %>
-
-            <% if (_can('manage_users')) { %>
-              <div class="nav-group <%= gUsers ? 'has-active' : '' %>" data-group-id="user-management">
-                <p class="nav-section-label">Accounts</p>
-                <button type="button" class="nav-group__toggle" aria-expanded="<%= gUsers ? 'true' : 'false' %>"
-                  id="nav-group-toggle-user-management">
-                  <span class="nav-group__meta">
-                    <span class="nav-group__icon" aria-hidden="true">👥</span>
-                    <span class="nav-group__title">User Governance</span>
-                  </span>
-                  <span class="nav-group__chev" aria-hidden="true"></span>
-                </button>
-                <div class="nav-group__panel">
-                  <div class="nav-group__inner">
-                    <a class="nav-link nav-link--sub <%= active === 'users' ? 'active' : '' %>" href="/admin/users">
-                      <span class="nav-icon">👥</span><span>Users</span>
-                    </a>
-                    <a class="nav-link nav-link--sub <%= active === 'kyc-documents' ? 'active' : '' %>"
-                      href="/admin/kyc-documents">
-                      <span class="nav-icon">📄</span><span>KYC Documents</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <% } %>
-
-                <% if (_can('manage_finance')) { %>
-                  <div class="nav-group <%= gFinancial ? 'has-active' : '' %>" data-group-id="financial">
-                    <p class="nav-section-label">Finance</p>
-                    <button type="button" class="nav-group__toggle" aria-expanded="<%= gFinancial ? 'true' : 'false' %>"
-                      id="nav-group-toggle-financial">
-                      <span class="nav-group__meta">
-                        <span class="nav-group__icon" aria-hidden="true">💹</span>
-                        <span class="nav-group__title">Financial</span>
-                      </span>
-                      <span class="nav-group__chev" aria-hidden="true"></span>
-                    </button>
-                    <div class="nav-group__panel">
-                      <div class="nav-group__inner">
-                        <a class="nav-link nav-link--sub <%= active === 'earnings' ? 'active' : '' %>"
-                          href="/admin/earnings">
-                          <span class="nav-icon">💸</span><span>Earnings</span>
-                        </a>
-                        <a class="nav-link nav-link--sub <%= active === 'analytics' ? 'active' : '' %>"
-                          href="/admin/analytics">
-                          <span class="nav-icon">📈</span><span>Analytics</span>
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                  <% } %>
-
-                    <div class="nav-group <%= gSystem ? 'has-active' : '' %>" data-group-id="system-monitoring">
-                      <p class="nav-section-label">Infrastructure</p>
-                      <button type="button" class="nav-group__toggle" aria-expanded="<%= gSystem ? 'true' : 'false' %>"
-                        id="nav-group-toggle-system-monitoring">
-                        <span class="nav-group__meta">
-                          <span class="nav-group__icon" aria-hidden="true">🛡️</span>
-                          <span class="nav-group__title">System &amp; Monitoring</span>
-                        </span>
-                        <span class="nav-group__chev" aria-hidden="true"></span>
-                      </button>
-                      <div class="nav-group__panel">
-                        <div class="nav-group__inner">
-                          <a class="nav-link nav-link--sub <%= active === 'system-workflow' ? 'active' : '' %>"
-                            href="/admin/system-workflow">
-                            <span class="nav-icon">🔭</span><span>System Workflow</span>
-                          </a>
-                          <a class="nav-link nav-link--sub <%= active === 'backend-monitor' ? 'active' : '' %>"
-                            href="/admin/backend">
-                            <span class="nav-icon">⚙️</span><span>Backend Monitor</span>
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-
-                    <% if (_can('manage_support')) { %>
-                      <div class="nav-group <%= gComm ? 'has-active' : '' %>" data-group-id="communication">
-                        <p class="nav-section-label">Engagement</p>
-                        <button type="button" class="nav-group__toggle" aria-expanded="<%= gComm ? 'true' : 'false' %>"
-                          id="nav-group-toggle-communication">
-                          <span class="nav-group__meta">
-                            <span class="nav-group__icon" aria-hidden="true">💬</span>
-                            <span class="nav-group__title">Communication</span>
-                          </span>
-                          <span class="nav-group__chev" aria-hidden="true"></span>
-                        </button>
-                        <div class="nav-group__panel">
-                          <div class="nav-group__inner">
-                            <a class="nav-link nav-link--sub <%= active === 'support' ? 'active' : '' %>"
-                              href="/admin/support">
-                              <span class="nav-icon">🎫</span><span>Support</span>
-                            </a>
-                            <a class="nav-link nav-link--sub <%= active === 'notifications' ? 'active' : '' %>"
-                              href="/admin/notifications">
-                              <span class="nav-icon">🔔</span><span>Notifications</span>
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                      <% } %>
-
-                        <% if (_can('manage_finance') || _can('manage_settings') || _isMaster) { %>
-                          <div class="nav-group <%= gAdmin ? 'has-active' : '' %>" data-group-id="administration">
-                            <p class="nav-section-label">Configuration</p>
-                            <button type="button" class="nav-group__toggle"
-                              aria-expanded="<%= gAdmin ? 'true' : 'false' %>" id="nav-group-toggle-administration">
-                              <span class="nav-group__meta">
-                                <span class="nav-group__icon" aria-hidden="true">⚙️</span>
-                                <span class="nav-group__title">Administration</span>
-                              </span>
-                              <span class="nav-group__chev" aria-hidden="true"></span>
-                            </button>
-                            <div class="nav-group__panel">
-                              <div class="nav-group__inner">
-                                <% if (_can('manage_finance')) { %>
-                                  <a class="nav-link nav-link--sub <%= active === 'payments' ? 'active' : '' %>"
-                                    href="/admin/payments">
-                                    <span class="nav-icon">💳</span><span>Payments</span>
-                                  </a>
-                                  <% } %>
-                                    <% if (_can('manage_settings')) { %>
-                                      <a class="nav-link nav-link--sub <%= active === 'settings' ? 'active' : '' %>"
-                                        href="/admin/settings">
-                                        <span class="nav-icon">⚙️</span><span>Settings</span>
-                                      </a>
-                                      <% } %>
-                                        <% if (_isMaster) { %>
-                                          <a class="nav-link nav-link--sub <%= active === 'admins' ? 'active' : '' %>"
-                                            href="/admin/admins">
-                                            <span class="nav-icon">🛡️</span><span>Sub-Admins</span>
-                                          </a>
-                                          <% } %>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <% } %>
-                        
-                          <div class="nav-footer">
-                            <div class="nav-footer__status">
-                              <span class="status-dot" aria-hidden="true"></span>
-                              <span>System Healthy</span>
-                            </div>
-                            <a class="nav-footer__action" href="/admin/system-workflow">Open Control Center</a>
-                          </div>
-                        </nav>
+      <% if (_can('manage_settings')) { %>
+      <a class="nav-link nav-link-sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings">
+        <span class="nav-icon"><%- icons.settings %></span><span>Settings</span>
+      </a>
+      <% } %>
+      <% if (_isMaster) { %>
+      <a class="nav-link nav-link-sub <%= active === 'admins' ? 'active' : '' %>" href="/admin/admins">
+        <span class="nav-icon"><%- icons.admins %></span><span>Sub-Admins</span>
+      </a>
+      <% } %>
+    </div>
+  </div>
+</div>
+<% } %>

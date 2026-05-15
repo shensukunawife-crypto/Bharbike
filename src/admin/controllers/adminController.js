@@ -345,32 +345,28 @@ export async function dashboard(req, res) {
     const startOfWeek = new Date(startOfToday);
     startOfWeek.setDate(startOfWeek.getDate() - 6);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     const [
-      { count: usersCount, error: usersError },
-      { count: bikesCount, error: bikesError },
-      { count: activeRentalsCount, error: rentalsError },
-      { data: bikesData, error: bikesDataError },
-      { data: ordersData, error: ordersError },
-      { data: earningsRows, error: earningsError },
+      { count: usersCount },
+      { count: bikesCount },
+      { count: activeRentalsCount },
+      { data: bikesData },
+      { data: ordersData },
+      { data: earningsRows },
+      { count: kycPendingCount },
+      { data: lastMonthUsers },
     ] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("bikes").select("*", { count: "exact", head: true }),
-      supabase
-        .from("rentals")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "active"),
+      supabase.from("rentals").select("*", { count: "exact", head: true }).eq("status", "active"),
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("*"),
       supabase.from("earnings").select("amount, created_at"),
+      supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("profiles").select("created_at").gte("created_at", startOfLastMonth.toISOString()),
     ]);
 
-    if (usersError || bikesError || rentalsError || earningsError || bikesDataError || ordersError) {
-      console.error(
-        "[admin.dashboard] fetch failed",
-        usersError || bikesError || rentalsError || earningsError || bikesDataError || ordersError
-      );
-    }
     const bikes = safeData(bikesData).map(normalizeBike);
     const orders = safeData(ordersData).map(normalizeOrder);
     const earnings = safeData(earningsRows).map((item) => ({
@@ -378,16 +374,35 @@ export async function dashboard(req, res) {
       createdAt: new Date(item.created_at || item.createdAt || now),
     }));
 
+    // Growth calculation
+    const usersThisMonth = (lastMonthUsers || []).filter(u => new Date(u.created_at) >= startOfMonth).length;
+    const usersLastMonth = (lastMonthUsers || []).filter(u => new Date(u.created_at) < startOfMonth).length;
+    const userGrowth = usersLastMonth ? Math.round(((usersThisMonth - usersLastMonth) / usersLastMonth) * 100) : 100;
+
+    const earningsThisMonth = earnings.filter(e => e.createdAt >= startOfMonth).reduce((s, e) => s + e.amount, 0);
+    const earningsLastMonth = earnings.filter(e => e.createdAt >= startOfLastMonth && e.createdAt < startOfMonth).reduce((s, e) => s + e.amount, 0);
+    const earningsGrowth = earningsLastMonth ? Math.round(((earningsThisMonth - earningsLastMonth) / earningsLastMonth) * 100) : 100;
+
     const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0);
-    const earningsBreakdown = earnings.reduce(
-      (acc, item) => {
-        if (item.createdAt >= startOfToday) acc.today += item.amount;
-        if (item.createdAt >= startOfWeek) acc.weekly += item.amount;
-        if (item.createdAt >= startOfMonth) acc.monthly += item.amount;
-        return acc;
-      },
-      { today: 0, weekly: 0, monthly: 0 }
-    );
+
+    // Fleet Health
+    const fleetStatus = {
+      available: bikes.filter(b => (b.status||'').toLowerCase() === 'available').length,
+      rented: bikes.filter(b => ['rented', 'in_use', 'active'].includes((b.status||'').toLowerCase())).length,
+      maintenance: bikes.filter(b => (b.status||'').toLowerCase() === 'maintenance').length,
+      lowBattery: bikes.filter(b => Number(b.battery || 100) < 20).length
+    };
+
+    // Top Hubs
+    const hubsMap = {};
+    bikes.forEach(b => {
+      const loc = b.location || 'Main Hub';
+      hubsMap[loc] = (hubsMap[loc] || 0) + 1;
+    });
+    const topHubs = Object.entries(hubsMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a,b) => b.count - a.count)
+      .slice(0, 4);
 
     const revenueLabels = [];
     const revenueData = [];
@@ -406,62 +421,35 @@ export async function dashboard(req, res) {
       }
     });
 
-    const orderBuckets = {
-      pending: 0,
-      accepted: 0,
-      ongoing: 0,
-      completed: 0,
-      cancelled: 0,
-    };
+    const orderBuckets = { pending: 0, accepted: 0, ongoing: 0, completed: 0, cancelled: 0 };
     orders.forEach((order) => {
       const status = String(order.status || "").toLowerCase();
-      if (status in orderBuckets) {
-        orderBuckets[status] += 1;
-      } else if (status === "rejected") {
-        orderBuckets.cancelled += 1;
-      }
+      if (status in orderBuckets) orderBuckets[status] += 1;
+      else if (status === "rejected") orderBuckets.cancelled += 1;
     });
 
-    const lowBatteryBikes = bikes.filter((bike) => Number(bike.battery || 0) < 25);
-    const pendingOrders = orders.filter((order) => String(order.status || "").toLowerCase() === "pending");
     const alerts = [];
-    if (lowBatteryBikes.length > 0) {
-      alerts.push({
-        level: "warning",
-        title: "Low Battery",
-        detail: `${lowBatteryBikes.length} bikes are below 25% battery.`,
-      });
+    if (fleetStatus.lowBattery > 0) {
+      alerts.push({ level: "warning", title: "Low Battery", detail: `${fleetStatus.lowBattery} bikes need charging.` });
     }
+    if (kycPendingCount > 0) {
+      alerts.push({ level: "info", title: "KYC Queue", detail: `${kycPendingCount} documents pending review.` });
+    }
+    const pendingOrders = orders.filter(o => (o.status||'').toLowerCase() === 'pending');
     if (pendingOrders.length > 0) {
-      alerts.push({
-        level: "info",
-        title: "Pending Orders",
-        detail: `${pendingOrders.length} orders need admin action.`,
-      });
+      alerts.push({ level: "info", title: "Pending Orders", detail: `${pendingOrders.length} orders need action.` });
     }
     if (alerts.length === 0) {
-      alerts.push({
-        level: "success",
-        title: "All Clear",
-        detail: "No urgent alerts right now.",
-      });
+      alerts.push({ level: "success", title: "System Normal", detail: "No critical issues detected." });
     }
 
     const recentActivity = orders
       .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt || b.created_at || now).getTime() -
-          new Date(a.createdAt || a.created_at || now).getTime()
-      )
+      .sort((a, b) => new Date(b.createdAt || b.created_at || now).getTime() - new Date(a.createdAt || a.created_at || now).getTime())
       .slice(0, 6)
       .map((order) => ({
-        title: `Order ${order.orderId || order.id || "N/A"} is ${String(order.status || "pending")
-          .replace("_", " ")
-          .toUpperCase()}`,
-        subtitle: `${order.userName || "Unknown user"} • ${order.pickup_location || "N/A"} to ${
-          order.drop_location || "N/A"
-        }`,
+        title: `Order ${order.orderId || order.id || "N/A"} ${String(order.status || "pending").toUpperCase()}`,
+        subtitle: `${order.userName || "User"} • ${order.pickup_location || "N/A"}`,
         time: new Date(order.createdAt || order.created_at || now).toLocaleString("en-IN"),
       }));
 
@@ -474,28 +462,23 @@ export async function dashboard(req, res) {
         bikesCount: bikesCount ?? 0,
         activeRentalsCount: activeRentalsCount ?? 0,
         totalEarnings,
+        userGrowth,
+        earningsGrowth,
+        kycPendingCount: kycPendingCount ?? 0,
       },
-      earningsBreakdown,
+      fleetStatus,
+      topHubs,
       alerts,
       recentActivity,
-      revenueChart: {
-        labels: revenueLabels,
-        data: revenueData,
-      },
+      revenueChart: { labels: revenueLabels, data: revenueData },
       ordersChart: {
         labels: ["Pending", "Accepted", "Ongoing", "Completed", "Cancelled"],
-        data: [
-          orderBuckets.pending,
-          orderBuckets.accepted,
-          orderBuckets.ongoing,
-          orderBuckets.completed,
-          orderBuckets.cancelled,
-        ],
+        data: [orderBuckets.pending, orderBuckets.accepted, orderBuckets.ongoing, orderBuckets.completed, orderBuckets.cancelled],
       },
     });
   } catch (error) {
-    console.error("[admin.dashboard] unexpected error", error);
-    return res.status(500).send("Unable to load dashboard");
+    console.error("[admin.dashboard] error", error);
+    return res.status(500).send("Dashboard Error");
   }
 }
 

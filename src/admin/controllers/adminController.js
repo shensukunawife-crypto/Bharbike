@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
+import * as subscriptionService from "../../services/subscriptionService.js";
+import * as iotService from "../../services/iotService.js";
 import supabase from "../../config/supabase.js";
 import { shapePublicUser } from "../../utils/userShape.js";
 import { listInMemoryBookings } from "../../services/bookingStore.js";
@@ -697,6 +699,19 @@ export async function bikeDetails(req, res) {
       return res.status(404).send("Bike not found");
     }
     const bike = normalizeBike(bikeRow, 0);
+
+    // Fetch LIVE LocoNav data
+    try {
+      const health = await iotService.getBikeHealth(bikeId);
+      bike.battery = health.batteryPct;
+      bike.liveLat = health.lat;
+      bike.liveLng = health.lng;
+      bike.lastPingAt = health.lastPingAt;
+      bike.isLive = !!(health.lat && health.lng);
+    } catch (iotErr) {
+      console.warn("[admin.bikeDetails] IoT fetch failed:", iotErr.message);
+    }
+
     const { data: orders } = await supabase.from("orders").select("*").eq("bike_id", bikeId);
     const { data: rentals } = await supabase.from("rentals").select("*").eq("bikeId", bikeId);
     const maintenanceLogs = maintenanceTickets

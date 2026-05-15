@@ -1,8 +1,21 @@
 <div class="stats-grid">
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Bike ID</span></div><strong class="stat-value"><%= bike.bike_code %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">📍</span><span class="stat-label">Location</span></div><strong class="stat-value"><%= bike.location %></strong></div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">🔋</span><span class="stat-label">Battery</span></div>
+    <strong class="stat-value"><%= bike.battery %>%</strong>
+    <span class="badge success" style="font-size: 10px; margin-top: 4px;">Live from LocoNav</span>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">📍</span><span class="stat-label">Location</span></div>
+    <% if (bike.isLive) { %>
+      <strong class="stat-value" style="font-size: 14px;"><%= Number(bike.liveLat).toFixed(4) %>, <%= Number(bike.liveLng).toFixed(4) %></strong>
+      <span class="badge success" style="font-size: 10px; margin-top: 4px;">GPS Live</span>
+    <% } else { %>
+      <strong class="stat-value"><%= bike.location %></strong>
+      <span class="badge" style="font-size: 10px; margin-top: 4px;">Static (Last Known)</span>
+    <% } %>
+  </div>
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">🛠️</span><span class="stat-label">Health</span></div><strong class="stat-value"><%= bike.healthStatus %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🔋</span><span class="stat-label">Battery</span></div><strong class="stat-value"><%= bike.battery %>%</strong></div>
 </div>
 
 <div class="analytics-grid">

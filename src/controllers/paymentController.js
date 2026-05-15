@@ -111,16 +111,15 @@ export const verifyPayment = async (req, res) => {
 
     // Create subscription or add wallet money
     if (user_id && plan_id) {
-      // Deduct from wallet first
-      const subAmount = Number(req.body.amount) || 0;
-      if (subAmount > 0) {
-        try {
-          await walletService.deductMoney(user_id, subAmount, `Subscription: ${plan_id}`);
-          console.log("[verifyPayment] wallet deducted:", subAmount);
-        } catch (deductErr) {
-          console.warn("[verifyPayment] wallet deduct failed:", deductErr?.message);
-          // Continue anyway — subscription may still be created
-        }
+      const { payment_method = "upi", amount } = req.body;
+      const subAmount = Number(amount) || 0;
+
+      // If paying via wallet, we MUST have enough balance
+      if (payment_method === "wallet" && subAmount > 0) {
+        console.log(`[verifyPayment] Wallet payment detected. Deducting ₹${subAmount}`);
+        // Remove try-catch so AppError (Insufficient balance) propagates to the user
+        await walletService.deductMoney(user_id, subAmount, `Subscription: ${plan_id}`);
+        console.log("[verifyPayment] wallet deducted successfully");
       }
 
       try {

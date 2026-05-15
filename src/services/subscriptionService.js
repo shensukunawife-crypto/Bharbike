@@ -2,33 +2,13 @@ import supabase from "../utils/supabaseClient.js";
 
 const MOCK_PLANS = [
   {
-    id: "plan_basic",
-    name: "basic",
-    display_name: "Basic Plan",
-    description: "Perfect for occasional riders. Essential features included.",
-    price: 199,
-    duration_days: 30,
-    features: JSON.stringify(["Unlock standard hubs", "2 hours free daily", "Email support"]),
-    is_active: true
-  },
-  {
-    id: "plan_premium",
-    name: "monthly_pro", // Kept as monthly_pro to trigger the "MOST POPULAR" badge in frontend
-    display_name: "Premium Plan",
-    description: "Our most popular choice for regular commuters.",
-    price: 499,
-    duration_days: 30,
+    id: "plan_weekly",
+    name: "weekly_plan",
+    display_name: "Weekly Plan",
+    description: "Full access to BharBike fleet for 7 days.",
+    price: 1950,
+    duration_days: 7,
     features: JSON.stringify(["Unlock ALL hubs", "Unlimited daily rides", "Priority support", "Free maintenance"]),
-    is_active: true
-  },
-  {
-    id: "plan_golden",
-    name: "golden",
-    display_name: "Golden Plan",
-    description: "The ultimate BharBike experience for power users.",
-    price: 999,
-    duration_days: 90,
-    features: JSON.stringify(["All Premium features", "Golden priority badge", "Free home delivery", "Dedicated manager"]),
     is_active: true
   }
 ];

@@ -1,262 +1,573 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<%
+  const today = new Date();
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const todayStr = `${dayNames[today.getDay()]}, ${today.getDate()} ${monthNames[today.getMonth()]}`;
+%>
 
 <style>
-  .dashboard-grid {
-    display: grid;
-    gap: 1rem;
-  }
-  .dashboard-row {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-  .dash-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
-  }
-  .dash-title {
-    margin: 0 0 0.75rem;
-    font-size: 0.95rem;
-    letter-spacing: 0.3px;
-    color: #1f2937;
-  }
-  .quick-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-  .quick-btn {
-    padding: 0.6rem 0.9rem;
-    border-radius: 10px;
-    color: #ffffff;
-    text-decoration: none;
-    background: #eab308;
-    font-weight: 600;
-  }
-  .quick-btn:hover {
-    background: #ca8a04;
-  }
-  .quick-btn.secondary {
-    background: #0d9488;
-    color: #ffffff;
-  }
-  .quick-btn.secondary:hover {
-    background: #0f766e;
-  }
-  .activity-list,
-  .alerts-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 0.7rem;
-  }
-  .activity-item,
-  .alert-item {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 0.7rem;
-  }
-  .item-title {
-    margin: 0;
-    font-weight: 600;
-    font-size: 0.92rem;
-    color: #1f2937;
-  }
-  .item-subtitle,
-  .item-time {
-    margin: 0.2rem 0 0;
-    font-size: 0.82rem;
-    color: #4b5563;
-  }
-  .alert-badge {
-    display: inline-block;
-    margin-bottom: 0.35rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-  }
-  .alert-warning {
-    background: #fffbeb;
-    color: #a16207;
-    border: 1px solid #fde68a;
-  }
-  .alert-info {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
-  }
-  .alert-success {
-    background: #f0fdf4;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
-  }
-  .breakdown-value {
-    margin: 0;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #1f2937;
-  }
+/* Dashboard Specific */
+.db-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.db-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 16px;
+  flex: 1;
+  max-width: 360px;
+}
+
+.db-search input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 13.5px;
+  color: var(--text);
+  width: 100%;
+  font-family: inherit;
+}
+
+.db-search svg { color: var(--text-light); flex-shrink: 0; }
+
+.db-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.db-date {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+}
+
+/* Stats row */
+.db-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.db-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.db-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.db-stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.db-stat-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+.db-stat-accent .db-stat-value { color: var(--accent); }
+
+/* Main content area */
+.db-main {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.db-main-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-main-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.4px;
+}
+
+.db-main-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.db-main-sub span {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.db-main-metrics {
+  display: flex;
+  gap: 32px;
+  text-align: right;
+}
+
+.db-metric-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.db-metric-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* Recent orders table */
+.db-table { width: 100%; border-collapse: collapse; }
+
+.db-table th {
+  text-align: left;
+  padding: 10px 24px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-light);
+  background: var(--border-light);
+  border-bottom: 1px solid var(--border);
+}
+
+.db-table td {
+  padding: 14px 24px;
+  font-size: 13.5px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+}
+
+.db-table tr:last-child td { border-bottom: none; }
+.db-table tbody tr:hover { background: var(--border-light); }
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.status-active { color: #16a34a; }
+.status-pending { color: #d97706; }
+.status-completed { color: #6b7280; }
+.status-cancelled { color: #dc2626; }
+
+/* Bottom Grid */
+.db-bottom {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+}
+
+.db-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.db-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.db-chart-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.db-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.db-chart-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+/* Dark info card */
+.db-dark-card {
+  background: #111827;
+  border-radius: var(--radius);
+  padding: 24px;
+  color: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
+
+.db-dark-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.db-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.db-quick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: #f9fafb;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+
+.db-quick-btn:hover { background: rgba(255,255,255,0.1); }
+
+.db-quick-btn svg { opacity: 0.5; }
+
+.db-earnings-bar {
+  margin-top: 8px;
+}
+
+.db-earnings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.db-earnings-period {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.db-earnings-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f9fafb;
+}
+
+.db-earnings-track {
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.db-earnings-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+@media (max-width: 1100px) {
+  .db-stats { grid-template-columns: repeat(2, 1fr); }
+  .db-bottom { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .db-stats { grid-template-columns: 1fr 1fr; }
+  .db-header { flex-wrap: wrap; }
+  .db-search { max-width: 100%; }
+}
 </style>
 
-<div class="dashboard-grid">
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-head"><span class="stat-icon">👥</span><span class="stat-label">Total Users</span></div>
-      <strong class="stat-value"><%= stats.usersCount %></strong>
-    </div>
-    <div class="stat-card">
-      <div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Total Bikes</span></div>
-      <strong class="stat-value"><%= stats.bikesCount %></strong>
-    </div>
-    <div class="stat-card">
-      <div class="stat-head"><span class="stat-icon">⏱️</span><span class="stat-label">Active Rentals</span></div>
-      <strong class="stat-value"><%= stats.activeRentalsCount %></strong>
-    </div>
-    <div class="stat-card">
-      <div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Total Earnings</span></div>
-      <strong class="stat-value">₹<%= Number(stats.totalEarnings || 0).toFixed(2) %></strong>
-    </div>
+<!-- Header -->
+<div class="db-header">
+  <div class="db-search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" placeholder="Search orders, users, bikes..." id="dash-search" />
   </div>
-
-  <div class="dashboard-row">
-    <div class="dash-card">
-      <h3 class="dash-title">Quick Actions</h3>
-      <div class="quick-actions">
-        <a class="quick-btn" href="/admin/bikes">Add Bike</a>
-        <a class="quick-btn secondary" href="/admin/users">Add User</a>
-      </div>
-    </div>
-
-    <div class="dash-card">
-      <h3 class="dash-title">Earnings Breakdown</h3>
-      <p class="breakdown-value">Today: ₹<%= Number(earningsBreakdown?.today || 0).toFixed(2) %></p>
-      <p class="breakdown-value">Weekly: ₹<%= Number(earningsBreakdown?.weekly || 0).toFixed(2) %></p>
-      <p class="breakdown-value">Monthly: ₹<%= Number(earningsBreakdown?.monthly || 0).toFixed(2) %></p>
-    </div>
-  </div>
-
-  <div class="dashboard-row">
-    <div class="dash-card">
-      <h3 class="dash-title">Revenue Trend (7 Days)</h3>
-      <div class="chart-box">
-        <canvas id="revenueChart"></canvas>
-      </div>
-    </div>
-    <div class="dash-card">
-      <h3 class="dash-title">Orders by Status</h3>
-      <div class="chart-box">
-        <canvas id="ordersChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="dashboard-row">
-    <div class="dash-card">
-      <h3 class="dash-title">Recent Activity</h3>
-      <ul class="activity-list">
-        <% if ((recentActivity || []).length === 0) { %>
-          <li class="activity-item">
-            <p class="item-title">No recent activity</p>
-          </li>
-        <% } %>
-        <% (recentActivity || []).forEach((activity) => { %>
-          <li class="activity-item">
-            <p class="item-title"><%= activity.title %></p>
-            <p class="item-subtitle"><%= activity.subtitle %></p>
-            <p class="item-time"><%= activity.time %></p>
-          </li>
-        <% }) %>
-      </ul>
-    </div>
-
-    <div class="dash-card">
-      <h3 class="dash-title">Alerts</h3>
-      <ul class="alerts-list">
-        <% (alerts || []).forEach((alert) => { %>
-          <li class="alert-item">
-            <span class="alert-badge alert-<%= alert.level %>"><%= String(alert.level || "info").toUpperCase() %></span>
-            <p class="item-title"><%= alert.title %></p>
-            <p class="item-subtitle"><%= alert.detail %></p>
-          </li>
-        <% }) %>
-      </ul>
-    </div>
+  <div class="db-header-right">
+    <div class="db-date"><%= todayStr %></div>
+    <a href="/admin/orders" class="btn btn-primary" style="gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Order
+    </a>
   </div>
 </div>
 
+<!-- Stats -->
+<div class="db-stats">
+  <div class="db-stat">
+    <p class="db-stat-label">Total Users</p>
+    <p class="db-stat-value"><%= stats.usersCount || 0 %></p>
+    <p class="db-stat-sub">Registered accounts</p>
+  </div>
+  <div class="db-stat">
+    <p class="db-stat-label">Fleet Size</p>
+    <p class="db-stat-value"><%= stats.bikesCount || 0 %></p>
+    <p class="db-stat-sub">Bikes available</p>
+  </div>
+  <div class="db-stat db-stat-accent">
+    <p class="db-stat-label">Active Rentals</p>
+    <p class="db-stat-value"><%= stats.activeRentalsCount || 0 %></p>
+    <p class="db-stat-sub">Currently ongoing</p>
+  </div>
+  <div class="db-stat">
+    <p class="db-stat-label">Total Earnings</p>
+    <p class="db-stat-value" style="font-size:22px;">₹<%= Number(stats.totalEarnings || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></p>
+    <p class="db-stat-sub">Lifetime revenue</p>
+  </div>
+</div>
+
+<!-- Recent Orders Table -->
+<div class="db-main">
+  <div class="db-main-head">
+    <div>
+      <p class="db-main-title">Recent Orders</p>
+      <p class="db-main-sub">
+        <span><%= (recentOrders || orders || []).length %> orders</span> — latest activity on the platform
+      </p>
+    </div>
+    <div class="db-main-metrics">
+      <div>
+        <p class="db-metric-val"><%= stats.bikesCount || 0 %></p>
+        <p class="db-metric-label">Bikes</p>
+      </div>
+      <div>
+        <p class="db-metric-val"><%= stats.activeRentalsCount || 0 %></p>
+        <p class="db-metric-label">Active</p>
+      </div>
+    </div>
+  </div>
+
+  <table class="db-table">
+    <thead>
+      <tr>
+        <th>Order</th>
+        <th>Customer</th>
+        <th>Route</th>
+        <th>Status</th>
+        <th>Amount</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% const recentList = (recentOrders || orders || []).slice(0, 8); %>
+      <% if (recentList.length === 0) { %>
+      <tr>
+        <td colspan="6" style="text-align:center; color:var(--text-muted); padding: 32px;">
+          No recent orders found
+        </td>
+      </tr>
+      <% } %>
+      <% recentList.forEach(order => { %>
+      <tr>
+        <td><span style="font-weight:600; font-family:monospace;">#<%= order.order_code || order.id?.toString().slice(0,8) || '—' %></span></td>
+        <td style="color:var(--text-muted)"><%= order.customer_name || order.user_name || '—' %></td>
+        <td style="color:var(--text-muted); font-size:12px; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          <%= order.pickup || '—' %> → <%= order.drop_location || order.destination || '—' %>
+        </td>
+        <td>
+          <% const st = (order.status || '').toLowerCase(); %>
+          <span class="status-dot <%= st === 'completed' ? 'status-completed' : st === 'accepted' || st === 'active' ? 'status-active' : st === 'cancelled' || st === 'rejected' ? 'status-cancelled' : 'status-pending' %>">
+            <%= order.status || 'pending' %>
+          </span>
+        </td>
+        <td style="font-weight:600;">₹<%= Number(order.amount || order.price || 0).toLocaleString('en-IN') %></td>
+        <td style="color:var(--text-muted); font-size:12px;">
+          <%= order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short'}) : '—' %>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<!-- Bottom: Chart + Quick Actions -->
+<div class="db-bottom">
+
+  <!-- Revenue Chart -->
+  <div class="db-chart-card">
+    <div class="db-chart-head">
+      <p class="db-chart-title">Revenue Trend</p>
+      <div class="db-chart-legend">
+        <span><span class="db-chart-dot" style="background:#f26d21;"></span>Revenue</span>
+        <span><span class="db-chart-dot" style="background:#94a3b8;"></span>Orders</span>
+      </div>
+    </div>
+    <div style="height: 200px; position:relative;">
+      <canvas id="revenueChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Dark quick actions card -->
+  <div class="db-dark-card">
+    <p class="db-dark-title">Earnings Breakdown</p>
+
+    <div class="db-earnings-bar">
+      <div class="db-earnings-row">
+        <span class="db-earnings-period">Today</span>
+        <span class="db-earnings-amount">₹<%= Number(earningsBreakdown?.today || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></span>
+      </div>
+      <div class="db-earnings-track">
+        <div class="db-earnings-fill" style="width:<%= Math.min(100, ((earningsBreakdown?.today || 0) / Math.max(earningsBreakdown?.monthly || 1, 1)) * 100).toFixed(0) %>%"></div>
+      </div>
+
+      <div class="db-earnings-row" style="margin-top:12px;">
+        <span class="db-earnings-period">This Week</span>
+        <span class="db-earnings-amount">₹<%= Number(earningsBreakdown?.weekly || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></span>
+      </div>
+      <div class="db-earnings-track">
+        <div class="db-earnings-fill" style="width:<%= Math.min(100, ((earningsBreakdown?.weekly || 0) / Math.max(earningsBreakdown?.monthly || 1, 1)) * 100).toFixed(0) %>%"></div>
+      </div>
+
+      <div class="db-earnings-row" style="margin-top:12px;">
+        <span class="db-earnings-period">This Month</span>
+        <span class="db-earnings-amount">₹<%= Number(earningsBreakdown?.monthly || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></span>
+      </div>
+      <div class="db-earnings-track">
+        <div class="db-earnings-fill" style="width:100%"></div>
+      </div>
+    </div>
+
+    <div>
+      <p class="db-dark-title" style="margin-bottom:12px;">Quick Actions</p>
+      <div class="db-quick-actions">
+        <a href="/admin/bikes" class="db-quick-btn">
+          <span>Add New Bike</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <a href="/admin/users" class="db-quick-btn">
+          <span>Manage Users</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <a href="/admin/kyc-documents" class="db-quick-btn">
+          <span>Review KYC</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 <script>
-  (() => {
-    const revenueCtx = document.getElementById("revenueChart");
-    const ordersCtx = document.getElementById("ordersChart");
-    if (!window.Chart || !revenueCtx || !ordersCtx) return;
+(() => {
+  const ctx = document.getElementById("revenueChart");
+  if (!window.Chart || !ctx) return;
 
-    new Chart(revenueCtx, {
-      type: "line",
-      data: {
-        labels: <%- JSON.stringify(revenueChart?.labels || []) %>,
-        datasets: [{
-          label: "Revenue",
-          data: <%- JSON.stringify(revenueChart?.data || []) %>,
-          borderColor: "#22c55e",
-          backgroundColor: "rgba(34, 197, 94, 0.2)",
-          fill: true,
-          tension: 0.35
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: "#374151" } },
-        },
-        scales: {
-          x: {
-            ticks: { color: "#6b7280" },
-            grid: { color: "#e5e7eb" },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { color: "#6b7280" },
-            grid: { color: "#e5e7eb" },
-          },
-        },
-      },
-    });
+  const labels = <%- JSON.stringify(revenueChart?.labels || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) %>;
+  const data   = <%- JSON.stringify(revenueChart?.data   || [0,0,0,0,0,0,0]) %>;
 
-    new Chart(ordersCtx, {
-      type: "bar",
-      data: {
-        labels: <%- JSON.stringify(ordersChart?.labels || []) %>,
-        datasets: [{
-          label: "Orders",
-          data: <%- JSON.stringify(ordersChart?.data || []) %>,
-          backgroundColor: ["#f59e0b", "#3b82f6", "#8b5cf6", "#10b981", "#ef4444"]
-        }]
+  const isDark = document.body.classList.contains("dark-mode");
+  const gridColor = isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6";
+  const tickColor = isDark ? "#525252" : "#9ca3af";
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Revenue (₹)",
+        data,
+        borderColor: "#f26d21",
+        backgroundColor: "rgba(242,109,33,0.08)",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: "#f26d21",
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: isDark ? "#1a1a1a" : "#fff",
+          titleColor: isDark ? "#f5f5f5" : "#111827",
+          bodyColor: isDark ? "#a3a3a3" : "#6b7280",
+          borderColor: isDark ? "#262626" : "#e5e7eb",
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            label: ctx => `₹${Number(ctx.raw).toLocaleString('en-IN')}`
+          }
+        }
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: "#374151" } },
+      scales: {
+        x: {
+          ticks: { color: tickColor, font: { size: 11 } },
+          grid: { color: gridColor }
         },
-        scales: {
-          x: {
-            ticks: { color: "#6b7280" },
-            grid: { color: "#e5e7eb" },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0, color: "#6b7280" },
-            grid: { color: "#e5e7eb" },
-          },
-        },
-      },
-    });
-  })();
+        y: {
+          beginAtZero: true,
+          ticks: { color: tickColor, font: { size: 11 }, callback: v => `₹${v}` },
+          grid: { color: gridColor }
+        }
+      }
+    }
+  });
+})();
 </script>

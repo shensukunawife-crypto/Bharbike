@@ -202,7 +202,7 @@
 /* Bottom Grid */
 .db-bottom {
   display: grid;
-  grid-template-columns: 1fr 1fr 340px;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
@@ -437,7 +437,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   </table>
 </div>
 
-<!-- Bottom: Two Charts + Dark Card -->
+<!-- Bottom: Two Charts -->
 <div class="db-bottom">
 
   <!-- Revenue Line Chart -->
@@ -460,27 +460,6 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
     </div>
     <div style="height: 220px; position:relative;">
       <canvas id="ordersChart"></canvas>
-    </div>
-  </div>
-
-  <!-- Dark earnings + quick actions card -->
-  <div class="db-dark-card">
-    <div style="margin-top: 4px;">
-      <p class="db-dark-title" style="margin-bottom:16px;">Quick Actions</p>
-      <div class="db-quick-actions">
-        <a href="/admin/bikes" class="db-quick-btn">
-          <span>Add New Bike</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </a>
-        <a href="/admin/users" class="db-quick-btn">
-          <span>Manage Users</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </a>
-        <a href="/admin/kyc-documents" class="db-quick-btn">
-          <span>Review KYC</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </a>
-      </div>
     </div>
   </div>
 

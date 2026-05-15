@@ -465,36 +465,8 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
 
   <!-- Dark earnings + quick actions card -->
   <div class="db-dark-card">
-    <p class="db-dark-title">Earnings Breakdown</p>
-
-    <div class="db-earnings-bar">
-      <div class="db-earnings-row">
-        <span class="db-earnings-period">Today</span>
-        <span class="db-earnings-amount">₹<%= Number(earningsBreakdown?.today || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></span>
-      </div>
-      <div class="db-earnings-track">
-        <div class="db-earnings-fill" style="width:<%= Math.min(100, ((earningsBreakdown?.today || 0) / Math.max(earningsBreakdown?.monthly || 1, 1)) * 100).toFixed(0) %>%"></div>
-      </div>
-
-      <div class="db-earnings-row" style="margin-top:12px;">
-        <span class="db-earnings-period">This Week</span>
-        <span class="db-earnings-amount">₹<%= Number(earningsBreakdown?.weekly || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></span>
-      </div>
-      <div class="db-earnings-track">
-        <div class="db-earnings-fill" style="width:<%= Math.min(100, ((earningsBreakdown?.weekly || 0) / Math.max(earningsBreakdown?.monthly || 1, 1)) * 100).toFixed(0) %>%"></div>
-      </div>
-
-      <div class="db-earnings-row" style="margin-top:12px;">
-        <span class="db-earnings-period">This Month</span>
-        <span class="db-earnings-amount">₹<%= Number(earningsBreakdown?.monthly || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></span>
-      </div>
-      <div class="db-earnings-track">
-        <div class="db-earnings-fill" style="width:100%"></div>
-      </div>
-    </div>
-
-    <div>
-      <p class="db-dark-title" style="margin-bottom:12px;">Quick Actions</p>
+    <div style="margin-top: 4px;">
+      <p class="db-dark-title" style="margin-bottom:16px;">Quick Actions</p>
       <div class="db-quick-actions">
         <a href="/admin/bikes" class="db-quick-btn">
           <span>Add New Bike</span>

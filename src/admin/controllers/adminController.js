@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import * as subscriptionService from "../../services/subscriptionService.js";
 import * as iotService from "../../services/iotService.js";
-import supabase from "../../config/supabase.js";
+import supabase from "../../utils/supabaseClient.js";
 import { shapePublicUser } from "../../utils/userShape.js";
 import { listInMemoryBookings } from "../../services/bookingStore.js";
 import * as paymentConfigService from "../../services/paymentConfigService.js";

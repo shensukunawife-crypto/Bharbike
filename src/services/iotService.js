@@ -1,3 +1,5 @@
+import axios from "axios";
+
 /**
  * IoT hardware integration — LocoNav GPS and Battery API
  */
@@ -21,18 +23,16 @@ export async function unlockBike(bikeId) {
 export async function getBikeHealth(bikeId) {
   console.log(`[IoT] Fetching LocoNav telemetry for bike_id=${bikeId}`);
   try {
-    // Assuming LocoNav standard V3 telematics endpoint or similar vehicle listing
-    // Users can adjust the exact endpoint path (e.g. /v3/vehicles or /api/v1/live_data)
-    const response = await fetch(`${LOCONAV_API_URL}/api/v3/vehicles/${bikeId}/live_data`, {
-      method: 'GET',
+    const response = await axios.get(`${LOCONAV_API_URL}/api/v3/vehicles/${bikeId}/live_data`, {
       headers: {
         'User-Authentication': LOCONAV_TOKEN,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: 5000
     });
 
-    if (response.ok) {
-      const data = await response.json();
+    if (response.status === 200) {
+      const data = response.data;
       // Adjust property paths according to exact LocoNav response schema
       return {
         bikeId,

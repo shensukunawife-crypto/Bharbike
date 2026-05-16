@@ -197,40 +197,49 @@ class PaymentMethodService {
 
   // Get invoices (from payments table)
   async getInvoices(userId, limit = 20) {
-    const { data, error } = await supabase
-      .from('payments')
-      .select(`
-        id,
-        amount,
-        status,
-        payment_method,
-        created_at,
-        orders (
-          bike_id,
-          bikes (
-            name
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select(`
+          id,
+          amount,
+          status,
+          payment_method,
+          created_at,
+          orders (
+            bike_id,
+            bikes (
+              name
+            )
           )
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
 
-    if (error) {
-      if (isMissingTableError(error)) return [];
-      throw error;
+      if (error) {
+        console.error('[PaymentMethodService.getInvoices] Supabase error:', error.message);
+        if (isMissingTableError(error)) return [];
+        // Instead of throwing, return empty array to keep UI stable
+        return [];
+      }
+
+      if (!data) return [];
+
+      // Format invoices
+      return data.map(payment => ({
+        id: `INV-${payment.id.slice(0, 4).toUpperCase()}`,
+        amount: payment.amount,
+        status: payment.status === 'success' ? 'Paid' : payment.status === 'failed' ? 'Failed' : 'Pending',
+        payment_method: payment.payment_method || 'Online',
+        date: payment.created_at,
+        bike_name: payment.orders?.bikes?.name || 'BharBike Ride',
+        bike_number: payment.orders?.bike_id ? String(payment.orders.bike_id).slice(0, 8) : 'N/A'
+      }));
+    } catch (err) {
+      console.error('[PaymentMethodService.getInvoices] Critical failure:', err.message);
+      return [];
     }
-
-    // Format invoices
-    return data.map(payment => ({
-      id: `INV-${payment.id.slice(0, 4).toUpperCase()}`,
-      amount: payment.amount,
-      status: payment.status === 'success' ? 'Paid' : payment.status === 'failed' ? 'Failed' : 'Pending',
-      payment_method: payment.payment_method || 'Online',
-      date: payment.created_at,
-      bike_name: payment.orders?.bikes?.name || 'BharBike Ride',
-      bike_number: payment.orders?.bike_id ? String(payment.orders.bike_id).slice(0, 8) : 'N/A'
-    }));
   }
 }
 

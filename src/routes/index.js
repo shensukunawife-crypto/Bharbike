@@ -25,6 +25,7 @@ import * as rentalController from "../controllers/rentalController.js";
 import * as paymentController from "../controllers/paymentController.js";
 import * as paymentAdminController from "../controllers/paymentAdminController.js";
 import adminPaymentRoutes from "./adminPaymentRoutes.js";
+import * as walletController from "../controllers/walletController.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import supabase from "../utils/supabaseClient.js";
@@ -84,6 +85,7 @@ api.use("/skipped-days", skippedDaysRoutes);
 api.use("/subscription", subscriptionRoutes);
 api.use("/", trackingRoutes);
 api.use("/", bookingRoutes);
+api.post("/promo/apply", authMiddleware, walletController.applyPromo);
 api.get("/bookings", authMiddleware, rentalController.bookings);
 
 // Payment Routes

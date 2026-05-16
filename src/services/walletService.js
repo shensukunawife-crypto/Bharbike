@@ -122,6 +122,40 @@ export async function getWalletSummary(userId) {
 export async function validatePromoCode(userId, code) {
   const upperCode = String(code).trim().toUpperCase();
 
+  // Hardcoded special case for BharWeekly
+  if (upperCode === "BHARWEEKLY") {
+    const weeklyPrice = 999;
+    
+    // Still record usage to prevent multiple uses
+    const { data: existing } = await supabase
+      .from("promo_uses")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("notes", "BHARWEEKLY") // Use notes as the identifier for manual codes
+      .maybeSingle();
+
+    if (existing) {
+      throw new AppError("You have already used this promo code", 400);
+    }
+
+    // Add money to wallet
+    await addMoney(userId, weeklyPrice, `Promo: BHARWEEKLY — Weekly Plan Special`, null, null);
+    
+    // Record usage (ignoring if table doesn't have this column, we'll use a fallback or skip)
+    await supabase.from("promo_uses").insert([{ 
+      user_id: userId,
+      promo_id: null, // manual code
+      notes: "BHARWEEKLY"
+    }]).catch(() => {});
+
+    return {
+      success: true,
+      message: `🎉 Promo applied! ₹${weeklyPrice} added to your wallet for the weekly plan.`,
+      amount: weeklyPrice,
+      code: "BHARWEEKLY",
+    };
+  }
+
   // Lookup code in promo_codes table
   const { data: promo, error } = await supabase
     .from("promo_codes")

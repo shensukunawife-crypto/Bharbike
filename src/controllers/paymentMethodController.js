@@ -127,9 +127,13 @@ class PaymentMethodController {
       const userId = req.user.id;
       const reward = await paymentMethodService.getRewardPoints(userId);
 
+      const cashback_value = Math.floor((reward?.points || 0) / 10); // 10 points = ₹1
       res.json({
         success: true,
-        data: reward || { points: 0, cashback_value: 0 }
+        data: {
+          ...(reward || { points: 0 }),
+          cashback_value
+        }
       });
     } catch (error) {
       console.error('Get reward points error:', error);

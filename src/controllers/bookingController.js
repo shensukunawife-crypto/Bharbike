@@ -39,10 +39,12 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ message: "This bike is currently unavailable." });
     }
 
+    const parsedDuration = parseInt(String(duration).replace(/[^0-9]/g, "")) || 0;
+
     const payload = {
       user_id,
       bike_id,
-      duration,
+      duration: parsedDuration,
       start_time,
       end_time,
       price,

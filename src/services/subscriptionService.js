@@ -93,6 +93,12 @@ export async function getSubscriptionPlanById(planId) {
       const mockPlan = MOCK_PLANS.find(p => p.id === planId || p.name === planId || p.display_name.toLowerCase().includes(planId.toLowerCase()));
       if (mockPlan) return mockPlan;
     }
+    if (data && data.display_name) {
+      const dn = String(data.display_name);
+      if (dn.length > 30 && dn.includes("-")) {
+        data.display_name = "Weekly Plan";
+      }
+    }
     return data;
   } catch (error) {
     console.error("[subscriptionService] getSubscriptionPlanById failed:", error.message);
@@ -105,6 +111,10 @@ export async function getSubscriptionPlanById(planId) {
  */
 export async function getUserActiveSubscription(userId) {
   try {
+    const now = new Date();
+    // Add 6 hour grace period for expiration to handle timezone shifts/delays
+    const graceThreshold = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from("user_subscriptions")
       .select(`
@@ -113,42 +123,48 @@ export async function getUserActiveSubscription(userId) {
       `)
       .eq("user_id", userId)
       .eq("status", "active")
-      .gt("end_date", new Date().toISOString())
+      .gt("end_date", graceThreshold)
       .order("end_date", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (error) {
-      // Join may fail if plan_id is not a valid UUID — try without join
+      console.warn("[getUserActiveSubscription] query error, trying fallback:", error.message);
+      // Try without join or other filters
       const { data: rawData, error: rawError } = await supabase
         .from("user_subscriptions")
         .select("*")
         .eq("user_id", userId)
         .eq("status", "active")
-        .gt("end_date", new Date().toISOString())
+        .gt("end_date", graceThreshold)
         .order("end_date", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (rawError) throw rawError;
       if (rawData) {
-        // Try to look up plan separately
         let planData = null;
         try {
-          const planLookup = await getSubscriptionPlanById(rawData.plan_id);
-          if (planLookup) planData = planLookup;
+          planData = await getSubscriptionPlanById(rawData.plan_id);
         } catch {}
-        return { ...rawData, plan: planData || { display_name: rawData.plan_id, price: 0 } };
+        return { ...rawData, plan: planData || { display_name: "Active Plan" } };
       }
+      
       if (isDatabaseError(error) || isDatabaseError(rawError)) {
         return mockSubscriptionsDB.get(userId) || null;
       }
       return null;
     }
+
+    if (data && data.plan && data.plan.display_name) {
+      const dn = String(data.plan.display_name);
+      if (dn.length > 30 && dn.includes("-")) {
+        data.plan.display_name = "Weekly Plan";
+      }
+    }
     return data;
   } catch (error) {
     console.error("[subscriptionService] getUserActiveSubscription failed:", error.message);
-    throw error;
+    return null;
   }
 }
 
@@ -175,8 +191,8 @@ export async function getUserSubscriptions(userId) {
     for (const sub of subs) {
       try {
         const plan = await getSubscriptionPlanById(sub.plan_id);
-        sub.plan = plan || { display_name: sub.plan_id, price: 0 };
-      } catch { sub.plan = { display_name: sub.plan_id, price: 0 }; }
+        sub.plan = plan || { display_name: "Active Plan", price: null, duration_days: null };
+      } catch { sub.plan = { display_name: "Active Plan", price: null, duration_days: null }; }
     }
     return subs;
   } catch (error) {
@@ -220,8 +236,8 @@ export async function createSubscription(userId, planId, paymentId = null) {
     if (!error && data) {
       try {
         const plan = await getSubscriptionPlanById(data.plan_id);
-        data.plan = plan || { display_name: data.plan_id, price: 0 };
-      } catch { data.plan = { display_name: data.plan_id, price: 0 }; }
+        data.plan = plan || { display_name: "Active Plan", price: null, duration_days: null };
+      } catch { data.plan = { display_name: "Active Plan", price: null, duration_days: null }; }
     }
 
     if (error) {

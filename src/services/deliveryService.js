@@ -60,26 +60,33 @@ export async function applyForDelivery(userId, partnerData = {}) {
 }
 
 export async function setPartnerOnline(userId, isOnline) {
-  const { data: user, error: fetchError } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", userId)
+  // Check if partner exists and is approved
+  const { data: partner, error: fetchError } = await supabase
+    .from("delivery_partners")
+    .select("id, status")
+    .eq("user_id", userId)
     .maybeSingle();
+
   if (fetchError) {
     console.error("[deliveryService.setPartnerOnline] fetch failed", fetchError);
     throw new AppError("Unable to update online status", 500);
   }
-  if (!user?.is_delivery_partner) {
+
+  if (!partner || partner.status !== "approved") {
     throw new AppError("Only approved partners can set online status", 403);
   }
+
+  // Update online status in delivery_partners table
   const { error: updateError } = await supabase
-    .from("users")
+    .from("delivery_partners")
     .update({ is_online: isOnline })
-    .eq("id", userId);
+    .eq("user_id", userId);
+
   if (updateError) {
     console.error("[deliveryService.setPartnerOnline] update failed", updateError);
     throw new AppError("Unable to update online status", 500);
   }
+
   return { is_online: isOnline };
 }
 

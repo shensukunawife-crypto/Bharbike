@@ -10,7 +10,7 @@ import supabase from "../utils/supabaseClient.js";
  */
 export const createOrder = async (req, res) => {
   try {
-    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, is_demo = true } = req.body;
+    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null, is_demo = true } = req.body;
     const numericAmount = Number(amount);
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
@@ -73,7 +73,9 @@ export const createOrder = async (req, res) => {
       currency: "INR",
       app_order_id: appOrderId,
       is_demo: true,
-      plan_id: plan_name || null,
+      // Pass through plan_id if provided (UUID from subscription_plans)
+      // Fall back to plan_name so verifyPayment can look it up
+      plan_id: plan_id || plan_name || null,
     });
   } catch (error) {
     console.error("[createOrder] Demo error:", error);
@@ -144,9 +146,10 @@ export const verifyPayment = async (req, res) => {
             }
           } catch (planErr) {
             console.warn("[verifyPayment] plan lookup skipped:", planErr?.message);
+            // BharBike only has a 7-day weekly plan — default to 7, not 30
             durationDays = plan_id?.toLowerCase().includes("month") ? 30 :
                            plan_id?.toLowerCase().includes("week") ? 7 :
-                           plan_id?.toLowerCase().includes("year") ? 365 : 30;
+                           plan_id?.toLowerCase().includes("year") ? 365 : 7;
           }
 
           const startDate = new Date();

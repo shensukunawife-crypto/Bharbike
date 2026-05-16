@@ -37,26 +37,11 @@ export async function pickFirstAvailableBike() {
     .order("bike_code", { ascending: true })
     .limit(1)
     .maybeSingle();
+
   if (error) {
     console.error("[bikeService.pickFirstAvailableBike] failed", error);
-    // If table doesn't exist or query fails, return a mock bike for demo
-    return {
-      id: 1,
-      bike_code: "BB-001",
-      name: "BharBike Demo",
-      status: "available",
-      registration_number: "DL-00-0001",
-    };
+    return null;
   }
-  // If no bikes available, return a mock bike so rentals can still work
-  if (!data) {
-    return {
-      id: 1,
-      bike_code: "BB-001",
-      name: "BharBike Demo",
-      status: "available",
-      registration_number: "DL-00-0001",
-    };
-  }
+
   return data;
 }

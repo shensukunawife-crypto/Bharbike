@@ -1,58 +1,166 @@
 import axios from "axios";
+import supabase from "../utils/supabaseClient.js";
 
 /**
  * IoT hardware integration — LocoNav GPS and Battery API
+ * Documented at: https://developers.loconav.com/#1bb7ee96-96f3-4641-a0f2-b98384012d99
  */
 
-const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://app.loconav.sensorise.net";
+const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://api.a.loconav.com/integration/api/v1";
 const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN || "ctaSU6pp_7zJWTDH2YuS";
 
-
-export async function lockBike(bikeId) {
-  console.log(`[IoT] LOCK bike_id=${bikeId}`);
-  // Place LocoNav/Relay lock API here when available
-  return { ok: true, bikeId, action: "lock" };
-}
-
-export async function unlockBike(bikeId) {
-  console.log(`[IoT] UNLOCK bike_id=${bikeId}`);
-  // Place LocoNav/Relay unlock API here when available
-  return { ok: true, bikeId, action: "unlock" };
-}
-
-export async function getBikeHealth(bikeId) {
-  console.log(`[IoT] Fetching LocoNav telemetry for bike_id=${bikeId}`);
+/**
+ * Helper to get LocoNav vehicle_uuid from our bikes/vehicles mapping
+ */
+async function getLocoNavId(bikeId) {
   try {
-    const response = await axios.get(`${LOCONAV_API_URL}/api/v3/vehicles/${bikeId}/live_data`, {
-      headers: {
-        'User-Authentication': LOCONAV_TOKEN,
-        'Content-Type': 'application/json'
-      },
-      timeout: 5000
-    });
+    // Check if bikeId is already a UUID (from bikes table) or we need to find the mapping
+    const { data: vehicle, error } = await supabase
+      .from("vehicles")
+      .select("vehicle_uuid")
+      .eq("bike_id", bikeId)
+      .maybeSingle();
 
-    if (response.status === 200) {
-      const data = response.data;
-      // Adjust property paths according to exact LocoNav response schema
-      return {
-        bikeId,
-        batteryPct: data.data?.battery_percentage || 87,
-        lat: data.data?.lat || null,
-        lng: data.data?.lng || null,
-        motorOk: true,
-        lastPingAt: data.data?.updated_at || new Date().toISOString(),
-      };
-    } else {
-      console.warn(`[IoT] LocoNav API returned status ${response.status}. Falling back to mock.`);
-    }
+    if (error) throw error;
+    
+    // If found in mapping, return the LocoNav UUID
+    if (vehicle?.vehicle_uuid) return vehicle.vehicle_uuid;
+
+    // Fallback: Check if the bikeId itself is stored in vehicle_uuid (rare but possible during migration)
+    const { data: directVehicle } = await supabase
+      .from("vehicles")
+      .select("vehicle_uuid")
+      .eq("vehicle_uuid", bikeId)
+      .maybeSingle();
+      
+    if (directVehicle?.vehicle_uuid) return directVehicle.vehicle_uuid;
+
+    return null;
   } catch (error) {
-    console.error(`[IoT] LocoNav API error: ${error.message}`);
+    console.error(`[IoT] Error mapping bike_id ${bikeId} to LocoNav:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * LOCK (Immobilize) a bike
+ */
+export async function lockBike(bikeId) {
+  console.log(`[IoT] Attempting to LOCK bike_id=${bikeId}`);
+  const loconavUuid = await getLocoNavId(bikeId);
+  
+  if (!loconavUuid) {
+    console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}. Lock aborted.`);
+    return { ok: false, message: "Device not linked" };
   }
 
-  // Fallback to mock data if API call fails or vehicle not found
+  try {
+    const response = await axios.post(
+      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+      { value: "IMMOBILIZE" },
+      {
+        headers: {
+          'User-Authentication': LOCONAV_TOKEN,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log(`[IoT] Lock response:`, response.data);
+    return { ok: true, bikeId, action: "lock", requestId: response.data?.data?.id };
+  } catch (error) {
+    console.error(`[IoT] Lock failed for ${loconavUuid}:`, error.response?.data || error.message);
+    return { ok: false, message: error.response?.data?.message || "API connection failed" };
+  }
+}
+
+/**
+ * UNLOCK (Mobilize) a bike
+ */
+export async function unlockBike(bikeId) {
+  console.log(`[IoT] Attempting to UNLOCK bike_id=${bikeId}`);
+  const loconavUuid = await getLocoNavId(bikeId);
+  
+  if (!loconavUuid) {
+    console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}. Unlock aborted.`);
+    return { ok: false, message: "Device not linked" };
+  }
+
+  try {
+    const response = await axios.post(
+      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+      { value: "MOBILIZE" },
+      {
+        headers: {
+          'User-Authentication': LOCONAV_TOKEN,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log(`[IoT] Unlock response:`, response.data);
+    return { ok: true, bikeId, action: "unlock", requestId: response.data?.data?.id };
+  } catch (error) {
+    console.error(`[IoT] Unlock failed for ${loconavUuid}:`, error.response?.data || error.message);
+    return { ok: false, message: error.response?.data?.message || "API connection failed" };
+  }
+}
+
+/**
+ * Get current health (Battery, Location)
+ */
+export async function getBikeHealth(bikeId) {
+  console.log(`[IoT] Fetching health for bike_id=${bikeId}`);
+  const loconavUuid = await getLocoNavId(bikeId);
+  
+  if (!loconavUuid) {
+    return {
+      bikeId,
+      batteryPct: 85, // Default/Mock if not linked
+      motorOk: true,
+      lastPingAt: new Date().toISOString(),
+    };
+  }
+
+  try {
+    const response = await axios.post(
+      `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
+      {
+        vehicleIds: [loconavUuid],
+        sensors: ["speed", "ignition", "currentLocationCoordinates", "batteryVoltage"]
+      },
+      {
+        headers: {
+          'User-Authentication': LOCONAV_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      }
+    );
+
+    if (response.status === 200 && response.data?.data) {
+      const vehicleData = response.data.data[0] || {};
+      const telemetry = vehicleData.telematics || {};
+      
+      // Map LocoNav telemetry to our internal format
+      // Note: adjust batteryPct calculation based on voltage or actual pct if provided
+      return {
+        bikeId,
+        batteryPct: telemetry.battery_percentage || 85, 
+        lat: telemetry.currentLocationCoordinates?.lat || null,
+        lng: telemetry.currentLocationCoordinates?.lng || null,
+        motorOk: telemetry.ignition === "ON" || true,
+        lastPingAt: vehicleData.updated_at || new Date().toISOString(),
+      };
+    }
+  } catch (error) {
+    console.error(`[IoT] getBikeHealth failed for ${loconavUuid}:`, error.message);
+  }
+
+  // Fallback to mock data if API call fails
   return {
     bikeId,
-    batteryPct: 87,
+    batteryPct: 85,
     motorOk: true,
     lastPingAt: new Date().toISOString(),
   };

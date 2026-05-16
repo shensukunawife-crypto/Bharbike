@@ -205,11 +205,10 @@ class PaymentMethodService {
         status,
         payment_method,
         created_at,
-        rentals (
+        orders (
           bike_id,
           bikes (
-            name,
-            registration_number
+            name
           )
         )
       `)
@@ -226,11 +225,11 @@ class PaymentMethodService {
     return data.map(payment => ({
       id: `INV-${payment.id.slice(0, 4).toUpperCase()}`,
       amount: payment.amount,
-      status: payment.status === 'completed' ? 'Paid' : payment.status === 'refunded' ? 'Refunded' : 'Pending',
-      payment_method: payment.payment_method,
+      status: payment.status === 'success' ? 'Paid' : payment.status === 'failed' ? 'Failed' : 'Pending',
+      payment_method: payment.payment_method || 'Online',
       date: payment.created_at,
-      bike_name: payment.rentals?.bikes?.name || 'Unknown Bike',
-      bike_number: payment.rentals?.bikes?.registration_number || 'N/A'
+      bike_name: payment.orders?.bikes?.name || 'BharBike Ride',
+      bike_number: payment.orders?.bike_id ? String(payment.orders.bike_id).slice(0, 8) : 'N/A'
     }));
   }
 }

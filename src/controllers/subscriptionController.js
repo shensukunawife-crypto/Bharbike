@@ -51,11 +51,29 @@ export const getActiveSubscription = async (req, res) => {
         if (rawSub) {
           const endDate = new Date(rawSub.end_date);
           const daysRemaining = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24));
+          
+          // Try to look up plan details by plan_id
+          let planInfo = { display_name: "Active Plan", price: null, duration_days: null };
+          try {
+            const { data: planRow } = await supabase
+              .from("subscription_plans")
+              .select("display_name, name, price, duration_days")
+              .eq("id", rawSub.plan_id)
+              .maybeSingle();
+            if (planRow) {
+              planInfo = {
+                display_name: planRow.display_name || planRow.name || "Active Plan",
+                price: planRow.price,
+                duration_days: planRow.duration_days,
+              };
+            }
+          } catch { /* plan table may not exist yet */ }
+
           return res.json({
             success: true,
             data: {
               ...rawSub,
-              plan: { display_name: rawSub.plan_id || "Subscription", price: 0, duration_days: daysRemaining },
+              plan: planInfo,
               days_remaining: daysRemaining,
             },
           });

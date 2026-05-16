@@ -52,6 +52,7 @@ import {
 } from "../utils/ticketNumber.js";
 
 const api = Router();
+api.get("/health", (req, res) => res.json({ status: "ok" }));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -63,7 +64,8 @@ const DOC_TYPE_TO_COLUMN = {
   pan: "pan_card_url",
   bill: "electricity_bill_url",
   selfie: "selfie_url",
-  driving_license: "driving_license_url", // Added driving license mapping
+  driving_license: "driving_license_url",
+  profile: "image_url", // Added profile image mapping
 };
 
 api.use("/auth", authRoutes);

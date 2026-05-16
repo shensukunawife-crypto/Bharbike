@@ -39,27 +39,33 @@ function addPlanDuration(start, plan) {
 }
 
 export async function startRental(userId, plan) {
+  // 1. Strict Active Rental Check
   const { data: active, error: activeError } = await supabase
     .from("rentals")
-    .select("*")
+    .select("id")
     .eq("user_id", userId)
     .eq("status", RentalStatus.active)
     .maybeSingle();
-  if (activeError) {
-    console.error("[rentalService.startRental] active check failed (proceeding anyway)", JSON.stringify(activeError));
+
+  if (activeError && !isRentalsTableMissing(activeError)) {
+    console.error("[rentalService.startRental] active check failed:", activeError);
+    throw new AppError("Unable to verify active rentals. Please try again.", 500);
   }
+  
   if (active) {
     throw new AppError("You already have an active rental", 409);
   }
 
+  // 2. Pick Bike
   const bike = await pickFirstAvailableBike();
-  if (!bike) {
-    throw new AppError("No bikes available", 409);
+  if (!bike || bike.status !== BikeStatus.available) {
+    throw new AppError("No bikes available at this hub", 409);
   }
 
   const startTime = new Date();
   const endTime = addPlanDuration(startTime, plan);
 
+  // 3. Create Rental
   const { data: rental, error: createError } = await supabase
     .from("rentals")
     .insert([
@@ -75,11 +81,11 @@ export async function startRental(userId, plan) {
     ])
     .select("*")
     .single();
+
   if (createError) {
     console.error("[rentalService.startRental] rental create failed", JSON.stringify(createError));
-    // If rentals table is missing, return mock rental
-    if (createError.message?.toLowerCase().includes("could not find") || createError.code === "PGRST205") {
-      console.warn("[rentalService.startRental] rentals table missing — returning mock rental");
+    // Fallback for missing table in demo
+    if (isRentalsTableMissing(createError)) {
       return {
         id: crypto.randomUUID(),
         user_id: userId,
@@ -91,53 +97,21 @@ export async function startRental(userId, plan) {
         status: RentalStatus.active,
       };
     }
-    // If FK constraint fails (user not in users table), try without FK by inserting null user_id
-    if (createError.code === "23503" || createError.message?.toLowerCase().includes("foreign key")) {
-      console.warn("[rentalService.startRental] FK constraint failed — retrying without user_id FK");
-      const { data: rental2, error: retryError } = await supabase
-        .from("rentals")
-        .insert([
-          {
-            bike_id: bike.id,
-            duration: PLAN_HOURS[plan],
-            price: PLAN_PRICE[plan],
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString(),
-            status: RentalStatus.active,
-          },
-        ])
-        .select("*")
-        .single();
-      if (!retryError) return rental2;
-      console.error("[rentalService.startRental] retry also failed", JSON.stringify(retryError));
-    }
-    // If RLS blocks insert, return mock rental so app doesn't crash
-    if (createError.message?.toLowerCase().includes("row-level security") || createError.message?.toLowerCase().includes("violates")) {
-      console.warn("[rentalService.startRental] RLS blocked insert — returning mock rental");
-      return {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        bike_id: bike.id,
-        duration: PLAN_HOURS[plan],
-        price: PLAN_PRICE[plan],
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        status: RentalStatus.active,
-      };
-    }
-    throw new AppError(`Unable to start rental: ${createError.message || "unknown error"}`, 500);
+    throw new AppError(`Unable to start rental: ${createError.message}`, 500);
   }
 
+  // 4. Update Bike Status
   try {
     const { error: bikeUpdateError } = await supabase
       .from("bikes")
       .update({ status: BikeStatus.in_use })
       .eq("id", bike.id);
+    
     if (bikeUpdateError) {
-      console.error("[rentalService.startRental] bike update failed (non-blocking)", bikeUpdateError);
+      console.warn("[rentalService.startRental] bike status update failed:", bikeUpdateError.message);
     }
-  } catch (bikeUpdateError) {
-    console.warn("[rentalService.startRental] bike update RLS blocked (non-blocking)", bikeUpdateError?.message);
+  } catch (err) {
+    console.warn("[rentalService.startRental] bike update exception:", err.message);
   }
 
   // Skip IoT unlock if not configured (demo mode)

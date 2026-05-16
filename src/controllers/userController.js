@@ -41,6 +41,8 @@ function getDemoProfile(id) {
     location: stored?.location ?? null,
     avatar_url: stored?.avatar_url ?? null,
     image_url: stored?.image_url ?? null,
+    emergency_contact_name: stored?.emergency_contact_name ?? null,
+    emergency_contact_phone: stored?.emergency_contact_phone ?? null,
   };
 }
 
@@ -176,6 +178,8 @@ export const updateUser = async (req, res) => {
       ...(body.phone !== undefined && { phone: body.phone }),
       ...(body.location !== undefined && { location: body.location }),
       ...(body.image_url !== undefined && { image_url: body.image_url, avatar_url: body.image_url }),
+      ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
+      ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
     };
     demoProfiles.set(id, updated);
     return res.json(shapePublicUser(updated));

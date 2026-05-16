@@ -11,6 +11,8 @@ export function shapePublicUser(row) {
     phone: row.phone ?? null,
     location: row.location ?? null,
     image_url: (row.image_url || row.avatar_url) ?? null,
+    emergency_contact_name: row.emergency_contact_name ?? null,
+    emergency_contact_phone: row.emergency_contact_phone ?? null,
     created_at: row.created_at ?? null,
   };
 }

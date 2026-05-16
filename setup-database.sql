@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   phone TEXT,
   location TEXT,
   avatar_url TEXT,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -29,6 +31,8 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT,
   phone TEXT,
   location TEXT,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
   aadhaar_front_url TEXT,
   aadhaar_back_url TEXT,
   pan_card_url TEXT,

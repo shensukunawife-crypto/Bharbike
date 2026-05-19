@@ -1,140 +1,113 @@
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-head">
-      <span class="stat-label">🛠️ Total in Maintenance</span>
-    </div>
-    <strong class="stat-value" style="color: var(--accent);"><%= maintenanceStats?.total || 0 %></strong>
+<div class="db-stats">
+  <div class="db-stat">
+    <p class="db-stat-label">🛠️ Total in Maintenance</p>
+    <p class="db-stat-value"><%= maintenanceStats?.total || 0 %></p>
+    <p class="db-stat-sub">Vehicles currently flagged</p>
   </div>
-  
-  <div class="stat-card">
-    <div class="stat-head">
-      <span class="stat-label">⏳ Active Repairs</span>
-    </div>
-    <strong class="stat-value" style="color: #f59e0b;"><%= maintenanceStats?.inProgress || 0 %></strong>
+  <div class="db-stat db-stat-accent">
+    <p class="db-stat-label">⌛ In Progress</p>
+    <p class="db-stat-value"><%= maintenanceStats?.inProgress || 0 %></p>
+    <p class="db-stat-sub">Under active repair</p>
   </div>
-  
-  <div class="stat-card">
-    <div class="stat-head">
-      <span class="stat-label">✅ Completed Fixes</span>
-    </div>
-    <strong class="stat-value" style="color: #10b981;"><%= maintenanceStats?.completed || 0 %></strong>
+  <div class="db-stat">
+    <p class="db-stat-label">✅ Completed</p>
+    <p class="db-stat-value"><%= maintenanceStats?.completed || 0 %></p>
+    <p class="db-stat-sub">Fixed & returned to service</p>
   </div>
-  
-  <div class="stat-card">
-    <div class="stat-head">
-      <span class="stat-label">💰 Repair Expenses</span>
-    </div>
-    <strong class="stat-value" style="color: #3b82f6;">₹<%= Number(maintenanceStats?.totalCost || 0).toLocaleString('en-IN') %></strong>
+  <div class="db-stat">
+    <p class="db-stat-label">💰 Total Repair Cost</p>
+    <p class="db-stat-value">₹<%= Number(maintenanceStats?.totalCost || 0).toLocaleString('en-IN') %></p>
+    <p class="db-stat-sub">Fleet maintenance expenses</p>
   </div>
 </div>
 
-<div class="toolbar" style="background: var(--surface); border: 1px solid var(--border); padding: 16px; border-radius: var(--radius); box-shadow: var(--shadow-sm); margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-  <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-    <button class="btn btn-gold glow" data-modal-target="add-maintenance-modal" style="font-weight: 700;">
-      ➕ Add Bike to Repair
-    </button>
-    <div style="width: 1px; height: 24px; background-color: var(--border); margin: 0 8px;"></div>
-    <a class="btn <%= filter === 'all' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=all" style="font-weight: 600;">All Tickets</a>
-    <a class="btn <%= filter === 'active' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=active" style="font-weight: 600;">Active</a>
-    <a class="btn <%= filter === 'completed' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=completed" style="font-weight: 600;">Completed</a>
-  </div>
-  
-  <form method="GET" action="/admin/maintenance" class="inline-form" style="display: flex; gap: 8px; align-items: center;">
+<div class="toolbar">
+  <button class="btn btn-gold" data-modal-target="add-maintenance-modal">+ Add Bike to Maintenance</button>
+  <a class="btn <%= filter === 'all' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=all">All</a>
+  <a class="btn <%= filter === 'active' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=active">Active</a>
+  <a class="btn <%= filter === 'completed' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=completed">Completed</a>
+  <form method="GET" action="/admin/maintenance" class="inline-form">
     <input type="hidden" name="filter" value="<%= filter %>" />
-    <input class="filter-input" type="text" name="search" value="<%= search || '' %>" placeholder="🔍 Search Bike ID..." style="min-width: 200px; padding: 8px 12px;" />
-    <button class="btn btn-primary" type="submit" style="background-color: var(--accent); border-color: var(--accent); color: white;">Search</button>
+    <input class="filter-input" type="text" name="search" value="<%= search || '' %>" placeholder="Search Bike ID" />
+    <button class="btn btn-ghost" type="submit">Search</button>
   </form>
 </div>
 
-<div class="chart-card" style="margin-bottom: 24px;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-    <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-      <span>🔧</span> Active Repair Tickets
-    </h3>
-    <span class="badge info" style="font-size: 11px; font-weight: 600;"><%= tickets.length %> Records</span>
-  </div>
-  
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Bike ID</th>
+        <th>Issue Type</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Technician</th>
+        <th>Repair Cost</th>
+        <th>Reported Date</th>
+        <th>Expected Fix Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!tickets.length) { %>
+      <tr><td colspan="9" class="empty">No maintenance tickets found</td></tr>
+      <% } %>
+      <% tickets.forEach((ticket, idx) => { %>
+      <tr class="<%= idx % 2 ? 'zebra' : '' %>">
+        <td>🛵 <%= ticket.bikeCode %></td>
+        <td><span class="badge badge-soft"><%= ticket.issueType %></span></td>
+        <td><%= ticket.description %></td>
+        <td>
+          <span class="badge <%= ticket.status === 'under_repair' ? 'danger' : ticket.status === 'in_progress' ? 'warning' : 'success' %>">
+            <%= ticket.status === 'under_repair' ? 'Under Repair' : ticket.status === 'in_progress' ? 'In Progress' : 'Completed' %>
+          </span>
+        </td>
+        <td><%= ticket.technicianName %></td>
+        <td>₹<%= ticket.repairCost %></td>
+        <td><%= ticket.reportedDate %></td>
+        <td><%= ticket.expectedFixDate %></td>
+        <td class="actions">
+          <button class="btn btn-success admin-action" data-url="/admin/maintenance/<%= ticket.bikeId %>/fixed" data-method="POST">🔧 Fix</button>
+          <button
+            class="btn btn-outline open-maintenance-status"
+            data-id="<%= ticket.id %>"
+            data-status="<%= ticket.status %>"
+            data-tech="<%= ticket.technicianName %>"
+            data-cost="<%= ticket.repairCost %>"
+            data-expected="<%= ticket.expectedFixDate %>"
+          >
+            ✏️ Update
+          </button>
+          <button class="btn btn-danger-ghost admin-action" data-url="/admin/maintenance/<%= ticket.id %>/remove" data-method="POST">🗑️ Delete</button>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="chart-card">
+  <h3>Maintenance History</h3>
   <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
-          <th>Bike Code</th>
-          <th>Issue Type</th>
-          <th>Diagnostics / Description</th>
-          <th>Status</th>
-          <th>Technician</th>
-          <th>Repair Cost</th>
-          <th>Reported</th>
-          <th>Target Date</th>
-          <th style="text-align: right; padding-right: 24px;">Actions</th>
+          <th>Bike ID</th>
+          <th>Issue</th>
+          <th>Cost</th>
+          <th>Fixed Date</th>
         </tr>
       </thead>
       <tbody>
-        <% if (!tickets.length) { %>
-        <tr>
-          <td colspan="9" class="empty" style="padding: 48px; text-align: center; color: var(--text-muted);">
-            <div style="font-size: 32px; margin-bottom: 12px;">📭</div>
-            <strong>No maintenance tickets found</strong>
-            <p style="font-size: 12px; margin-top: 4px;">There are currently no active repair records matching this filter.</p>
-          </td>
-        </tr>
+        <% if (!history.length) { %>
+        <tr><td colspan="4" class="empty">No maintenance history found</td></tr>
         <% } %>
-        <% tickets.forEach((ticket, idx) => { %>
+        <% history.forEach((item) => { %>
         <tr>
-          <td style="font-weight: 700; color: var(--text);">
-            <a href="/admin/bikes/<%= ticket.bikeId %>" style="color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 6px;">
-              <span>🛵</span> <%= ticket.bikeCode %>
-            </a>
-          </td>
-          <td>
-            <span class="badge info" style="font-weight: 600; font-size: 11px;">
-              <%= ticket.issueType %>
-            </span>
-          </td>
-          <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted);" title="<%= ticket.description %>">
-            <%= ticket.description %>
-          </td>
-          <td>
-            <span class="badge <%= ticket.status === 'under_repair' ? 'danger' : ticket.status === 'in_progress' ? 'warning' : 'success' %>" style="font-weight: 700;">
-              <%= ticket.status === 'under_repair' ? 'Under Repair' : ticket.status === 'in_progress' ? 'In Progress' : 'Completed' %>
-            </span>
-          </td>
-          <td>
-            <% if (ticket.technicianName) { %>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 24px; height: 24px; border-radius: 50%; background-color: var(--border); color: var(--text-muted); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;">
-                  <%= ticket.technicianName.charAt(0).toUpperCase() %>
-                </div>
-                <span style="font-weight: 500;"><%= ticket.technicianName %></span>
-              </div>
-            <% } else { %>
-              <span style="color: var(--text-light); font-style: italic;">Unassigned</span>
-            <% } %>
-          </td>
-          <td style="font-weight: 700; color: #10b981;">
-            ₹<%= Number(ticket.repairCost || 0).toLocaleString('en-IN') %>
-          </td>
-          <td style="font-size: 12px; color: var(--text-muted);"><%= ticket.reportedDate %></td>
-          <td style="font-size: 12px; font-weight: 600; color: #f59e0b;"><%= ticket.expectedFixDate %></td>
-          <td class="actions" style="justify-content: flex-end; padding-right: 24px; gap: 6px;">
-            <button class="btn btn-sm btn-success admin-action" data-url="/admin/maintenance/<%= ticket.bikeId %>/fixed" data-method="POST" style="background-color: #22c55e; border-color: #22c55e; color: white; padding: 4px 8px; font-size: 11px;">
-              🔧 Fix
-            </button>
-            <button
-              class="btn btn-sm btn-outline open-maintenance-status"
-              data-id="<%= ticket.id %>"
-              data-status="<%= ticket.status %>"
-              data-tech="<%= ticket.technicianName %>"
-              data-cost="<%= ticket.repairCost %>"
-              data-expected="<%= ticket.expectedFixDate %>"
-              style="padding: 4px 8px; font-size: 11px;"
-            >
-              ✏️ Update
-            </button>
-            <button class="btn btn-sm btn-ghost admin-action" data-url="/admin/maintenance/<%= ticket.id %>/remove" data-method="POST" style="color: #ef4444; padding: 4px 8px; font-size: 11px;">
-              🗑️ Delete
-            </button>
-          </td>
+          <td><%= item.bikeCode %></td>
+          <td><%= item.issueType %></td>
+          <td>₹<%= item.repairCost %></td>
+          <td><%= item.fixedDate || '-' %></td>
         </tr>
         <% }) %>
       </tbody>
@@ -142,175 +115,74 @@
   </div>
 </div>
 
-<div class="grid-2">
-  <div class="chart-card">
-    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-      <span>📜</span> Resolved Repair History
-    </h3>
-    
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Bike Code</th>
-            <th>Issue Fixed</th>
-            <th>Total Cost</th>
-            <th>Completion Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (!history.length) { %>
-          <tr><td colspan="4" class="empty" style="text-align: center; color: var(--text-muted);">No completed repairs in history.</td></tr>
-          <% } %>
-          <% history.slice(0, 10).forEach((item) => { %>
-          <tr>
-            <td style="font-weight: 700; color: var(--text);"><%= item.bikeCode %></td>
-            <td><span class="badge success" style="font-size: 10px;"><%= item.issueType %></span></td>
-            <td style="font-weight: 600; color: #10b981;">₹<%= Number(item.repairCost || 0).toLocaleString('en-IN') %></td>
-            <td style="font-size: 12px; color: var(--text-muted);"><%= item.fixedDate || '-' %></td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="chart-card">
-    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-      <span>💬</span> User Support Flagged Tickets
-    </h3>
-    
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Ticket ID</th>
-            <th>Issue Type</th>
-            <th>Rider Description</th>
-            <th>Status</th>
-            <th>Reported Time</th>
-          </tr>
-        </thead>
-        <tbody id="maintenance-support-body">
-          <% if (!(supportTickets || []).length) { %>
-          <tr><td colspan="5" class="empty" style="text-align: center; color: var(--text-muted);">No active support issues.</td></tr>
-          <% } %>
-          <% (supportTickets || []).slice(0, 10).forEach((ticket, idx) => { %>
-          <tr>
-            <td style="font-weight: 700; font-family: monospace;">
-              <% if (ticket.ticket_number != null && ticket.ticket_number !== undefined) { %>#<%= ticket.ticket_number %><% } else { %>—<% } %>
-              <button class="btn btn-ghost copy-ticket-id" data-value="<%= (ticket.ticket_number != null && ticket.ticket_number !== undefined) ? ticket.ticket_number : '' %>" style="padding: 2px 4px; font-size: 10px; margin-left: 4px;">📋</button>
-            </td>
-            <td><span class="badge info" style="font-size: 10px;"><%= ticket.issue_type || '-' %></span></td>
-            <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: var(--text-muted);" title="<%= ticket.description || '' %>">
-              <%= ticket.description || '-' %>
-            </td>
-            <td>
-              <span class="badge <%= ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'warning' : 'danger' %>" style="font-size: 10px;">
-                <%= ticket.status === 'in_progress' ? 'In Progress' : ticket.status === 'resolved' ? 'Resolved' : 'Pending' %>
-              </span>
-            </td>
-            <td style="font-size: 11px; color: var(--text-muted);"><%= String(ticket.created_at || '').slice(0, 16).replace('T', ' ') %></td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
+<div class="chart-card">
+  <h3>User Support Requests</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Ticket ID</th>
+          <th>Issue Type</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody id="maintenance-support-body">
+        <% if (!(supportTickets || []).length) { %>
+        <tr><td colspan="5" class="empty">No support tickets found</td></tr>
+        <% } %>
+        <% (supportTickets || []).forEach((ticket, idx) => { %>
+        <tr>
+          <td><% if (ticket.ticket_number != null && ticket.ticket_number !== undefined) { %>#<%= ticket.ticket_number %><% } else { %>—<% } %> <button class="btn btn-ghost copy-ticket-id" data-value="<%= (ticket.ticket_number != null && ticket.ticket_number !== undefined) ? ticket.ticket_number : '' %>">📋</button></td>
+          <td><span class="badge badge-soft"><%= ticket.issue_type || '-' %></span></td>
+          <td title="<%= ticket.description || '' %>"><%= String(ticket.description || '-').slice(0, 60) %><%= String(ticket.description || '').length > 60 ? '...' : '' %></td>
+          <td>
+            <span class="badge <%= ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'warning' : 'danger' %>">
+              <%= ticket.status === 'in_progress' ? 'In Progress' : ticket.status === 'resolved' ? 'Resolved' : 'Pending' %>
+            </span>
+          </td>
+          <td><%= String(ticket.created_at || '').slice(0, 19).replace('T', ' ') %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
   </div>
 </div>
 
-<!-- MODALS -->
 <div class="modal" id="add-maintenance-modal">
   <div class="modal-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h3 style="margin: 0; font-size: 16px; font-weight: 700;">➕ Flag Bike for Maintenance</h3>
-      <button class="modal-close" onclick="document.getElementById('add-maintenance-modal').classList.remove('show')">✕</button>
-    </div>
-    
+    <h3>Add Bike to Maintenance</h3>
     <form class="admin-form ajax-form" data-url="/admin/maintenance/add">
-      <div class="form-group">
-        <label>Select Vehicle to Service</label>
-        <select name="bikeId" required>
-          <% bikes.forEach((bike) => { %>
-          <option value='<%- JSON.stringify({ id: bike.id, bike_code: bike.bike_code }) %>'><%= bike.bike_code %></option>
-          <% }) %>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label>Issue Classification</label>
-        <input name="issueType" placeholder="e.g. Engine noise, flat tyre, battery cell drain" required />
-      </div>
-      
-      <div class="form-group">
-        <label>Diagnostics Description</label>
-        <textarea name="description" rows="3" placeholder="Enter detailed diagnostics / physical damage notes..." required></textarea>
-      </div>
-      
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div class="form-group">
-          <label>Assigned Technician</label>
-          <input type="text" name="technicianName" placeholder="Tech Name" />
-        </div>
-        <div class="form-group">
-          <label>Estimated Cost (₹)</label>
-          <input type="number" name="repairCost" placeholder="0" />
-        </div>
-      </div>
-      
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div class="form-group">
-          <label>Reported Date</label>
-          <input type="date" name="reportedDate" required />
-        </div>
-        <div class="form-group">
-          <label>Expected Fix Date</label>
-          <input type="date" name="expectedFixDate" required />
-        </div>
-      </div>
-      
-      <button type="submit" class="btn btn-gold glow" style="width: 100%; margin-top: 12px; justify-content: center; padding: 10px;">
-        Add to Repair Queue
-      </button>
+      <select name="bikeId" required>
+        <% bikes.forEach((bike) => { %>
+        <option value='<%- JSON.stringify({ id: bike.id, bike_code: bike.bike_code }) %>'><%= bike.bike_code %></option>
+        <% }) %>
+      </select>
+      <input name="issueType" placeholder="Issue Type" required />
+      <textarea name="description" rows="3" placeholder="Description" required></textarea>
+      <input type="text" name="technicianName" placeholder="Technician Name" />
+      <input type="number" name="repairCost" placeholder="Repair Cost" />
+      <input type="date" name="reportedDate" required />
+      <input type="date" name="expectedFixDate" required />
+      <button type="submit" class="btn btn-gold glow">Add Maintenance</button>
     </form>
   </div>
 </div>
 
 <div class="modal" id="update-maintenance-modal">
   <div class="modal-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h3 style="margin: 0; font-size: 16px; font-weight: 700;">✏️ Update Repair Status</h3>
-      <button class="modal-close" onclick="document.getElementById('update-maintenance-modal').classList.remove('show')">✕</button>
-    </div>
-    
+    <h3>Update Maintenance Status</h3>
     <form class="admin-form ajax-form" id="update-maintenance-form" data-url="">
-      <div class="form-group">
-        <label>Job Progress</label>
-        <select name="status" id="maintenance-status">
-          <option value="under_repair">Under Repair</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label>Assigned Technician</label>
-        <input type="text" name="technicianName" id="maintenance-tech" placeholder="Tech Name" />
-      </div>
-      
-      <div class="form-group">
-        <label>Actual / Accrued Cost (₹)</label>
-        <input type="number" name="repairCost" id="maintenance-cost" placeholder="0" />
-      </div>
-      
-      <div class="form-group">
-        <label>Target / Fixed Date</label>
-        <input type="date" name="expectedFixDate" id="maintenance-expected" />
-      </div>
-      
-      <button type="submit" class="btn btn-gold glow" style="width: 100%; margin-top: 12px; justify-content: center; padding: 10px;">
-        Save Changes
-      </button>
+      <select name="status" id="maintenance-status">
+        <option value="under_repair">Under Repair</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+      </select>
+      <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" />
+      <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" />
+      <input type="date" name="expectedFixDate" id="maintenance-expected" />
+      <button type="submit" class="btn btn-gold glow">Update</button>
     </form>
   </div>
 </div>

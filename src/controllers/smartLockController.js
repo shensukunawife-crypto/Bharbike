@@ -38,10 +38,11 @@ export const getLockStatus = asyncHandler(async (req, res) => {
   }
 
   // Get bike lock status from database
+  const bikeId = rental.bike_id || rental.bikeId;
   const { data: bike, error } = await supabase
     .from("bikes")
     .select("id, name, license_plate, is_locked, battery_level, last_ping_at")
-    .eq("id", rental.bikeId)
+    .eq("id", bikeId)
     .single();
 
   if (error) {
@@ -51,13 +52,13 @@ export const getLockStatus = asyncHandler(async (req, res) => {
       data: {
         hasActiveRental: true,
         rentalId: rental.id,
-        bikeId: rental.bikeId,
+        bikeId: bikeId,
         bikeName: "Bike",
         licensePlate: "—",
         isLocked: true,
         batteryLevel: 87,
         lastPingAt: null,
-        rentalExpiresAt: rental.endTime,
+        rentalExpiresAt: rental.end_time || rental.endTime,
       },
     });
   }
@@ -73,7 +74,7 @@ export const getLockStatus = asyncHandler(async (req, res) => {
       isLocked: bike.is_locked !== false, // Default to locked if null
       batteryLevel: bike.battery_level || 87,
       lastPingAt: bike.last_ping_at,
-      rentalExpiresAt: rental.endTime,
+      rentalExpiresAt: rental.end_time || rental.endTime,
     },
   });
 });
@@ -94,19 +95,21 @@ export const lockBike = asyncHandler(async (req, res) => {
   if (!rental) {
     // Demo fallback for lock command
     console.log(`[lockBike] Using demo fallback for ${req.user.id}`);
-    rental = { id: "demo-rental-123", bikeId: "demo-bike-456" };
+    rental = { id: "demo-rental-123", bike_id: "demo-bike-456" };
   }
+
+  const bikeId = rental.bike_id || rental.bikeId;
 
   // Send lock command to IoT device (graceful fallback if no hardware)
   let iotResult;
   try {
-    iotResult = await iotService.lockBike(rental.bikeId);
+    iotResult = await iotService.lockBike(bikeId);
   } catch {
     iotResult = { ok: true };
   }
   
-  if (!iotResult.ok) {
-    throw new AppError("Failed to lock bike", 500);
+  if (!iotResult.ok && iotResult.message !== "Device not linked") {
+    throw new AppError(iotResult.message || "Failed to lock bike", 500);
   }
 
   // Update bike status in database
@@ -117,14 +120,14 @@ export const lockBike = asyncHandler(async (req, res) => {
         is_locked: true,
         last_ping_at: new Date().toISOString(),
       })
-      .eq("id", rental.bikeId);
+      .eq("id", bikeId);
   } catch {}
 
   // Log the action
   try {
     await supabase.from("bike_lock_logs").insert([
       {
-        bike_id: rental.bikeId,
+        bike_id: bikeId,
         user_id: req.user.id,
         rental_id: rental.id,
         action: "lock",
@@ -137,7 +140,7 @@ export const lockBike = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      bikeId: rental.bikeId,
+      bikeId: bikeId,
       isLocked: true,
       message: "Bike locked successfully",
     },
@@ -162,19 +165,21 @@ export const unlockBike = asyncHandler(async (req, res) => {
   if (!rental) {
     // Demo fallback for testing
     console.log(`[SmartLock] Using demo fallback for ${req.user.id}`);
-    rental = { id: "demo-rental-123", bikeId: "demo-bike-456" };
+    rental = { id: "demo-rental-123", bike_id: "demo-bike-456" };
   }
+
+  const bikeId = rental.bike_id || rental.bikeId;
 
   // Send unlock command to IoT device (graceful fallback if no hardware)
   let iotResult;
   try {
-    iotResult = await iotService.unlockBike(rental.bikeId);
+    iotResult = await iotService.unlockBike(bikeId);
   } catch {
     iotResult = { ok: true };
   }
   
-  if (!iotResult.ok) {
-    throw new AppError("Failed to unlock bike", 500);
+  if (!iotResult.ok && iotResult.message !== "Device not linked") {
+    throw new AppError(iotResult.message || "Failed to unlock bike", 500);
   }
 
   // Update bike status in database
@@ -185,14 +190,14 @@ export const unlockBike = asyncHandler(async (req, res) => {
         is_locked: false,
         last_ping_at: new Date().toISOString(),
       })
-      .eq("id", rental.bikeId);
+      .eq("id", bikeId);
   } catch {}
 
   // Log the action
   try {
     await supabase.from("bike_lock_logs").insert([
       {
-        bike_id: rental.bikeId,
+        bike_id: bikeId,
         user_id: req.user.id,
         rental_id: rental.id,
         action: "unlock",
@@ -205,7 +210,7 @@ export const unlockBike = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      bikeId: rental.bikeId,
+      bikeId: bikeId,
       isLocked: false,
       message: "Bike unlocked successfully",
       method: method,
@@ -229,13 +234,15 @@ export const getBikeHealth = asyncHandler(async (req, res) => {
   if (!rental) {
     // Demo fallback for testing
     console.log(`[SmartLock] Using demo fallback for ${req.user.id}`);
-    rental = { id: "demo-rental-123", bikeId: "demo-bike-456" };
+    rental = { id: "demo-rental-123", bike_id: "demo-bike-456" };
   }
+
+  const bikeId = rental.bike_id || rental.bikeId;
 
   // Get health from IoT device (graceful fallback)
   let health;
   try {
-    health = await iotService.getBikeHealth(rental.bikeId);
+    health = await iotService.getBikeHealth(bikeId);
   } catch {
     health = { batteryPct: 87, motorOk: true, lastPingAt: new Date().toISOString() };
   }
@@ -244,13 +251,13 @@ export const getBikeHealth = asyncHandler(async (req, res) => {
   const { data: bike } = await supabase
     .from("bikes")
     .select("name, license_plate, battery_level, is_locked")
-    .eq("id", rental.bikeId)
+    .eq("id", bikeId)
     .single();
 
   res.json({
     success: true,
     data: {
-      bikeId: rental.bikeId,
+      bikeId: bikeId,
       bikeName: bike?.name,
       licensePlate: bike?.license_plate,
       batteryLevel: bike?.battery_level || health.batteryPct,

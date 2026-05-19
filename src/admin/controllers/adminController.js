@@ -505,7 +505,7 @@ export async function users(req, res) {
   try {
     const [{ data: usersData, error: usersError }, { data: ordersData, error: ordersError }] =
       await Promise.all([
-        supabase.from("profiles").select("*"),
+        supabase.from("users").select("*"),
         supabase.from("orders").select("*"),
       ]);
     if (usersError || ordersError) {
@@ -521,8 +521,13 @@ export async function users(req, res) {
     const allOrders = safeData(ordersData).map(normalizeOrder);
 
     const users = safeData(usersData)
+      .filter((row) => row.is_delivery_partner !== true)
       .map((row) => {
-        const base = shapePublicUser(row);
+        const normalizedRow = {
+          ...row,
+          full_name: row.full_name || row.name || null,
+        };
+        const base = shapePublicUser(normalizedRow);
         const userOrders = allOrders.filter(
           (order) =>
             String(order.userId || order.user_id || order.customer_id || "").toLowerCase() ===
@@ -613,13 +618,17 @@ export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
     const [{ data: userRow }, { data: ordersData }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
     ]);
     if (!userRow) {
       return res.status(404).send("User not found");
     }
-    const base = shapePublicUser(userRow);
+    const normalizedRow = {
+      ...userRow,
+      full_name: userRow.full_name || userRow.name || null,
+    };
+    const base = shapePublicUser(normalizedRow);
     const orders = safeData(ordersData)
       .map(normalizeOrder)
       .filter(
@@ -822,14 +831,14 @@ export async function kycDocumentsPage(req, res) {
         .select("id, user_id, type, file_url, status, created_at")
         .order("created_at", { ascending: false }),
       supabase
-        .from("profiles")
-        .select("id, full_name, phone"),
+        .from("users")
+        .select("id, full_name, name, phone"),
     ]);
 
     if (kycError) console.error("[admin.kycDocumentsPage] kyc_documents fetch failed", kycError);
     if (usersError) console.error("[admin.kycDocumentsPage] profiles fetch failed", usersError);
 
-    const profileNameMap = new Map(safeData(usersData).map((p) => [String(p.id), p.full_name || p.phone || "User"]));
+    const profileNameMap = new Map(safeData(usersData).map((p) => [String(p.id), p.full_name || p.name || p.phone || "User"]));
 
     let documents = [];
     if (safeData(kycData).length > 0) {
@@ -966,10 +975,13 @@ export async function deliveryPartnerProfile(req, res) {
       supabase.from("earnings").select("*").eq("user_id", partnerId),
     ]);
 
-    // Also try profiles table if delivery_partners record doesn't have full_name
+    // Also try users table if delivery_partners record doesn't have full_name
     let profile = partnerData;
     if (!profile || !profile.full_name) {
-      const { data: profileRow } = await supabase.from("profiles").select("*").eq("id", partnerId).maybeSingle();
+      const { data: profileRow } = await supabase.from("users").select("*").eq("id", partnerId).maybeSingle();
+      if (profileRow) {
+        profileRow.full_name = profileRow.full_name || profileRow.name || null;
+      }
       profile = { ...(profileRow || {}), ...(profile || {}) };
     }
 
@@ -1037,10 +1049,10 @@ export async function earnings(req, res) {
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Fetch profile names for realistic transaction mapping
-    const { data: dbProfiles } = await supabase.from("profiles").select("id, full_name");
+    const { data: dbProfiles } = await supabase.from("users").select("id, full_name, name");
     const profileMap = {};
     (dbProfiles || []).forEach((p) => {
-      profileMap[p.id] = p.full_name;
+      profileMap[p.id] = p.full_name || p.name || "BharBike Rider";
     });
 
     const transactions = filtered.slice(0, 20).map((item, index) => ({
@@ -1623,14 +1635,25 @@ export async function addUser(req, res) {
     const full_name = req.body.full_name ?? req.body.name ?? null;
     const { phone, email, location } = req.body;
     const id = typeof req.body.id === "string" && req.body.id.length >= 32 ? req.body.id : randomUUID();
-    await supabase.from("users").insert([
-      {
-        id,
-        full_name,
-        phone,
-        email: email ?? null,
-        location: location ?? null,
-      },
+    await Promise.all([
+      supabase.from("users").insert([
+        {
+          id,
+          full_name,
+          phone,
+          email: email ?? null,
+          location: location ?? null,
+        },
+      ]),
+      supabase.from("profiles").insert([
+        {
+          id,
+          full_name,
+          phone,
+          email: email ?? null,
+          location: location ?? null,
+        },
+      ]),
     ]);
     return res.json({ success: true, message: "User added" });
   } catch (error) {
@@ -1644,15 +1667,16 @@ export async function editUser(req, res) {
     const { userId } = req.params;
     const full_name = req.body.full_name ?? req.body.name;
     const { phone, email, location } = req.body;
-    await supabase
-      .from("profiles")
-      .update({
-        ...(full_name !== undefined && { full_name }),
-        ...(phone !== undefined && { phone }),
-        ...(email !== undefined && { email }),
-        ...(location !== undefined && { location }),
-      })
-      .eq("id", userId);
+    const updates = {
+      ...(full_name !== undefined && { full_name }),
+      ...(phone !== undefined && { phone }),
+      ...(email !== undefined && { email }),
+      ...(location !== undefined && { location }),
+    };
+    await Promise.all([
+      supabase.from("users").update(updates).eq("id", userId),
+      supabase.from("profiles").update(updates).eq("id", userId),
+    ]);
     return res.json({ success: true, message: "User updated" });
   } catch (error) {
     console.error("[admin.editUser] failed", error);

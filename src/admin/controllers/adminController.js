@@ -819,7 +819,7 @@ export async function kycDocumentsPage(req, res) {
     const [{ data: kycData, error: kycError }, { data: usersData, error: usersError }] = await Promise.all([
       supabase
         .from("kyc_documents")
-        .select("id, user_id, type, file_url, status, created_at, updated_at")
+        .select("id, user_id, type, file_url, status, created_at")
         .order("created_at", { ascending: false }),
       supabase
         .from("profiles")
@@ -849,7 +849,7 @@ export async function kycDocumentsPage(req, res) {
         electricity_bill_url: u.docs.find((d) => d.type === "electricity_bill")?.file_url || null,
         selfie_url: u.docs.find((d) => d.type === "selfie")?.file_url || null,
         driving_license_url: u.docs.find((d) => d.type === "driving_license")?.file_url || null,
-        updated_at: u.docs[0]?.updated_at || u.docs[0]?.created_at || null,
+        updated_at: u.docs[0]?.created_at || null,
       }));
     } else {
       // Fallback: read from users/profiles table columns

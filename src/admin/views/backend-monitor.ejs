@@ -113,6 +113,16 @@
       <p id="backend-rentals" class="backend-value">Loading...</p>
       <p class="backend-subtext">Total rental records</p>
     </div>
+    <div class="backend-card">
+      <p class="backend-label">🔑 Supabase Key</p>
+      <p id="backend-key-type" class="backend-value" style="font-size: 1.1rem; word-break: break-all;">Loading...</p>
+      <p class="backend-subtext">Bypasses RLS status</p>
+    </div>
+    <div class="backend-card">
+      <p class="backend-label">🗂 KYC Docs</p>
+      <p id="backend-kyc-docs" class="backend-value">Loading...</p>
+      <p class="backend-subtext">Total documents in DB</p>
+    </div>
   </div>
 </div>
 
@@ -126,6 +136,8 @@
       "backend-users",
       "backend-bikes",
       "backend-rentals",
+      "backend-key-type",
+      "backend-kyc-docs",
     ];
 
     const setError = () => {
@@ -159,6 +171,17 @@
         document.getElementById("backend-users").textContent = data.users ?? 0;
         document.getElementById("backend-bikes").textContent = data.bikes ?? 0;
         document.getElementById("backend-rentals").textContent = data.rentals ?? 0;
+        
+        const keyTypeEl = document.getElementById("backend-key-type");
+        keyTypeEl.textContent = data.supabaseKeyType || "-";
+        keyTypeEl.className = "backend-value";
+        if (data.supabaseKeyType && data.supabaseKeyType.includes("Bypassed")) {
+          keyTypeEl.classList.add("status-green");
+        } else {
+          keyTypeEl.classList.add("status-orange");
+        }
+        
+        document.getElementById("backend-kyc-docs").textContent = data.kycCount ?? 0;
       } catch (error) {
         setError();
       }

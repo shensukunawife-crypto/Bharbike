@@ -1253,10 +1253,11 @@ api.get("/rentals", async (req, res) => {
 
 api.get("/admin/health", async (req, res) => {
   try {
-    const [users, bikes, rentals] = await Promise.all([
+    const [users, bikes, rentals, kycCountRes] = await Promise.all([
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("bikes").select("id", { count: "exact", head: true }),
       supabase.from("rentals").select("id", { count: "exact", head: true }),
+      supabase.from("kyc_documents").select("id", { count: "exact", head: true }),
     ]);
 
     return res.json({
@@ -1267,6 +1268,8 @@ api.get("/admin/health", async (req, res) => {
       users: users.count || 0,
       bikes: bikes.count || 0,
       rentals: rentals.count || 0,
+      kycCount: kycCountRes.count || 0,
+      supabaseKeyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Service Role Key (RLS Bypassed)" : "Anon Key (Subject to RLS)"
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Health check failed" });

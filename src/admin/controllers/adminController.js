@@ -2104,7 +2104,15 @@ export async function toggleAdmin(req, res) {
 export async function backendMonitor(req, res) {
   try {
     const start = Date.now();
-    const { error: dbError } = await supabase.from("profiles").select("id").limit(1);
+    const [
+      { error: dbError },
+      { count: kycCount, error: kycCountErr },
+      { count: profilesCount }
+    ] = await Promise.all([
+      supabase.from("profiles").select("id").limit(1),
+      supabase.from("kyc_documents").select("id", { count: "exact", head: true }),
+      supabase.from("profiles").select("id", { count: "exact", head: true })
+    ]);
     const dbLatency = Date.now() - start;
 
     const stats = {
@@ -2118,6 +2126,9 @@ export async function backendMonitor(req, res) {
       dbError: dbError?.message || null,
       environment: process.env.NODE_ENV || "production",
       apiUrl: process.env.RENDER_EXTERNAL_URL || "Localhost",
+      supabaseKeyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Service Role Key (RLS Bypassed)" : "Anon Key (Subject to RLS)",
+      kycCount: kycCountErr ? `Error: ${kycCountErr.message}` : (kycCount || 0),
+      profilesCount: profilesCount || 0
     };
 
     return renderPage(res, {

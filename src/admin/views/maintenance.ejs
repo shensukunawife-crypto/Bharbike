@@ -1,23 +1,19 @@
-<div class="db-stats">
-  <div class="db-stat">
-    <p class="db-stat-label">🛠️ Total in Maintenance</p>
-    <p class="db-stat-value"><%= maintenanceStats?.total || 0 %></p>
-    <p class="db-stat-sub">Vehicles currently flagged</p>
+<div class="page-stat-bar">
+  <div class="page-stat">
+    <p class="page-stat-label">🛠️ Total in Maintenance</p>
+    <p class="page-stat-value"><%= maintenanceStats?.total || 0 %></p>
   </div>
-  <div class="db-stat db-stat-accent">
-    <p class="db-stat-label">⌛ In Progress</p>
-    <p class="db-stat-value"><%= maintenanceStats?.inProgress || 0 %></p>
-    <p class="db-stat-sub">Under active repair</p>
+  <div class="page-stat page-stat-accent">
+    <p class="page-stat-label">⌛ In Progress</p>
+    <p class="page-stat-value"><%= maintenanceStats?.inProgress || 0 %></p>
   </div>
-  <div class="db-stat">
-    <p class="db-stat-label">✅ Completed</p>
-    <p class="db-stat-value"><%= maintenanceStats?.completed || 0 %></p>
-    <p class="db-stat-sub">Fixed & returned to service</p>
+  <div class="page-stat">
+    <p class="page-stat-label">✅ Completed</p>
+    <p class="page-stat-value"><%= maintenanceStats?.completed || 0 %></p>
   </div>
-  <div class="db-stat">
-    <p class="db-stat-label">💰 Total Repair Cost</p>
-    <p class="db-stat-value">₹<%= Number(maintenanceStats?.totalCost || 0).toLocaleString('en-IN') %></p>
-    <p class="db-stat-sub">Fleet maintenance expenses</p>
+  <div class="page-stat">
+    <p class="page-stat-label">💰 Total Repair Cost</p>
+    <p class="page-stat-value">₹<%= Number(maintenanceStats?.totalCost || 0).toLocaleString('en-IN') %></p>
   </div>
 </div>
 

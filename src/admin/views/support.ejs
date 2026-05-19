@@ -39,26 +39,22 @@
   }
 </style>
 
-<div class="db-stats support-page">
-  <div class="db-stat">
-    <p class="db-stat-label">🎫 Total Tickets</p>
-    <p class="db-stat-value" id="support-stat-total"><%= stats?.total || 0 %></p>
-    <p class="db-stat-sub">All logged issues</p>
+<div class="page-stat-bar support-page">
+  <div class="page-stat">
+    <p class="page-stat-label">🎫 Total Tickets</p>
+    <p class="page-stat-value" id="support-stat-total"><%= stats?.total || 0 %></p>
   </div>
-  <div class="db-stat db-stat-accent">
-    <p class="db-stat-label">🟠 Pending</p>
-    <p class="db-stat-value" id="support-stat-pending"><%= stats?.pending || 0 %></p>
-    <p class="db-stat-sub">Needs attention</p>
+  <div class="page-stat page-stat-accent">
+    <p class="page-stat-label">🟠 Pending</p>
+    <p class="page-stat-value" id="support-stat-pending"><%= stats?.pending || 0 %></p>
   </div>
-  <div class="db-stat">
-    <p class="db-stat-label">🔄 In Progress</p>
-    <p class="db-stat-value" id="support-stat-inprogress"><%= stats?.inProgress || 0 %></p>
-    <p class="db-stat-sub">Being worked on</p>
+  <div class="page-stat">
+    <p class="page-stat-label">🔄 In Progress</p>
+    <p class="page-stat-value" id="support-stat-inprogress"><%= stats?.inProgress || 0 %></p>
   </div>
-  <div class="db-stat">
-    <p class="db-stat-label">✅ Resolved</p>
-    <p class="db-stat-value" id="support-stat-resolved"><%= stats?.resolved || 0 %></p>
-    <p class="db-stat-sub">Successfully closed</p>
+  <div class="page-stat">
+    <p class="page-stat-label">✅ Resolved</p>
+    <p class="page-stat-value" id="support-stat-resolved"><%= stats?.resolved || 0 %></p>
   </div>
 </div>
 

@@ -1005,11 +1005,11 @@ export async function deliveryPartnerProfile(req, res) {
 export async function earnings(req, res) {
   try {
     const filter = req.query.filter || "weekly";
-    const { data, error } = await supabase.from("earnings").select("*");
+    const { data: earningsData, error } = await supabase.from("earnings").select("*");
     if (error) {
       console.error("[admin.earnings] fetch failed", error);
     }
-    const rows = safeData(data);
+    const rows = safeData(earningsData);
     const now = Date.now();
     const days = filter === "today" ? 1 : filter === "monthly" ? 30 : 7;
     const filtered = rows.filter((row) => {
@@ -1036,10 +1036,17 @@ export async function earnings(req, res) {
       .filter((item) => item.status === "paid")
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
+    // Fetch profile names for realistic transaction mapping
+    const { data: dbProfiles } = await supabase.from("profiles").select("id, full_name");
+    const profileMap = {};
+    (dbProfiles || []).forEach((p) => {
+      profileMap[p.id] = p.full_name;
+    });
+
     const transactions = filtered.slice(0, 20).map((item, index) => ({
-      id: `TX-${1000 + index}`,
-      user: item.userName || item.user || "User",
-      type: item.type === "delivery" ? "Delivery" : "Bike",
+      id: `TX-${2000 + index}`,
+      user: profileMap[item.userid] || "BharBike Rider",
+      type: item.type === "delivery" ? "Delivery" : "Bike Rental",
       amount: Number(item.amount || 0),
       status: Number(item.amount || 0) > 0 ? "Success" : "Pending",
       date: (item.createdAt || item.created_at || new Date().toISOString()).slice(0, 10),
@@ -1057,9 +1064,29 @@ export async function earnings(req, res) {
 
     const recentActivity = transactions.slice(0, 5);
     const pieSeries = [
-      { label: "Bike", value: rental },
+      { label: "Bike Rental", value: rental },
       { label: "Delivery", value: delivery },
     ];
+
+    // Group transactions by date for realistic, premium daily trend charts
+    const dailyMap = {};
+    filtered.forEach((item) => {
+      const dateStr = new Date(item.created_at || item.createdAt || now).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      dailyMap[dateStr] = (dailyMap[dateStr] || 0) + Number(item.amount || 0);
+    });
+
+    // Chronologically sort and select the last 10 days of earnings for a professional plot
+    const sortedDays = Object.entries(dailyMap)
+      .sort((a, b) => new Date(a[0] + " " + new Date().getFullYear()).getTime() - new Date(b[0] + " " + new Date().getFullYear()).getTime())
+      .slice(-10);
+
+    const chartSeries = sortedDays.map(([label, value]) => ({
+      label,
+      value: Number(value.toFixed(0)),
+    }));
 
     return renderPage(res, {
       title: "Earnings",
@@ -1076,10 +1103,7 @@ export async function earnings(req, res) {
         pendingPayout,
         totalPaidAmount,
       },
-      chartSeries: filtered.slice(0, 10).map((item, index) => ({
-        label: `Day ${index + 1}`,
-        value: Number(item.amount || 0),
-      })),
+      chartSeries,
       transactions,
       payoutQueue: payoutQueue.filter((item) => item.status === "pending"),
       payoutHistory,
@@ -1150,19 +1174,49 @@ export async function analytics(req, res) {
       .filter((item) => item.type === "delivery")
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-    const revenueSeries = filteredEarnings.slice(0, 10).map((item, idx) => ({
-      label: `P${idx + 1}`,
-      value: Number(item.amount || 0),
+    // Group earnings by date for chronological Revenue Over Time chart
+    const dailyEarnMap = {};
+    filteredEarnings.forEach((item) => {
+      const dateStr = new Date(item.created_at || item.createdAt || now).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      dailyEarnMap[dateStr] = (dailyEarnMap[dateStr] || 0) + Number(item.amount || 0);
+    });
+
+    const sortedEarnDays = Object.entries(dailyEarnMap)
+      .sort((a, b) => new Date(a[0] + " " + new Date().getFullYear()).getTime() - new Date(b[0] + " " + new Date().getFullYear()).getTime())
+      .slice(-10);
+
+    const revenueSeries = sortedEarnDays.map(([label, value]) => ({
+      label,
+      value: Number(value.toFixed(0)),
     }));
-    const ordersSeries = filteredOrders.slice(0, 10).map((item, idx) => ({
-      label: `O${idx + 1}`,
-      value: Number(item.earnings || 0),
+
+    // Group orders by date for chronological Orders Breakdown chart
+    const dailyOrdersMap = {};
+    filteredOrders.forEach((item) => {
+      const dateStr = new Date(item.created_at || item.createdAt || now).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      dailyOrdersMap[dateStr] = (dailyOrdersMap[dateStr] || 0) + 1;
+    });
+
+    const sortedOrderDays = Object.entries(dailyOrdersMap)
+      .sort((a, b) => new Date(a[0] + " " + new Date().getFullYear()).getTime() - new Date(b[0] + " " + new Date().getFullYear()).getTime())
+      .slice(-10);
+
+    const ordersSeries = sortedOrderDays.map(([label, value]) => ({
+      label,
+      value,
     }));
+
     const bikeEarnings = filteredEarnings
       .filter((item) => item.type === "rental")
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const pieSeries = [
-      { label: "Bike", value: bikeEarnings },
+      { label: "Bike Rental", value: bikeEarnings },
       { label: "Delivery", value: deliveryEarnings },
     ];
 

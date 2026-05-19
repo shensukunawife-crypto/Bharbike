@@ -197,7 +197,13 @@
 .order-id-sub  { font-size: 11px; color: var(--text-light); margin-top: 2px; font-family: monospace; }
 
 /* Row actions */
-.row-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
 
 /* Responsive */
 @media (max-width: 900px) {
@@ -320,16 +326,23 @@
           <td style="padding:13px 16px;">
             <div class="row-actions">
               <a class="btn btn-sm" href="/admin/orders/<%= order.id %>">Details</a>
-              <form class="ajax-form inline-form" data-url="/admin/orders/<%= order.id %>/assign" style="display:inline-flex;gap:4px;">
-                <select name="partnerId" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;">
-                  <option value="">Assign rider</option>
-                  <% partners.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
-                </select>
-                <button type="submit" class="btn btn-sm btn-primary">Assign</button>
-              </form>
-              <button class="btn btn-sm admin-action" data-url="/admin/orders/<%= order.id %>/ongoing" data-method="POST">Ongoing</button>
-              <button class="btn btn-sm btn-primary admin-action" data-url="/admin/orders/<%= order.id %>/complete" data-method="POST">Complete</button>
-              <button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/<%= order.id %>/reject" data-method="POST">Cancel</button>
+              
+              <% if (st === 'pending') { %>
+                <form class="ajax-form inline-form" data-url="/admin/orders/<%= order.id %>/assign" style="display:inline-flex;gap:4px;">
+                  <select name="partnerId" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;">
+                    <option value="">Assign rider</option>
+                    <% partners.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+                  </select>
+                  <button type="submit" class="btn btn-sm btn-primary">Assign</button>
+                </form>
+                <button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/<%= order.id %>/reject" data-method="POST">Cancel</button>
+              <% } else if (st === 'accepted') { %>
+                <button class="btn btn-sm admin-action" data-url="/admin/orders/<%= order.id %>/ongoing" data-method="POST">Ongoing</button>
+                <button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/<%= order.id %>/reject" data-method="POST">Cancel</button>
+              <% } else if (st === 'ongoing') { %>
+                <button class="btn btn-sm btn-primary admin-action" data-url="/admin/orders/<%= order.id %>/complete" data-method="POST">Complete</button>
+                <button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/<%= order.id %>/reject" data-method="POST">Cancel</button>
+              <% } %>
             </div>
           </td>
         </tr>
@@ -501,10 +514,15 @@
           '<td style="padding:13px 16px;font-size:12px;color:var(--text-muted);white-space:nowrap;">' + escapeHtml(created) + '</td>' +
           '<td style="padding:13px 16px;"><div class="row-actions">' +
             '<a class="btn btn-sm" href="/admin/orders/' + encodeURIComponent(order.id) + '">Details</a>' +
-            '<form class="ajax-form inline-form" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/assign" style="display:inline-flex;gap:4px;"><select name="partnerId" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;">' + pOpts + '</select><button type="submit" class="btn btn-sm btn-primary">Assign</button></form>' +
-            '<button class="btn btn-sm admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/ongoing" data-method="POST">Ongoing</button>' +
-            '<button class="btn btn-sm btn-primary admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/complete" data-method="POST">Complete</button>' +
-            '<button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/reject" data-method="POST">Cancel</button>' +
+            (st === 'pending' ? 
+              ('<form class="ajax-form inline-form" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/assign" style="display:inline-flex;gap:4px;"><select name="partnerId" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:inherit;">' + pOpts + '</select><button type="submit" class="btn btn-sm btn-primary">Assign</button></form>' +
+               '<button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/reject" data-method="POST">Cancel</button>') : '') +
+            (st === 'accepted' ? 
+              ('<button class="btn btn-sm admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/ongoing" data-method="POST">Ongoing</button>' +
+               '<button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/reject" data-method="POST">Cancel</button>') : '') +
+            (st === 'ongoing' ? 
+              ('<button class="btn btn-sm btn-primary admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/complete" data-method="POST">Complete</button>' +
+               '<button class="btn btn-sm btn-danger admin-action" data-url="/admin/orders/' + encodeURIComponent(order.id) + '/reject" data-method="POST">Cancel</button>') : '') +
           '</div></td></tr>';
       }).join('');
       wireActions(tbody);

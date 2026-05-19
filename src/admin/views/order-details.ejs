@@ -1,29 +1,80 @@
 <div class="stats-grid">
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🧾</span><span class="stat-label">Order ID</span></div><strong class="stat-value"><%= order.id %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">👤</span><span class="stat-label">User</span></div><strong class="stat-value"><%= order.userName %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Bike</span></div><strong class="stat-value"><%= order.bikeId %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">💳</span><span class="stat-label">Payment</span></div><strong class="stat-value"><%= order.paymentStatus %> / ₹<%= Number(order.amount || 0).toFixed(2) %></strong></div>
+  <div class="stat-card">
+    <div class="stat-head">
+      <span class="stat-icon">🧾</span>
+      <span class="stat-label">Order ID</span>
+    </div>
+    <strong class="stat-value" style="font-size: 15px; font-family: monospace; word-break: break-all; margin-top: 8px; color: var(--text-muted);"><%= order.id %></strong>
+  </div>
+  
+  <div class="stat-card">
+    <div class="stat-head">
+      <span class="stat-icon">👤</span>
+      <span class="stat-label">User</span>
+    </div>
+    <strong class="stat-value" style="font-size: 22px; font-weight: 700; margin-top: 4px;"><%= order.userName || "User" %></strong>
+  </div>
+  
+  <div class="stat-card">
+    <div class="stat-head">
+      <span class="stat-icon">🚲</span>
+      <span class="stat-label">Bike</span>
+    </div>
+    <strong class="stat-value" style="font-size: 22px; font-weight: 700; margin-top: 4px;"><%= order.bikeId || "-" %></strong>
+  </div>
+  
+  <div class="stat-card">
+    <div class="stat-head">
+      <span class="stat-icon">💳</span>
+      <span class="stat-label">Payment</span>
+    </div>
+    <strong class="stat-value" style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+      <span class="badge <%= order.paymentStatus === 'paid' ? 'success' : 'warning' %>"><%= order.paymentStatus %></span>
+      <span style="font-size: 20px; font-weight: 700; color: var(--text);">₹<%= Number(order.amount || 0).toFixed(2) %></span>
+    </strong>
+  </div>
 </div>
 
 <div class="analytics-grid">
   <div class="chart-card">
-    <h3>Route Tracking</h3>
+    <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+      <span>📍</span> Route Tracking
+    </h3>
     <div class="summary-list">
-      <div><span>Pickup</span><strong><%= order.pickup_location %></strong></div>
-      <div><span>Drop</span><strong><%= order.drop_location %></strong></div>
-      <div><span>Route</span><strong><%= tracking.route %></strong></div>
-      <div><span>Delivery Partner Status</span><strong><%= tracking.partnerStatus %></strong></div>
+      <div>
+        <span>Pickup Location</span>
+        <strong><%= order.pickup_location || "N/A" %></strong>
+      </div>
+      <div>
+        <span>Drop Location</span>
+        <strong><%= order.drop_location || "N/A" %></strong>
+      </div>
+      <div>
+        <span>Estimated Route</span>
+        <strong><%= tracking.route || "N/A" %></strong>
+      </div>
+      <div>
+        <span>Delivery Partner Status</span>
+        <strong style="display: inline-flex; align-items: center;">
+          <span class="badge <%= tracking.partnerStatus === 'assigned' || tracking.partnerStatus === 'On Route' ? 'success' : 'info' %>">
+            <%= tracking.partnerStatus || "N/A" %>
+          </span>
+        </strong>
+      </div>
     </div>
   </div>
+
   <div class="chart-card">
-    <h3>Timeline</h3>
+    <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+      <span>🕒</span> Order Timeline
+    </h3>
     <div class="timeline">
       <% timeline.forEach((item) => { %>
       <div class="timeline-item <%= item.done ? 'done' : '' %>">
         <span class="dot"></span>
         <div>
           <strong><%= item.label %></strong>
-          <p><%= item.time %></p>
+          <p><%= item.time || "-" %></p>
         </div>
       </div>
       <% }) %>

@@ -356,7 +356,7 @@ export async function dashboard(req, res) {
       { data: ordersData, error: ordersError },
       { data: earningsRows, error: earningsError },
     ] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("users").select("*", { count: "exact", head: true }).neq("is_delivery_partner", true),
       supabase.from("bikes").select("*", { count: "exact", head: true }),
       supabase
         .from("rentals")
@@ -2016,8 +2016,10 @@ export async function sendNotification(req, res) {
 
     // Fan out to target users' notifications table
     try {
-      let userQuery = supabase.from("profiles").select("id");
-      if (audience === "Delivery Partners") {
+      let userQuery = supabase.from("users").select("id");
+      if (audience === "Users") {
+        userQuery = userQuery.neq("is_delivery_partner", true);
+      } else if (audience === "Delivery Partners") {
         const { data: partners } = await supabase.from("delivery_partners").select("user_id").eq("status", "approved");
         const ids = (partners || []).map((p) => p.user_id).filter(Boolean);
         if (ids.length) userQuery = userQuery.in("id", ids);
@@ -2187,9 +2189,9 @@ export async function backendMonitor(req, res) {
       { count: kycCount, error: kycCountErr },
       { count: profilesCount }
     ] = await Promise.all([
-      supabase.from("profiles").select("id").limit(1),
+      supabase.from("users").select("id").limit(1),
       supabase.from("kyc_documents").select("id", { count: "exact", head: true }),
-      supabase.from("profiles").select("id", { count: "exact", head: true })
+      supabase.from("users").select("id", { count: "exact", head: true })
     ]);
     const dbLatency = Date.now() - start;
 
@@ -2247,7 +2249,7 @@ export async function activityLogsPage(req, res) {
       supabase.from("wallet_transactions").select("id, user_id, amount, type, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
       supabase.from("kyc_documents").select("id, user_id, type, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
       supabase.from("user_subscriptions").select("id, user_id, status, plan_id, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
-      supabase.from("profiles").select("id, full_name, phone").then(r => r, e => ({ data: [] }))
+      supabase.from("users").select("id, full_name, name, phone").then(r => r, e => ({ data: [] }))
     ]);
 
     // Normalize Orders
@@ -2321,7 +2323,7 @@ export async function activityLogsPage(req, res) {
       const profile = profileMap.get(String(item.user_id));
       return {
         ...item,
-        user_name: profile ? (profile.full_name || "Rider") : "Rider",
+        user_name: profile ? (profile.full_name || profile.name || "Rider") : "Rider",
         user_phone: profile ? (profile.phone || "No Phone") : ""
       };
     });

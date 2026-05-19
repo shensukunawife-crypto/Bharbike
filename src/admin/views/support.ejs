@@ -1,19 +1,64 @@
-<div class="stats-grid support-stats">
-  <div class="stat-card stat-card-orange">
-    <div class="stat-head"><span class="stat-icon">🎫</span><span class="stat-label">Total Tickets</span></div>
-    <h3 id="support-stat-total"><%= stats?.total || 0 %></h3>
+<style>
+  .support-page {
+    animation: fadeInUp 0.35s ease;
+  }
+  .summary-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+    background: var(--border-light);
+    padding: 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .summary-list div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .summary-list div span {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .summary-list div strong {
+    font-size: 13px;
+    color: var(--text);
+  }
+  .btn-gradient {
+    background: linear-gradient(135deg, var(--accent) 0%, #d946ef 100%);
+    color: #fff;
+    border: none;
+  }
+  .btn-gradient:hover {
+    opacity: 0.9;
+    box-shadow: 0 4px 12px rgba(242,109,33,0.2);
+  }
+</style>
+
+<div class="db-stats support-page">
+  <div class="db-stat">
+    <p class="db-stat-label">🎫 Total Tickets</p>
+    <p class="db-stat-value" id="support-stat-total"><%= stats?.total || 0 %></p>
+    <p class="db-stat-sub">All logged issues</p>
   </div>
-  <div class="stat-card stat-card-orange">
-    <div class="stat-head"><span class="stat-icon">🟠</span><span class="stat-label">Pending</span></div>
-    <h3 id="support-stat-pending"><%= stats?.pending || 0 %></h3>
+  <div class="db-stat db-stat-accent">
+    <p class="db-stat-label">🟠 Pending</p>
+    <p class="db-stat-value" id="support-stat-pending"><%= stats?.pending || 0 %></p>
+    <p class="db-stat-sub">Needs attention</p>
   </div>
-  <div class="stat-card stat-card-blue">
-    <div class="stat-head"><span class="stat-icon">🔄</span><span class="stat-label">In Progress</span></div>
-    <h3 id="support-stat-inprogress"><%= stats?.inProgress || 0 %></h3>
+  <div class="db-stat">
+    <p class="db-stat-label">🔄 In Progress</p>
+    <p class="db-stat-value" id="support-stat-inprogress"><%= stats?.inProgress || 0 %></p>
+    <p class="db-stat-sub">Being worked on</p>
   </div>
-  <div class="stat-card stat-card-green">
-    <div class="stat-head"><span class="stat-icon">✅</span><span class="stat-label">Resolved</span></div>
-    <h3 id="support-stat-resolved"><%= stats?.resolved || 0 %></h3>
+  <div class="db-stat">
+    <p class="db-stat-label">✅ Resolved</p>
+    <p class="db-stat-value" id="support-stat-resolved"><%= stats?.resolved || 0 %></p>
+    <p class="db-stat-sub">Successfully closed</p>
   </div>
 </div>
 

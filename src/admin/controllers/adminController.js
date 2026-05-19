@@ -871,6 +871,7 @@ export async function kycDocumentsPage(req, res) {
       pan: documents.filter((x) => x.pan_card_url).length,
       bill: documents.filter((x) => x.electricity_bill_url).length,
       selfie: documents.filter((x) => x.selfie_url).length,
+      driving_license: documents.filter((x) => x.driving_license_url).length,
     };
 
     return renderPage(res, {

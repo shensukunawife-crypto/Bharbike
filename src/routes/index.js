@@ -1233,7 +1233,9 @@ api.get("/admin/health", async (req, res) => {
       bikes: bikes.count || 0,
       rentals: rentals.count || 0,
       kycCount: kycCountRes.count || 0,
-      supabaseKeyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Service Role Key (RLS Bypassed)" : "Anon Key (Subject to RLS)"
+      supabaseKeyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Service Role Key (RLS Bypassed)" : "Anon Key (Subject to RLS)",
+      supabaseUrl: process.env.SUPABASE_URL || "not set",
+      supabaseKeyLength: process.env.SUPABASE_KEY ? process.env.SUPABASE_KEY.length : 0,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Health check failed" });

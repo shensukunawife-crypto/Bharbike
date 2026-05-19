@@ -386,42 +386,6 @@ api.post("/admin/orders/create", async (req, res) => {
   }
 });
 
-api.get("/admin/health", async (req, res) => {
-  try {
-    const [profilesCountRes, bikesCountRes, rentalsCountRes] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("bikes").select("*", { count: "exact", head: true }),
-      supabase.from("rentals").select("*", { count: "exact", head: true }),
-    ]);
-
-    if (profilesCountRes.error || bikesCountRes.error || rentalsCountRes.error) {
-      return res.status(500).json({
-        status: "error",
-        message:
-          profilesCountRes.error?.message ||
-          bikesCountRes.error?.message ||
-          rentalsCountRes.error?.message ||
-          "Database stats failed",
-      });
-    }
-
-    return res.json({
-      status: "running",
-      uptime: process.uptime(),
-      memory: process.memoryUsage().rss,
-      cpu: os.loadavg()[0],
-      platform: process.platform,
-      node_version: process.version,
-      users: profilesCountRes.count || 0,
-      bikes: bikesCountRes.count || 0,
-      rentals: rentalsCountRes.count || 0,
-    });
-  } catch (error) {
-    console.error("[GET /api/admin/health]", error);
-    return res.status(500).json({ status: "error", message: "Server not responding ❌" });
-  }
-});
-
 api.post("/delivery/apply", async (req, res) => {
   try {
     const {

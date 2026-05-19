@@ -501,6 +501,100 @@ export async function dashboard(req, res) {
   }
 }
 
+export async function operationsDashboard(req, res) {
+  try {
+    const now = Date.now();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const safeArr = (arr) => Array.isArray(arr) ? arr : [];
+
+    const [
+      { data: bikesData },
+      { data: partnersData },
+      { data: activeOrdersData },
+      { data: skippedLogsData }
+    ] = await Promise.all([
+      supabase.from("bikes").select("*"),
+      supabase.from("delivery_partners").select("*"),
+      supabase.from("orders").select("*").in("status", ["pending", "accepted", "ongoing"]),
+      supabase.from("rider_skipped_days").select("*").gte("created_at", todayStr)
+    ]);
+
+    const bikes = safeArr(bikesData).map(normalizeBike);
+    const partners = safeArr(partnersData);
+    const activeOrders = safeArr(activeOrdersData).map(normalizeOrder);
+    const skippedLogs = safeArr(skippedLogsData);
+
+    // Aggregate counts
+    const stats = {
+      activeDeliveries: activeOrders.length,
+      onlineRiders: partners.filter(p => p.is_online === true).length,
+      availableBikes: bikes.filter(b => b.status === "available").length,
+      skippedRidersCount: skippedLogs.length,
+      bikesInField: bikes.filter(b => b.status === "rented").length,
+      maintenanceBikes: bikes.filter(b => b.status === "maintenance").length
+    };
+
+    // Online riders list details (with name fallback resolution)
+    const { data: dbUsers } = await supabase.from("users").select("id, full_name, name, phone");
+    const userMap = {};
+    (dbUsers || []).forEach((u) => {
+      userMap[u.id] = {
+        name: u.full_name || u.name || "Delivery Partner",
+        phone: u.phone || "No Phone"
+      };
+    });
+
+    const onlineRidersList = partners
+      .filter(p => p.is_online === true)
+      .map(p => {
+        const u = userMap[p.user_id] || { name: p.full_name || "Rider", phone: p.phone || "No Phone" };
+        return {
+          id: p.id,
+          userId: p.user_id,
+          name: u.name,
+          phone: u.phone,
+          vehicleType: p.vehicle_type || "Bike",
+          rating: Number(p.rating || 5.0).toFixed(1),
+          status: p.status || "approved"
+        };
+      });
+
+    // Skipped logs detailed mapping
+    const skippedList = skippedLogs.map((log, index) => {
+      const u = userMap[log.user_id] || { name: "Rider", phone: "" };
+      return {
+        id: log.id || `SK-${index}`,
+        name: u.name,
+        date: log.skipped_date || todayStr,
+        reason: log.reason || "Not specified",
+        created_at: new Date(log.created_at || now).toLocaleString("en-IN")
+      };
+    });
+
+    // Populate active orders with user name lookups
+    const enrichedOrders = activeOrders.map(o => {
+      const u = userMap[o.user_id] || { name: o.userName || "Customer", phone: "" };
+      return {
+        ...o,
+        userName: u.name
+      };
+    });
+
+    return renderPage(res, {
+      title: "Operations Dashboard",
+      active: "operations",
+      bodyView: "operations",
+      stats,
+      onlineRiders: onlineRidersList,
+      activeOrders: enrichedOrders,
+      skippedLogs: skippedList,
+    });
+  } catch (error) {
+    console.error("[admin.operationsDashboard] unexpected error", error);
+    return res.status(500).send("Unable to load operations dashboard");
+  }
+}
+
 export async function users(req, res) {
   try {
     const [{ data: usersData, error: usersError }, { data: ordersData, error: ordersError }] =

@@ -23,6 +23,7 @@
       <tr>
         <th>Bike ID</th>
         <th>Status</th>
+        <th>Lock Status</th>
         <th>Usage</th>
         <th>Battery %</th>
         <th>Location</th>
@@ -41,6 +42,11 @@
         <td>
           <span class="badge <%= bike.status === 'available' ? 'success' : bike.status === 'in_use' ? 'warning' : bike.status === 'maintenance' ? 'danger' : '' %>">
             <%= bike.statusLabel %>
+          </span>
+        </td>
+        <td>
+          <span class="badge <%= bike.is_locked !== false ? 'danger' : 'success' %>" style="font-size: 11px; font-weight: 600; padding: 4px 8px;">
+            <%= bike.is_locked !== false ? "Locked 🔒" : "Unlocked 🔓" %>
           </span>
         </td>
         <td><%= bike.usage %></td>

@@ -180,7 +180,7 @@ api.post("/orders/accept", async (req, res) => {
     let tracking_link = null;
     let vehicle_id = null;
     // ... Loconav logic omitted for brevity in instruction, keeping it in actual code ...
-    const token = String(process.env.LOCONAV_USER_AUTH_TOKEN || "").trim();
+    const token = String(process.env.LOCONAV_USER_AUTH_TOKEN || process.env.LOCONAV_TOKEN || "").trim();
     if (token) {
       const { data: vehicle } = await supabase
         .from("vehicles")

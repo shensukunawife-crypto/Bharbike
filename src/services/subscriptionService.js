@@ -421,9 +421,19 @@ export async function hasActiveSubscription(userId) {
  */
 export async function updateAutoRenew(userId, subscriptionId, autoRenew) {
   try {
+    const updateData = { auto_renew: autoRenew };
+    if (autoRenew) {
+      updateData.status = "active";
+      updateData.cancelled_at = null;
+      updateData.cancellation_reason = null;
+    } else {
+      updateData.status = "cancelled";
+      updateData.cancelled_at = new Date().toISOString();
+    }
+
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .update({ auto_renew: autoRenew })
+      .update(updateData)
       .eq("id", subscriptionId)
       .eq("user_id", userId)
       .select()

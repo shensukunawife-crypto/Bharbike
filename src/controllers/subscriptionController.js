@@ -42,7 +42,7 @@ export const getActiveSubscription = async (req, res) => {
           .from("user_subscriptions")
           .select("*")
           .eq("user_id", userId)
-          .eq("status", "active")
+          .in("status", ["active", "cancelled"])
           .gt("end_date", new Date().toISOString())
           .order("end_date", { ascending: false })
           .limit(1)

@@ -122,7 +122,7 @@ export async function getUserActiveSubscription(userId) {
         plan:subscription_plans(*)
       `)
       .eq("user_id", userId)
-      .eq("status", "active")
+      .in("status", ["active", "cancelled"])
       .gt("end_date", graceThreshold)
       .order("end_date", { ascending: false })
       .limit(1)
@@ -135,7 +135,7 @@ export async function getUserActiveSubscription(userId) {
         .from("user_subscriptions")
         .select("*")
         .eq("user_id", userId)
-        .eq("status", "active")
+        .in("status", ["active", "cancelled"])
         .gt("end_date", graceThreshold)
         .order("end_date", { ascending: false })
         .limit(1)
@@ -445,7 +445,7 @@ export async function expireOldSubscriptions() {
     const { data, error } = await supabase
       .from("user_subscriptions")
       .update({ status: "expired" })
-      .eq("status", "active")
+      .in("status", ["active", "cancelled"])
       .lt("end_date", new Date().toISOString())
       .select();
 

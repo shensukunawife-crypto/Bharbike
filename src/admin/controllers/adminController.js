@@ -2260,6 +2260,14 @@ export async function activityLogsPage(req, res) {
       subscriptions: logs.filter(l => l.type === 'subscription').length
     };
 
+    if (req.query.ajax) {
+      return res.json({
+        success: true,
+        logs,
+        stats
+      });
+    }
+
     return renderPage(res, {
       title: "Activity Logs",
       active: "activity-logs",

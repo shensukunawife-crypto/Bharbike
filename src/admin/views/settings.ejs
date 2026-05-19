@@ -1,109 +1,236 @@
 <div class="settings-grid">
+  <!-- Business Settings -->
   <div class="settings-card">
     <h3>🏢 Business Settings</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <input name="companyName" value="<%= settings.companyName %>" placeholder="Company Name" required />
-      <input name="supportEmail" value="<%= settings.supportEmail %>" placeholder="Support Email" required />
-      <input name="phone" value="<%= settings.phone %>" placeholder="Phone" required />
-      <textarea name="address" rows="2" placeholder="Address"><%= settings.address %></textarea>
-      <button type="submit" class="btn btn-gold glow">Save Business</button>
+      <div class="form-group">
+        <label>Company Name</label>
+        <input type="text" name="companyName" value="<%= settings.companyName %>" placeholder="e.g. BharBike Pvt Ltd" required />
+      </div>
+      <div class="form-group">
+        <label>Support Email</label>
+        <input type="email" name="supportEmail" value="<%= settings.supportEmail %>" placeholder="e.g. support@bharbike.com" required />
+      </div>
+      <div class="form-group">
+        <label>Contact Phone</label>
+        <input type="text" name="phone" value="<%= settings.phone %>" placeholder="e.g. +91 98765 43210" required />
+      </div>
+      <div class="form-group">
+        <label>Business Address</label>
+        <textarea name="address" rows="2" placeholder="Enter corporate office address"><%= settings.address %></textarea>
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save Business Settings</button>
     </form>
   </div>
 
+  <!-- Payment Settings -->
   <div class="settings-card">
     <h3>💳 Payment Settings</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <label class="switch-row">COD <input type="checkbox" name="codEnabled" <%= settings.codEnabled ? "checked" : "" %> /><span class="switch"></span></label>
-      <label class="switch-row">Online Payment <input type="checkbox" name="onlinePaymentEnabled" <%= settings.onlinePaymentEnabled ? "checked" : "" %> /><span class="switch"></span></label>
-      <input type="number" name="minimumWalletBalance" value="<%= settings.minimumWalletBalance %>" placeholder="Minimum wallet balance" />
-      <button type="submit" class="btn btn-gold glow">Save Payment</button>
+      <div class="form-group">
+        <label>Supported Payment Modes</label>
+        <label class="switch-row" style="margin-bottom: 8px;">
+          <span>Cash on Delivery (COD)</span>
+          <input type="checkbox" name="codEnabled" <%= settings.codEnabled ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+        <label class="switch-row">
+          <span>Online Payments (Razorpay)</span>
+          <input type="checkbox" name="onlinePaymentEnabled" <%= settings.onlinePaymentEnabled ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Minimum Wallet Balance (₹)</label>
+        <input type="number" name="minimumWalletBalance" value="<%= settings.minimumWalletBalance %>" placeholder="e.g. 100" min="0" required />
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save Payment Settings</button>
     </form>
   </div>
 
+  <!-- Rental Settings -->
   <div class="settings-card">
     <h3>🚲 Rental Settings</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <input type="number" name="bikePricePerHour" value="<%= settings.bikePricePerHour %>" placeholder="Price per hour" />
-      <input type="number" name="minimumRentalTime" value="<%= settings.minimumRentalTime %>" placeholder="Minimum rental time (min)" />
-      <input type="number" name="lateFeePerHour" value="<%= settings.lateFeePerHour %>" placeholder="Late fee per hour" />
-      <input type="number" name="securityDeposit" value="<%= settings.securityDeposit %>" placeholder="Security deposit" />
-      <button type="submit" class="btn btn-gold glow">Save Rental</button>
+      <div class="form-group">
+        <label>Bike Price Per Hour (₹)</label>
+        <input type="number" name="bikePricePerHour" value="<%= settings.bikePricePerHour %>" placeholder="e.g. 100" min="1" required />
+      </div>
+      <div class="form-group">
+        <label>Minimum Rental Duration (Minutes)</label>
+        <input type="number" name="minimumRentalTime" value="<%= settings.minimumRentalTime %>" placeholder="e.g. 30" min="1" required />
+      </div>
+      <div class="form-group">
+        <label>Late Fee Per Hour (₹)</label>
+        <input type="number" name="lateFeePerHour" value="<%= settings.lateFeePerHour %>" placeholder="e.g. 25" min="0" required />
+      </div>
+      <div class="form-group">
+        <label>Refundable Security Deposit (₹)</label>
+        <input type="number" name="securityDeposit" value="<%= settings.securityDeposit %>" placeholder="e.g. 500" min="0" required />
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save Rental Settings</button>
     </form>
   </div>
 
+  <!-- Delivery Settings -->
   <div class="settings-card">
     <h3>🛵 Delivery Settings</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <input type="number" name="deliveryCharges" value="<%= settings.deliveryCharges %>" placeholder="Base delivery charge" />
-      <input type="number" name="perKmCharge" value="<%= settings.perKmCharge %>" placeholder="Per KM charge" />
-      <input type="number" name="maxDeliveryDistance" value="<%= settings.maxDeliveryDistance %>" placeholder="Max delivery distance" />
-      <button type="submit" class="btn btn-gold glow">Save Delivery</button>
+      <div class="form-group">
+        <label>Base Delivery Charge (₹)</label>
+        <input type="number" name="deliveryCharges" value="<%= settings.deliveryCharges %>" placeholder="e.g. 40" min="0" required />
+      </div>
+      <div class="form-group">
+        <label>Distance Charge Per KM (₹)</label>
+        <input type="number" name="perKmCharge" value="<%= settings.perKmCharge %>" placeholder="e.g. 8" min="0" required />
+      </div>
+      <div class="form-group">
+        <label>Maximum Delivery Distance (KM)</label>
+        <input type="number" name="maxDeliveryDistance" value="<%= settings.maxDeliveryDistance %>" placeholder="e.g. 15" min="1" required />
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save Delivery Settings</button>
     </form>
   </div>
 
+  <!-- Security Settings -->
   <div class="settings-card">
     <h3>🔐 Security Settings</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <input type="password" name="adminPasswordUi" placeholder="Change admin password (UI only)" />
-      <input type="number" name="sessionTimeout" value="<%= settings.sessionTimeout %>" placeholder="Session timeout (minutes)" />
-      <label class="switch-row">OTP Login <input type="checkbox" name="otpLoginEnabled" <%= settings.otpLoginEnabled ? "checked" : "" %> /><span class="switch"></span></label>
-      <button type="submit" class="btn btn-gold glow">Save Security</button>
+      <div class="form-group">
+        <label>Change Admin Password</label>
+        <input type="password" name="adminPasswordUi" placeholder="Enter new password (optional)" />
+      </div>
+      <div class="form-group">
+        <label>Session Timeout (Minutes)</label>
+        <input type="number" name="sessionTimeout" value="<%= settings.sessionTimeout %>" placeholder="e.g. 30" min="5" required />
+      </div>
+      <div class="form-group">
+        <label>Authentication Options</label>
+        <label class="switch-row">
+          <span>Enable OTP Login via SMS</span>
+          <input type="checkbox" name="otpLoginEnabled" <%= settings.otpLoginEnabled ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save Security Settings</button>
     </form>
   </div>
 
+  <!-- Notification Settings -->
   <div class="settings-card">
     <h3>🔔 Notification Settings</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <label class="switch-row">Push Notifications <input type="checkbox" name="pushEnabled" <%= settings.pushEnabled ? "checked" : "" %> /><span class="switch"></span></label>
-      <label class="switch-row">SMS <input type="checkbox" name="smsEnabled" <%= settings.smsEnabled ? "checked" : "" %> /><span class="switch"></span></label>
-      <label class="switch-row">Email <input type="checkbox" name="emailEnabled" <%= settings.emailEnabled ? "checked" : "" %> /><span class="switch"></span></label>
-      <button type="submit" class="btn btn-gold glow">Save Notifications</button>
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 10px;">
+        <label>Active Notification Channels</label>
+        <label class="switch-row">
+          <span>Push Notifications</span>
+          <input type="checkbox" name="pushEnabled" <%= settings.pushEnabled ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+        <label class="switch-row">
+          <span>SMS Gateway Notifications</span>
+          <input type="checkbox" name="smsEnabled" <%= settings.smsEnabled ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+        <label class="switch-row">
+          <span>Automated Email Notifications</span>
+          <input type="checkbox" name="emailEnabled" <%= settings.emailEnabled ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save Notification Settings</button>
     </form>
   </div>
 
+  <!-- App Customization -->
   <div class="settings-card">
     <h3>🎨 App Customization</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <input type="file" name="logoUiOnly" />
-      <label>Brand Color</label>
-      <input type="color" name="brandColor" value="<%= settings.brandColor %>" />
-      <select name="theme">
-        <option value="dark" <%= settings.theme === "dark" ? "selected" : "" %>>Dark</option>
-        <option value="light" <%= settings.theme === "light" ? "selected" : "" %>>Light</option>
-      </select>
-      <button type="submit" class="btn btn-gold glow">Save Customization</button>
+      <div class="form-group">
+        <label>Upload Application Logo</label>
+        <input type="file" name="logoUiOnly" accept="image/*" />
+      </div>
+      <div class="form-group">
+        <label>Brand Accent Color</label>
+        <input type="color" name="brandColor" value="<%= settings.brandColor %>" />
+      </div>
+      <div class="form-group">
+        <label>Admin Theme</label>
+        <select name="theme" required>
+          <option value="dark" <%= settings.theme === "dark" ? "selected" : "" %>>Dark Mode</option>
+          <option value="light" <%= settings.theme === "light" ? "selected" : "" %>>Light Mode</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save Customization</button>
     </form>
   </div>
 
+  <!-- System Settings -->
   <div class="settings-card">
     <h3>🧠 System Settings</h3>
     <form class="admin-form ajax-form" data-url="/admin/settings/save">
-      <label class="switch-row">Maintenance Mode <input type="checkbox" name="maintenanceMode" <%= settings.maintenanceMode ? "checked" : "" %> /><span class="switch"></span></label>
-      <label class="switch-row">Debug Mode <input type="checkbox" name="debugMode" <%= settings.debugMode ? "checked" : "" %> /><span class="switch"></span></label>
-      <input type="text" name="appName" value="<%= settings.appName %>" placeholder="App Name" />
-      <button type="submit" class="btn btn-gold glow">Save System</button>
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 10px;">
+        <label>Operational States</label>
+        <label class="switch-row">
+          <span>Maintenance Mode (Freeze Apps)</span>
+          <input type="checkbox" name="maintenanceMode" <%= settings.maintenanceMode ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+        <label class="switch-row">
+          <span>Debug Mode (Verbose Server Logs)</span>
+          <input type="checkbox" name="debugMode" <%= settings.debugMode ? "checked" : "" %> />
+          <span class="switch"></span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Application Branding Title</label>
+        <input type="text" name="appName" value="<%= settings.appName %>" placeholder="e.g. BharBike Console" required />
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save System Settings</button>
     </form>
   </div>
 </div>
 
 <!-- Promo Codes Section -->
-<div style="margin-top:32px">
-  <h2 style="font-size:1.1rem;margin-bottom:16px">🎟️ Promo Codes</h2>
+<div style="margin-top:40px">
+  <div class="section-header" style="margin-bottom: 20px;">
+    <h2 class="section-title">🎟️ Promo Codes & Coupons</h2>
+  </div>
 
   <!-- Add New Promo -->
-  <div class="settings-card" style="margin-bottom:20px">
-    <h3>Add New Promo Code</h3>
-    <form class="admin-form ajax-form" data-url="/admin/promo/add" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <input name="code" placeholder="Code e.g. WELCOME50" required style="text-transform:uppercase" />
-      <select name="discount_type" required>
-        <option value="percent">Percentage (%)</option>
-        <option value="flat">Flat Amount (₹)</option>
-      </select>
-      <input type="number" name="discount_value" placeholder="Discount value" required min="1" />
-      <input type="number" name="max_uses" placeholder="Max uses (blank = unlimited)" min="1" />
-      <input type="date" name="expires_at" placeholder="Expiry date (optional)" />
-      <input name="description" placeholder="Description (optional)" />
-      <button type="submit" class="btn btn-gold glow" style="grid-column:1/-1">➕ Create Promo Code</button>
+  <div class="settings-card" style="margin-bottom:28px">
+    <h3>Create a New Promo Coupon</h3>
+    <form class="admin-form ajax-form" data-url="/admin/promo/add">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px">
+        <div class="form-group">
+          <label>Coupon Code</label>
+          <input name="code" placeholder="e.g. FIRST50" required style="text-transform:uppercase" />
+        </div>
+        <div class="form-group">
+          <label>Discount Type</label>
+          <select name="discount_type" required>
+            <option value="percent">Percentage (%)</option>
+            <option value="flat">Flat Discount (₹)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Discount Value</label>
+          <input type="number" name="discount_value" placeholder="e.g. 50" required min="1" />
+        </div>
+        <div class="form-group">
+          <label>Maximum Coupon Usage limit</label>
+          <input type="number" name="max_uses" placeholder="Leave blank for unlimited" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Expiry Date</label>
+          <input type="date" name="expires_at" placeholder="Select Expiry" />
+        </div>
+        <div class="form-group">
+          <label>Description / Terms</label>
+          <input name="description" placeholder="e.g. ₹50 off on first ride" />
+        </div>
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">➕ Create Active Promo Coupon</button>
     </form>
   </div>
 
@@ -112,39 +239,41 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Code</th>
-          <th>Type</th>
-          <th>Discount</th>
-          <th>Uses</th>
-          <th>Max Uses</th>
-          <th>Expires</th>
+          <th>Coupon Code</th>
+          <th>Discount Type</th>
+          <th>Discount Amount</th>
+          <th>Redeemed Times</th>
+          <th>Maximum Allocation</th>
+          <th>Expiry Date</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <% if (!promoCodes || !promoCodes.length) { %>
-        <tr><td colspan="8" class="empty">No promo codes yet. Create one above.</td></tr>
+        <tr><td colspan="8" class="empty">No promo codes active in database. Create one above to get started.</td></tr>
         <% } %>
         <% (promoCodes || []).forEach((promo) => { %>
         <tr>
           <td><code><strong><%= promo.code %></strong></code></td>
-          <td><span class="badge badge-soft"><%= promo.discount_type %></span></td>
+          <td><span class="badge badge-orange" style="text-transform: uppercase;"><%= promo.discount_type %></span></td>
           <td><strong><%= promo.discount_type === 'percent' ? promo.discount_value + '%' : '₹' + promo.discount_value %></strong></td>
-          <td><%= promo.uses_count || 0 %></td>
-          <td><%= promo.max_uses || '∞' %></td>
-          <td style="font-size:12px"><%= promo.expires_at ? String(promo.expires_at).slice(0,10) : 'No expiry' %></td>
+          <td><%= promo.uses_count || 0 %> / <%= promo.max_uses || '∞' %></td>
+          <td><%= promo.max_uses || 'Unlimited' %></td>
+          <td style="font-size:12px; font-weight: 500;"><%= promo.expires_at ? String(promo.expires_at).slice(0,10) : 'Permanent' %></td>
           <td><span class="badge <%= promo.is_active ? 'success' : 'danger' %>"><%= promo.is_active ? 'Active' : 'Disabled' %></span></td>
           <td class="actions">
-            <button class="btn <%= promo.is_active ? 'btn-ghost' : 'btn-success' %> admin-action"
+            <button class="btn <%= promo.is_active ? 'btn-ghost' : 'btn-primary' %> admin-action btn-sm"
               data-url="/admin/promo/<%= promo.id %>/toggle"
-              data-method="POST">
+              data-method="POST"
+              style="padding: 4px 8px; font-size: 11.5px;">
               <%= promo.is_active ? '🚫 Disable' : '✔ Enable' %>
             </button>
-            <button class="btn btn-danger admin-action"
+            <button class="btn btn-danger admin-action btn-sm"
               data-url="/admin/promo/<%= promo.id %>/delete"
               data-method="POST"
-              onclick="return confirm('Delete promo code <%= promo.code %>?')">
+              onclick="return confirm('Confirm permanent deletion of Coupon <%= promo.code %>?')"
+              style="padding: 4px 8px; font-size: 11.5px;">
               🗑 Delete
             </button>
           </td>

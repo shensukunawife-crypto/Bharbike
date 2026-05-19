@@ -203,7 +203,16 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    return res.json({ success: true, is_demo: true });
+    let walletSummary = null;
+    if (user_id) {
+      try {
+        walletSummary = await walletService.getWalletSummary(user_id);
+      } catch (e) {
+        console.warn("[verifyPayment] failed to get wallet summary:", e?.message);
+      }
+    }
+
+    return res.json({ success: true, is_demo: true, wallet: walletSummary });
   } catch (error) {
     console.error("[verifyPayment] Demo error:", error);
     return res.status(error.statusCode || 500).json({ success: false, message: error.message });

@@ -2281,3 +2281,76 @@ export async function activityLogsPage(req, res) {
   }
 }
 
+export async function adminLockBike(req, res) {
+  try {
+    const { bikeId } = req.params;
+
+    // Call IoT service to send immobilizer request
+    const iotResult = await iotService.lockBike(bikeId);
+
+    // Update Supabase DB
+    await supabase
+      .from("bikes")
+      .update({ is_locked: true, last_ping_at: new Date().toISOString() })
+      .eq("id", bikeId);
+
+    // Log action to bike_lock_logs
+    try {
+      await supabase.from("bike_lock_logs").insert([
+        {
+          bike_id: bikeId,
+          user_id: req.user?.id || null,
+          action: "lock",
+          method: "admin_portal",
+          success: iotResult?.ok !== false,
+        },
+      ]);
+    } catch (_) {}
+
+    return res.json({
+      success: true,
+      message: iotResult?.ok ? "Bike locked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`
+    });
+  } catch (error) {
+    console.error("[adminLockBike] failed", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+export async function adminUnlockBike(req, res) {
+  try {
+    const { bikeId } = req.params;
+
+    // Call IoT service to send mobilizer request
+    const iotResult = await iotService.unlockBike(bikeId);
+
+    // Update Supabase DB
+    await supabase
+      .from("bikes")
+      .update({ is_locked: false, last_ping_at: new Date().toISOString() })
+      .eq("id", bikeId);
+
+    // Log action to bike_lock_logs
+    try {
+      await supabase.from("bike_lock_logs").insert([
+        {
+          bike_id: bikeId,
+          user_id: req.user?.id || null,
+          action: "unlock",
+          method: "admin_portal",
+          success: iotResult?.ok !== false,
+        },
+      ]);
+    } catch (_) {}
+
+    return res.json({
+      success: true,
+      message: iotResult?.ok ? "Bike unlocked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`
+    });
+  } catch (error) {
+    console.error("[adminUnlockBike] failed", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+

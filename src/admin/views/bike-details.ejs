@@ -16,6 +16,25 @@
     <% } %>
   </div>
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">🛠️</span><span class="stat-label">Health</span></div><strong class="stat-value"><%= bike.healthStatus %></strong></div>
+  <div class="stat-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div class="stat-head">
+        <span class="stat-icon">🔒</span>
+        <span class="stat-label">Smart Lock</span>
+      </div>
+      <strong class="stat-value" style="color: <%= bike.is_locked !== false ? '#f87171' : '#4ade80' %>; font-size: 24px;">
+        <%= bike.is_locked !== false ? "Locked 🔒" : "Unlocked 🔓" %>
+      </strong>
+    </div>
+    <div style="display: flex; gap: 8px; margin-top: 12px;">
+      <button class="btn btn-sm btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/lock" data-method="POST" style="flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+        Lock
+      </button>
+      <button class="btn btn-sm btn-success admin-action" data-url="/admin/bikes/<%= bike.id %>/unlock" data-method="POST" style="flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; background-color: #22c55e; border-color: #22c55e; color: white;">
+        Unlock
+      </button>
+    </div>
+  </div>
 </div>
 
 <div class="analytics-grid">

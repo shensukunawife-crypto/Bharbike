@@ -40,6 +40,8 @@ router.post("/bikes/add", adminController.addBike);
 router.post("/bikes/:bikeId/assign", adminController.assignBike);
 router.post("/bikes/:bikeId/maintenance", adminController.sendBikeToMaintenance);
 router.post("/bikes/:bikeId/disable", adminController.disableBike);
+router.post("/bikes/:bikeId/lock", adminController.adminLockBike);
+router.post("/bikes/:bikeId/unlock", adminController.adminUnlockBike);
 router.post("/orders/:orderId/accept", adminController.acceptOrder);
 router.post("/orders/:orderId/reject", adminController.rejectOrder);
 router.post("/orders/:orderId/assign", adminController.assignOrder);

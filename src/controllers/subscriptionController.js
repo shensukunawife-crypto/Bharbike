@@ -1,4 +1,5 @@
 import * as subscriptionService from "../services/subscriptionService.js";
+import supabase from "../utils/supabaseClient.js";
 
 /**
  * GET /api/subscription/plans

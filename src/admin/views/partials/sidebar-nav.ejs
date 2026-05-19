@@ -3,7 +3,7 @@
   const gVehicle    = ['bikes', 'maintenance'].includes(active);
   const gUsers      = ['users', 'kyc-documents'].includes(active);
   const gFinancial  = ['earnings', 'analytics'].includes(active);
-  const gSystem     = ['system-workflow', 'backend-monitor'].includes(active);
+  const gSystem     = ['system-workflow', 'backend-monitor', 'activity-logs'].includes(active);
   const gComm       = ['support', 'notifications'].includes(active);
   const gAdmin      = ['payments', 'settings', 'admins'].includes(active);
 
@@ -161,6 +161,9 @@
       </a>
       <a class="nav-link nav-link-sub <%= active === 'backend-monitor' ? 'active' : '' %>" href="/admin/backend">
         <span class="nav-icon"><%- icons.monitor %></span><span>Backend Monitor</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'activity-logs' ? 'active' : '' %>" href="/admin/activity-logs">
+        <span class="nav-icon"><%- icons.workflow %></span><span>Activity Logs</span>
       </a>
     </div>
   </div>

@@ -13,6 +13,7 @@ router.use(requireAdminAuth);
 router.get("/", adminController.dashboard);
 router.get("/dashboard", adminController.dashboard);
 router.get("/backend", adminController.backendMonitor);
+router.get("/activity-logs", adminController.activityLogsPage);
 router.get("/users", adminController.users);
 router.get("/users/:userId", adminController.userProfile);
 router.get("/bikes", adminController.bikes);

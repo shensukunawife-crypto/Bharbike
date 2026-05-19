@@ -2150,3 +2150,126 @@ export async function systemWorkflowPage(req, res) {
     bodyView: "system-workflow",
   });
 }
+
+export async function activityLogsPage(req, res) {
+  try {
+    const safeData = (arr) => Array.isArray(arr) ? arr : [];
+
+    // Fetch data in parallel with independent try-catches to ensure high resilience
+    const [
+      ordersRes,
+      rentalsRes,
+      txsRes,
+      kycRes,
+      subsRes,
+      profilesRes
+    ] = await Promise.all([
+      supabase.from("orders").select("id, user_id, total_amount, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
+      supabase.from("rentals").select("id, user_id, bike_id, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
+      supabase.from("kyc_documents").select("id, user_id, type, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
+      supabase.from("user_subscriptions").select("id, user_id, status, plan_id, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
+      supabase.from("profiles").select("id, full_name, phone").then(r => r, e => ({ data: [] }))
+    ]);
+
+    // Normalize Orders
+    const normalizedOrders = safeData(ordersRes.data).map(o => ({
+      id: `order_${o.id}`,
+      user_id: o.user_id,
+      action: "Placed a ride order",
+      type: "order",
+      timestamp: o.created_at || new Date().toISOString(),
+      details: `Order total: ₹${o.total_amount || 0} (Status: ${o.status || 'Pending'})`
+    }));
+
+    // Normalize Rentals
+    const normalizedRentals = safeData(rentalsRes.data).map(r => ({
+      id: `rental_${r.id}`,
+      user_id: r.user_id,
+      action: "Rented a bike",
+      type: "booking",
+      timestamp: r.created_at || new Date().toISOString(),
+      details: `Bike ID: ${r.bike_id || '-'} (Rental status: ${r.status || 'Active'})`
+    }));
+
+    // Normalize Wallet Transactions
+    const normalizedTxs = safeData(txsRes.data).map(t => {
+      let actionText = "Wallet transaction";
+      if (t.type === "deposit") actionText = "Added money to wallet";
+      else if (t.type === "deduct") actionText = "Paid via wallet";
+      return {
+        id: `tx_${t.id}`,
+        user_id: t.user_id,
+        action: actionText,
+        type: "payment",
+        timestamp: t.created_at || new Date().toISOString(),
+        details: `Amount: ₹${t.amount || 0} (Status: ${t.status || 'Completed'})`
+      };
+    });
+
+    // Normalize KYC
+    const normalizedKyc = safeData(kycRes.data).map(k => ({
+      id: `kyc_${k.id}`,
+      user_id: k.user_id,
+      action: `Uploaded ${String(k.type || 'KYC').toUpperCase()} document`,
+      type: "kyc",
+      timestamp: k.created_at || new Date().toISOString(),
+      details: `Status: ${String(k.status || 'Pending').toUpperCase()}`
+    }));
+
+    // Normalize Subscriptions
+    const normalizedSubs = safeData(subsRes.data).map(s => ({
+      id: `sub_${s.id}`,
+      user_id: s.user_id,
+      action: `Subscription status updated to '${s.status}'`,
+      type: "subscription",
+      timestamp: s.created_at || new Date().toISOString(),
+      details: `Plan Reference: ${s.plan_id || 'Weekly Plan'}`
+    }));
+
+    // Map profiles
+    const profileMap = new Map(safeData(profilesRes.data).map(p => [String(p.id), p]));
+
+    // Combine and sort
+    let logs = [
+      ...normalizedOrders,
+      ...normalizedRentals,
+      ...normalizedTxs,
+      ...normalizedKyc,
+      ...normalizedSubs
+    ];
+
+    logs = logs.map(item => {
+      const profile = profileMap.get(String(item.user_id));
+      return {
+        ...item,
+        user_name: profile ? (profile.full_name || "Rider") : "Rider",
+        user_phone: profile ? (profile.phone || "No Phone") : ""
+      };
+    });
+
+    // Sort by timestamp DESC
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    logs = logs.slice(0, 100);
+
+    const stats = {
+      total: logs.length,
+      bookings: logs.filter(l => l.type === 'booking' || l.type === 'order').length,
+      payments: logs.filter(l => l.type === 'payment').length,
+      kyc: logs.filter(l => l.type === 'kyc').length,
+      subscriptions: logs.filter(l => l.type === 'subscription').length
+    };
+
+    return renderPage(res, {
+      title: "Activity Logs",
+      active: "activity-logs",
+      bodyView: "activity-logs",
+      logs,
+      stats
+    });
+  } catch (error) {
+    console.error("[adminController.activityLogsPage]", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+

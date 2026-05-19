@@ -1,0 +1,285 @@
+<style>
+  .logs-shell {
+    animation: fadeInUp .35s ease;
+  }
+  .logs-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .logs-head h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: #111827;
+  }
+  .logs-head p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #6b7280;
+  }
+  .logs-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .logs-search-box {
+    position: relative;
+    flex: 1;
+    min-width: 260px;
+  }
+  .logs-search-input {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .logs-search-input:focus {
+    border-color: #ff7a00;
+    box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.15);
+  }
+  .logs-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+  }
+  .logs-tabs {
+    display: flex;
+    gap: 8px;
+    background: #eef2f6;
+    padding: 4px;
+    border-radius: 12px;
+    overflow-x: auto;
+  }
+  .logs-tab {
+    padding: 8px 16px;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .logs-tab:hover {
+    color: #1e293b;
+  }
+  .logs-tab.active {
+    background: #ffffff;
+    color: #ff7a00;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  .badge-type {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge-booking { background: #eff6ff; color: #1d4ed8; }
+  .badge-payment { background: #ecfdf5; color: #047857; }
+  .badge-kyc { background: #fff7ed; color: #c2410c; }
+  .badge-subscription { background: #faf5ff; color: #6b21a8; }
+  .badge-order { background: #fdf2f8; color: #be185d; }
+
+  .sub-note {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 2px;
+  }
+  .text-details {
+    font-size: 13px;
+    color: #475569;
+    word-break: break-all;
+    max-width: 320px;
+  }
+  .timestamp-col {
+    white-space: nowrap;
+    font-size: 13px;
+    color: #64748b;
+  }
+  
+  .dark-mode .logs-tab.active {
+    background: #1e293b;
+    color: #ff7a00;
+  }
+  .dark-mode .logs-tabs {
+    background: #0f172a;
+  }
+  .dark-mode .logs-search-input {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="logs-shell">
+  <div class="logs-head">
+    <div>
+      <h2>User Activity Logs</h2>
+      <p>Real-time stream of rider actions, bookings, payments, and subscriptions.</p>
+    </div>
+  </div>
+
+  <div class="premium-stats">
+    <div class="premium-stat">
+      <div class="top"><span>📋</span><span>Total Actions</span></div>
+      <div class="val" id="stat-total"><%= stats.total %></div>
+    </div>
+    <div class="premium-stat">
+      <div class="top"><span>🚲</span><span>Bookings</span></div>
+      <div class="val" id="stat-bookings"><%= stats.bookings %></div>
+    </div>
+    <div class="premium-stat">
+      <div class="top"><span>💳</span><span>Payments</span></div>
+      <div class="val" id="stat-payments"><%= stats.payments %></div>
+    </div>
+    <div class="premium-stat">
+      <div class="top"><span>🪪</span><span>KYC Submissions</span></div>
+      <div class="val" id="stat-kyc"><%= stats.kyc %></div>
+    </div>
+    <div class="premium-stat">
+      <div class="top"><span>⭐</span><span>Subscriptions</span></div>
+      <div class="val" id="stat-subscriptions"><%= stats.subscriptions %></div>
+    </div>
+  </div>
+
+  <div class="logs-controls">
+    <div class="logs-search-box">
+      <svg class="logs-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="logs-search" class="logs-search-input" placeholder="Search by rider name, action, or user ID..." />
+    </div>
+
+    <div class="logs-tabs">
+      <button type="button" class="logs-tab active" data-filter="all">All Logs</button>
+      <button type="button" class="logs-tab" data-filter="booking,order">Bookings & Orders</button>
+      <button type="button" class="logs-tab" data-filter="payment">Payments</button>
+      <button type="button" class="logs-tab" data-filter="kyc">KYC uploads</button>
+      <button type="button" class="logs-tab" data-filter="subscription">Subscriptions</button>
+    </div>
+  </div>
+
+  <div class="premium-table-wrap">
+    <table class="premium-table" id="logs-table">
+      <thead>
+        <tr>
+          <th>Rider Name</th>
+          <th>Type</th>
+          <th>Action</th>
+          <th>Details</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!logs.length) { %>
+        <tr class="no-logs-row"><td colspan="5"><div class="empty-state"><strong>No activity logs found</strong></div></td></tr>
+        <% } %>
+        <% logs.forEach((item) => { %>
+        <tr class="log-row" data-type="<%= item.type %>">
+          <td>
+            <strong>
+              <% if (item.user_id) { %>
+              <a href="/admin/users/<%= item.user_id %>" style="color: inherit; text-decoration: none;" class="hover-underline">
+                <%= item.user_name || "User" %>
+              </a>
+              <% } else { %>
+              <%= item.user_name || "System" %>
+              <% } %>
+            </strong>
+            <div class="sub-note"><%= item.user_phone || "System Action" %></div>
+          </td>
+          <td>
+            <span class="badge-type badge-<%= item.type %>"><%= item.type %></span>
+          </td>
+          <td>
+            <strong><%= item.action %></strong>
+          </td>
+          <td>
+            <div class="text-details"><%= item.details || "-" %></div>
+          </td>
+          <td class="timestamp-col" data-time="<%= item.timestamp %>">
+            <%= new Date(item.timestamp).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const searchInput = document.getElementById("logs-search");
+    const tabButtons = document.querySelectorAll(".logs-tab");
+    const tableRows = document.querySelectorAll(".log-row");
+    const noLogsRow = document.querySelector(".no-logs-row");
+
+    let currentFilter = "all";
+    let currentSearch = "";
+
+    const applyFilters = () => {
+      let visibleCount = 0;
+      const filters = currentFilter.split(",");
+
+      tableRows.forEach((row) => {
+        const type = row.getAttribute("data-type") || "";
+        const rowText = row.textContent.toLowerCase();
+        
+        const typeMatches = currentFilter === "all" || filters.includes(type);
+        const searchMatches = !currentSearch || rowText.includes(currentSearch);
+
+        if (typeMatches && searchMatches) {
+          row.style.display = "";
+          visibleCount++;
+        } else {
+          row.style.display = "none";
+        }
+      });
+
+      if (noLogsRow) {
+        noLogsRow.style.display = visibleCount === 0 ? "" : "none";
+      }
+    };
+
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        currentSearch = e.target.value.toLowerCase().trim();
+        applyFilters();
+      });
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        tabButtons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.getAttribute("data-filter") || "all";
+        applyFilters();
+      });
+    });
+  })();
+</script>

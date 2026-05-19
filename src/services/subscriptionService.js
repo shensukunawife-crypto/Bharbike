@@ -285,7 +285,7 @@ export async function cancelSubscription(userId, subscriptionId, reason = null) 
       .eq("user_id", userId)
       .eq("status", "active")
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       if (isDatabaseError(error)) {
@@ -300,6 +300,25 @@ export async function cancelSubscription(userId, subscriptionId, reason = null) 
       }
       throw error;
     }
+
+    if (!data) {
+      // Check if subscription exists and is already cancelled
+      const { data: existing } = await supabase
+        .from("user_subscriptions")
+        .select("*")
+        .eq("id", subscriptionId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existing) {
+        if (existing.status === "cancelled") {
+          return existing;
+        }
+        throw new Error(`Subscription status is '${existing.status}', cannot cancel.`);
+      }
+      throw new Error("Active subscription not found to cancel.");
+    }
+
     return data;
   } catch (error) {
     console.error("[subscriptionService] cancelSubscription failed:", error.message);

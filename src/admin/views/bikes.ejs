@@ -121,9 +121,9 @@ function openAssignModal(bikeId, bikeCode) {
   const form = document.getElementById('assign-bike-form');
   document.getElementById('assign-bike-code').innerText = '(' + bikeCode + ')';
   form.setAttribute('data-url', '/admin/bikes/' + bikeId + '/assign');
-  modal.classList.add('active');
+  modal.classList.add('show');
 }
 function closeAssignModal() {
-  document.getElementById('assign-bike-modal').classList.remove('active');
+  document.getElementById('assign-bike-modal').classList.remove('show');
 }
 </script>

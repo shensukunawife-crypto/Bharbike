@@ -108,3 +108,34 @@ export async function updateNotificationSettings(userId, settings) {
     }
     return data;
 }
+
+/**
+ * Create a new user notification
+ */
+export async function createUserNotification(userId, title, message, type = "info") {
+    try {
+        const { data, error } = await supabase
+            .from("notifications")
+            .insert([{
+                user_id: userId,
+                title,
+                message,
+                body: message,
+                type,
+                read: false,
+                is_read: false,
+                created_at: new Date().toISOString()
+            }])
+            .select();
+        
+        if (error) {
+            console.error(`[notificationService] Failed to create notification for user ${userId}:`, error.message);
+            return null;
+        }
+        return data && data.length > 0 ? data[0] : null;
+    } catch (err) {
+        console.error(`[notificationService] Error creating notification for user ${userId}:`, err?.message || err);
+        return null;
+    }
+}
+

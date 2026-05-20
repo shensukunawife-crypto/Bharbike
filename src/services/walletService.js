@@ -1,5 +1,6 @@
 import supabase from "../config/supabase.js";
 import { AppError } from "../utils/AppError.js";
+import { createUserNotification } from "./notificationService.js";
 
 /**
  * Get or create wallet balance for a user
@@ -42,6 +43,14 @@ export async function addMoney(userId, amount, title, paymentId = null, orderId 
     throw new AppError(error.message || "Unable to add money to wallet", 500);
   }
 
+  // Create user notification (non-blocking)
+  createUserNotification(
+    userId,
+    "Money Added Successfully",
+    `₹${amount} has been added to your wallet successfully via: ${title}`,
+    "wallet"
+  ).catch((err) => console.warn("[walletService.addMoney] notification failed (non-blocking):", err?.message));
+
   return data;
 }
 
@@ -70,6 +79,14 @@ export async function deductMoney(userId, amount, title, description = null) {
     
     throw new AppError(error.message || "Unable to deduct money from wallet", 500);
   }
+
+  // Create user notification (non-blocking)
+  createUserNotification(
+    userId,
+    "Payment Successful",
+    `₹${amount} has been paid successfully from your wallet for: ${title}`,
+    "wallet"
+  ).catch((err) => console.warn("[walletService.deductMoney] notification failed (non-blocking):", err?.message));
 
   return data;
 }

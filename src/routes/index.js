@@ -28,6 +28,7 @@ import adminPaymentRoutes from "./adminPaymentRoutes.js";
 import * as walletController from "../controllers/walletController.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { createUserNotification } from "../services/notificationService.js";
 import supabase from "../utils/supabaseClient.js";
 import os from "os";
 import { adminApiLogin } from "../controllers/adminAuthController.js";
@@ -459,6 +460,13 @@ api.post("/delivery/apply", async (req, res) => {
       return res.status(500).json({ success: false, message: error.message });
     }
 
+    createUserNotification(
+      user_id,
+      "Application Submitted",
+      "Your delivery partner application has been successfully submitted and is under review.",
+      "kyc"
+    ).catch((err) => console.warn("[POST /api/delivery/apply] notification failed:", err?.message));
+
     return res.status(201).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Server error" });
@@ -587,6 +595,18 @@ api.patch("/admin/delivery/:id", async (req, res) => {
 
     if (error) {
       return res.status(500).json({ success: false, message: error.message });
+    }
+
+    if (data?.user_id) {
+      const isApproved = nextStatus === "approved";
+      createUserNotification(
+        data.user_id,
+        isApproved ? "Delivery Partner Approved! 🎉" : "Application Rejected",
+        isApproved
+          ? "Congratulations! Your delivery partner application has been approved. Go online and start earning today!"
+          : "Your delivery partner application was rejected. Please review your documents and re-apply.",
+        isApproved ? "success" : "kyc"
+      ).catch((err) => console.warn("[PATCH /admin/delivery/:id] notification failed:", err?.message));
     }
 
     return res.json({

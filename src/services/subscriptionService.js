@@ -1,4 +1,5 @@
 import supabase from "../utils/supabaseClient.js";
+import { createUserNotification } from "./notificationService.js";
 
 const MOCK_PLANS = [
   {
@@ -253,6 +254,15 @@ export async function createSubscription(userId, planId, paymentId = null) {
           plan: plan
         };
         mockSubscriptionsDB.set(userId, mockSub);
+        
+        // Trigger notification for simulated DB
+        createUserNotification(
+          userId,
+          "Subscription Activated! 🚲",
+          `Your ${plan.display_name} subscription has been activated! Enjoy unlimited rides and premium modules.`,
+          "success"
+        ).catch((err) => console.warn("[subscriptionService.createSubscription] mock notification failed:", err?.message));
+
         return mockSub;
       }
       throw error;
@@ -260,6 +270,14 @@ export async function createSubscription(userId, planId, paymentId = null) {
 
     // Create billing record
     await createBillingRecord(data.id, userId, plan.price, "paid", paymentId);
+
+    // Trigger notification for real DB
+    createUserNotification(
+      userId,
+      "Subscription Activated! 🚲",
+      `Your ${plan.display_name} subscription has been activated! Enjoy unlimited rides and premium modules.`,
+      "success"
+    ).catch((err) => console.warn("[subscriptionService.createSubscription] notification failed:", err?.message));
 
     return data;
   } catch (error) {
@@ -295,6 +313,15 @@ export async function cancelSubscription(userId, subscriptionId, reason = null) 
           mockSub.cancelled_at = new Date().toISOString();
           mockSub.cancellation_reason = reason;
           mockSubscriptionsDB.delete(userId); // remove from active
+          
+          // Trigger notification for simulated DB
+          createUserNotification(
+            userId,
+            "Subscription Cancelled",
+            "Your subscription has been cancelled. It will remain active until your period ends.",
+            "info"
+          ).catch((err) => console.warn("[subscriptionService.cancelSubscription] mock notification failed:", err?.message));
+
           return mockSub;
         }
       }
@@ -318,6 +345,14 @@ export async function cancelSubscription(userId, subscriptionId, reason = null) 
       }
       throw new Error("Active subscription not found to cancel.");
     }
+
+    // Trigger notification for real DB
+    createUserNotification(
+      userId,
+      "Subscription Cancelled",
+      "Your subscription has been cancelled. It will remain active until your period ends.",
+      "info"
+    ).catch((err) => console.warn("[subscriptionService.cancelSubscription] notification failed:", err?.message));
 
     return data;
   } catch (error) {
@@ -461,6 +496,19 @@ export async function expireOldSubscriptions() {
 
     if (error) throw error;
     console.log(`[subscriptionService] Expired ${data?.length || 0} subscriptions`);
+
+    // Trigger non-blocking notifications for all expired subscriptions
+    if (data && data.length > 0) {
+      for (const sub of data) {
+        createUserNotification(
+          sub.user_id,
+          "Subscription Expired",
+          "Your subscription has expired. Renew today to unlock GPS and battery controls.",
+          "kyc"
+        ).catch((err) => console.warn(`[subscriptionService.expireOldSubscriptions] notification failed for user ${sub.user_id}:`, err?.message));
+      }
+    }
+
     return data || [];
   } catch (error) {
     console.error("[subscriptionService] expireOldSubscriptions failed:", error.message);

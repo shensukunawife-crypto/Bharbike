@@ -114,3 +114,68 @@ export const uploadImage = asyncHandler(async (req, res) => {
     message: "Image uploaded successfully",
   });
 });
+
+/**
+ * Get message history for a ticket
+ * GET /api/support/ticket/:ticketId/messages
+ */
+export const getChatMessages = asyncHandler(async (req, res) => {
+  const { ticketId } = req.params;
+
+  // Verify ticket exists and belongs to user (or user is admin)
+  const ticket = await supportService.getTicketById(ticketId);
+  if (req.user.id !== ticket.user_id && !req.user.is_admin) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied",
+    });
+  }
+
+  const messages = await supportService.getTicketMessages(ticketId);
+
+  res.json({
+    success: true,
+    data: messages,
+  });
+});
+
+/**
+ * Send a support message
+ * POST /api/support/ticket/:ticketId/messages
+ */
+export const sendChatMessage = asyncHandler(async (req, res) => {
+  const { ticketId } = req.params;
+  const { message, image_url } = req.body;
+
+  if (!message && !image_url) {
+    return res.status(400).json({
+      success: false,
+      message: "Message text or image URL is required",
+    });
+  }
+
+  // Verify ticket exists and belongs to user (or user is admin)
+  const ticket = await supportService.getTicketById(ticketId);
+  if (req.user.id !== ticket.user_id && !req.user.is_admin) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied",
+    });
+  }
+
+  const senderType = req.user.is_admin ? "admin" : "user";
+
+  const msg = await supportService.sendTicketMessage(
+    ticketId,
+    req.user.id,
+    senderType,
+    message,
+    image_url
+  );
+
+  res.status(201).json({
+    success: true,
+    data: msg,
+  });
+});
+

@@ -1,171 +1,916 @@
 <style>
-  .support-page {
-    animation: fadeInUp 0.35s ease;
+  :root {
+    --chat-accent: #ff7a00;
+    --chat-accent-hover: #e06b00;
+    --chat-bg-user: rgba(255, 122, 0, 0.08);
+    --chat-bg-admin: var(--border-light);
+    --chat-border-user: rgba(255, 122, 0, 0.15);
+    --chat-border-admin: var(--border);
   }
-  .summary-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-    background: var(--border-light);
-    padding: 16px;
-    border-radius: var(--radius);
+
+  .support-container {
+    display: flex;
+    height: calc(100vh - 180px);
+    background: var(--bg-card, #ffffff);
     border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .summary-list div {
+
+  /* Left Panel - Ticket List Sidebar */
+  .support-sidebar {
+    width: 360px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-sidebar, #fafafa);
+    flex-shrink: 0;
+  }
+
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sidebar-search-box {
+    position: relative;
+  }
+
+  .sidebar-search {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    transition: all 0.2s ease;
+  }
+
+  .sidebar-search:focus {
+    border-color: var(--chat-accent);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.15);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  .ticket-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .ticket-item {
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    position: relative;
+  }
+
+  .ticket-item:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  .ticket-item.active {
+    background: rgba(255, 122, 0, 0.06);
+    border-color: rgba(255, 122, 0, 0.2);
+  }
+
+  .ticket-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .ticket-number {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ticket-number::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ccc;
+  }
+
+  .ticket-item.status-pending .ticket-number::before {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+    animation: pulse 1.5s infinite;
+  }
+
+  .ticket-item.status-in_progress .ticket-number::before {
+    background: #eab308;
+    box-shadow: 0 0 8px #eab308;
+    animation: pulse 1.5s infinite;
+  }
+
+  .ticket-item.status-resolved .ticket-number::before {
+    background: #22c55e;
+  }
+
+  .ticket-date {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .ticket-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .ticket-issue {
+    background: var(--border-light);
+    color: var(--text);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .ticket-preview {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Right Panel - Chat Console */
+  .support-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    position: relative;
+  }
+
+  .chat-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 32px;
+    background: radial-gradient(circle at center, rgba(255,122,0,0.02) 0%, transparent 70%);
+  }
+
+  .chat-placeholder-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    animation: bounceSlow 3s infinite ease-in-out;
+  }
+
+  .chat-placeholder h3 {
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .chat-placeholder p {
+    font-size: 13px;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  /* Active Chat Content */
+  .chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .chat-header-info {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
-  .summary-list div span {
-    font-size: 10px;
+
+  .chat-header-title {
     font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .summary-list div strong {
-    font-size: 13px;
+    font-size: 16px;
     color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .btn-gradient {
-    background: linear-gradient(135deg, var(--accent) 0%, #d946ef 100%);
+
+  .chat-header-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: rgba(0,0,0,0.01);
+  }
+
+  .message-group {
+    display: flex;
+    flex-direction: column;
+    max-width: 75%;
+  }
+
+  .message-group.incoming {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+
+  .message-group.outgoing {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  .message-bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  }
+
+  .incoming .message-bubble {
+    background: var(--chat-bg-user);
+    color: var(--text);
+    border: 1px solid var(--chat-border-user);
+    border-top-left-radius: 2px;
+  }
+
+  .outgoing .message-bubble {
+    background: var(--chat-bg-admin);
+    color: var(--text);
+    border: 1px solid var(--chat-border-admin);
+    border-top-right-radius: 2px;
+  }
+
+  .message-image {
+    max-width: 240px;
+    border-radius: 8px;
+    margin-top: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .message-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .chat-quick-replies {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    background: var(--bg-card);
+    scrollbar-width: none;
+  }
+
+  .quick-reply-chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: var(--border-light);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+
+  .quick-reply-chip:hover {
+    border-color: var(--chat-accent);
+    background: rgba(255, 122, 0, 0.05);
+    color: var(--chat-accent);
+  }
+
+  .chat-input-area {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+
+  .chat-input-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .chat-textarea {
+    flex: 1;
+    resize: none;
+    height: 44px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    transition: all 0.2s ease;
+    line-height: 1.4;
+  }
+
+  .chat-textarea:focus {
+    border-color: var(--chat-accent);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.1);
+  }
+
+  .chat-send-btn {
+    height: 44px;
+    width: 44px;
+    border-radius: 10px;
+    background: var(--chat-accent);
     color: #fff;
     border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
   }
-  .btn-gradient:hover {
-    opacity: 0.9;
-    box-shadow: 0 4px 12px rgba(242,109,33,0.2);
+
+  .chat-send-btn:hover {
+    background: var(--chat-accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 122, 0, 0.2);
+  }
+
+  .chat-send-btn:active {
+    transform: translateY(0);
+  }
+
+  /* Stat strip */
+  .chat-stats-strip {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  .chat-stat-card {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .chat-stat-icon {
+    font-size: 24px;
+    opacity: 0.8;
+  }
+
+  .chat-stat-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .chat-stat-number {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes bounceSlow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
   }
 </style>
 
-<div class="page-stat-bar support-page">
-  <div class="page-stat">
-    <p class="page-stat-label">🎫 Total Tickets</p>
-    <p class="page-stat-value" id="support-stat-total"><%= stats?.total || 0 %></p>
+<div class="chat-stats-strip">
+  <div class="chat-stat-card">
+    <div class="chat-stat-icon">🎫</div>
+    <div class="chat-stat-info">
+      <span class="chat-stat-label">Total Support Sessions</span>
+      <span class="chat-stat-number" id="stat-total"><%= stats?.total || 0 %></span>
+    </div>
   </div>
-  <div class="page-stat page-stat-accent">
-    <p class="page-stat-label">🟠 Pending</p>
-    <p class="page-stat-value" id="support-stat-pending"><%= stats?.pending || 0 %></p>
+  <div class="chat-stat-card" style="border-left: 4px solid #ef4444;">
+    <div class="chat-stat-icon">🔴</div>
+    <div class="chat-stat-info">
+      <span class="chat-stat-label">Pending User Chats</span>
+      <span class="chat-stat-number" id="stat-pending"><%= stats?.pending || 0 %></span>
+    </div>
   </div>
-  <div class="page-stat">
-    <p class="page-stat-label">🔄 In Progress</p>
-    <p class="page-stat-value" id="support-stat-inprogress"><%= stats?.inProgress || 0 %></p>
+  <div class="chat-stat-card" style="border-left: 4px solid #eab308;">
+    <div class="chat-stat-icon">🔄</div>
+    <div class="chat-stat-info">
+      <span class="chat-stat-label">In Progress Chats</span>
+      <span class="chat-stat-number" id="stat-progress"><%= stats?.inProgress || 0 %></span>
+    </div>
   </div>
-  <div class="page-stat">
-    <p class="page-stat-label">✅ Resolved</p>
-    <p class="page-stat-value" id="support-stat-resolved"><%= stats?.resolved || 0 %></p>
+  <div class="chat-stat-card" style="border-left: 4px solid #22c55e;">
+    <div class="chat-stat-icon">✅</div>
+    <div class="chat-stat-info">
+      <span class="chat-stat-label">Resolved Tickets</span>
+      <span class="chat-stat-number" id="stat-resolved"><%= stats?.resolved || 0 %></span>
+    </div>
   </div>
 </div>
 
-<div class="toolbar">
-  <form method="GET" action="/admin/support" class="inline-form support-filter-form">
-    <input class="filter-input" type="text" name="search" value="<%= search || '' %>" placeholder="Search # / 6-digit / User" />
-    <select name="status" class="filter-input">
-      <option value="all" <%= filter === 'all' ? 'selected' : '' %>>All Status</option>
-      <option value="pending" <%= filter === 'pending' ? 'selected' : '' %>>Pending</option>
-      <option value="in_progress" <%= filter === 'in_progress' ? 'selected' : '' %>>In Progress</option>
-      <option value="resolved" <%= filter === 'resolved' ? 'selected' : '' %>>Resolved</option>
-    </select>
-    <select name="sort" class="filter-input">
-      <option value="newest" <%= sort !== 'oldest' ? 'selected' : '' %>>Newest</option>
-      <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest</option>
-    </select>
-    <button class="btn btn-gold" type="submit">Apply</button>
-  </form>
-</div>
-
-<div class="table-wrap" id="support-table-root" data-filter="<%= filter %>" data-search="<%= search || '' %>" data-sort="<%= sort || 'newest' %>">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Ticket ID</th>
-        <th>Bike</th>
-        <th>Issue</th>
-        <th>User</th>
-        <th>Status</th>
-        <th>Created</th>
-        <th>Image</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="support-table-body">
+<div class="support-container">
+  <!-- Left Panel -->
+  <div class="support-sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span>💬</span> Live Support Chats
+      </div>
+      <div class="sidebar-search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="sidebar-search" class="sidebar-search" placeholder="Search by Ticket ID / User ID..." />
+      </div>
+    </div>
+    <div class="ticket-list" id="ticket-list-container">
       <% if (!(tickets || []).length) { %>
-      <tr><td colspan="8" class="empty">No support tickets found</td></tr>
+        <div style="padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 13px;">
+          No active support chats
+        </div>
+      <% } else { %>
+        <% tickets.forEach((t) => { %>
+          <div class="ticket-item status-<%= t.status %>" 
+               id="ticket-item-<%= t.id %>"
+               data-id="<%= t.id %>"
+               data-number="<%= t.ticket_number %>"
+               data-user-id="<%= t.user_id %>"
+               data-bike="<%= t.bike_name || '' %>"
+               data-issue="<%= t.issue_type || '' %>"
+               data-desc="<%= t.description || '' %>"
+               data-status="<%= t.status %>"
+               data-created="<%= t.created_at %>"
+               data-image="<%= t.image_url || '' %>"
+               onclick="selectTicket(this)">
+            <div class="ticket-item-header">
+              <span class="ticket-number">#<%= t.ticket_number || 'BB-Chat' %></span>
+              <span class="ticket-date"><%= t.relativeCreatedAt || 'Just now' %></span>
+            </div>
+            <div class="ticket-meta">
+              <span>👤 <%= String(t.user_id || 'User').slice(0, 8) %></span>
+              <span class="ticket-issue"><%= t.issue_type %></span>
+            </div>
+            <div class="ticket-preview"><%= t.description || 'No description provided.' %></div>
+          </div>
+        <% }) %>
       <% } %>
-      <% (tickets || []).forEach((ticket) => { %>
-      <tr>
-        <td><%= (ticket.ticket_number != null && ticket.ticket_number !== undefined) ? ('#' + ticket.ticket_number) : '—' %> <button class="btn btn-ghost copy-ticket-id" data-value="<%= (ticket.ticket_number != null && ticket.ticket_number !== undefined) ? ticket.ticket_number : '' %>">📋</button></td>
-        <td>🛵 <%= ticket.bike_name || '-' %></td>
-        <td>
-          <div>
-            <strong>
-              <span class="badge <%= ticket.issue_type === 'rsa' ? 'danger' : ticket.issue_type === 'at_hub' ? 'info' : ticket.issue_type === 'battery' ? 'warning' : ticket.issue_type === 'brake' ? 'danger' : ticket.issue_type === 'engine' ? 'info' : 'badge-soft' %>">
-                <%= ticket.issue_type === 'rsa' ? 'RSA (Road Side)' : ticket.issue_type === 'at_hub' ? 'At Hub' : ticket.issue_type || '-' %>
-              </span>
-            </strong>
-          </div>
-          <div class="table-subtext" title="<%= ticket.description || '' %>">
-            <%= String(ticket.description || '-').slice(0, 64) %><%= String(ticket.description || '').length > 64 ? '...' : '' %>
-          </div>
-        </td>
-        <td><%= String(ticket.user_id || '-').slice(0, 8) %></td>
-        <td>
-          <span class="badge <%= ticket.status === 'resolved' ? 'success' : ticket.status === 'in_progress' ? 'warning' : 'danger' %>">
-            <%= ticket.status === 'in_progress' ? 'In Progress' : ticket.status === 'resolved' ? 'Resolved' : 'Pending' %>
-          </span>
-        </td>
-        <td title="<%= String(ticket.created_at || '').slice(0, 19).replace('T', ' ') %>"><%= ticket.relativeCreatedAt || String(ticket.created_at || '').slice(0, 19).replace('T', ' ') %></td>
-        <td>
-          <% if (ticket.image_url) { %>
-            <img src="<%= ticket.image_url %>" alt="ticket" style="width:40px;height:40px;border-radius:8px;object-fit:cover;" />
-          <% } else { %>
-            <span class="table-subtext">No image</span>
-          <% } %>
-        </td>
-        <td class="actions">
-          <button class="btn btn-outline support-view-btn" data-ticket='<%- JSON.stringify(ticket).replace(/'/g, "&apos;") %>'>👁️ View</button>
-          <button class="btn btn-info support-status-btn" data-id="<%= ticket.id %>" data-status="in_progress">🔄 Progress</button>
-          <button class="btn btn-success support-status-btn" data-id="<%= ticket.id %>" data-status="resolved">✔ Resolve</button>
-          <button class="btn btn-gradient support-convert-btn" data-id="<%= ticket.id %>">⚙ Convert</button>
-        </td>
-      </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</div>
+    </div>
+  </div>
 
-<div class="modal" id="support-view-modal">
-  <div class="modal-card">
-    <h3>Ticket Details</h3>
-    <div class="summary-list">
-      <div><span>ID</span><strong id="support-view-id">-</strong></div>
-      <div><span>User</span><strong id="support-view-user">-</strong></div>
-      <div><span>Issue</span><strong id="support-view-issue">-</strong></div>
-      <div><span>Status</span><strong id="support-view-status">-</strong></div>
-      <div><span>Created</span><strong id="support-view-created">-</strong></div>
+  <!-- Right Panel -->
+  <div class="support-chat" id="chat-panel-container">
+    <!-- Placeholder Screen -->
+    <div class="chat-placeholder" id="chat-placeholder-el">
+      <div class="chat-placeholder-icon">🧑‍💻</div>
+      <h3>BharBike Support Desk</h3>
+      <p>Select any customer's active Chat ID from the left panel to begin real-time chat assistance.</p>
     </div>
-    <div class="inline-form" style="margin-top:10px;">
-      <select id="support-view-status-select" class="filter-input">
-        <option value="pending">Pending</option>
-        <option value="in_progress">In Progress</option>
-        <option value="resolved">Resolved</option>
-      </select>
-      <button id="support-view-update-btn" class="btn btn-gold" data-ticket-id="">Update Status</button>
+
+    <!-- Active Chat Screen (Initially Hidden) -->
+    <div style="display: none; flex-direction: column; flex: 1;" id="chat-active-el">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-header-title">
+            <span id="active-chat-title">#000000</span>
+            <span class="badge" id="active-chat-status-badge">Pending</span>
+          </div>
+          <div class="chat-header-subtitle">
+            <span id="active-chat-user-lbl">User: loading...</span>
+            <span style="margin: 0 6px;">•</span>
+            <span id="active-chat-issue-lbl">Issue: RSA</span>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="btn btn-outline" id="btn-convert-maint" style="font-size: 12px; padding: 6px 12px;">🛠 Convert to Maint.</button>
+          <button class="btn btn-info" id="btn-in-progress" style="font-size: 12px; padding: 6px 12px;">🔄 In Progress</button>
+          <button class="btn btn-success" id="btn-resolve-ticket" style="font-size: 12px; padding: 6px 12px;">✔ Resolve</button>
+        </div>
+      </div>
+
+      <!-- Messages Body -->
+      <div class="chat-messages" id="chat-messages-container">
+        <!-- Message bubbles dynamically populated here -->
+      </div>
+
+      <!-- Quick Replies Bar -->
+      <div class="chat-quick-replies">
+        <div class="quick-reply-chip" onclick="applyQuickReply('Hello! BharBike Support here. How can I help you today?')">👋 Welcome</div>
+        <div class="quick-reply-chip" onclick="applyQuickReply('Could you please upload a photo of the vehicle showing the issue?')">📸 Request Photo</div>
+        <div class="quick-reply-chip" onclick="applyQuickReply('We are looking into your issue and resolving it right away.')">⏳ Investigating</div>
+        <div class="quick-reply-chip" onclick="applyQuickReply('I have successfully refunded/updated your wallet balance. Please check.')">💳 Wallet Updated</div>
+        <div class="quick-reply-chip" onclick="applyQuickReply('Your smartlock is now unlocked. You can resume your ride.')">🔓 Smartlock Unlocked</div>
+        <div class="quick-reply-chip" onclick="applyQuickReply('This ticket has been resolved. Feel free to reach out if you have any questions!')">✅ Issue Resolved</div>
+      </div>
+
+      <!-- Input Form -->
+      <div class="chat-input-area">
+        <form class="chat-input-form" onsubmit="handleFormSubmit(event)">
+          <input type="text" id="chat-input-msg" class="chat-textarea" placeholder="Type your support reply..." autocomplete="off" />
+          <button type="submit" class="chat-send-btn">
+            <span>✈</span>
+          </button>
+        </form>
+      </div>
     </div>
-    <p id="support-view-desc" style="margin-top:12px;color:#4b5563;">-</p>
-    <a id="support-view-image-link" class="btn btn-ghost" href="#" target="_blank" rel="noreferrer">Open Image</a>
-    <img id="support-view-image" src="" alt="ticket image" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;margin-top:10px;display:none;" />
   </div>
 </div>
 
+<!-- Convert Confirmation Modal -->
 <div class="modal" id="support-convert-modal">
   <div class="modal-card">
     <h3>Convert to Maintenance</h3>
-    <p style="color:#6b7280;">Convert this ticket to maintenance and mark it in progress?</p>
-    <div class="actions" style="margin-top:12px;">
-      <button id="support-convert-confirm" class="btn btn-gradient" data-ticket-id="">Yes, Convert</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('support-convert-modal').classList.remove('show')">Cancel</button>
+    <p style="color:var(--text-muted); font-size: 13px;">Are you sure you want to convert this support ticket to an active maintenance ticket? This will automatically place the bike in maintenance mode.</p>
+    <div class="actions" style="margin-top:16px; display:flex; gap: 8px; justify-content: flex-end;">
+      <button class="btn btn-outline" onclick="closeConvertModal()">Cancel</button>
+      <button id="support-convert-confirm-btn" class="btn btn-gold">Yes, Convert</button>
     </div>
   </div>
 </div>
+
+<script>
+  let activeTicketId = null;
+  let activeTicketData = null;
+  let refreshTimer = null;
+
+  // Select a ticket to display in chat panel
+  function selectTicket(el) {
+    // UI Update left panel
+    document.querySelectorAll('.ticket-item').forEach(item => item.classList.remove('active'));
+    el.classList.add('active');
+
+    // Extract attributes
+    const id = el.dataset.id;
+    const number = el.dataset.number;
+    const userId = el.dataset.userId;
+    const bike = el.dataset.bike;
+    const issue = el.dataset.issue;
+    const desc = el.dataset.desc;
+    const status = el.dataset.status;
+    const created = el.dataset.created;
+    const image = el.dataset.image;
+
+    activeTicketId = id;
+    activeTicketData = { id, number, userId, bike, issue, desc, status, created, image };
+
+    // Toggle panels
+    document.getElementById('chat-placeholder-el').style.display = 'none';
+    document.getElementById('chat-active-el').style.display = 'flex';
+
+    // Populate header
+    document.getElementById('active-chat-title').innerText = 'Ticket #' + number;
+    document.getElementById('active-chat-user-lbl').innerText = 'User: ' + userId.slice(0, 8);
+    document.getElementById('active-chat-issue-lbl').innerText = 'Issue: ' + (issue === 'rsa' ? 'RSA (Road Side Support)' : issue);
+    
+    // Status badge styling
+    const badge = document.getElementById('active-chat-status-badge');
+    badge.innerText = status.toUpperCase().replace('_', ' ');
+    badge.className = 'badge';
+    if (status === 'resolved') badge.classList.add('success');
+    else if (status === 'in_progress') badge.classList.add('warning');
+    else badge.classList.add('danger');
+
+    // Attach event listeners for actions
+    document.getElementById('btn-resolve-ticket').onclick = () => updateTicketStatus(id, 'resolved');
+    document.getElementById('btn-in-progress').onclick = () => updateTicketStatus(id, 'in_progress');
+    document.getElementById('btn-convert-maint').onclick = () => openConvertModal(id);
+
+    // Initial load of messages
+    loadMessages(id);
+
+    // Set polling refresh for live messages every 2 seconds
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => {
+      if (activeTicketId === id) {
+        pollMessages(id);
+      }
+    }, 2000);
+  }
+
+  // Load message list from server
+  async function loadMessages(ticketId) {
+    const container = document.getElementById('chat-messages-container');
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">Syncing messages...</div>';
+
+    try {
+      const res = await fetch(`/admin/support/ticket/${ticketId}/messages`);
+      const payload = await res.json();
+
+      if (payload.success) {
+        renderMessages(payload.data);
+      } else {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:red;">Error loading messages: ${payload.message}</div>`;
+      }
+    } catch (e) {
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:red;">Network error syncing chat history.</div>';
+    }
+  }
+
+  // Polling load (silent, doesn't flash loading spinner)
+  async function pollMessages(ticketId) {
+    try {
+      const res = await fetch(`/admin/support/ticket/${ticketId}/messages`);
+      const payload = await res.json();
+      if (payload.success && activeTicketId === ticketId) {
+        renderMessages(payload.data, true);
+      }
+    } catch (e) {
+      console.warn("Live chat polling failed", e);
+    }
+  }
+
+  // Render message arrays into bubbles
+  let currentMsgCount = 0;
+  function renderMessages(messages, isPoll = false) {
+    const container = document.getElementById('chat-messages-container');
+    
+    // If it is a poll and message length hasn't changed, skip DOM re-render to save performance
+    if (isPoll && messages.length === currentMsgCount) {
+      return;
+    }
+    currentMsgCount = messages.length;
+
+    let html = '';
+
+    // First, render the original ticket description as the starting system/user message if present
+    if (activeTicketData && activeTicketData.desc) {
+      html += `
+        <div class="message-group incoming">
+          <div class="message-bubble" style="background:rgba(0,0,0,0.03); border:1px dashed var(--border);">
+            <div style="font-weight:700; font-size:11px; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">🎫 Initial Issue Description</div>
+            <strong>${activeTicketData.issue.toUpperCase().replace('_', ' ')}:</strong> ${activeTicketData.desc}
+            ${activeTicketData.image ? `<br/><img class="message-image" src="${activeTicketData.image}" onclick="window.open('${activeTicketData.image}', '_blank')" />` : ''}
+          </div>
+          <div class="message-time">${new Date(activeTicketData.created).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+        </div>
+      `;
+    }
+
+    if (messages.length === 0) {
+      html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No support messages yet. Type below to reply.</div>';
+    } else {
+      messages.forEach(msg => {
+        const isIncoming = msg.sender_type === 'user';
+        const groupClass = isIncoming ? 'incoming' : 'outgoing';
+        const formattedTime = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        html += `
+          <div class="message-group ${groupClass}">
+            <div class="message-bubble">
+              ${escapeHtml(msg.message)}
+              ${msg.image_url ? `<br/><img class="message-image" src="${msg.image_url}" onclick="window.open('${msg.image_url}', '_blank')" />` : ''}
+            </div>
+            <div class="message-time">${formattedTime}</div>
+          </div>
+        `;
+      });
+    }
+
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // Apply quick reply
+  function applyQuickReply(text) {
+    document.getElementById('chat-input-msg').value = text;
+    document.getElementById('chat-input-msg').focus();
+  }
+
+  // Handle support message form submit
+  async function handleFormSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById('chat-input-msg');
+    const text = input.value.trim();
+
+    if (!text || !activeTicketId) return;
+
+    input.value = '';
+
+    // Optimistic UI update
+    const container = document.getElementById('chat-messages-container');
+    const optimisticBubble = document.createElement('div');
+    optimisticBubble.className = 'message-group outgoing';
+    optimisticBubble.innerHTML = `
+      <div class="message-bubble" style="opacity: 0.7;">
+        ${escapeHtml(text)}
+      </div>
+      <div class="message-time">Sending...</div>
+    `;
+    container.appendChild(optimisticBubble);
+    container.scrollTop = container.scrollHeight;
+
+    try {
+      const res = await fetch(`/admin/support/ticket/${activeTicketId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: text })
+      });
+      const payload = await res.json();
+      if (payload.success) {
+        loadMessages(activeTicketId);
+        
+        // Update local ticket item in the sidebar status to "in_progress"
+        const ticketItem = document.getElementById(`ticket-item-${activeTicketId}`);
+        if (ticketItem) {
+          ticketItem.dataset.status = 'in_progress';
+          ticketItem.className = 'ticket-item active status-in_progress';
+        }
+      } else {
+        alert("Failed to send message: " + payload.message);
+        loadMessages(activeTicketId);
+      }
+    } catch (err) {
+      alert("Network failure. Message could not be delivered.");
+      loadMessages(activeTicketId);
+    }
+  }
+
+  // Update support ticket status (Resolved, In Progress)
+  async function updateTicketStatus(ticketId, status) {
+    try {
+      const res = await fetch(`/api/support/ticket/${ticketId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+      const payload = await res.json();
+
+      if (payload.success) {
+        // Update sidebar element status
+        const item = document.getElementById(`ticket-item-${ticketId}`);
+        if (item) {
+          item.dataset.status = status;
+          item.className = `ticket-item active status-${status}`;
+        }
+
+        // Update badge
+        const badge = document.getElementById('active-chat-status-badge');
+        badge.innerText = status.toUpperCase().replace('_', ' ');
+        badge.className = 'badge';
+        if (status === 'resolved') badge.classList.add('success');
+        else if (status === 'in_progress') badge.classList.add('warning');
+        else badge.classList.add('danger');
+
+        // Show confirmation banner
+        const container = document.getElementById('chat-messages-container');
+        const alertDiv = document.createElement('div');
+        alertDiv.style.cssText = 'text-align:center; padding:8px; border-radius:8px; margin: 10px 0; font-size:12px; background:rgba(0,0,0,0.03); color:var(--text-muted);';
+        alertDiv.innerHTML = `⚙ System: Ticket status updated to <strong>${status.toUpperCase()}</strong>`;
+        container.appendChild(alertDiv);
+        container.scrollTop = container.scrollHeight;
+        
+        // Refresh stat badges
+        refreshStats();
+      } else {
+        alert("Failed to update status: " + payload.message);
+      }
+    } catch (e) {
+      alert("Error updating status.");
+    }
+  }
+
+  // Open convert to maintenance modal
+  function openConvertModal(ticketId) {
+    document.getElementById('support-convert-modal').classList.add('show');
+    document.getElementById('support-convert-confirm-btn').onclick = () => confirmConvert(ticketId);
+  }
+
+  function closeConvertModal() {
+    document.getElementById('support-convert-modal').classList.remove('show');
+  }
+
+  async function confirmConvert(ticketId) {
+    closeConvertModal();
+    try {
+      const res = await fetch(`/admin/support/${ticketId}/convert`, {
+        method: 'POST'
+      });
+      const payload = await res.json();
+      if (payload.success) {
+        updateTicketStatus(ticketId, 'in_progress');
+        alert("Ticket successfully converted to active Maintenance Job.");
+      } else {
+        alert("Convert failed: " + payload.message);
+      }
+    } catch (e) {
+      alert("Error converting ticket.");
+    }
+  }
+
+  // Simple HTML Escaper
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Local Search & Filter Sidebar Chats
+  document.getElementById('sidebar-search').addEventListener('input', function(e) {
+    const q = e.target.value.toLowerCase().trim();
+    document.querySelectorAll('.ticket-item').forEach(item => {
+      const ticketId = item.dataset.number.toLowerCase();
+      const userId = item.dataset.userId.toLowerCase();
+      const issue = item.dataset.issue.toLowerCase();
+      const desc = item.dataset.desc.toLowerCase();
+
+      if (ticketId.includes(q) || userId.includes(q) || issue.includes(q) || desc.includes(q)) {
+        item.style.display = 'flex';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+  });
+
+  // Fetch updated support stats
+  async function refreshStats() {
+    // Local calculation based on list datasets
+    const allItems = Array.from(document.querySelectorAll('.ticket-item'));
+    const total = allItems.length;
+    const pending = allItems.filter(i => i.dataset.status === 'pending').length;
+    const progress = allItems.filter(i => i.dataset.status === 'in_progress').length;
+    const resolved = allItems.filter(i => i.dataset.status === 'resolved').length;
+
+    document.getElementById('stat-total').innerText = total;
+    document.getElementById('stat-pending').innerText = pending;
+    document.getElementById('stat-progress').innerText = progress;
+    document.getElementById('stat-resolved').innerText = resolved;
+  }
+</script>

@@ -1529,6 +1529,68 @@ export async function convertSupportToMaintenance(req, res) {
   }
 }
 
+export async function getSupportMessages(req, res) {
+  try {
+    const { ticketId } = req.params;
+    
+    const { data: messages, error } = await supabase
+      .from("ticket_messages")
+      .select("*")
+      .eq("ticket_id", ticketId)
+      .order("created_at", { ascending: true });
+      
+    if (error) {
+      console.error("[admin.getSupportMessages] failed", error);
+      return res.status(500).json({ success: false, message: "Unable to fetch messages: " + error.message });
+    }
+    
+    return res.json({ success: true, data: messages || [] });
+  } catch (error) {
+    console.error("[admin.getSupportMessages] unexpected error", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function sendSupportMessage(req, res) {
+  try {
+    const { ticketId } = req.params;
+    const { message } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ success: false, message: "Message is required" });
+    }
+    
+    const { data: newMsg, error } = await supabase
+      .from("ticket_messages")
+      .insert([
+        {
+          ticket_id: ticketId,
+          sender_id: req.admin?.id || null,
+          sender_type: "admin",
+          message: message,
+        }
+      ])
+      .select("*")
+      .single();
+      
+    if (error) {
+      console.error("[admin.sendSupportMessage] failed", error);
+      return res.status(500).json({ success: false, message: "Unable to send message: " + error.message });
+    }
+    
+    // Update ticket status to in_progress
+    await supabase
+      .from("support_tickets")
+      .update({ status: "in_progress", updated_at: new Date().toISOString() })
+      .eq("id", ticketId);
+      
+    return res.json({ success: true, data: newMsg });
+  } catch (error) {
+    console.error("[admin.sendSupportMessage] unexpected error", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
 export async function notificationsPage(req, res) {
   let history = [];
   try {

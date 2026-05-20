@@ -168,3 +168,82 @@ export async function uploadSupportImage(imageBase64, fileName, contentType = "i
     return `https://support.bharbike.local/${uniqueFileName}`;
   }
 }
+
+/**
+ * Get message history for a ticket
+ */
+export async function getTicketMessages(ticketId) {
+  if (String(ticketId).startsWith("demo-")) {
+    return [
+      {
+        id: "demo-msg-1",
+        ticket_id: ticketId,
+        sender_id: "demo-system",
+        sender_type: "admin",
+        message: "Hello! Welcome to BharBike Live Support. How can we help you today?",
+        created_at: new Date(Date.now() - 60000).toISOString(),
+      }
+    ];
+  }
+
+  const { data, error } = await supabase
+    .from("ticket_messages")
+    .select("*")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[supportService.getTicketMessages] failed", error);
+    throw new AppError("Unable to fetch ticket messages", 500);
+  }
+
+  return data || [];
+}
+
+/**
+ * Send a message for a ticket
+ */
+export async function sendTicketMessage(ticketId, senderId, senderType, message, imageUrl = null) {
+  if (String(ticketId).startsWith("demo-")) {
+    return {
+      id: `demo-msg-${Date.now()}`,
+      ticket_id: ticketId,
+      sender_id: senderId,
+      sender_type: senderType,
+      message: message,
+      image_url: imageUrl,
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("ticket_messages")
+    .insert([
+      {
+        ticket_id: ticketId,
+        sender_id: senderId || null,
+        sender_type: senderType,
+        message: message,
+        image_url: imageUrl,
+      },
+    ])
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[supportService.sendTicketMessage] failed", error);
+    throw new AppError("Unable to send message: " + error.message, 500);
+  }
+
+  // Auto update ticket status if user sends a message and it was resolved
+  // This reopens the ticket
+  if (senderType === "user") {
+    await supabase
+      .from("support_tickets")
+      .update({ status: "pending", updated_at: new Date().toISOString() })
+      .eq("id", ticketId);
+  }
+
+  return data;
+}
+

@@ -66,4 +66,25 @@ r.patch(
   supportController.updateTicketStatus
 );
 
+// Get messages for a ticket
+r.get(
+  "/ticket/:ticketId/messages",
+  [param("ticketId").isUUID().withMessage("Invalid ticket ID")],
+  validateRequest,
+  supportController.getChatMessages
+);
+
+// Send message for a ticket
+r.post(
+  "/ticket/:ticketId/messages",
+  [
+    param("ticketId").isUUID().withMessage("Invalid ticket ID"),
+    body("message").optional().isString(),
+    body("image_url").optional({ nullable: true, checkFalsy: true }).isString(),
+  ],
+  validateRequest,
+  supportController.sendChatMessage
+);
+
 export default r;
+

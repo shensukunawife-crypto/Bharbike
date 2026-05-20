@@ -176,7 +176,25 @@ export const verifyPayment = async (req, res) => {
       }
     } else if (user_id) {
       // Add money to wallet — try RPC first, then direct insert fallback
-      const addAmount = Number(req.body.amount) || 0;
+      let addAmount = Number(req.body.amount) || 0;
+
+      // Fallback: If amount is missing, retrieve it from the orders table
+      if (addAmount <= 0 && app_order_id) {
+        try {
+          const { data: orderRow } = await supabase
+            .from("orders")
+            .select("amount")
+            .eq("id", app_order_id)
+            .maybeSingle();
+          if (orderRow?.amount) {
+            addAmount = Number(orderRow.amount);
+            console.log(`[verifyPayment] Recovered wallet amount from orders table: ₹${addAmount}`);
+          }
+        } catch (dbErr) {
+          console.warn("[verifyPayment] Failed to recover amount from orders table:", dbErr?.message);
+        }
+      }
+
       if (addAmount > 0) {
         try {
           await walletService.addMoney(user_id, addAmount, "Wallet Recharge", mockPaymentId, razorpay_order_id);

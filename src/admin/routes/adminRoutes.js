@@ -58,6 +58,8 @@ router.post("/maintenance/add", adminController.addMaintenanceTicket);
 router.post("/maintenance/:ticketId/status", adminController.updateMaintenanceStatus);
 router.post("/maintenance/:ticketId/remove", adminController.removeMaintenanceTicket);
 router.post("/support/:ticketId/convert", adminController.convertSupportToMaintenance);
+router.get("/support/ticket/:ticketId/messages", adminController.getSupportMessages);
+router.post("/support/ticket/:ticketId/messages", adminController.sendSupportMessage);
 router.post("/notifications/send", adminController.sendNotification);
 router.post("/earnings/payout/:payoutId/release", adminController.releasePayout);
 router.post("/settings/save", adminController.saveSettings);

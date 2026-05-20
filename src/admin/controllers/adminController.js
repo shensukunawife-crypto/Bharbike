@@ -131,7 +131,13 @@ function normalizeBike(bike, index) {
   const healthScore = Number(bike.health_score ?? Math.max(35, Math.min(98, battery + 8)));
   const healthStatus = healthScore >= 80 ? "Good" : healthScore >= 55 ? "Average" : "Critical";
   const usage = status === "in_use" ? "In Service" : status === "maintenance" ? "Repair Queue" : "Standby";
-  const location = bike.location || bike.last_location || "Unknown Yard";
+  const rawLocation = bike.location || bike.last_location;
+  // If we have GPS coords stored, show them nicely instead of "Unknown Yard"
+  const location = rawLocation && rawLocation !== "Unknown Yard"
+    ? rawLocation
+    : (bike.last_lat && bike.last_lng)
+      ? `${Number(bike.last_lat).toFixed(5)}, ${Number(bike.last_lng).toFixed(5)}`
+      : "Unknown Yard";
   const lastServiceDate = bike.last_service_date || bike.lastServiceDate || "2026-04-01";
 
   return {
@@ -817,6 +823,21 @@ export async function bikeDetails(req, res) {
       bike.liveLng = health.lng;
       bike.lastPingAt = health.lastPingAt;
       bike.isLive = !!(health.lat && health.lng);
+
+      // Write GPS coords back to Supabase so the bikes LIST stays updated
+      if (health.lat && health.lng) {
+        const gpsLocationStr = `${Number(health.lat).toFixed(5)}, ${Number(health.lng).toFixed(5)}`;
+        supabase
+          .from("bikes")
+          .update({ last_lat: health.lat, last_lng: health.lng, location: gpsLocationStr })
+          .eq("id", bikeId)
+          .then(({ error }) => {
+            if (error) console.warn("[admin.bikeDetails] GPS write-back failed:", error.message);
+            else console.log(`[admin.bikeDetails] GPS written back for bike ${bikeId}: ${gpsLocationStr}`);
+          });
+        // Also update the in-memory bike object so this page render shows it
+        bike.location = gpsLocationStr;
+      }
     } catch (iotErr) {
       console.warn("[admin.bikeDetails] IoT fetch failed:", iotErr.message);
     }

@@ -20,6 +20,8 @@ router.get("/activity-logs", adminController.activityLogsPage);
 router.get("/users", requirePermission("manage_users"), adminController.users);
 router.get("/users/:userId", requirePermission("manage_users"), adminController.userProfile);
 router.get("/kyc-documents", requirePermission("manage_users"), adminController.kycDocumentsPage);
+router.post("/kyc-documents/:docId/status", requirePermission("manage_users"), adminController.kycUpdateStatus);
+
 router.post("/users/add", requirePermission("manage_users"), adminController.addUser);
 router.post("/users/:userId/edit", requirePermission("manage_users"), adminController.editUser);
 router.post("/users/:userId/block", requirePermission("manage_users"), adminController.blockUser);

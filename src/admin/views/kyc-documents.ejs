@@ -271,3 +271,105 @@ function renderKycCell(doc, typeLabel) {
     </table>
   </div>
 </div>
+
+<!-- Reject Reason Modal -->
+<div id="reject-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:18px; padding:28px 28px 20px; width:360px; max-width:90vw; box-shadow:0 24px 48px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 6px; font-size:16px; font-weight:800; color:#111827;">Reject Document</h3>
+    <p style="margin:0 0 14px; font-size:13px; color:#6b7280;">Optionally provide a reason for rejection (shown to user).</p>
+    <textarea id="reject-reason-input" placeholder="e.g. Image is blurry, please re-upload" rows="3"
+      style="width:100%; border:1.5px solid #d1d5db; border-radius:10px; padding:10px; font-size:13px; font-family:inherit; resize:none; box-sizing:border-box; outline:none;"></textarea>
+    <div style="display:flex; gap:10px; margin-top:14px; justify-content:flex-end;">
+      <button id="reject-cancel-btn" style="padding:8px 18px; border-radius:10px; border:1.5px solid #d1d5db; background:#fff; font-weight:700; font-size:13px; cursor:pointer; color:#374151;">Cancel</button>
+      <button id="reject-confirm-btn" style="padding:8px 18px; border-radius:10px; border:none; background:#ef4444; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">Reject</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let pendingDocId = null;
+  let pendingStatus = null;
+
+  async function updateDocStatus(docId, status, reason) {
+    const res = await fetch('/admin/kyc-documents/' + docId + '/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, reason: reason || undefined }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Update failed');
+    return json;
+  }
+
+  function showToast(msg, ok) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:12px 22px;border-radius:12px;font-weight:700;font-size:14px;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.18);transition:opacity .4s;';
+    t.style.background = ok ? '#10b981' : '#ef4444';
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2800);
+  }
+
+  function setButtonLoading(btn, loading) {
+    btn.disabled = loading;
+    btn.style.opacity = loading ? '0.6' : '1';
+  }
+
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.kyc-status-btn');
+    if (!btn) return;
+
+    const docId = btn.dataset.id;
+    const status = btn.dataset.status;
+
+    if (status === 'rejected') {
+      // Show modal
+      pendingDocId = docId;
+      pendingStatus = status;
+      const modal = document.getElementById('reject-modal');
+      document.getElementById('reject-reason-input').value = '';
+      modal.style.display = 'flex';
+      setTimeout(() => document.getElementById('reject-reason-input').focus(), 50);
+      return;
+    }
+
+    // Direct verify
+    setButtonLoading(btn, true);
+    try {
+      await updateDocStatus(docId, status, null);
+      showToast('✅ Document verified!', true);
+      setTimeout(() => location.reload(), 900);
+    } catch (err) {
+      showToast('❌ ' + err.message, false);
+      setButtonLoading(btn, false);
+    }
+  });
+
+  document.getElementById('reject-cancel-btn').addEventListener('click', function() {
+    document.getElementById('reject-modal').style.display = 'none';
+    pendingDocId = null;
+  });
+
+  document.getElementById('reject-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.style.display = 'none';
+      pendingDocId = null;
+    }
+  });
+
+  document.getElementById('reject-confirm-btn').addEventListener('click', async function() {
+    if (!pendingDocId) return;
+    const reason = document.getElementById('reject-reason-input').value.trim();
+    document.getElementById('reject-modal').style.display = 'none';
+    try {
+      await updateDocStatus(pendingDocId, 'rejected', reason);
+      showToast('🚫 Document rejected.', true);
+      setTimeout(() => location.reload(), 900);
+    } catch (err) {
+      showToast('❌ ' + err.message, false);
+    }
+    pendingDocId = null;
+  });
+})();
+</script>

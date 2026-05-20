@@ -991,11 +991,11 @@ export async function kycDocumentsPage(req, res) {
 
     const stats = {
       total: documents.length,
-      aadhaar: documents.filter((x) => x.aadhaar_front_url).length,
-      pan: documents.filter((x) => x.pan_card_url).length,
-      bill: documents.filter((x) => x.electricity_bill_url).length,
-      selfie: documents.filter((x) => x.selfie_url).length,
-      driving_license: documents.filter((x) => x.driving_license_url).length,
+      aadhaar: documents.filter((x) => x.aadhaar).length,
+      pan: documents.filter((x) => x.pan).length,
+      bill: documents.filter((x) => x.electricity_bill).length,
+      selfie: documents.filter((x) => x.selfie).length,
+      driving_license: documents.filter((x) => x.driving_license).length,
     };
 
     return renderPage(res, {
@@ -1008,6 +1008,45 @@ export async function kycDocumentsPage(req, res) {
   } catch (error) {
     console.error("[admin.kycDocumentsPage] unexpected error", error);
     return res.status(500).send("Unable to load KYC documents");
+  }
+}
+
+export async function kycUpdateStatus(req, res) {
+  try {
+    const { docId } = req.params;
+    const { status, reason } = req.body;
+
+    if (!docId || !status) {
+      return res.status(400).json({ success: false, error: "Missing docId or status" });
+    }
+    if (!["verified", "rejected", "pending"].includes(status)) {
+      return res.status(400).json({ success: false, error: "Invalid status value" });
+    }
+
+    const updatePayload = { status };
+    if (status === "rejected" && reason) {
+      updatePayload.reason = reason;
+    } else if (status !== "rejected") {
+      updatePayload.reason = null;
+    }
+
+    const { data, error } = await supabase
+      .from("kyc_documents")
+      .update(updatePayload)
+      .eq("id", docId)
+      .select("id, user_id, type, status, reason")
+      .single();
+
+    if (error) {
+      console.error("[admin.kycUpdateStatus] update failed", error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    console.log(`[admin.kycUpdateStatus] doc ${docId} → ${status}`, data);
+    return res.json({ success: true, doc: data });
+  } catch (err) {
+    console.error("[admin.kycUpdateStatus] unexpected error", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 }
 

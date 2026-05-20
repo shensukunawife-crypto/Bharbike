@@ -8,7 +8,8 @@
   <div class="stat-card">
     <div class="stat-head"><span class="stat-icon">📍</span><span class="stat-label">Location</span></div>
     <% if (bike.isLive) { %>
-      <strong class="stat-value" style="font-size: 14px;"><%= Number(bike.liveLat).toFixed(4) %>, <%= Number(bike.liveLng).toFixed(4) %></strong>
+      <strong class="stat-value" style="font-size: 14px; margin-bottom: 6px;"><%= Number(bike.liveLat).toFixed(4) %>, <%= Number(bike.liveLng).toFixed(4) %></strong>
+      <button onclick="openMapModal(<%= bike.liveLat %>, <%= bike.liveLng %>)" class="btn btn-sm btn-gold glow" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; justify-content: center; width: 100%;">🗺️ View Live Map</button>
       <span class="badge success" style="font-size: 10px; margin-top: 4px;">GPS Live</span>
     <% } else { %>
       <strong class="stat-value"><%= bike.location %></strong>
@@ -98,3 +99,52 @@
     </table>
   </div>
 </div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- Map Modal -->
+<div class="modal" id="map-modal">
+  <div class="modal-card" style="width: 90%; max-width: 600px; padding: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h3 style="margin:0;">Bike Live Location</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="closeMapModal()">&times;</button>
+    </div>
+    <div id="bike-map" style="height: 400px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;"></div>
+  </div>
+</div>
+
+<script>
+let bikeMap = null;
+let bikeMarker = null;
+
+function openMapModal(lat, lng) {
+  const modal = document.getElementById("map-modal");
+  modal.classList.add("show");
+  
+  // Need to use a slight timeout to ensure the modal is visible before rendering the map, 
+  // otherwise Leaflet tiles might not load correctly due to incorrect container dimensions.
+  setTimeout(() => {
+    if (!bikeMap) {
+      bikeMap = L.map("bike-map").setView([lat, lng], 15);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "� OpenStreetMap contributors"
+      }).addTo(bikeMap);
+      
+      bikeMarker = L.marker([lat, lng]).addTo(bikeMap)
+        .bindPopup("<b>Bike Location</b><br>Lat: " + lat + "<br>Lng: " + lng).openPopup();
+    } else {
+      bikeMap.setView([lat, lng], 15);
+      bikeMarker.setLatLng([lat, lng]);
+      bikeMap.invalidateSize();
+    }
+  }, 100);
+}
+
+function closeMapModal() {
+  document.getElementById("map-modal").classList.remove("show");
+}
+</script>
+

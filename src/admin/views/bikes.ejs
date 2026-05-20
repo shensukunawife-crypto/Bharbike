@@ -109,7 +109,8 @@
           <option value="<%= user.id %>"><%= user.full_name || user.name || "Unknown User" %> - <%= user.phone || user.email || "No Contact" %></option>
         <% }) %>
       </select>
-      <input type="number" name="duration_hours" value="24" min="1" placeholder="Rental Duration (Hours)" required />
+      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: #4b5563; font-weight: 500;">Rental Duration (Hours)</label>
+      <input type="number" name="duration_hours" value="24" min="1" required />
       <button type="submit" class="btn btn-gold glow">Assign to User</button>
     </form>
   </div>

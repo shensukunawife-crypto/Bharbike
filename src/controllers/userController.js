@@ -186,12 +186,24 @@ export const updateUser = async (req, res) => {
   }
 
   const body = req.body ?? {};
-  const patch = {
+
+  // 1. Patch for the 'profiles' table (uses image_url, full_name, email, phone, location, etc.)
+  const profilesPatch = {
     ...(body.full_name !== undefined && { full_name: body.full_name }),
     ...(body.email !== undefined && { email: body.email }),
     ...(body.phone !== undefined && { phone: body.phone }),
     ...(body.location !== undefined && { location: body.location }),
-    ...(body.image_url !== undefined && { avatar_url: body.image_url }),
+    ...(body.image_url !== undefined && { image_url: body.image_url }),
+    ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
+    ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
+  };
+
+  // 2. Patch for the 'users' table (strictly valid columns only, no avatar_url or image_url)
+  const usersPatch = {
+    ...(body.full_name !== undefined && { full_name: body.full_name }),
+    ...(body.email !== undefined && { email: body.email }),
+    ...(body.phone !== undefined && { phone: body.phone }),
+    ...(body.location !== undefined && { location: body.location }),
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
   };
@@ -199,15 +211,14 @@ export const updateUser = async (req, res) => {
   // Try updating profiles table
   const { data, error } = await supabase
     .from("profiles")
-    .update(patch)
+    .update(profilesPatch)
     .eq("id", req.params.id)
     .select();
 
   if (error) {
     console.warn("[updateUser] profiles update failed:", error.message);
-    // Try users table as fallback
-    const usersPatch = { ...patch };
-    if (body.image_url !== undefined) usersPatch.avatar_url = body.image_url;
+    
+    // Fallback: Try users table if profiles update failed
     const { data: userData, error: userError } = await supabase
       .from("users")
       .update(usersPatch)
@@ -222,14 +233,16 @@ export const updateUser = async (req, res) => {
     return res.json(updated != null ? shapePublicUser(updated) : null);
   }
 
-  // Also update users table for image_url, email, phone sync
+  // Also update users table for sync in background (ignoring errors)
   try {
-    const usersSync = {};
-    if (body.image_url !== undefined) { usersSync.image_url = body.image_url; usersSync.avatar_url = body.image_url; }
-    if (body.email !== undefined) usersSync.email = body.email;
-    if (body.phone !== undefined) usersSync.phone = body.phone;
-    if (Object.keys(usersSync).length > 0) {
-      await supabase.from("users").update(usersSync).eq("id", req.params.id);
+    if (Object.keys(usersPatch).length > 0) {
+      const { error: syncError } = await supabase
+        .from("users")
+        .update(usersPatch)
+        .eq("id", req.params.id);
+      if (syncError) {
+        console.warn("[updateUser] users sync failed:", syncError.message);
+      }
     }
   } catch (e) {
     console.warn("[updateUser] users sync skipped:", e?.message);

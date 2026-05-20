@@ -88,7 +88,7 @@ export const createOrder = async (req, res) => {
  */
 export const verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, app_order_id, user_id, plan_id } = req.body;
+    const { razorpay_order_id, app_order_id, user_id, plan_id, ticket_id } = req.body;
     const mockPaymentId = `pay_demo_${Date.now()}`;
 
     console.log("[verifyPayment] DEMO MODE - Auto-verifying payment");
@@ -98,7 +98,10 @@ export const verifyPayment = async (req, res) => {
       if (app_order_id) {
         await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
       }
-    } catch (e) { console.warn("[verifyPayment] orders update skipped:", e?.message); }
+      if (ticket_id) {
+        await supabase.from("support_tickets").update({ payment_status: "paid" }).eq("id", ticket_id);
+      }
+    } catch (e) { console.warn("[verifyPayment] orders/tickets update skipped:", e?.message); }
 
     let paymentRecordId = null;
     try {

@@ -560,9 +560,10 @@
           </div>
         </div>
         <div class="chat-header-actions">
+          <button class="btn btn-warning" id="btn-open-repair-modal" style="font-size: 12px; padding: 6px 12px; background: #b45309; color: white;">💰 Set Repair Cost</button>
           <button class="btn btn-outline" id="btn-convert-maint" style="font-size: 12px; padding: 6px 12px;">🛠 Convert to Maint.</button>
-          <button class="btn btn-info" id="btn-in-progress" style="font-size: 12px; padding: 6px 12px;">🔄 In Progress</button>
-          <button class="btn btn-success" id="btn-resolve-ticket" style="font-size: 12px; padding: 6px 12px;">✔ Resolve</button>
+          <button class="btn btn-info" id="btn-in-progress" style="font-size: 12px; padding: 6px 12px;">⌛ In Progress</button>
+          <button class="btn btn-success" id="btn-resolve-ticket" style="font-size: 12px; padding: 6px 12px;">✅ Resolve</button>
         </div>
       </div>
 
@@ -602,6 +603,22 @@
     <div class="actions" style="margin-top:16px; display:flex; gap: 8px; justify-content: flex-end;">
       <button class="btn btn-outline" onclick="closeConvertModal()">Cancel</button>
       <button id="support-convert-confirm-btn" class="btn btn-gold">Yes, Convert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Repair Cost Modal -->
+<div class="modal" id="repair-cost-modal">
+  <div class="modal-card">
+    <h3>Assign Repair Cost</h3>
+    <p style="color:var(--text-muted); font-size: 13px; margin-bottom: 12px;">Set the repair cost. A message will be sent to the user prompting them to pay.</p>
+    <div style="display:flex; flex-direction:column; gap: 10px;">
+      <input type="number" id="repair-cost-input-modal" placeholder="Cost Amount (₹)" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+      <textarea id="repair-cost-msg-modal" rows="3" placeholder="Message to user (e.g. Please pay the repair cost for the damaged lock...)" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: none;"></textarea>
+    </div>
+    <div class="actions" style="margin-top:16px; display:flex; gap: 8px; justify-content: flex-end;">
+      <button class="btn btn-outline" onclick="closeRepairCostModal()">Cancel</button>
+      <button onclick="confirmRepairCost()" class="btn btn-warning" style="background:#b45309; color:white;">Assign & Send</button>
     </div>
   </div>
 </div>
@@ -652,6 +669,7 @@
     document.getElementById('btn-resolve-ticket').onclick = () => updateTicketStatus(id, 'resolved');
     document.getElementById('btn-in-progress').onclick = () => updateTicketStatus(id, 'in_progress');
     document.getElementById('btn-convert-maint').onclick = () => openConvertModal(id);
+    document.getElementById('btn-open-repair-modal').onclick = () => openRepairCostModal();
 
     // Initial load of messages
     loadMessages(id);
@@ -851,6 +869,25 @@
     }
   }
 
+  async function assignRepairCost(ticketId, cost) {
+    try {
+      const res = await fetch(`/api/admin/support/${ticketId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repair_cost: cost })
+      });
+      const payload = await res.json();
+      if (payload.success) {
+        alert("Repair cost of ₹" + cost + " assigned successfully! The user will be prompted to pay.");
+        document.getElementById('repair-cost-input').value = '';
+      } else {
+        alert("Failed to assign repair cost: " + payload.message);
+      }
+    } catch (e) {
+      alert("Error assigning repair cost.");
+    }
+  }
+
   // Open convert to maintenance modal
   function openConvertModal(ticketId) {
     document.getElementById('support-convert-modal').classList.add('show');
@@ -861,7 +898,7 @@
     document.getElementById('support-convert-modal').classList.remove('show');
   }
 
-  async function confirmConvert(ticketId) {
+  function confirmConvert(ticketId) {
     closeConvertModal();
     try {
       const res = await fetch(`/admin/support/${ticketId}/convert`, {
@@ -876,6 +913,50 @@
       }
     } catch (e) {
       alert("Error converting ticket.");
+    }
+  }
+
+  // Repair Cost Modal Logic
+  function openRepairCostModal() {
+    document.getElementById('repair-cost-input-modal').value = '';
+    document.getElementById('repair-cost-msg-modal').value = 'A repair cost has been assessed for this ticket. Please pay the amount to proceed.';
+    document.getElementById('repair-cost-modal').classList.add('show');
+  }
+
+  function closeRepairCostModal() {
+    document.getElementById('repair-cost-modal').classList.remove('show');
+  }
+
+  async function confirmRepairCost() {
+    const cost = document.getElementById('repair-cost-input-modal').value;
+    const message = document.getElementById('repair-cost-msg-modal').value;
+    if (!cost) return alert("Please enter a repair cost.");
+    
+    closeRepairCostModal();
+    try {
+      const res = await fetch(`/api/admin/support/${activeTicketId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repair_cost: cost })
+      });
+      const payload = await res.json();
+      
+      if (!payload.success) {
+        return alert("Failed to assign repair cost: " + payload.message);
+      }
+
+      if (message.trim()) {
+        await fetch(`/admin/support/ticket/${activeTicketId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message.trim() })
+        });
+      }
+      
+      alert("Repair cost assigned and message sent successfully!");
+      loadMessages(activeTicketId);
+    } catch (e) {
+      alert("Error assigning repair cost.");
     }
   }
 

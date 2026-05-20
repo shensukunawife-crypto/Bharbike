@@ -622,13 +622,7 @@ api.patch("/admin/delivery/:id", async (req, res) => {
 
 api.get("/support/user/:userId", async (req, res) => {
   try {
-    const userId = String(req.params.userId || "");
-    if (!userId) {
-      return res.status(400).json({ success: false, message: "userId is required" });
-    }
-    if (isDemoUser(userId)) {
-      return res.json({ success: true, data: [] });
-    }
+    const { userId } = req.params;
     const { data, error } = await supabase
       .from("support_tickets")
       .select("*")
@@ -636,11 +630,28 @@ api.get("/support/user/:userId", async (req, res) => {
       .order("created_at", { ascending: false });
     if (error) {
       console.error("[GET /api/support/user/:userId] failed:", error);
-      return res.status(500).json({ success: false, message: error.message || "Fetch failed" });
+      return res.status(500).json({ success: false, message: error.message || "Unable to load tickets" });
     }
     return res.json({ success: true, data: data || [] });
   } catch (err) {
     console.error("[GET /api/support/user/:userId] unexpected:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.get("/support/ticket/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message || "Unable to load ticket" });
+    }
+    return res.json({ success: true, data: data || null });
+  } catch (err) {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -682,12 +693,19 @@ api.put("/admin/support/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const status = String(req.body?.status || "").toLowerCase();
-    if (!["pending", "in_progress", "resolved"].includes(status)) {
+    const repair_cost = req.body?.repair_cost;
+    
+    if (status && !["pending", "in_progress", "resolved"].includes(status)) {
       return res.status(400).json({ success: false, message: "Invalid status" });
     }
+    
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (repair_cost !== undefined) updateData.repair_cost = Number(repair_cost) || 0;
+
     const { data, error } = await supabase
       .from("support_tickets")
-      .update({ status })
+      .update(updateData)
       .eq("id", id)
       .select()
       .single();

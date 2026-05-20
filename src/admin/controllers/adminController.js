@@ -922,7 +922,7 @@ export async function kycDocumentsPage(req, res) {
     const [{ data: kycData, error: kycError }, { data: usersData, error: usersError }] = await Promise.all([
       supabase
         .from("kyc_documents")
-        .select("id, user_id, type, file_url, status, reason, created_at")
+        .select("id, user_id, type, file_url, status, created_at")
         .order("created_at", { ascending: false }),
       supabase
         .from("users")
@@ -1023,18 +1023,14 @@ export async function kycUpdateStatus(req, res) {
       return res.status(400).json({ success: false, error: "Invalid status value" });
     }
 
+    // Only update status — reason column may not exist yet in DB
     const updatePayload = { status };
-    if (status === "rejected" && reason) {
-      updatePayload.reason = reason;
-    } else if (status !== "rejected") {
-      updatePayload.reason = null;
-    }
 
     const { data, error } = await supabase
       .from("kyc_documents")
       .update(updatePayload)
       .eq("id", docId)
-      .select("id, user_id, type, status, reason")
+      .select("id, user_id, type, status")
       .single();
 
     if (error) {

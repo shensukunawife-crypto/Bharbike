@@ -67,7 +67,7 @@
         </td>
         <td class="actions">
           <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>">View Details</a>
-          <button class="btn btn-gold admin-action" data-url="/admin/bikes/<%= bike.id %>/assign" data-method="POST">Assign Bike</button>
+          <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')">Assign Bike</button>
           <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST">Send to Maintenance</button>
           <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST">Disable Bike</button>
         </td>
@@ -95,3 +95,35 @@
     </form>
   </div>
 </div>
+
+<div class="modal" id="assign-bike-modal">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>Assign Bike <span id="assign-bike-code" style="color:#f59e0b; font-size: 16px;"></span></h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="closeAssignModal()">&times;</button>
+    </div>
+    <form class="admin-form ajax-form" id="assign-bike-form" data-url="">
+      <select name="user_id" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #d1d5db; margin-bottom: 12px; background: #f8fafc; font-size: 14px;">
+        <option value="">Select User (Search by typing)...</option>
+        <% users.forEach(user => { %>
+          <option value="<%= user.id %>"><%= user.full_name || user.name || "Unknown User" %> - <%= user.phone || user.email || "No Contact" %></option>
+        <% }) %>
+      </select>
+      <input type="number" name="duration_hours" value="24" min="1" placeholder="Rental Duration (Hours)" required />
+      <button type="submit" class="btn btn-gold glow">Assign to User</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAssignModal(bikeId, bikeCode) {
+  const modal = document.getElementById('assign-bike-modal');
+  const form = document.getElementById('assign-bike-form');
+  document.getElementById('assign-bike-code').innerText = '(' + bikeCode + ')';
+  form.setAttribute('data-url', '/admin/bikes/' + bikeId + '/assign');
+  modal.classList.add('active');
+}
+function closeAssignModal() {
+  document.getElementById('assign-bike-modal').classList.remove('active');
+}
+</script>

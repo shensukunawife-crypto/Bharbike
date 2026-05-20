@@ -763,11 +763,15 @@ export async function userProfile(req, res) {
 
 export async function bikes(req, res) {
   try {
-    const { data, error } = await supabase.from("bikes").select("*");
-    if (error) {
-      console.error("[admin.bikes] fetch failed", error);
-    }
-    const allBikes = safeData(data).map(normalizeBike);
+    const [{ data: bikesData, error: bikesError }, { data: usersData, error: usersError }] = await Promise.all([
+      supabase.from("bikes").select("*"),
+      supabase.from("users").select("id, full_name, phone, email").order("created_at", { ascending: false })
+    ]);
+    
+    if (bikesError) console.error("[admin.bikes] bikes fetch failed", bikesError);
+    if (usersError) console.error("[admin.bikes] users fetch failed", usersError);
+
+    const allBikes = safeData(bikesData).map(normalizeBike);
     const search = (req.query.search || "").trim().toLowerCase();
     const statusFilter = (req.query.status || "all").toLowerCase();
     const lowBatteryOnly = req.query.lowBattery === "true";
@@ -777,11 +781,13 @@ export async function bikes(req, res) {
       if (lowBatteryOnly && bike.battery > 20) return false;
       return true;
     });
+    
     return renderPage(res, {
       title: "Bikes",
       active: "bikes",
       bodyView: "bikes",
       bikes,
+      users: safeData(usersData),
       filters: {
         search,
         status: statusFilter,
@@ -1941,7 +1947,29 @@ export async function addBike(req, res) {
 
 export async function assignBike(req, res) {
   try {
-    await supabase.from("bikes").update({ status: "in_use" }).eq("id", req.params.bikeId);
+    const { bikeId } = req.params;
+    const { user_id, duration_hours = 24 } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ success: false, message: "User ID is required" });
+    }
+
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + duration_hours * 60 * 60 * 1000);
+
+    const { error: rentalError } = await supabase.from("rentals").insert([{
+      bike_id: bikeId,
+      user_id,
+      duration: duration_hours,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      status: "ongoing",
+      price: 0
+    }]);
+
+    if (rentalError) throw rentalError;
+
+    await supabase.from("bikes").update({ status: "in_use" }).eq("id", bikeId);
     return res.json({ success: true, message: "Bike assigned successfully" });
   } catch (error) {
     console.error("[admin.assignBike] failed", error);

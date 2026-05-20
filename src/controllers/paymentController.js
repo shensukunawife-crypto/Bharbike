@@ -116,11 +116,30 @@ export const verifyPayment = async (req, res) => {
       const { payment_method = "upi", amount } = req.body;
       const subAmount = Number(amount) || 0;
 
+      // Resolve plan display name first
+      let planDisplayName = "Weekly Plan"; // Default fallback
+      try {
+        const { data: planRow } = await supabase
+          .from("subscription_plans")
+          .select("display_name")
+          .or(`id.eq.${plan_id},name.eq.${plan_id}`)
+          .limit(1)
+          .single();
+        if (planRow?.display_name) {
+          planDisplayName = planRow.display_name;
+        }
+      } catch (planErr) {
+        console.warn("[verifyPayment] plan display name lookup failed, using fallback:", planErr?.message);
+        if (plan_id?.toLowerCase().includes("weekly") || plan_id === "plan_weekly") {
+          planDisplayName = "Weekly Plan";
+        }
+      }
+
       // If paying via wallet, we MUST have enough balance
       if (payment_method === "wallet" && subAmount > 0) {
         console.log(`[verifyPayment] Wallet payment detected. Deducting ₹${subAmount}`);
         // Remove try-catch so AppError (Insufficient balance) propagates to the user
-        await walletService.deductMoney(user_id, subAmount, `Subscription: ${plan_id}`);
+        await walletService.deductMoney(user_id, subAmount, `Subscription: ${planDisplayName}`);
         console.log("[verifyPayment] wallet deducted successfully");
       }
 

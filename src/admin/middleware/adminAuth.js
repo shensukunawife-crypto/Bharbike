@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env.js";
+import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../config/branding.js";
 
 function readCookie(cookieHeader, name) {
   if (!cookieHeader) return "";
@@ -44,6 +45,11 @@ export function requireAdminAuth(req, res, next) {
 export function requirePermission(permission) {
   return (req, res, next) => {
     if (!req.admin) {
+      const url = String(req.originalUrl || "").split("?")[0];
+      const onAdminSite = req.baseUrl === "/admin" || url.startsWith("/admin") || req.path.startsWith("/admin");
+      if (onAdminSite && req.method === "GET") {
+        return res.redirect(302, "/admin/login");
+      }
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     
@@ -56,6 +62,24 @@ export function requirePermission(permission) {
       return next();
     }
     
-    return res.status(403).json({ success: false, message: "Forbidden: You don't have permission to perform this action" });
+    if (req.method === "GET") {
+      // Render a beautiful Access Denied page inside layout shell
+      return res.status(403).render("layout", {
+        BRAND_NAME,
+        BRAND_PRODUCT_NAME,
+        formatBrand,
+        title: "Access Denied",
+        active: "dashboard",
+        bodyView: "forbidden",
+        message: `You do not have the required permission (${permission.replace(/_/g, ' ')}) to access this page.`,
+        locals: { admin: req.admin }
+      });
+    }
+    
+    return res.status(403).json({ 
+      success: false, 
+      message: `Forbidden: You do not have the required permission (${permission.replace(/_/g, ' ')}) to perform this action.` 
+    });
   };
 }
+

@@ -1,0 +1,28 @@
+<div class="forbidden-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 20px; text-align: center;">
+  <div class="forbidden-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px; max-width: 500px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; align-items: center;">
+    
+    <!-- Lock/Shield Warning Icon -->
+    <div class="forbidden-icon-wrapper" style="width: 80px; height: 80px; border-radius: 50%; background: var(--accent-light); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; color: var(--accent);">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+
+    <!-- Error Message -->
+    <h2 style="font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 12px;">Access Denied</h2>
+    <p style="color: var(--text-muted); font-size: 15px; line-height: 1.6; margin-bottom: 30px;">
+      <%= typeof message !== 'undefined' ? message : "You do not have the required permissions to access this page or perform this action." %>
+    </p>
+
+    <!-- Action Button -->
+    <a href="/admin" class="btn btn-gold glow" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-weight: 600; text-decoration: none; border-radius: var(--radius); transition: all 0.2s ease;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"/>
+        <polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Back to Dashboard
+    </a>
+
+  </div>
+</div>

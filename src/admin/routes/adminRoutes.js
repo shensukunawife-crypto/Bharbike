@@ -15,63 +15,70 @@ router.get("/dashboard", adminController.dashboard);
 router.get("/operations", adminController.operationsDashboard);
 router.get("/backend", adminController.backendMonitor);
 router.get("/activity-logs", adminController.activityLogsPage);
-router.get("/users", adminController.users);
-router.get("/users/:userId", adminController.userProfile);
-router.get("/bikes", adminController.bikes);
-router.get("/bikes/:bikeId", adminController.bikeDetails);
-router.get("/orders", adminController.orders);
-router.get("/bookings", adminController.bookingsPage);
-router.get("/kyc-documents", adminController.kycDocumentsPage);
-router.get("/orders/:orderId", adminController.orderDetails);
-router.get("/delivery-partners", adminController.deliveryPartners);
-router.get("/delivery-partners/:partnerId", adminController.deliveryPartnerProfile);
-router.get("/earnings", adminController.earnings);
-router.get("/analytics", adminController.analytics);
-router.get("/maintenance", adminController.maintenance);
-router.get("/support", adminController.supportPage);
-router.get("/notifications", adminController.notificationsPage);
-router.get("/payments", adminController.paymentsPage);
-router.get("/settings", adminController.settingsPage);
-router.get("/skipped-days", adminController.skippedDaysPage);
 
-router.post("/users/add", adminController.addUser);
-router.post("/users/:userId/edit", adminController.editUser);
-router.post("/users/:userId/block", adminController.blockUser);
-router.post("/bikes/add", adminController.addBike);
-router.post("/bikes/:bikeId/assign", adminController.assignBike);
-router.post("/bikes/:bikeId/maintenance", adminController.sendBikeToMaintenance);
-router.post("/bikes/:bikeId/disable", adminController.disableBike);
-router.post("/bikes/:bikeId/lock", adminController.adminLockBike);
-router.post("/bikes/:bikeId/unlock", adminController.adminUnlockBike);
-router.post("/orders/:orderId/accept", adminController.acceptOrder);
-router.post("/orders/:orderId/reject", adminController.rejectOrder);
-router.post("/orders/:orderId/assign", adminController.assignOrder);
-router.post("/orders/:orderId/ongoing", adminController.markOrderOngoing);
-router.post("/orders/:orderId/complete", adminController.markOrderCompleted);
-router.post("/delivery/:userId/approve", adminController.approvePartner);
-router.post("/delivery/:userId/reject", adminController.rejectPartner);
-router.post("/delivery/:userId/toggle-online", adminController.togglePartnerOnline);
-router.post("/delivery/:userId/assign", adminController.assignOrderToPartner);
-router.post("/delivery/:userId/disable", adminController.disablePartner);
-router.post("/maintenance/:bikeId/fixed", adminController.markBikeFixed);
-router.post("/maintenance/add", adminController.addMaintenanceTicket);
-router.post("/maintenance/:ticketId/status", adminController.updateMaintenanceStatus);
-router.post("/maintenance/:ticketId/remove", adminController.removeMaintenanceTicket);
-router.post("/support/:ticketId/convert", adminController.convertSupportToMaintenance);
-router.get("/support/ticket/:ticketId/messages", adminController.getSupportMessages);
-router.post("/support/ticket/:ticketId/messages", adminController.sendSupportMessage);
-router.post("/notifications/send", adminController.sendNotification);
-router.post("/earnings/payout/:payoutId/release", adminController.releasePayout);
-router.post("/settings/save", adminController.saveSettings);
+// User Governance
+router.get("/users", requirePermission("manage_users"), adminController.users);
+router.get("/users/:userId", requirePermission("manage_users"), adminController.userProfile);
+router.get("/kyc-documents", requirePermission("manage_users"), adminController.kycDocumentsPage);
+router.post("/users/add", requirePermission("manage_users"), adminController.addUser);
+router.post("/users/:userId/edit", requirePermission("manage_users"), adminController.editUser);
+router.post("/users/:userId/block", requirePermission("manage_users"), adminController.blockUser);
 
-// Booking actions
-router.post("/bookings/:bookingId/complete", adminController.completeBooking);
-router.post("/bookings/:bookingId/cancel", adminController.cancelBooking);
+// Vehicle & Fleet Control
+router.get("/bikes", requirePermission("manage_bikes"), adminController.bikes);
+router.get("/bikes/:bikeId", requirePermission("manage_bikes"), adminController.bikeDetails);
+router.get("/maintenance", requirePermission("manage_bikes"), adminController.maintenance);
+router.post("/bikes/add", requirePermission("manage_bikes"), adminController.addBike);
+router.post("/bikes/:bikeId/assign", requirePermission("manage_bikes"), adminController.assignBike);
+router.post("/bikes/:bikeId/maintenance", requirePermission("manage_bikes"), adminController.sendBikeToMaintenance);
+router.post("/bikes/:bikeId/disable", requirePermission("manage_bikes"), adminController.disableBike);
+router.post("/bikes/:bikeId/lock", requirePermission("manage_bikes"), adminController.adminLockBike);
+router.post("/bikes/:bikeId/unlock", requirePermission("manage_bikes"), adminController.adminUnlockBike);
+router.post("/maintenance/:bikeId/fixed", requirePermission("manage_bikes"), adminController.markBikeFixed);
+router.post("/maintenance/add", requirePermission("manage_bikes"), adminController.addMaintenanceTicket);
+router.post("/maintenance/:ticketId/status", requirePermission("manage_bikes"), adminController.updateMaintenanceStatus);
+router.post("/maintenance/:ticketId/remove", requirePermission("manage_bikes"), adminController.removeMaintenanceTicket);
 
-// Promo Code management
-router.post("/promo/add", adminController.addPromoCode);
-router.post("/promo/:promoId/toggle", adminController.togglePromoCode);
-router.post("/promo/:promoId/delete", adminController.deletePromoCode);
+// Operations & Orders
+router.get("/orders", requirePermission("manage_orders"), adminController.orders);
+router.get("/bookings", requirePermission("manage_orders"), adminController.bookingsPage);
+router.get("/orders/:orderId", requirePermission("manage_orders"), adminController.orderDetails);
+router.get("/delivery-partners", requirePermission("manage_orders"), adminController.deliveryPartners);
+router.get("/delivery-partners/:partnerId", requirePermission("manage_orders"), adminController.deliveryPartnerProfile);
+router.get("/skipped-days", requirePermission("manage_orders"), adminController.skippedDaysPage);
+router.post("/orders/:orderId/accept", requirePermission("manage_orders"), adminController.acceptOrder);
+router.post("/orders/:orderId/reject", requirePermission("manage_orders"), adminController.rejectOrder);
+router.post("/orders/:orderId/assign", requirePermission("manage_orders"), adminController.assignOrder);
+router.post("/orders/:orderId/ongoing", requirePermission("manage_orders"), adminController.markOrderOngoing);
+router.post("/orders/:orderId/complete", requirePermission("manage_orders"), adminController.markOrderCompleted);
+router.post("/delivery/:userId/approve", requirePermission("manage_orders"), adminController.approvePartner);
+router.post("/delivery/:userId/reject", requirePermission("manage_orders"), adminController.rejectPartner);
+router.post("/delivery/:userId/toggle-online", requirePermission("manage_orders"), adminController.togglePartnerOnline);
+router.post("/delivery/:userId/assign", requirePermission("manage_orders"), adminController.assignOrderToPartner);
+router.post("/delivery/:userId/disable", requirePermission("manage_orders"), adminController.disablePartner);
+router.post("/bookings/:bookingId/complete", requirePermission("manage_orders"), adminController.completeBooking);
+router.post("/bookings/:bookingId/cancel", requirePermission("manage_orders"), adminController.cancelBooking);
+
+// Finance & Analytics
+router.get("/earnings", requirePermission("manage_finance"), adminController.earnings);
+router.get("/analytics", requirePermission("manage_finance"), adminController.analytics);
+router.get("/payments", requirePermission("manage_finance"), adminController.paymentsPage);
+router.post("/earnings/payout/:payoutId/release", requirePermission("manage_finance"), adminController.releasePayout);
+router.post("/promo/add", requirePermission("manage_finance"), adminController.addPromoCode);
+router.post("/promo/:promoId/toggle", requirePermission("manage_finance"), adminController.togglePromoCode);
+router.post("/promo/:promoId/delete", requirePermission("manage_finance"), adminController.deletePromoCode);
+
+// Engagement & Support
+router.get("/support", requirePermission("manage_support"), adminController.supportPage);
+router.get("/notifications", requirePermission("manage_support"), adminController.notificationsPage);
+router.post("/notifications/send", requirePermission("manage_support"), adminController.sendNotification);
+router.post("/support/:ticketId/convert", requirePermission("manage_support"), adminController.convertSupportToMaintenance);
+router.get("/support/ticket/:ticketId/messages", requirePermission("manage_support"), adminController.getSupportMessages);
+router.post("/support/ticket/:ticketId/messages", requirePermission("manage_support"), adminController.sendSupportMessage);
+
+// System Settings
+router.get("/settings", requirePermission("manage_settings"), adminController.settingsPage);
+router.post("/settings/save", requirePermission("manage_settings"), adminController.saveSettings);
 
 // Sub-Admins Management
 router.get("/admins", requirePermission("manage_admins"), adminController.adminsPage);

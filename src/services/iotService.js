@@ -127,7 +127,7 @@ export async function getBikeHealth(bikeId) {
       `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
       {
         vehicleIds: [loconavUuid],
-        sensors: ["speed", "ignition", "currentLocationCoordinates", "batteryVoltage"]
+        sensors: ["speed", "ignition", "currentLocationCoordinates"]
       },
       {
         headers: {
@@ -138,19 +138,19 @@ export async function getBikeHealth(bikeId) {
       }
     );
 
-    if (response.status === 200 && response.data?.data) {
-      const vehicleData = response.data.data[0] || {};
-      const telemetry = vehicleData.telematics || {};
+    if (response.status === 200 && response.data?.data?.values?.length > 0) {
+      const vehicleData = response.data.data.values[0];
+      const gps = vehicleData.gps || {};
+      const coords = gps.currentLocationCoordinates || {};
       
       // Map LocoNav telemetry to our internal format
-      // Note: adjust batteryPct calculation based on voltage or actual pct if provided
       return {
         bikeId,
-        batteryPct: telemetry.battery_percentage || 85, 
-        lat: telemetry.currentLocationCoordinates?.lat || null,
-        lng: telemetry.currentLocationCoordinates?.lng || null,
-        motorOk: telemetry.ignition === "ON" || true,
-        lastPingAt: vehicleData.updated_at || new Date().toISOString(),
+        batteryPct: 85, // Defaulting to 85% as batteryVoltage is unsupported by this device
+        lat: coords.lat?.value || null,
+        lng: coords.long?.value || null,
+        motorOk: true, // Assuming true unless ignition sensor explicitly says OFF
+        lastPingAt: coords.lat?.timestamp ? new Date(coords.lat.timestamp * 1000).toISOString() : new Date().toISOString(),
       };
     }
   } catch (error) {

@@ -922,7 +922,7 @@ export async function kycDocumentsPage(req, res) {
     const [{ data: kycData, error: kycError }, { data: usersData, error: usersError }] = await Promise.all([
       supabase
         .from("kyc_documents")
-        .select("id, user_id, type, file_url, status, created_at")
+        .select("id, user_id, type, file_url, status, reason, created_at")
         .order("created_at", { ascending: false }),
       supabase
         .from("users")
@@ -945,15 +945,31 @@ export async function kycDocumentsPage(req, res) {
         }
         byUser.get(uid).docs.push(doc);
       }
-      documents = Array.from(byUser.values()).map((u) => ({
-        ...u,
-        aadhaar_front_url: u.docs.find((d) => d.type === "aadhaar")?.file_url || null,
-        pan_card_url: u.docs.find((d) => d.type === "pan")?.file_url || null,
-        electricity_bill_url: u.docs.find((d) => d.type === "electricity_bill")?.file_url || null,
-        selfie_url: u.docs.find((d) => d.type === "selfie")?.file_url || null,
-        driving_license_url: u.docs.find((d) => d.type === "driving_license")?.file_url || null,
-        updated_at: u.docs[0]?.created_at || null,
-      }));
+      documents = Array.from(byUser.values()).map((u) => {
+        const aadhaarDoc = u.docs.find((d) => d.type === "aadhaar");
+        const panDoc = u.docs.find((d) => d.type === "pan");
+        const billDoc = u.docs.find((d) => d.type === "electricity_bill");
+        const selfieDoc = u.docs.find((d) => d.type === "selfie");
+        const dlDoc = u.docs.find((d) => d.type === "driving_license");
+
+        return {
+          ...u,
+          aadhaar: aadhaarDoc ? { id: aadhaarDoc.id, file_url: aadhaarDoc.file_url, status: aadhaarDoc.status, reason: aadhaarDoc.reason } : null,
+          pan: panDoc ? { id: panDoc.id, file_url: panDoc.file_url, status: panDoc.status, reason: panDoc.reason } : null,
+          electricity_bill: billDoc ? { id: billDoc.id, file_url: billDoc.file_url, status: billDoc.status, reason: billDoc.reason } : null,
+          selfie: selfieDoc ? { id: selfieDoc.id, file_url: selfieDoc.file_url, status: selfieDoc.status, reason: selfieDoc.reason } : null,
+          driving_license: dlDoc ? { id: dlDoc.id, file_url: dlDoc.file_url, status: dlDoc.status, reason: dlDoc.reason } : null,
+
+          // Legacy fields compatibility
+          aadhaar_front_url: aadhaarDoc?.file_url || null,
+          aadhaar_back_url: null,
+          pan_card_url: panDoc?.file_url || null,
+          electricity_bill_url: billDoc?.file_url || null,
+          selfie_url: selfieDoc?.file_url || null,
+          driving_license_url: dlDoc?.file_url || null,
+          updated_at: u.docs[0]?.created_at || null,
+        };
+      });
     } else {
       // Fallback: read from users/profiles table columns
       const { data: usersKycData } = await supabase
@@ -965,6 +981,11 @@ export async function kycDocumentsPage(req, res) {
         .map((item) => ({
           ...item,
           user_name: item.full_name || profileNameMap.get(String(item.id)) || "User",
+          aadhaar: item.aadhaar_front_url ? { file_url: item.aadhaar_front_url, status: "pending" } : null,
+          pan: item.pan_card_url ? { file_url: item.pan_card_url, status: "pending" } : null,
+          electricity_bill: item.electricity_bill_url ? { file_url: item.electricity_bill_url, status: "pending" } : null,
+          selfie: item.selfie_url ? { file_url: item.selfie_url, status: "pending" } : null,
+          driving_license: item.driving_license_url ? { file_url: item.driving_license_url, status: "pending" } : null,
         }));
     }
 

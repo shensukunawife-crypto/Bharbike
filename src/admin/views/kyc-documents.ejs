@@ -3,19 +3,213 @@
   .kyc-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #e5e7eb; }
   .kyc-head h2 { margin:0; font-size:24px; font-weight:800; color:#111827; }
   .kyc-head p { margin:4px 0 0; font-size:13px; color:#6b7280; }
-  .premium-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:14px; }
+  .premium-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:14px; }
   .premium-stat { border-radius:16px; padding:16px; background:linear-gradient(180deg,#fff,#f8fafc); border:1px solid #e5e7eb; box-shadow:0 8px 20px rgba(2,6,23,.06); }
   .premium-stat .top { display:flex; gap:8px; color:#64748b; font-size:13px; }
-  .premium-stat .val { margin-top:8px; font-size:30px; font-weight:800; color:#111827; }
+  .premium-stat .val { margin-top:8px; font-size:26px; font-weight:800; color:#111827; }
   .premium-table-wrap { border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; box-shadow:0 8px 22px rgba(2,6,23,.06); background:#fff; }
   .premium-table { width:100%; border-collapse:collapse; }
   .premium-table thead tr { background:#f8fafc; }
   .premium-table th, .premium-table td { padding:13px 14px; border-bottom:1px solid #eef2f7; text-align:left; vertical-align:top; }
   .action-row { display:flex; gap:6px; flex-wrap:wrap; }
-  .btn-doc { border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:10px; padding:7px 10px; cursor:pointer; text-decoration:none; }
+  .btn-doc { border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:10px; padding:7px 10px; cursor:pointer; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; }
   .empty-state { padding:36px 16px; text-align:center; color:#6b7280; }
+  
+  /* Dark mode overrides for shell */
+  .dark-mode .kyc-head { border-bottom-color: #334155; }
+  .dark-mode .kyc-head h2 { color: #f8fafc; }
+  .dark-mode .kyc-head p { color: #94a3b8; }
+  .dark-mode .premium-stat { background: linear-gradient(180deg, #1e293b, #0f172a); border-color: #334155; }
+  .dark-mode .premium-stat .val { color: #f8fafc; }
+  .dark-mode .premium-table-wrap { background: #0f172a; border-color: #334155; }
+  .dark-mode .premium-table thead tr { background: #1e293b; }
+  .dark-mode .premium-table th { color: #94a3b8; }
+  .dark-mode .premium-table td { border-bottom-color: #1e293b; color: #cbd5e1; }
+  .dark-mode .btn-doc { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  .dark-mode .btn-doc:hover { background: #334155; }
+
+  /* Premium KYC document card inside cells */
+  .kyc-doc-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    min-width: 140px;
+    max-width: 180px;
+    min-height: 125px;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+  }
+  .kyc-doc-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    border-color: #cbd5e1;
+  }
+  .dark-mode .kyc-doc-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  .dark-mode .kyc-doc-card:hover {
+    border-color: #475569;
+  }
+
+  .doc-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    width: fit-content;
+  }
+  .doc-status-pending {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+  .doc-status-verified {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+  .doc-status-rejected {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+  .dark-mode .doc-status-pending {
+    background-color: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+  }
+  .dark-mode .doc-status-verified {
+    background-color: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+  }
+  .dark-mode .doc-status-rejected {
+    background-color: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+  }
+  
+  .reject-reason {
+    font-size: 11px;
+    color: #ef4444;
+    margin-top: 4px;
+    font-style: italic;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+  .dark-mode .reject-reason {
+    color: #f87171;
+  }
+
+  .kyc-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    width: 100%;
+  }
+  
+  .btn-approve {
+    flex: 1;
+    background: #10b981;
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: all 0.2s ease;
+  }
+  .btn-approve:hover {
+    background: #059669;
+    transform: translateY(-1px);
+  }
+  .btn-reject {
+    flex: 1;
+    background: #ef4444;
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: all 0.2s ease;
+  }
+  .btn-reject:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+  }
+
   @keyframes fadeInUp { from {opacity:0; transform:translateY(6px);} to {opacity:1; transform:translateY(0);} }
 </style>
+
+<% 
+function renderKycCell(doc, typeLabel) {
+  if (!doc) { 
+%>
+    <div style="text-align: center; color: #6b7280; font-size: 13px; padding: 12px;">-</div>
+<% 
+    return;
+  }
+%>
+  <div class="kyc-doc-card">
+    <div class="action-row">
+      <a class="btn-doc" href="<%= doc.file_url %>" target="_blank" rel="noreferrer" style="font-size:10px; padding: 3px 6px; border-radius: 6px;">View</a>
+      <a class="btn-doc" href="<%= doc.file_url %>" download style="font-size:10px; padding: 3px 6px; border-radius: 6px;">Get</a>
+    </div>
+
+    <div style="margin-top: 4px;">
+      <% if (doc.status === 'verified') { %>
+        <span class="doc-status-badge doc-status-verified">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Verified
+        </span>
+      <% } else if (doc.status === 'rejected') { %>
+        <span class="doc-status-badge doc-status-rejected">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          Rejected
+        </span>
+        <% if (doc.reason) { %>
+          <div class="reject-reason" title="<%= doc.reason %>">Reason: <%= doc.reason %></div>
+        <% } %>
+      <% } else { %>
+        <span class="doc-status-badge doc-status-pending">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Pending
+        </span>
+      <% } %>
+    </div>
+
+    <% if (doc.id) { %>
+      <div class="kyc-actions">
+        <% if (doc.status !== 'verified') { %>
+          <button class="btn-approve kyc-status-btn" data-id="<%= doc.id %>" data-status="verified" title="Approve this document">
+            Verify
+          </button>
+        <% } %>
+        <% if (doc.status !== 'rejected') { %>
+          <button class="btn-reject kyc-status-btn" data-id="<%= doc.id %>" data-status="rejected" title="Reject this document">
+            Reject
+          </button>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+<% 
+} 
+%>
 
 <div class="kyc-shell">
   <div class="kyc-head">
@@ -31,6 +225,7 @@
     <div class="premium-stat"><div class="top"><span>💳</span><span>PAN</span></div><div class="val"><%= stats.pan %></div></div>
     <div class="premium-stat"><div class="top"><span>🚗</span><span>Driving License</span></div><div class="val"><%= stats.driving_license %></div></div>
     <div class="premium-stat"><div class="top"><span>🏠</span><span>Bill</span></div><div class="val"><%= stats.bill %></div></div>
+    <div class="premium-stat"><div class="top"><span>📸</span><span>Selfie</span></div><div class="val"><%= stats.selfie %></div></div>
   </div>
 
   <div class="premium-table-wrap">
@@ -52,36 +247,23 @@
         <% documents.forEach((item) => { %>
         <tr>
           <td>
-            <strong><%= item.user_name || "-" %></strong>
-            <div class="sub-note"><%= item.id %></div>
+            <strong style="font-size: 14px;"><%= item.user_name || "-" %></strong>
+            <div class="sub-note" style="font-size: 11px; color: #6b7280; margin-top: 4px; font-family: monospace;"><%= item.id %></div>
           </td>
           <td>
-            <%- item.aadhaar_front_url || item.aadhaar_back_url
-              ? `<div class="action-row">
-                  ${item.aadhaar_front_url ? `<a class="btn-doc" href="${item.aadhaar_front_url}" target="_blank" rel="noreferrer">View Front</a><a class="btn-doc" href="${item.aadhaar_front_url}" download>Download</a>` : ""}
-                  ${item.aadhaar_back_url ? `<a class="btn-doc" href="${item.aadhaar_back_url}" target="_blank" rel="noreferrer">View Back</a><a class="btn-doc" href="${item.aadhaar_back_url}" download>Download</a>` : ""}
-                </div>`
-              : "-" %>
+            <% renderKycCell(item.aadhaar, 'Aadhaar'); %>
           </td>
           <td>
-            <%- item.pan_card_url
-              ? `<div class="action-row"><a class="btn-doc" href="${item.pan_card_url}" target="_blank" rel="noreferrer">View</a><a class="btn-doc" href="${item.pan_card_url}" download>Download</a></div>`
-              : "-" %>
+            <% renderKycCell(item.pan, 'PAN'); %>
           </td>
           <td>
-            <%- item.driving_license_url
-              ? `<div class="action-row"><a class="btn-doc" href="${item.driving_license_url}" target="_blank" rel="noreferrer">View</a><a class="btn-doc" href="${item.driving_license_url}" download>Download</a></div>`
-              : "-" %>
+            <% renderKycCell(item.driving_license, 'Driving License'); %>
           </td>
           <td>
-            <%- item.electricity_bill_url
-              ? `<div class="action-row"><a class="btn-doc" href="${item.electricity_bill_url}" target="_blank" rel="noreferrer">View</a><a class="btn-doc" href="${item.electricity_bill_url}" download>Download</a></div>`
-              : "-" %>
+            <% renderKycCell(item.electricity_bill, 'Electricity Bill'); %>
           </td>
           <td>
-            <%- item.selfie_url
-              ? `<div class="action-row"><a class="btn-doc" href="${item.selfie_url}" target="_blank" rel="noreferrer">View</a><a class="btn-doc" href="${item.selfie_url}" download>Download</a></div>`
-              : "-" %>
+            <% renderKycCell(item.selfie, 'Selfie'); %>
           </td>
         </tr>
         <% }) %>

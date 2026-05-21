@@ -1,5 +1,6 @@
 import supabase from "../config/supabase.js";
 import { AppError } from "../utils/AppError.js";
+import { createUserNotification } from "./notificationService.js";
 
 export async function applyForDelivery(userId, partnerData = {}) {
   if (!userId) {
@@ -56,6 +57,14 @@ export async function applyForDelivery(userId, partnerData = {}) {
     }
   }
 
+  // Send KYC Submission Notification (non-blocking)
+  createUserNotification(
+    userId,
+    "KYC Application Under Review 📄",
+    "Your delivery partner application has been submitted successfully. We are reviewing your Aadhaar & Driving License. Expect approval within 24 hours!",
+    "kyc"
+  ).catch((err) => console.warn("[deliveryService.applyForDelivery] submission notification failed:", err?.message));
+
   return { status: "review", message: "Application submitted successfully for review" };
 }
 
@@ -86,6 +95,16 @@ export async function setPartnerOnline(userId, isOnline) {
     console.error("[deliveryService.setPartnerOnline] update failed", updateError);
     throw new AppError("Unable to update online status", 500);
   }
+
+  // Send status update notification (non-blocking)
+  createUserNotification(
+    userId,
+    isOnline ? "You are Online 🟢" : "You are Offline 🔴",
+    isOnline 
+      ? "Your status is now online. You will receive bike delivery jobs in your area." 
+      : "Your status is now offline. You will no longer receive delivery jobs.",
+    "info"
+  ).catch((err) => console.warn("[deliveryService.setPartnerOnline] notification failed:", err?.message));
 
   return { is_online: isOnline };
 }

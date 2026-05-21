@@ -2,6 +2,7 @@ import supabase from "../config/supabase.js";
 import { OrderStatus, EarningsType } from "../constants/dbEnums.js";
 import { AppError } from "../utils/AppError.js";
 import * as earningsService from "./earningsService.js";
+import { createUserNotification } from "./notificationService.js";
 
 async function assertPartnerEligible(userId) {
   const { data: user, error } = await supabase
@@ -65,6 +66,24 @@ export async function acceptOrder(userId, orderId) {
     throw new AppError("Unable to accept order", 500);
   }
 
+  // Notify delivery partner (non-blocking)
+  createUserNotification(
+    userId,
+    "Delivery Job Accepted 📦",
+    `You have successfully accepted Delivery Order #${orderId}. Please proceed to the pickup location: ${updated.pickup || "the designated hub"}.`,
+    "info"
+  ).catch((err) => console.warn("[orderService.acceptOrder] partner notification failed:", err?.message));
+
+  // Notify customer if associated with order (non-blocking)
+  if (updated.user_id) {
+    createUserNotification(
+      updated.user_id,
+      "Delivery Partner Assigned 🚚",
+      `A delivery partner has been assigned to your order #${orderId} and is on their way to deliver your bike!`,
+      "info"
+    ).catch((err) => console.warn("[orderService.acceptOrder] customer notification failed:", err?.message));
+  }
+
   return updated;
 }
 
@@ -96,6 +115,25 @@ export async function rejectOrder(userId, orderId) {
     console.error("[orderService.rejectOrder] update failed", error);
     throw new AppError("Unable to reject order", 500);
   }
+
+  // Notify delivery partner (non-blocking)
+  createUserNotification(
+    userId,
+    "Delivery Job Released 🔄",
+    `Delivery Order #${orderId} has been successfully returned to the active orders pool.`,
+    "info"
+  ).catch((err) => console.warn("[orderService.rejectOrder] partner notification failed:", err?.message));
+
+  // Notify customer if associated with order (non-blocking)
+  if (data.user_id) {
+    createUserNotification(
+      data.user_id,
+      "Delivery Order Updated ⏳",
+      `Your delivery order #${orderId} assignment has changed. We are matching you with another delivery partner shortly.`,
+      "warning"
+    ).catch((err) => console.warn("[orderService.rejectOrder] customer notification failed:", err?.message));
+  }
+
   return data;
 }
 
@@ -137,5 +175,24 @@ export async function completeOrder(userId, orderId) {
     console.error("[orderService.completeOrder] refetch failed", refetchError);
     throw new AppError("Order completed but unable to fetch latest data", 500);
   }
+
+  // Notify delivery partner of earnings (non-blocking)
+  createUserNotification(
+    userId,
+    "Delivery Completed! 💰",
+    `Great job! Delivery Order #${orderId} was completed successfully. ₹${updatedOrder.earnings} has been credited to your delivery earnings.`,
+    "success"
+  ).catch((err) => console.warn("[orderService.completeOrder] partner notification failed:", err?.message));
+
+  // Notify customer if associated with order (non-blocking)
+  if (updatedOrder.user_id) {
+    createUserNotification(
+      updatedOrder.user_id,
+      "Your Bike Has Arrived! 🚲",
+      `Awesome news! Your delivery order #${orderId} is complete and your bike has been delivered to your location. Ready to ride?`,
+      "success"
+    ).catch((err) => console.warn("[orderService.completeOrder] customer notification failed:", err?.message));
+  }
+
   return updatedOrder;
 }

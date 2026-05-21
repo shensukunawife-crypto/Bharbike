@@ -1,4 +1,6 @@
 import supabase from "../utils/supabaseClient.js";
+import { createUserNotification } from "../services/notificationService.js";
+import { getWalletBalance } from "../services/walletService.js";
 
 export const createBooking = async (req, res) => {
   try {
@@ -57,6 +59,28 @@ export const createBooking = async (req, res) => {
     if (error) {
       return res.status(500).json({ message: error.message, code: error.code });
     }
+
+    // Send Booking Confirmed Notification (non-blocking)
+    createUserNotification(
+      user_id,
+      "Booking Confirmed! 📅",
+      `Your booking for Bike #${bike_id} is confirmed. Start your ride from the app to unlock the smart lock.`,
+      "success"
+    ).catch((err) => console.warn("[bookingController.createBooking] notification failed:", err?.message));
+
+    // Check wallet balance and notify if low (non-blocking)
+    getWalletBalance(user_id)
+      .then((wallet) => {
+        if (wallet && wallet.balance < 150) {
+          createUserNotification(
+            user_id,
+            "Low Wallet Balance Alert ⚠️",
+            `Your wallet balance is low (₹${wallet.balance}). We recommend topping up to ensure a smooth, uninterrupted ride!`,
+            "warning"
+          ).catch(() => {});
+        }
+      })
+      .catch((err) => console.warn("[bookingController.createBooking] wallet check skipped (non-blocking):", err?.message));
 
     // 4. Update bike status to in_use
     if (!String(bike_id).includes("demo")) {

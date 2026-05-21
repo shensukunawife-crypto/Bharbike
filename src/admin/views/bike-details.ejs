@@ -36,6 +36,23 @@
       </button>
     </div>
   </div>
+  <div class="stat-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div class="stat-head">
+        <span class="stat-icon">📡</span>
+        <span class="stat-label">GPS Tracker ID</span>
+      </div>
+      <strong class="stat-value" style="font-size: 14.5px; word-break: break-all; margin-top: 4px; display: block; color: <%= bike.tracker_uuid ? 'var(--accent)' : '#9ca3af' %>;">
+        <%= bike.tracker_uuid || "⚠️ None Linked" %>
+      </strong>
+    </div>
+    <form class="ajax-form" data-url="/admin/bikes/<%= bike.id %>/link-gps" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+      <input type="text" name="device_uuid" placeholder="GPS Tracker UUID" value="<%= bike.tracker_uuid || '' %>" style="width: 100%; padding: 8px 10px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit;" />
+      <button type="submit" class="btn btn-sm btn-gold glow" style="width: 100%; padding: 8px; font-size: 12px; border-radius: 6px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; background: var(--accent); border: none; color: #fff;">
+        🔗 Link / Update GPS
+      </button>
+    </form>
+  </div>
 </div>
 
 <div class="analytics-grid">
@@ -130,7 +147,7 @@ function openMapModal(lat, lng) {
     if (!bikeMap) {
       bikeMap = L.map("bike-map").setView([lat, lng], 15);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "� OpenStreetMap contributors"
+        attribution: "� OpenStreetMap contributors"
       }).addTo(bikeMap);
       
       bikeMarker = L.marker([lat, lng]).addTo(bikeMap)

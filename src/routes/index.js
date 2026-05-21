@@ -1175,6 +1175,14 @@ api.post("/kyc/webhook", async (req, res) => {
         console.warn("[POST /api/kyc/webhook] users update skipped:", userErr?.message);
       }
 
+      // Send KYC approval notification (non-blocking)
+      createUserNotification(
+        userId,
+        "KYC Approved! 🪪 ✅",
+        "Congratulations! Your identity document has been verified. You can now unlock and ride any e-bike in our fleet!",
+        "success"
+      ).catch((err) => console.warn("[kyc/webhook] approval notification failed:", err?.message));
+
       return res.json({ success: true, message: "KYC approved and database updated" });
 
     } else if (status === "DECLINED" || status === "FAILED") {
@@ -1195,6 +1203,14 @@ api.post("/kyc/webhook", async (req, res) => {
       } catch (dbErr) {
         console.error("[POST /api/kyc/webhook] Supabase decline update exception:", dbErr?.message);
       }
+
+      // Send KYC rejection notification (non-blocking)
+      createUserNotification(
+        userId,
+        "KYC Rejected 🪪 ❌",
+        `We were unable to verify your identity document: ${declineReason || "Verification failed"}. Please upload a clear photo and try again.`,
+        "warning"
+      ).catch((err) => console.warn("[kyc/webhook] rejection notification failed:", err?.message));
 
       return res.json({ success: true, message: "KYC rejected updated" });
     }
@@ -1253,6 +1269,14 @@ api.post("/kyc/electricity", async (req, res) => {
       console.warn("[kyc/electricity] users column update skipped:", dbErr?.message);
     }
 
+    // Trigger submission notification (non-blocking)
+    createUserNotification(
+      user_id,
+      "KYC Document Submitted 🪪",
+      "Your Electricity Bill has been successfully submitted and is under review. We'll verify it shortly!",
+      "info"
+    ).catch((err) => console.warn("[kyc/electricity] submission notification failed:", err?.message));
+
     return res.status(201).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Server error" });
@@ -1296,6 +1320,14 @@ api.post("/kyc/driving-license", async (req, res) => {
     } catch (dbErr) {
       console.warn("[kyc/driving-license] users column update skipped:", dbErr?.message);
     }
+
+    // Trigger submission notification (non-blocking)
+    createUserNotification(
+      user_id,
+      "KYC Document Submitted 🪪",
+      "Your Driving License has been successfully submitted and is under review. We'll verify it shortly!",
+      "info"
+    ).catch((err) => console.warn("[kyc/driving-license] submission notification failed:", err?.message));
 
     return res.status(201).json({ success: true, data });
   } catch (err) {
@@ -1549,6 +1581,19 @@ api.patch("/admin/kyc/:id", async (req, res) => {
     }
     if (error) {
       return res.status(500).json({ success: false, message: error.message });
+    }
+
+    // Send KYC approval or rejection notification (non-blocking)
+    if (data && data.user_id) {
+      const isApproved = nextStatus === "verified" || nextStatus === "approved";
+      createUserNotification(
+        data.user_id,
+        isApproved ? "KYC Approved! 🪪 ✅" : "KYC Rejected 🪪 ❌",
+        isApproved
+          ? "Congratulations! Your identity document has been verified. You can now unlock and ride any e-bike in our fleet!"
+          : `We were unable to verify your identity document: ${reason || "Invalid document image"}. Please upload a clear photo and try again.`,
+        isApproved ? "success" : "warning"
+      ).catch((err) => console.warn("[admin/kyc/:id] status notification failed:", err?.message));
     }
 
     return res.json({ success: true, data });

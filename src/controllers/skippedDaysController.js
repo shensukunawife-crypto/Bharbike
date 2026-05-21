@@ -50,3 +50,58 @@ export async function getSkippedDays(req, res) {
     return res.status(500).json({ message: err?.message || "Fetch failed" });
   }
 }
+
+export async function toggleSkippedDayStatus(req, res) {
+  try {
+    const { id } = req.params;
+
+    const { data: current, error: getError } = await supabase
+      .from("rider_skipped_days")
+      .select("status")
+      .eq("id", id)
+      .single();
+
+    if (getError || !current) {
+      console.log("GET ERROR:", getError);
+      return res.status(404).json({ success: false, message: "Record not found" });
+    }
+
+    const nextStatus = current.status === "Active" ? "Inactive" : "Active";
+
+    const { data, error } = await supabase
+      .from("rider_skipped_days")
+      .update({ status: nextStatus })
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      console.log("UPDATE ERROR:", error);
+      return res.status(500).json(error);
+    }
+
+    res.json({ success: true, nextStatus, data });
+  } catch (err) {
+    console.error("[toggleSkippedDayStatus]", err);
+    return res.status(500).json({ message: err?.message || "Toggle failed" });
+  }
+}
+
+export async function deleteSkippedDay(req, res) {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from("rider_skipped_days")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.log("DELETE ERROR:", error);
+      return res.status(500).json(error);
+    }
+
+    res.json({ success: true, message: "Record deleted successfully" });
+  } catch (err) {
+    console.error("[deleteSkippedDay]", err);
+    return res.status(500).json({ message: err?.message || "Delete failed" });
+  }
+}

@@ -10,18 +10,105 @@ import supabase from "../utils/supabaseClient.js";
  */
 export const createOrder = async (req, res) => {
   try {
-    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null, is_demo = true } = req.body;
+    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null } = req.body;
     const numericAmount = Number(amount);
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({ success: false, message: "Valid amount is required" });
     }
-    
-    // DEMO MODE: Skip Razorpay and create a mock order
+
+    const normalizedAmount = amount_in_paise ? numericAmount / 100 : numericAmount;
+
+    // Check if real Razorpay key is configured
+    let config = null;
+    let useRealRazorpay = false;
+    try {
+      config = await getActiveRazorpayConfig();
+      if (config && config.key_id && config.key_secret && config.key_id.startsWith("rzp_")) {
+        useRealRazorpay = true;
+      }
+    } catch (configError) {
+      console.log("[createOrder] Active Razorpay config not found or invalid. Falling back to Demo Mode:", configError.message);
+    }
+
+    if (useRealRazorpay) {
+      console.log(`[createOrder] Real Razorpay Mode Active (${config.mode})`);
+
+      // 1. Create order record in app database first (pending)
+      const { data: appOrder, error: appOrderError } = await supabase
+        .from("orders")
+        .insert([
+          {
+            user_id: user_id || null,
+            plan_name: plan_name || null,
+            amount: Math.round(normalizedAmount),
+            status: "pending",
+            order_code: `ORD-RZP-${Date.now()}`,
+          },
+        ])
+        .select("id")
+        .single();
+
+      let appOrderId = appOrder?.id ?? null;
+      if (appOrderError) {
+        console.error("[createOrder] database order insert failed:", appOrderError);
+        // Fallback to random ID if database is missing tables or RLS blocked
+        if (appOrderError.message?.toLowerCase().includes("row-level security") ||
+            appOrderError.message?.toLowerCase().includes("violates") ||
+            appOrderError.message?.toLowerCase().includes("could not find") ||
+            appOrderError.code === "PGRST205") {
+          appOrderId = crypto.randomUUID();
+          console.warn("[createOrder] orders table issue — using mock order ID:", appOrderId);
+        } else {
+          return res.status(500).json({ success: false, message: appOrderError.message });
+        }
+      }
+
+      // 2. Initialize Razorpay Client
+      const razorpay = new Razorpay({
+        key_id: config.key_id,
+        key_secret: config.key_secret,
+      });
+
+      // 3. Create real order on Razorpay servers
+      const amountInPaise = Math.round(normalizedAmount * 100);
+      const rzpOrder = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: currency || "INR",
+        receipt: receipt || `receipt_${appOrderId || Date.now()}`,
+      });
+
+      // 4. Save to payments table
+      try {
+        await supabase.from("payments").insert([
+          {
+            order_id: appOrderId,
+            razorpay_order_id: rzpOrder.id,
+            status: "created",
+          },
+        ]);
+      } catch (paymentInsertError) {
+        console.warn("[createOrder] payments insert skipped in real mode:", paymentInsertError?.message);
+      }
+
+      // 5. Return actual order details and key_id to the frontend
+      return res.status(200).json({
+        success: true,
+        id: rzpOrder.id,
+        order_id: rzpOrder.id,
+        key_id: config.key_id,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency || "INR",
+        app_order_id: appOrderId,
+        is_demo: false,
+        plan_id: plan_id || plan_name || null,
+      });
+    }
+
+    // DEMO MODE FALLBACK: Skip Razorpay and create a mock order
     console.log("[createOrder] DEMO MODE ACTIVE - Skipping Razorpay");
     
     const mockRazorpayOrderId = `order_demo_${Date.now()}`;
-    const normalizedAmount = amount_in_paise ? numericAmount / 100 : numericAmount;
 
     const { data: appOrder, error: appOrderError } = await supabase
       .from("orders")
@@ -78,36 +165,104 @@ export const createOrder = async (req, res) => {
       plan_id: plan_id || plan_name || null,
     });
   } catch (error) {
-    console.error("[createOrder] Demo error:", error);
+    console.error("[createOrder] Order creation error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 /**
- * Verifies Payment (Modified for Demo Mode)
+ * Verifies Payment (Supports Cryptographic Signature Check & Demo Bypass)
  */
 export const verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, app_order_id, user_id, plan_id, ticket_id } = req.body;
-    const mockPaymentId = `pay_demo_${Date.now()}`;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, app_order_id, user_id, plan_id, ticket_id, payment_method, amount } = req.body;
+    
+    let resolvedPaymentId = `pay_demo_${Date.now()}`;
+    let isDemoMode = true;
 
-    console.log("[verifyPayment] DEMO MODE - Auto-verifying payment");
+    // Cryptographic signature check if a real Razorpay signature is supplied
+    if (razorpay_signature) {
+      console.log("[verifyPayment] Real Razorpay signature received. Verifying...");
+      try {
+        const config = await getActiveRazorpayConfig();
+        if (config && config.key_secret) {
+          const hmac = crypto.createHmac("sha256", config.key_secret);
+          hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+          const generatedSignature = hmac.digest("hex");
+          
+          if (generatedSignature !== razorpay_signature) {
+            console.error("[verifyPayment] Cryptographic signature mismatch!");
+            return res.status(400).json({ success: false, message: "Payment verification failed: Signature mismatch" });
+          }
+          console.log("[verifyPayment] Cryptographic signature verified successfully!");
+          resolvedPaymentId = razorpay_payment_id;
+          isDemoMode = false;
+        } else {
+          console.warn("[verifyPayment] Real signature received but no active key secret found. Falling back to Demo Mode.");
+        }
+      } catch (err) {
+        console.error("[verifyPayment] Error retrieving key secret for verification:", err.message);
+        return res.status(400).json({ success: false, message: "Verification failed: Could not load Razorpay config" });
+      }
+    } else {
+      console.log("[verifyPayment] DEMO MODE - Auto-verifying payment");
+    }
+
+    // Check if this is a support ticket repair cost payment
+    if (ticket_id) {
+      if (payment_method === "wallet") {
+        const costAmount = Number(amount) || 0;
+        if (costAmount <= 0) {
+          return res.status(400).json({ success: false, message: "Invalid payment amount for ticket" });
+        }
+        console.log(`[verifyPayment] Wallet payment for ticket detected. Deducting ₹${costAmount}`);
+        // Deduct money from wallet
+        await walletService.deductMoney(user_id, costAmount, `Repair Cost: Ticket #${ticket_id}`);
+      }
+
+      // Update ticket status in DB
+      try {
+        await supabase.from("support_tickets").update({ 
+          payment_status: "paid",
+          status: "resolved",
+          updated_at: new Date().toISOString()
+        }).eq("id", ticket_id);
+      } catch (e) {
+        console.warn("[verifyPayment] support_tickets status update failed:", e?.message);
+      }
+
+      if (app_order_id) {
+        try {
+          await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
+        } catch (e) {
+          console.warn("[verifyPayment] orders status update failed:", e?.message);
+        }
+      }
+
+      let walletSummary = null;
+      if (user_id) {
+        try {
+          walletSummary = await walletService.getWalletSummary(user_id);
+        } catch (e) {
+          console.warn("[verifyPayment] failed to get wallet summary:", e?.message);
+        }
+      }
+
+      return res.json({ success: true, is_demo: isDemoMode, wallet: walletSummary });
+    }
 
     // Wrap all DB operations in try/catch — don't fail on RLS or missing tables
     try {
       if (app_order_id) {
         await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
       }
-      if (ticket_id) {
-        await supabase.from("support_tickets").update({ payment_status: "paid" }).eq("id", ticket_id);
-      }
-    } catch (e) { console.warn("[verifyPayment] orders/tickets update skipped:", e?.message); }
+    } catch (e) { console.warn("[verifyPayment] orders update skipped:", e?.message); }
 
     let paymentRecordId = null;
     try {
       const { data: paymentRecord } = await supabase
         .from("payments")
-        .update({ status: "success", razorpay_payment_id: mockPaymentId })
+        .update({ status: "success", razorpay_payment_id: resolvedPaymentId })
         .eq("razorpay_order_id", razorpay_order_id)
         .select("id")
         .single();
@@ -116,7 +271,6 @@ export const verifyPayment = async (req, res) => {
 
     // Create subscription or add wallet money
     if (user_id && plan_id) {
-      const { payment_method = "upi", amount } = req.body;
       const subAmount = Number(amount) || 0;
 
       // Resolve plan display name first
@@ -198,7 +352,7 @@ export const verifyPayment = async (req, res) => {
       }
     } else if (user_id) {
       // Add money to wallet — try RPC first, then direct insert fallback
-      let addAmount = Number(req.body.amount) || 0;
+      let addAmount = Number(amount) || 0;
 
       // Fallback: If amount is missing, retrieve it from the orders table
       if (addAmount <= 0 && app_order_id) {
@@ -219,7 +373,7 @@ export const verifyPayment = async (req, res) => {
 
       if (addAmount > 0) {
         try {
-          await walletService.addMoney(user_id, addAmount, "Wallet Recharge", mockPaymentId, razorpay_order_id);
+          await walletService.addMoney(user_id, addAmount, "Wallet Recharge", resolvedPaymentId, razorpay_order_id);
         } catch (rpcErr) {
           console.warn("[verifyPayment] wallet RPC failed, trying direct insert:", rpcErr?.message);
           try {
@@ -234,7 +388,7 @@ export const verifyPayment = async (req, res) => {
             // Insert transaction record
             await supabase.from("wallet_transactions").insert({
               user_id, amount: addAmount, type: "credit", title: "Wallet Recharge",
-              payment_id: mockPaymentId, order_id: razorpay_order_id, status: "completed"
+              payment_id: resolvedPaymentId, order_id: razorpay_order_id, status: "completed"
             }).then(r => { if (r.error) console.warn("[verifyPayment] tx insert failed:", r.error.message); });
           } catch (directErr) {
             console.warn("[verifyPayment] direct wallet insert also failed:", directErr?.message);
@@ -252,9 +406,9 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    return res.json({ success: true, is_demo: true, wallet: walletSummary });
+    return res.json({ success: true, is_demo: isDemoMode, wallet: walletSummary });
   } catch (error) {
-    console.error("[verifyPayment] Demo error:", error);
+    console.error("[verifyPayment] Error:", error);
     return res.status(error.statusCode || 500).json({ success: false, message: error.message });
   }
 };

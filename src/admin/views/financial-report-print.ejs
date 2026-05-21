@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BharBike — Financial Audit Statement</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #ff7a00;
+      --primary-dark: #cc6200;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border: #cbd5e1;
+      --bg-light: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--text-main);
+      background-color: #fff;
+      line-height: 1.5;
+      padding: 40px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Professional A4 Portrait Margins */
+    @page {
+      size: A4 portrait;
+      margin: 20mm;
+    }
+
+    .report-shell {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* HEADER BLOCK */
+    .header-block {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .company-info h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+    }
+
+    .company-info h1 span {
+      color: var(--primary);
+    }
+
+    .company-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .statement-title-block {
+      text-align: right;
+    }
+
+    .statement-title-block h2 {
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary-dark);
+    }
+
+    .statement-id {
+      font-family: monospace;
+      font-size: 13px;
+      background: var(--bg-light);
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    /* METADATA GRID */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .meta-item {
+      font-size: 13px;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: var(--text-muted);
+      display: inline-block;
+      width: 140px;
+    }
+
+    .meta-value {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    /* FINANCIAL CARDS */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .metric-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      background: #fff;
+    }
+
+    .metric-card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .metric-card-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .metric-card-value.highlight {
+      color: var(--primary-dark);
+    }
+
+    /* LEDGER SECTION */
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      color: var(--text-main);
+      border-left: 4px solid var(--primary);
+      padding-left: 8px;
+    }
+
+    .table-container {
+      margin-bottom: 32px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: var(--bg-light);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--text-main);
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .amount-col {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-badge.success {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .status-badge.pending {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    /* SIGNATURE BLOCK */
+    .signature-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .signature-box {
+      width: 240px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .signature-line {
+      height: 1px;
+      background: var(--text-main);
+      margin-bottom: 8px;
+      margin-top: 40px;
+    }
+
+    .signature-title {
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* PRINT LAYOUT ADJUSTMENTS */
+    @media print {
+      body {
+        padding: 0;
+      }
+      .no-print {
+        display: none;
+      }
+      .metric-card {
+        background-color: #fff !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="report-shell">
+    
+    <!-- HEADER -->
+    <div class="header-block">
+      <div class="company-info">
+        <h1>Bhar<span>Bike</span></h1>
+        <p>Smart Bike Rentals & Partner Delivery System</p>
+        <p>Bangalore Corporate Office, Karnataka, India</p>
+      </div>
+      <div class="statement-title-block">
+        <h2>Financial Audit Statement</h2>
+        <div class="statement-id">ID: AUD-<%= Date.now().toString().slice(-8) %></div>
+      </div>
+    </div>
+
+    <!-- METADATA -->
+    <div class="meta-grid">
+      <div class="meta-item">
+        <span class="meta-label">Generated On:</span>
+        <span class="meta-value"><%= new Date().toLocaleString("en-IN") %></span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Reporting Period:</span>
+        <span class="meta-value"><%= filter.toUpperCase() %></span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Company Name:</span>
+        <span class="meta-value">BharBike Technologies Pvt Ltd</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Report Type:</span>
+        <span class="meta-value">Executive General Ledger</span>
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-card-label">Aggregate Net Revenue</div>
+        <div class="metric-card-value highlight">₹<%= Number(totals.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">Bike Rental Share</div>
+        <div class="metric-card-value">₹<%= Number(totals.rental || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">Delivery Partner Share</div>
+        <div class="metric-card-value">₹<%= Number(totals.delivery || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+      </div>
+    </div>
+
+    <!-- TRANSACTION LEDGER -->
+    <div class="section-title">Transactions Activity (Ledger)</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Txn ID</th>
+            <th>Rider / User Name</th>
+            <th>Service Type</th>
+            <th>Timestamp</th>
+            <th>Status</th>
+            <th style="text-align: right;">Amount (INR)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!transactions.length) { %>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No records available in this range</td></tr>
+          <% } %>
+          <% transactions.forEach((tx) => { %>
+            <tr>
+              <td style="font-family: monospace;"><%= tx.id %></td>
+              <td style="font-weight: 500;"><%= tx.user %></td>
+              <td><%= tx.type %></td>
+              <td><%= tx.date %></td>
+              <td>
+                <span class="status-badge <%= tx.status === 'Success' ? 'success' : 'pending' %>"><%= tx.status %></span>
+              </td>
+              <td class="amount-col">₹<%= Number(tx.amount || 0).toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PAYOUT RECORDS -->
+    <div class="section-title">Disbursed Payout History</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Payout ID</th>
+            <th>Linked Txn</th>
+            <th>Partner Name</th>
+            <th>Status</th>
+            <th>Paid Date</th>
+            <th style="text-align: right;">Disbursed (INR)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!payoutHistory.length) { %>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No payout entries available</td></tr>
+          <% } %>
+          <% payoutHistory.forEach((item) => { %>
+            <tr>
+              <td style="font-family: monospace;"><%= item.payoutId %></td>
+              <td style="font-family: monospace;"><%= item.transactionId %></td>
+              <td style="font-weight: 500;"><%= item.user %></td>
+              <td>
+                <span class="status-badge <%= item.status === 'paid' ? 'success' : 'pending' %>"><%= item.status %></span>
+              </td>
+              <td><%= item.paidAt %></td>
+              <td class="amount-col">₹<%= Number(item.amount || 0).toFixed(2) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SIGNATURE BLOCK -->
+    <div class="signature-container">
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <div class="signature-title">Prepared & Verified By</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">BharBike Finance Officer</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <div class="signature-title">Authorized Seal & Signature</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Auditing Governance</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    window.onload = () => {
+      // Auto trigger standard browser print-to-PDF prompt
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    };
+  </script>
+</body>
+</html>

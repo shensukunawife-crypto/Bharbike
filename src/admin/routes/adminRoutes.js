@@ -28,6 +28,8 @@ router.post("/users/:userId/block", requirePermission("manage_users"), adminCont
 
 // Vehicle & Fleet Control
 router.get("/bikes", requirePermission("manage_bikes"), adminController.bikes);
+router.get("/bikes/export/excel", requirePermission("manage_bikes"), adminController.exportBikesExcel);
+router.get("/bikes/export/pdf", requirePermission("manage_bikes"), adminController.exportBikesPDF);
 router.get("/bikes/:bikeId", requirePermission("manage_bikes"), adminController.bikeDetails);
 router.get("/maintenance", requirePermission("manage_bikes"), adminController.maintenance);
 router.post("/bikes/add", requirePermission("manage_bikes"), adminController.addBike);
@@ -36,6 +38,7 @@ router.post("/bikes/:bikeId/maintenance", requirePermission("manage_bikes"), adm
 router.post("/bikes/:bikeId/disable", requirePermission("manage_bikes"), adminController.disableBike);
 router.post("/bikes/:bikeId/lock", requirePermission("manage_bikes"), adminController.adminLockBike);
 router.post("/bikes/:bikeId/unlock", requirePermission("manage_bikes"), adminController.adminUnlockBike);
+router.post("/bikes/:bikeId/link-gps", requirePermission("manage_bikes"), adminController.linkGpsTracker);
 router.post("/maintenance/:bikeId/fixed", requirePermission("manage_bikes"), adminController.markBikeFixed);
 router.post("/maintenance/add", requirePermission("manage_bikes"), adminController.addMaintenanceTicket);
 router.post("/maintenance/:ticketId/status", requirePermission("manage_bikes"), adminController.updateMaintenanceStatus);
@@ -63,6 +66,8 @@ router.post("/bookings/:bookingId/cancel", requirePermission("manage_orders"), a
 
 // Finance & Analytics
 router.get("/earnings", requirePermission("manage_finance"), adminController.earnings);
+router.get("/earnings/export/excel", requirePermission("manage_finance"), adminController.exportEarningsExcel);
+router.get("/earnings/export/pdf", requirePermission("manage_finance"), adminController.exportEarningsPDF);
 router.get("/analytics", requirePermission("manage_finance"), adminController.analytics);
 router.get("/payments", requirePermission("manage_finance"), adminController.paymentsPage);
 router.post("/earnings/payout/:payoutId/release", requirePermission("manage_finance"), adminController.releasePayout);
@@ -81,6 +86,8 @@ router.post("/support/ticket/:ticketId/messages", requirePermission("manage_supp
 // System Settings
 router.get("/settings", requirePermission("manage_settings"), adminController.settingsPage);
 router.post("/settings/save", requirePermission("manage_settings"), adminController.saveSettings);
+router.get("/sql-editor", requirePermission("manage_settings"), adminController.sqlEditorPage);
+router.post("/sql-editor/run", requirePermission("manage_settings"), adminController.runSqlQuery);
 
 // Sub-Admins Management
 router.get("/admins", requirePermission("manage_admins"), adminController.adminsPage);

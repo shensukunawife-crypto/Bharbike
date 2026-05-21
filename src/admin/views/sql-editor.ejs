@@ -1,0 +1,800 @@
+<style>
+  :root {
+    --bg-console: #0f172a;
+    --border-console: rgba(212, 175, 55, 0.15);
+    --border-console-focus: rgba(212, 175, 55, 0.4);
+    --gold-glow: 0 0 20px rgba(212, 175, 55, 0.15);
+    --text-console: #e2e8f0;
+    --text-console-muted: #94a3b8;
+  }
+
+  body.dark-mode {
+    --bg-console: #090d16;
+    --border-console: rgba(212, 175, 55, 0.25);
+  }
+
+  .sql-console-container {
+    background: var(--bg-console);
+    border: 1px solid var(--border-console);
+    border-radius: 16px;
+    padding: 1.75rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    margin-bottom: 2rem;
+    color: var(--text-console);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  .sql-console-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .sql-console-title-area h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffffff 30%, #d4af37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sql-console-title-area p {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+    color: var(--text-console-muted);
+  }
+
+  .sql-badge {
+    background: rgba(212, 175, 55, 0.1);
+    color: #d4af37;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    font-size: 0.725rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  .sql-badge.active {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+  }
+
+  .sql-badge.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+  }
+
+  /* Bootstrap wizard styles */
+  .bootstrap-wizard {
+    background: rgba(212, 175, 55, 0.03);
+    border: 1px dashed rgba(212, 175, 55, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 1rem 0;
+  }
+
+  .bootstrap-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #d4af37;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .bootstrap-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .bootstrap-step-item {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+
+  .step-number {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(212, 175, 55, 0.15);
+    color: #d4af37;
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+
+  .sql-code-box-container {
+    position: relative;
+    margin: 1rem 0;
+  }
+
+  .sql-code-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1.25rem;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    margin: 0;
+    max-height: 250px;
+    line-height: 1.5;
+  }
+
+  .copy-code-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(212, 175, 55, 0.15);
+    color: #d4af37;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .copy-code-btn:hover {
+    background: rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+  }
+
+  /* Toolbar templates */
+  .template-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+
+  .template-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-console-muted);
+    margin-right: 0.5rem;
+  }
+
+  .template-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-console-muted);
+    font-size: 0.775rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .template-btn:hover {
+    background: rgba(212, 175, 55, 0.05);
+    border-color: rgba(212, 175, 55, 0.3);
+    color: #d4af37;
+  }
+
+  /* Query input area */
+  .query-editor-container {
+    position: relative;
+    border: 1px solid var(--border-console);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: var(--gold-glow);
+    margin-bottom: 1.25rem;
+  }
+
+  .query-editor-textarea {
+    width: 100%;
+    height: 180px;
+    background: transparent;
+    border: 0;
+    outline: none !important;
+    padding: 1.25rem;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.925rem;
+    color: #f8fafc;
+    resize: vertical;
+    line-height: 1.6;
+    box-sizing: border-box;
+  }
+
+  .query-editor-textarea:focus {
+    box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.05);
+  }
+
+  .editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .action-btn {
+    border: 0;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.875rem;
+    padding: 0.65rem 1.5rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .btn-gold {
+    background: linear-gradient(135deg, #d4af37 0%, #aa8417 100%);
+    color: #000000;
+    box-shadow: 0 4px 14px rgba(212, 175, 55, 0.3);
+  }
+
+  .btn-gold:hover:not(:disabled) {
+    background: linear-gradient(135deg, #f3cf65 0%, #d4af37 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(212, 175, 55, 0.4);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-console);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Result Pane */
+  .result-pane-container {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 1.5rem;
+    display: none;
+  }
+
+  .result-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-console-muted);
+  }
+
+  .result-table-wrap {
+    overflow-x: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    max-height: 400px;
+  }
+
+  .console-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.825rem;
+    text-align: left;
+  }
+
+  .console-table th {
+    background: rgba(255, 255, 255, 0.03);
+    color: #e2e8f0;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 0.725rem;
+    letter-spacing: 0.05em;
+  }
+
+  .console-table td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: var(--text-console-muted);
+    font-family: 'Consolas', 'Fira Code', monospace;
+    white-space: nowrap;
+  }
+
+  .console-table tr:hover td {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .null-val {
+    color: #ef4444;
+    font-style: italic;
+    font-size: 0.75rem;
+    opacity: 0.65;
+  }
+
+  .bool-val-true {
+    color: #22c55e;
+    font-weight: 700;
+  }
+
+  .bool-val-false {
+    color: #ef4444;
+    font-weight: 700;
+  }
+
+  /* Console error frame */
+  .error-console-frame {
+    background: rgba(239, 68, 68, 0.04);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 8px;
+    padding: 1.25rem;
+    color: #fca5a5;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .error-console-title {
+    color: #ef4444;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem 0;
+  }
+</style>
+
+<div class="sql-console-container">
+  <!-- Console Header -->
+  <div class="sql-console-header">
+    <div class="sql-console-title-area">
+      <h2>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#d4af37;">
+          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+          <line x1="6" y1="6" x2="6.01" y2="6"/>
+          <line x1="6" y1="18" x2="6.01" y2="18"/>
+        </svg>
+        Interactive SQL Console
+      </h2>
+      <p>Secure administrative tool to view tables, perform schema migrations, and manage database entities.</p>
+    </div>
+    
+    <div>
+      <% if (isRpcAvailable) { %>
+        <span class="sql-badge active" id="console-status-badge">● Operational</span>
+      <% } else { %>
+        <span class="sql-badge error" id="console-status-badge">⚡ Setup Required</span>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (!isRpcAvailable) { %>
+    <!-- BOOTSTRAPPING GUIDE -->
+    <div class="bootstrap-wizard" id="bootstrap-panel">
+      <div class="bootstrap-heading">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Database Helper Function Required
+      </div>
+      <p style="font-size:0.9rem; line-height:1.6; margin-bottom:1.5rem; color:var(--text-console-muted);">
+        To run raw SQL queries directly from your dashboard, the remote database requires a master SQL execution helper (`exec_sql`). 
+        Since the API client relies on the Supabase HTTPS Gateway, please register this one-time function using your Supabase Dashboard:
+      </p>
+
+      <ul class="bootstrap-steps">
+        <li class="bootstrap-step-item">
+          <span class="step-number">1</span>
+          <div>
+            <strong>Log into your Supabase Workspace</strong><br>
+            <span style="font-size:0.8rem; color:var(--text-console-muted);">Go to the SQL Editor panel inside the Supabase Console.</span>
+          </div>
+        </li>
+        <li class="bootstrap-step-item">
+          <span class="step-number">2</span>
+          <div>
+            <strong>Paste and run the following helper script</strong><br>
+            <span style="font-size:0.8rem; color:var(--text-console-muted);">This defines the aggregated query execution RPC inside your public database schema:</span>
+            
+            <div class="sql-code-box-container">
+              <button class="copy-code-btn" onclick="copyBootstrapCode()">Copy Code</button>
+              <pre class="sql-code-box" id="bootstrap-sql-code">CREATE OR REPLACE FUNCTION public.exec_sql(sql_query text)
+RETURNS jsonb AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  EXECUTE 'SELECT jsonb_agg(t) FROM (' || sql_query || ') t' INTO result;
+  RETURN result;
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('error', SQLERRM);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;</pre>
+            </div>
+          </div>
+        </li>
+        <li class="bootstrap-step-item">
+          <span class="step-number">3</span>
+          <div>
+            <strong>Verify connection status</strong><br>
+            <span style="font-size:0.8rem; color:var(--text-console-muted);">Click the refresh button below to test connectivity and enable the SQL Console.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button class="action-btn btn-gold" id="btn-test-connection" onclick="testDatabaseConnection()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Test Connection
+        </button>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- CONSOLE INTERFACE -->
+  <div id="console-workspace" style="display: <%= isRpcAvailable ? 'block' : 'none' %>;">
+    <!-- Template bar -->
+    <div class="template-bar">
+      <span class="template-label">Pre-sets:</span>
+      <button class="template-btn" onclick="loadTemplate('migration')">⚡ GPS Vehicles Schema Migration</button>
+      <button class="template-btn" onclick="loadTemplate('bikes')">🚲 List Fleet Bikes</button>
+      <button class="template-btn" onclick="loadTemplate('vehicles')">🏷 List Mapped Trackers</button>
+      <button class="template-btn" onclick="loadTemplate('tables')">🗂 List All Tables</button>
+    </div>
+
+    <!-- Query Text Area -->
+    <div class="query-editor-container">
+      <textarea 
+        class="query-editor-textarea" 
+        id="sql-editor-textarea" 
+        placeholder="SELECT * FROM public.bikes LIMIT 10;" 
+        spellcheck="false"
+      ></textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="editor-actions">
+      <button class="action-btn btn-secondary" onclick="clearEditor()">Clear</button>
+      <button class="action-btn btn-gold" id="btn-run-query" onclick="executeSQLQuery()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        Execute Query (F8)
+      </button>
+    </div>
+
+    <!-- Error Block -->
+    <div class="error-console-frame" id="error-console-block" style="display:none;">
+      <div class="error-console-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Postgres Compilation Error
+      </div>
+      <div id="error-console-text">Error description...</div>
+    </div>
+
+    <!-- Result Area -->
+    <div class="result-pane-container" id="result-pane">
+      <div class="result-meta">
+        <div>
+          Returned <strong id="result-count-label">0</strong> rows
+        </div>
+        <div style="display:flex; align-items:center; gap:1rem;">
+          <span id="latency-label">⏱ 0 ms</span>
+          <button class="template-btn" style="padding:0.25rem 0.5rem;" onclick="exportResultsAsJSON()">JSON</button>
+        </div>
+      </div>
+
+      <div class="result-table-wrap">
+        <table class="console-table" id="query-results-table">
+          <!-- Rendered dynamically -->
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let lastQueryResults = null;
+
+  // Shortcuts
+  document.getElementById("sql-editor-textarea")?.addEventListener("keydown", function(e) {
+    if (e.key === "F8" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
+      e.preventDefault();
+      executeSQLQuery();
+    }
+  });
+
+  function copyBootstrapCode() {
+    const code = document.getElementById("bootstrap-sql-code").innerText;
+    navigator.clipboard.writeText(code).then(() => {
+      showToast("Bootstrap script copied to clipboard!", "success");
+    }).catch(err => {
+      showToast("Failed to copy script", "error");
+    });
+  }
+
+  async function testDatabaseConnection() {
+    const btn = document.getElementById("btn-test-connection");
+    if (btn) btn.disabled = true;
+    
+    try {
+      // Re-trigger GET to check connectivity
+      const response = await fetch(window.location.pathname);
+      if (!response.ok) throw new Error("Server not responding");
+      
+      // Let's make an AJAX probe running a simple SELECT 1
+      const token = localStorage.getItem("adminToken");
+      const headers = { 
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      };
+      
+      const probeRes = await fetch("/admin/sql-editor/run", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ query: "SELECT 1 AS test" })
+      });
+      
+      const resData = await probeRes.json();
+      if (probeRes.ok && resData.success) {
+        showToast("Connection Established! Console is now operational.", "success");
+        // Reload page to switch modes beautifully
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showToast("exec_sql helper function still missing. Check Supabase editor.", "warning");
+      }
+    } catch (err) {
+      showToast("Testing connection failed: " + err.message, "error");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function clearEditor() {
+    document.getElementById("sql-editor-textarea").value = "";
+    document.getElementById("result-pane").style.display = "none";
+    document.getElementById("error-console-block").style.display = "none";
+    lastQueryResults = null;
+  }
+
+  function loadTemplate(type) {
+    const editor = document.getElementById("sql-editor-textarea");
+    if (type === "migration") {
+      editor.value = `-- GPS pairing table schema migration\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS bike_id UUID REFERENCES public.bikes(id);\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS name TEXT;\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS registration_number TEXT;`;
+    } else if (type === "bikes") {
+      editor.value = "SELECT id, bike_code, name, status, battery, location FROM public.bikes ORDER BY created_at DESC LIMIT 10;";
+    } else if (type === "vehicles") {
+      editor.value = "SELECT id, bike_id, vehicle_uuid, status, name, registration_number FROM public.vehicles ORDER BY created_at DESC LIMIT 10;";
+    } else if (type === "tables") {
+      editor.value = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;";
+    }
+    editor.focus();
+  }
+
+  async function executeSQLQuery() {
+    const editor = document.getElementById("sql-editor-textarea");
+    const query = editor.value.trim();
+    if (!query) {
+      showToast("Please enter a SQL query", "warning");
+      return;
+    }
+
+    const btn = document.getElementById("btn-run-query");
+    const resultPane = document.getElementById("result-pane");
+    const errorBlock = document.getElementById("error-console-block");
+    
+    btn.disabled = true;
+    errorBlock.style.display = "none";
+    resultPane.style.display = "none";
+    lastQueryResults = null;
+
+    const start = performance.now();
+    try {
+      const token = localStorage.getItem("adminToken");
+      const headers = { 
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      };
+
+      const response = await fetch("/admin/sql-editor/run", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ query })
+      });
+
+      const latency = Math.round(performance.now() - start);
+      const data = await response.json();
+
+      document.getElementById("latency-label").textContent = `⏱ ${latency} ms`;
+
+      if (response.ok && data.success) {
+        lastQueryResults = data.results;
+        renderResultsTable(data.results);
+        showToast("Query executed successfully!", "success");
+      } else {
+        const errorMsg = data.message || data.error?.message || "An error occurred executing query";
+        document.getElementById("error-console-text").textContent = errorMsg;
+        errorBlock.style.display = "block";
+        showToast("SQL Execution Failed", "error");
+      }
+    } catch (err) {
+      document.getElementById("error-console-text").textContent = err.message || "Failed to submit request";
+      errorBlock.style.display = "block";
+      showToast("Network Error", "error");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderResultsTable(results) {
+    const table = document.getElementById("query-results-table");
+    table.innerHTML = "";
+    
+    const resultPane = document.getElementById("result-pane");
+    const countLabel = document.getElementById("result-count-label");
+
+    if (!results || !results.length) {
+      countLabel.textContent = "0";
+      table.innerHTML = `<tr><td style="text-align:center; padding:20px; font-style:italic;">Query executed successfully. No rows returned.</td></tr>`;
+      resultPane.style.display = "block";
+      return;
+    }
+
+    countLabel.textContent = results.length;
+
+    // Grab all column names from unique keys of all objects
+    const cols = [];
+    results.forEach(row => {
+      if (row && typeof row === "object") {
+        Object.keys(row).forEach(k => {
+          if (!cols.includes(k)) cols.push(k);
+        });
+      }
+    });
+
+    if (cols.length === 0) {
+      cols.push("result");
+    }
+
+    // Build header
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    cols.forEach(col => {
+      const th = document.createElement("th");
+      th.textContent = col;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Build body
+    const tbody = document.createElement("tbody");
+    results.forEach(row => {
+      const tr = document.createElement("tr");
+      cols.forEach(col => {
+        const td = document.createElement("td");
+        const val = row && typeof row === "object" ? row[col] : row;
+        
+        if (val === null || val === undefined) {
+          td.innerHTML = `<span class="null-val">NULL</span>`;
+        } else if (typeof val === "boolean") {
+          td.innerHTML = val 
+            ? `<span class="bool-val-true">TRUE</span>`
+            : `<span class="bool-val-false">FALSE</span>`;
+        } else if (typeof val === "object") {
+          td.textContent = JSON.stringify(val);
+        } else {
+          td.textContent = String(val);
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    resultPane.style.display = "block";
+  }
+
+  function exportResultsAsJSON() {
+    if (!lastQueryResults) {
+      showToast("No data to export", "warning");
+      return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastQueryResults, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `sql_query_result_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  }
+
+  function showToast(message, type = "info") {
+    const container = document.getElementById("toast-container");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.style.padding = "0.75rem 1.25rem";
+    toast.style.borderRadius = "8px";
+    toast.style.marginBottom = "0.5rem";
+    toast.style.fontSize = "0.85rem";
+    toast.style.fontWeight = "600";
+    toast.style.display = "flex";
+    toast.style.alignItems = "center";
+    toast.style.gap = "0.5rem";
+    toast.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    toast.style.transition = "opacity 0.3s ease";
+    
+    let color = "#3b82f6";
+    let bg = "rgba(59, 130, 246, 0.1)";
+    let border = "1px solid rgba(59, 130, 246, 0.25)";
+    let icon = "ℹ️";
+
+    if (type === "success") {
+      color = "#22c55e";
+      bg = "rgba(34, 197, 94, 0.1)";
+      border = "1px solid rgba(34, 197, 94, 0.25)";
+      icon = "✅";
+    } else if (type === "warning") {
+      color = "#f59e0b";
+      bg = "rgba(245, 158, 11, 0.1)";
+      border = "1px solid rgba(245, 158, 11, 0.25)";
+      icon = "⚠️";
+    } else if (type === "error") {
+      color = "#ef4444";
+      bg = "rgba(239, 68, 68, 0.1)";
+      border = "1px solid rgba(239, 68, 68, 0.25)";
+      icon = "❌";
+    }
+
+    toast.style.color = color;
+    toast.style.background = bg;
+    toast.style.border = border;
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+</script>

@@ -3,6 +3,7 @@ import { AppError } from "../utils/AppError.js";
 import { signToken } from "../middleware/auth.js";
 import { shapePublicUser } from "../utils/userShape.js";
 import { env } from "../config/env.js";
+import { createUserNotification } from "./notificationService.js";
 
 const OTP_TTL_SECONDS = 60;
 const OTP_THROTTLE_LIMIT = 3;
@@ -214,6 +215,22 @@ export async function verifyOtp({ phone, otp }) {
       phone: normalizedPhone,
     });
 
+    // Send New Login Detected Notification (non-blocking)
+    createUserNotification(
+      profile.id,
+      "New Login Detected 🛡️",
+      `A new login was detected on your account via Demo OTP at ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })} (IST).`,
+      "info"
+    ).catch((err) => console.warn("[authService.verifyOtp] demo login notification failed:", err?.message));
+
+    // Send Welcome Notification (non-blocking)
+    createUserNotification(
+      profile.id,
+      "Welcome to BharBike! 🚲",
+      `Hey ${profile.fullName || profile.full_name || "Rider"}, thank you for joining BharBike! Get ready to explore the city with our premium fleet.`,
+      "success"
+    ).catch((err) => console.warn("[authService.verifyOtp] demo welcome notification failed:", err?.message));
+
     return {
       token: appToken,
       user: profile,
@@ -234,6 +251,15 @@ export async function verifyOtp({ phone, otp }) {
   }
 
   const profile = await upsertProfileFromAuthUser(data.user, normalizedPhone);
+
+  // Send New Login Notification (non-blocking)
+  createUserNotification(
+    data.user.id,
+    "New Login Detected 🛡️",
+    `A new login was detected on your account via OTP at ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })} (IST).`,
+    "info"
+  ).catch((err) => console.warn("[authService.verifyOtp] login notification failed:", err?.message));
+
   const appToken = signToken({
     id: data.user.id,
     phone: normalizedPhone,
@@ -277,6 +303,15 @@ export async function signupWithEmail({ email, password, full_name }) {
   }
 
   const profile = await upsertProfileFromAuthUser(data.user, null);
+
+  // Send Welcome Notification (non-blocking)
+  createUserNotification(
+    data.user.id,
+    "Welcome to BharBike! 🚲",
+    `Hey ${profile.fullName || profile.full_name || "Rider"}, thank you for joining BharBike! Get ready to explore the city with our premium fleet.`,
+    "success"
+  ).catch((err) => console.warn("[authService.signupWithEmail] welcome notification failed:", err?.message));
+
   const appToken = signToken({
     id: data.user.id,
     phone: data.user.phone || null,
@@ -313,6 +348,15 @@ export async function loginWithEmail({ email, password }) {
   }
 
   const profile = await upsertProfileFromAuthUser(data.user, null);
+
+  // Send New Login Notification (non-blocking)
+  createUserNotification(
+    data.user.id,
+    "New Login Detected 🛡️",
+    `A new login was detected on your account via Email at ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })} (IST).`,
+    "info"
+  ).catch((err) => console.warn("[authService.loginWithEmail] login notification failed:", err?.message));
+
   const appToken = signToken({
     id: data.user.id,
     phone: data.user.phone || null,

@@ -315,10 +315,11 @@ export async function cancelSubscription(userId, subscriptionId, reason = null) 
           mockSubscriptionsDB.delete(userId); // remove from active
           
           // Trigger notification for simulated DB
+          const endDateFormatted = mockSub.end_date ? new Date(mockSub.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : "the end of your period";
           createUserNotification(
             userId,
-            "Subscription Cancelled",
-            "Your subscription has been cancelled. It will remain active until your period ends.",
+            "Subscription Cancelled 🔴",
+            `Your subscription has been cancelled. It will remain active with full benefits until ${endDateFormatted}.`,
             "info"
           ).catch((err) => console.warn("[subscriptionService.cancelSubscription] mock notification failed:", err?.message));
 
@@ -347,10 +348,11 @@ export async function cancelSubscription(userId, subscriptionId, reason = null) 
     }
 
     // Trigger notification for real DB
+    const endDateFormatted = data.end_date ? new Date(data.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : "the end of your period";
     createUserNotification(
       userId,
-      "Subscription Cancelled",
-      "Your subscription has been cancelled. It will remain active until your period ends.",
+      "Subscription Cancelled 🔴",
+      `Your subscription has been cancelled. It will remain active with full benefits until ${endDateFormatted}.`,
       "info"
     ).catch((err) => console.warn("[subscriptionService.cancelSubscription] notification failed:", err?.message));
 

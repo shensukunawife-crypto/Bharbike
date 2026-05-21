@@ -102,10 +102,24 @@ export async function updateNotificationSettings(userId, settings) {
     if (error) {
         if (isMissingTableError(error) || isRlsError(error)) {
             console.warn(`[notificationService] Skipping DB upsert due to missing table or RLS. Simulating success for user ${userId}.`);
+            createUserNotification(
+                userId,
+                "Preferences Updated ⚙️",
+                "Your notification preferences have been successfully saved.",
+                "info"
+            ).catch(() => {});
             return { user_id: userId, ...DEFAULT_SETTINGS, ...updateData };
         }
         throw error;
     }
+
+    createUserNotification(
+        userId,
+        "Preferences Updated ⚙️",
+        "Your notification preferences have been successfully saved.",
+        "info"
+    ).catch(() => {});
+
     return data;
 }
 

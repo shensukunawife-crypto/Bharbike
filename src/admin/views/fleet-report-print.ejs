@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BharBike — Fleet Inventory Audit Statement</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #ff7a00;
+      --primary-dark: #cc6200;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border: #cbd5e1;
+      --bg-light: #f8fafc;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b91c1c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--text-main);
+      background-color: #fff;
+      line-height: 1.5;
+      padding: 40px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Professional A4 Portrait Margins */
+    @page {
+      size: A4 portrait;
+      margin: 20mm;
+    }
+
+    .report-shell {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* HEADER BLOCK */
+    .header-block {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .company-info h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+    }
+
+    .company-info h1 span {
+      color: var(--primary);
+    }
+
+    .company-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .statement-title-block {
+      text-align: right;
+    }
+
+    .statement-title-block h2 {
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary-dark);
+    }
+
+    .statement-id {
+      font-family: monospace;
+      font-size: 13px;
+      background: var(--bg-light);
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    /* METADATA GRID */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .meta-item {
+      font-size: 13px;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: var(--text-muted);
+      display: inline-block;
+      width: 140px;
+    }
+
+    .meta-value {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    /* FINANCIAL / STATUS CARDS */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+
+    .metric-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      background: #fff;
+    }
+
+    .metric-card-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .metric-card-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .metric-card-value.highlight {
+      color: var(--primary-dark);
+    }
+
+    .metric-card-value.alert-danger {
+      color: var(--danger);
+    }
+
+    /* LEDGER SECTION */
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      color: var(--text-main);
+      border-left: 4px solid var(--primary);
+      padding-left: 8px;
+    }
+
+    .table-container {
+      margin-bottom: 32px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: var(--bg-light);
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--text-main);
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-badge.available {
+      background: #dcfce7;
+      color: var(--success);
+    }
+
+    .status-badge.in_use {
+      background: #fef3c7;
+      color: var(--warning);
+    }
+
+    .status-badge.maintenance {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+
+    .status-badge.offline {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .battery-fill-bar {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+      display: inline-block;
+      width: 50px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .battery-fill-inner {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .battery-fill-inner.good {
+      background: #22c55e;
+    }
+
+    .battery-fill-inner.mid {
+      background: #eab308;
+    }
+
+    .battery-fill-inner.low {
+      background: #ef4444;
+    }
+
+    /* SIGNATURE BLOCK */
+    .signature-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .signature-box {
+      width: 240px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .signature-line {
+      height: 1px;
+      background: var(--text-main);
+      margin-bottom: 8px;
+      margin-top: 40px;
+    }
+
+    .signature-title {
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* PRINT LAYOUT ADJUSTMENTS */
+    @media print {
+      body {
+        padding: 0;
+      }
+      .no-print {
+        display: none;
+      }
+      .metric-card {
+        background-color: #fff !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="report-shell">
+    
+    <!-- HEADER -->
+    <div class="header-block">
+      <div class="company-info">
+        <h1>Bhar<span>Bike</span></h1>
+        <p>Smart Bike Rentals & Partner Delivery System</p>
+        <p>Bangalore Corporate Office, Karnataka, India</p>
+      </div>
+      <div class="statement-title-block">
+        <h2>Fleet Inventory Statement</h2>
+        <div class="statement-id">ID: FLT-<%= Date.now().toString().slice(-8) %></div>
+      </div>
+    </div>
+
+    <!-- METADATA -->
+    <div class="meta-grid">
+      <div class="meta-item">
+        <span class="meta-label">Generated On:</span>
+        <span class="meta-value"><%= new Date().toLocaleString("en-IN") %></span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Active Filters:</span>
+        <span class="meta-value">
+          Status: <%= filters.status.toUpperCase() %>, Search: <%= filters.search || "None" %>, Low Battery Only: <%= filters.lowBattery ? "YES" : "NO" %>
+        </span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Company Name:</span>
+        <span class="meta-value">BharBike Technologies Pvt Ltd</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Report Type:</span>
+        <span class="meta-value">Fleet Asset Registry & Health Audit</span>
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-card-label">Total Fleet Monitored</div>
+        <div class="metric-card-value highlight"><%= totals.total %></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">Available Units</div>
+        <div class="metric-card-value" style="color: var(--success);"><%= totals.available %></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">In Service Queue</div>
+        <div class="metric-card-value" style="color: var(--warning);"><%= totals.inUse %></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">Repair & Offline</div>
+        <div class="metric-card-value" style="color: var(--danger);"><%= totals.maintenance + totals.offline %></div>
+      </div>
+    </div>
+
+    <div class="metrics-row" style="grid-template-columns: 1fr 1fr; margin-top: -24px; margin-bottom: 32px;">
+      <div class="metric-card" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+        <div class="metric-card-label" style="margin: 0; text-align: left;">Low Battery Alerts (&le;20%)</div>
+        <div class="metric-card-value alert-danger"><%= totals.lowBattery %> units</div>
+      </div>
+      <div class="metric-card" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+        <div class="metric-card-label" style="margin: 0; text-align: left;">Average Fleet Battery Level</div>
+        <div class="metric-card-value highlight"><%= totals.avgBattery %>%</div>
+      </div>
+    </div>
+
+    <!-- FLEET REGISTRY TABLE -->
+    <div class="section-title">Fleet Registry Ledger</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Bike ID</th>
+            <th>Status</th>
+            <th>Lock State</th>
+            <th>Usage State</th>
+            <th>Battery</th>
+            <th>Current Location</th>
+            <th>Last Service</th>
+            <th>Health Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!bikes.length) { %>
+            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No records matching current filters</td></tr>
+          <% } %>
+          <% bikes.forEach((bike) => { %>
+            <tr>
+              <td style="font-family: monospace; font-weight: 600;"><%= bike.bike_code %></td>
+              <td>
+                <span class="status-badge <%= bike.status %>"><%= bike.statusLabel %></span>
+              </td>
+              <td>
+                <span style="font-weight: 500;"><%= bike.is_locked !== false ? "Locked" : "Unlocked" %></span>
+              </td>
+              <td><%= bike.usage %></td>
+              <td>
+                <div class="battery-fill-bar">
+                  <div class="battery-fill-inner <%= bike.battery > 60 ? 'good' : bike.battery > 20 ? 'mid' : 'low' %>" style="width: <%= bike.battery %>%"></div>
+                </div>
+                <span><%= bike.battery %>%</span>
+              </td>
+              <td style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><%= bike.location %></td>
+              <td><%= bike.lastServiceDate %></td>
+              <td>
+                <span style="font-weight: 600; color: <%= bike.healthStatus === 'Good' ? 'var(--success)' : bike.healthStatus === 'Average' ? 'var(--warning)' : 'var(--danger)' %>">
+                  <%= bike.healthStatus %> (<%= bike.healthScore || 0 %>%)
+                </span>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SIGNATURE BLOCK -->
+    <div class="signature-container">
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <div class="signature-title">Prepared & Verified By</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">BharBike Operations Manager</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <div class="signature-title">Fleet Audit Authority</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">System Integrity Assurance</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    window.onload = () => {
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    };
+  </script>
+</body>
+</html>

@@ -9,6 +9,7 @@ import { AppError } from "../utils/AppError.js";
 import { pickFirstAvailableBike } from "./bikeService.js";
 import * as iot from "./iotService.js";
 import * as earningsService from "./earningsService.js";
+import { createUserNotification } from "./notificationService.js";
 
 const PLAN_MS = {
   [RentalPlan.daily]: 24 * 60 * 60 * 1000,
@@ -121,6 +122,14 @@ export async function startRental(userId, plan) {
     console.log("[rentalService] IoT unlock skipped (not configured):", iotErr.message);
   }
 
+  // Send Ride Started Notification (non-blocking)
+  createUserNotification(
+    userId,
+    "Ride Started Successfully! 🚲",
+    "Your rental is active. Please ride safely, wear a helmet, and follow local traffic regulations.",
+    "info"
+  ).catch((err) => console.warn("[rentalService.startRental] notification failed:", err?.message));
+
   return rental;
 }
 
@@ -167,6 +176,21 @@ async function finalizeRental(rentalId, status) {
   } catch (earnErr) {
     console.warn("[rentalService.finalizeRental] earning record skipped (non-blocking):", earnErr?.message);
   }
+
+  // Send notification based on status (non-blocking)
+  const isExpired = status === RentalStatus.expired;
+  const notifTitle = isExpired ? "Rental Subscription Expired ⚠️" : "Ride Completed Successfully! 🏁";
+  const notifMsg = isExpired 
+    ? `Your rental period for Bike #${rental.bike_id || "bike"} has expired. Please return and lock the bike at the nearest hub.`
+    : `Your rental has ended. Thank you for riding with BharBike! We charged you ₹${amount}. Check your stats under the dashboard.`;
+  const notifType = isExpired ? "warning" : "success";
+
+  createUserNotification(
+    rental.user_id,
+    notifTitle,
+    notifMsg,
+    notifType
+  ).catch((err) => console.warn("[rentalService.finalizeRental] notification failed:", err?.message));
 
   return { rentalId, status, rentalEarning: amount };
 }

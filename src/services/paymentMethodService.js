@@ -1,4 +1,5 @@
 import supabase from '../utils/supabaseClient.js';
+import { createUserNotification } from './notificationService.js';
 
 function isMissingTableError(error) {
   if (!error) return false;
@@ -42,6 +43,15 @@ class PaymentMethodService {
       .single();
 
     if (error) throw error;
+
+    // Send Payment Method Linked Notification (non-blocking)
+    createUserNotification(
+      userId,
+      "Payment Method Linked 💳",
+      `A new payment method (${display_name || type || "Card"}) was successfully linked to your wallet account.`,
+      "success"
+    ).catch((err) => console.warn("[PaymentMethodService.addPaymentMethod] notification failed:", err?.message));
+
     return data;
   }
 
@@ -141,6 +151,14 @@ class PaymentMethodService {
 
     if (txError) throw txError;
 
+    // Send Reward Points Credited Notification (non-blocking)
+    createUserNotification(
+      userId,
+      "Reward Points Credited! 🏆",
+      `Congratulations! You just earned +${points} reward points for: ${description}. Keep riding to earn more!`,
+      "success"
+    ).catch((err) => console.warn("[PaymentMethodService.addRewardPoints] notification failed:", err?.message));
+
     return updatedReward;
   }
 
@@ -175,6 +193,14 @@ class PaymentMethodService {
       });
 
     if (txError) throw txError;
+
+    // Send Reward Points Redeemed Notification (non-blocking)
+    createUserNotification(
+      userId,
+      "Reward Points Redeemed! 🛍️",
+      `Successfully redeemed ${points} reward points for: ${description}. Enjoy your reward!`,
+      "success"
+    ).catch((err) => console.warn("[PaymentMethodService.redeemRewardPoints] notification failed:", err?.message));
 
     return updatedReward;
   }

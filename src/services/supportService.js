@@ -1,6 +1,7 @@
 import supabase from "../utils/supabaseClient.js";
 import { AppError } from "../utils/AppError.js";
 import { generateTicketNumber } from "../utils/ticketNumber.js";
+import { createUserNotification } from "./notificationService.js";
 
 const isDemoUser = (id) => /^demo-/i.test(String(id || ""));
 
@@ -10,9 +11,17 @@ const isDemoUser = (id) => /^demo-/i.test(String(id || ""));
 export async function createTicket(userId, bikeId, bikeName, issueType, description, imageUrl = null) {
   // Demo users can't create real tickets in Supabase
   if (isDemoUser(userId)) {
+    const ticketNumber = `DEMO-${Math.floor(100000 + Math.random() * 900000)}`;
+    createUserNotification(
+      userId,
+      "Support Ticket Registered 🎫",
+      `Your support ticket #${ticketNumber} was registered for: ${issueType}. Our fleet response team will contact you shortly.`,
+      "info"
+    ).catch((err) => console.warn("[supportService.createTicket] demo notification failed:", err?.message));
+
     return {
       id: `demo-ticket-${Date.now()}`,
-      ticket_number: `DEMO-${Math.floor(100000 + Math.random() * 900000)}`,
+      ticket_number: ticketNumber,
       status: "pending",
       created_at: new Date().toISOString(),
       bike_name: bikeName,
@@ -58,6 +67,13 @@ export async function createTicket(userId, bikeId, bikeName, issueType, descript
     console.error("[supportService.createTicket] failed", error);
     throw new AppError("Unable to create support ticket: " + error.message, 500);
   }
+
+  createUserNotification(
+    userId,
+    "Support Ticket Registered 🎫",
+    `Your support ticket #${ticketNumber} was registered for: ${issueType}. Our fleet response team will contact you shortly.`,
+    "info"
+  ).catch((err) => console.warn("[supportService.createTicket] notification failed:", err?.message));
 
   return data;
 }
@@ -123,6 +139,14 @@ export async function updateTicketStatus(ticketId, status, adminNotes = null) {
     console.error("[supportService.updateTicketStatus] failed", error);
     throw new AppError("Unable to update ticket status", 500);
   }
+
+  // Send Ticket Update Notification (non-blocking)
+  createUserNotification(
+    data.user_id,
+    "Support Ticket Status Updated! 🔔",
+    `Your support ticket #${data.ticket_number} status has been updated to "${status}". Notes: ${adminNotes || "None"}.`,
+    status === "resolved" ? "success" : "info"
+  ).catch((err) => console.warn("[supportService.updateTicketStatus] notification failed:", err?.message));
 
   return data;
 }
@@ -205,7 +229,7 @@ export async function getTicketMessages(ticketId) {
  */
 export async function sendTicketMessage(ticketId, senderId, senderType, message, imageUrl = null) {
   if (String(ticketId).startsWith("demo-")) {
-    return {
+    const mockMsg = {
       id: `demo-msg-${Date.now()}`,
       ticket_id: ticketId,
       sender_id: senderId,
@@ -214,6 +238,16 @@ export async function sendTicketMessage(ticketId, senderId, senderType, message,
       image_url: imageUrl,
       created_at: new Date().toISOString(),
     };
+    if (senderType === "admin") {
+      // In demo mode, assume senderId is the customer user ID to send notification
+      createUserNotification(
+        senderId,
+        "Support Response Received 💬",
+        `A support agent has replied to your ticket: "${message}"`,
+        "info"
+      ).catch(() => {});
+    }
+    return mockMsg;
   }
 
   const { data, error } = await supabase
@@ -233,6 +267,29 @@ export async function sendTicketMessage(ticketId, senderId, senderType, message,
   if (error) {
     console.error("[supportService.sendTicketMessage] failed", error);
     throw new AppError("Unable to send message: " + error.message, 500);
+  }
+
+  // Send Notification if reply comes from Admin (non-blocking)
+  if (senderType === "admin") {
+    supabase
+      .from("support_tickets")
+      .select("user_id, ticket_number")
+      .eq("id", ticketId)
+      .maybeSingle()
+      .then(({ data: ticket }) => {
+        if (ticket?.user_id) {
+          const truncatedMsg = String(message || "").length > 60 
+            ? `${String(message || "").substring(0, 57)}...` 
+            : message;
+          createUserNotification(
+            ticket.user_id,
+            "Support Response Received 💬",
+            `A support agent has replied to your ticket #${ticket.ticket_number || "Support Ticket"}: "${truncatedMsg}"`,
+            "info"
+          ).catch((err) => console.warn("[supportService.sendTicketMessage] notification failed:", err?.message));
+        }
+      })
+      .catch((err) => console.warn("[supportService.sendTicketMessage] ticket lookup failed:", err?.message));
   }
 
   // Auto update ticket status if user sends a message and it was resolved

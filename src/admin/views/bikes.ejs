@@ -1,21 +1,32 @@
-<div class="toolbar">
-  <button class="btn btn-gold" data-modal-target="add-bike-modal">+ Add Bike</button>
-  <form class="toolbar" method="get" action="/admin/bikes">
-    <input class="filter-input" type="text" name="search" placeholder="Search Bike ID" value="<%= filters.search %>" />
-    <select class="filter-input" name="status">
-      <option value="all" <%= filters.status === "all" ? "selected" : "" %>>All Status</option>
-      <option value="available" <%= filters.status === "available" ? "selected" : "" %>>Available</option>
-      <option value="in_use" <%= filters.status === "in_use" ? "selected" : "" %>>In Use</option>
-      <option value="maintenance" <%= filters.status === "maintenance" ? "selected" : "" %>>Maintenance</option>
-      <option value="offline" <%= filters.status === "offline" ? "selected" : "" %>>Offline</option>
-    </select>
-    <label class="switch-row">
-      Low Battery
-      <input type="checkbox" name="lowBattery" value="true" <%= filters.lowBattery ? "checked" : "" %> />
-      <span class="switch"></span>
-    </label>
-    <button type="submit" class="btn btn-gold">Apply</button>
-  </form>
+<div class="toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <button class="btn btn-gold" data-modal-target="add-bike-modal" style="padding: 8px 16px; border-radius: 8px; font-weight: 600;">+ Add Bike</button>
+    <form style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0;" method="get" action="/admin/bikes">
+      <input class="filter-input" type="text" name="search" placeholder="Search Bike ID" value="<%= filters.search %>" style="margin: 0; padding: 8px 12px; border-radius: 8px;" />
+      <select class="filter-input" name="status" style="margin: 0; padding: 8px 12px; border-radius: 8px;">
+        <option value="all" <%= filters.status === "all" ? "selected" : "" %>>All Status</option>
+        <option value="available" <%= filters.status === "available" ? "selected" : "" %>>Available</option>
+        <option value="in_use" <%= filters.status === "in_use" ? "selected" : "" %>>In Use</option>
+        <option value="maintenance" <%= filters.status === "maintenance" ? "selected" : "" %>>Maintenance</option>
+        <option value="offline" <%= filters.status === "offline" ? "selected" : "" %>>Offline</option>
+      </select>
+      <label class="switch-row" style="margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+        Low Battery
+        <input type="checkbox" name="lowBattery" value="true" <%= filters.lowBattery ? "checked" : "" %> />
+        <span class="switch"></span>
+      </label>
+      <button type="submit" class="btn btn-gold" style="padding: 8px 16px; border-radius: 8px;">Apply</button>
+    </form>
+  </div>
+  
+  <div class="export-center" style="display: flex; gap: 12px; align-items: center;">
+    <a href="/admin/bikes/export/excel?search=<%= filters.search %>&status=<%= filters.status %>&lowBattery=<%= filters.lowBattery %>" class="btn btn-ghost" style="border: 1px solid #10b981; color: #10b981; display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 8px 16px; border-radius: 8px; text-decoration: none; transition: background-color 0.2s;">
+      <span>📥</span> Export Excel (.xlsx)
+    </a>
+    <a href="/admin/bikes/export/pdf?search=<%= filters.search %>&status=<%= filters.status %>&lowBattery=<%= filters.lowBattery %>" target="_blank" class="btn btn-gold" style="display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 8px 16px; border-radius: 8px; text-decoration: none;">
+      <span>📄</span> Download PDF Report
+    </a>
+  </div>
 </div>
 <div class="table-wrap">
   <table class="table">
@@ -79,9 +90,13 @@
 
 <div class="modal" id="add-bike-modal">
   <div class="modal-card">
-    <h3>Add Bike</h3>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h3>Add Bike</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('add-bike-modal').classList.remove('show')">&times;</button>
+    </div>
     <form class="admin-form ajax-form" data-url="/admin/bikes/add">
-      <input name="bike_code" placeholder="Bike ID" required />
+      <input name="bike_code" placeholder="Bike ID (e.g. BB001)" required />
+      <input name="device_uuid" placeholder="GPS Tracker ID / Device UUID (Optional)" style="margin-bottom: 12px;" />
       <select name="status">
         <option value="available">Available</option>
         <option value="in_use">In Use</option>

@@ -88,6 +88,22 @@ export async function deductMoney(userId, amount, title, description = null) {
     "wallet"
   ).catch((err) => console.warn("[walletService.deductMoney] notification failed (non-blocking):", err?.message));
 
+  // Check low wallet balance (non-blocking)
+  try {
+    const txData = Array.isArray(data) ? data[0] : data;
+    const newBal = txData ? Number(txData.new_balance) : null;
+    if (newBal !== null && newBal < 50) {
+      createUserNotification(
+        userId,
+        "Low Wallet Balance ⚠️",
+        `Your wallet balance is low (₹${newBal.toFixed(2)}). Please recharge soon to ensure uninterrupted riding.`,
+        "wallet"
+      ).catch((err) => console.warn("[walletService.deductMoney] low balance notification failed (non-blocking):", err?.message));
+    }
+  } catch (balErr) {
+    console.warn("[walletService.deductMoney] failed to parse remaining balance for low alert:", balErr.message);
+  }
+
   return data;
 }
 
@@ -165,6 +181,14 @@ export async function validatePromoCode(userId, code) {
       notes: "BHARWEEKLY"
     }]).catch(() => {});
 
+    // Send Promo Code Applied Notification (non-blocking)
+    createUserNotification(
+      userId,
+      "Promo Code Applied! 🎉",
+      `Yay! Code BHARWEEKLY applied successfully. Benefit: Weekly Plan Special has been credited to your wallet.`,
+      "success"
+    ).catch((err) => console.warn("[walletService.validatePromoCode] notification failed:", err?.message));
+
     return {
       success: true,
       message: `🎉 Promo applied! ₹${weeklyPrice} added to your wallet for the weekly plan.`,
@@ -232,6 +256,14 @@ export async function validatePromoCode(userId, code) {
   const label = promo.discount_type === "percent"
     ? `${promo.discount_value}% off (₹${discountAmount} added to wallet)`
     : `₹${discountAmount} added to wallet`;
+
+  // Send Promo Code Applied Notification (non-blocking)
+  createUserNotification(
+    userId,
+    "Promo Code Applied! 🎉",
+    `Code ${upperCode} has been successfully applied to your account! Benefit: ${promo?.description || "Discount bonus added"}.`,
+    "success"
+  ).catch((err) => console.warn("[walletService.validatePromoCode] notification failed:", err?.message));
 
   return {
     success: true,

@@ -2,6 +2,7 @@ import supabase from "../utils/supabaseClient.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import * as userService from "../services/userService.js";
 import { shapePublicUser } from "../utils/userShape.js";
+import { createUserNotification } from "../services/notificationService.js";
 
 export const profile = asyncHandler(async (req, res) => {
   const raw = await userService.getProfile(req.user.id);
@@ -161,6 +162,14 @@ export const createUser = async (req, res) => {
   }
 
   const created = data?.[0] ?? data ?? null;
+  if (created && created.id) {
+    createUserNotification(
+      created.id,
+      "Welcome to BharBike! 🚲",
+      `Hey ${created.full_name || "Rider"}, thank you for joining BharBike! Get ready to explore the greenest fleet in the city.`,
+      "success"
+    ).catch((err) => console.warn("[userController.createUser] welcome notification failed:", err?.message));
+  }
   res.status(201).json(created != null ? shapePublicUser(created) : null);
 };
 
@@ -182,6 +191,21 @@ export const updateUser = async (req, res) => {
       ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
     };
     demoProfiles.set(id, updated);
+    if (body.emergency_contact_name || body.emergency_contact_phone) {
+      createUserNotification(
+        id,
+        "Emergency Contact Configured 🚨",
+        `Your emergency contact (${body.emergency_contact_name || "Emergency Contact"}) has been successfully linked/updated for your safety.`,
+        "success"
+      ).catch((err) => console.warn("[userController.updateUser] demo emergency notification failed:", err?.message));
+    } else {
+      createUserNotification(
+        id,
+        "Profile Configured Successfully! ⚙️",
+        "Hey, your profile details have been successfully saved. Ready to explore the fleet!",
+        "success"
+      ).catch((err) => console.warn("[userController.updateUser] demo notification failed:", err?.message));
+    }
     return res.json(shapePublicUser(updated));
   }
 
@@ -249,6 +273,23 @@ export const updateUser = async (req, res) => {
   }
 
   const updated = data?.[0] ?? data ?? null;
+  if (updated && updated.id) {
+    if (body.emergency_contact_name || body.emergency_contact_phone) {
+      createUserNotification(
+        updated.id,
+        "Emergency Contact Configured 🚨",
+        `Your emergency contact (${body.emergency_contact_name || "Emergency Contact"}) has been successfully linked/updated for your safety.`,
+        "success"
+      ).catch((err) => console.warn("[userController.updateUser] emergency notification failed:", err?.message));
+    } else {
+      createUserNotification(
+        updated.id,
+        "Profile Configured Successfully! ⚙️",
+        "Hey, your profile details have been successfully saved. Ready to explore the fleet!",
+        "success"
+      ).catch((err) => console.warn("[userController.updateUser] notification failed:", err?.message));
+    }
+  }
   res.json(updated != null ? shapePublicUser(updated) : null);
 };
 
@@ -366,6 +407,28 @@ export const initializeUserData = asyncHandler(async (req, res) => {
     if (rewardError) {
       console.error("[initializeUserData] reward error:", rewardError);
     }
+
+    // Send Welcome Notification Series (non-blocking)
+    createUserNotification(
+      userId,
+      "Welcome to BharBike! 🚲",
+      "Thank you for choosing BharBike! Your wallet, rewards, and notification preferences have been configured.",
+      "success"
+    ).catch((err) => console.warn("[userController.initializeUserData] welcome notification failed:", err?.message));
+
+    createUserNotification(
+      userId,
+      "Complete KYC to Unlock Riding! 🪪",
+      "Verify your Aadhaar card or Driving License in the profile section to start renting e-bikes instantly.",
+      "info"
+    ).catch((err) => console.warn("[userController.initializeUserData] KYC onboarding notification failed:", err?.message));
+
+    createUserNotification(
+      userId,
+      "Get ₹100 Wallet Bonus 🎁",
+      "Use code BHARFIRST on the wallet screen to get ₹100 bonus balance on your very first ride!",
+      "success"
+    ).catch((err) => console.warn("[userController.initializeUserData] welcome promo notification failed:", err?.message));
 
     res.json({
       success: true,

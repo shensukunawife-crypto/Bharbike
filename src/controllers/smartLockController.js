@@ -3,6 +3,7 @@ import * as iotService from "../services/iotService.js";
 import * as rentalService from "../services/rentalService.js";
 import supabase from "../config/supabase.js";
 import { AppError } from "../utils/AppError.js";
+import { createUserNotification } from "../services/notificationService.js";
 
 /**
  * Get lock status for user's active rental
@@ -135,7 +136,15 @@ export const lockBike = asyncHandler(async (req, res) => {
         success: true,
       },
     ]);
-  } catch {};
+  } catch {}
+
+  // Send lock notification (non-blocking)
+  createUserNotification(
+    req.user.id,
+    "Bike Locked Successfully 🔒",
+    `Bike #${bikeId} has been secured. Remember to end your active rental if you are finished riding.`,
+    "info"
+  ).catch((err) => console.warn("[smartLockController.lockBike] notification failed:", err?.message));
 
   res.json({
     success: true,
@@ -206,6 +215,14 @@ export const unlockBike = asyncHandler(async (req, res) => {
       },
     ]);
   } catch {};
+
+  // Send unlock notification (non-blocking)
+  createUserNotification(
+    req.user.id,
+    "Bike Unlocked Successfully 🔓",
+    `Bike #${bikeId} has been unlocked via ${method}. Enjoy your ride and ride safely!`,
+    "success"
+  ).catch((err) => console.warn("[smartLockController.unlockBike] notification failed:", err?.message));
 
   res.json({
     success: true,

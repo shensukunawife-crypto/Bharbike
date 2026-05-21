@@ -7,6 +7,9 @@ import { shapePublicUser } from "../../utils/userShape.js";
 import { listInMemoryBookings } from "../../services/bookingStore.js";
 import * as paymentConfigService from "../../services/paymentConfigService.js";
 import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../config/branding.js";
+import XLSX from "xlsx";
+import { createUserNotification } from "../../services/notificationService.js";
+
 
 const dashboardSettings = {
   companyName: `${BRAND_NAME} Admin Pvt Ltd`,
@@ -815,6 +818,14 @@ export async function bikeDetails(req, res) {
     }
     const bike = normalizeBike(bikeRow, 0);
 
+    // Fetch associated GPS tracker UUID from the vehicles table
+    const { data: vehicleMapping } = await supabase
+      .from("vehicles")
+      .select("vehicle_uuid")
+      .eq("bike_id", bikeId)
+      .maybeSingle();
+    bike.tracker_uuid = vehicleMapping ? vehicleMapping.vehicle_uuid : null;
+
     // Fetch LIVE LocoNav data
     try {
       const health = await iotService.getBikeHealth(bikeId);
@@ -1302,6 +1313,314 @@ export async function earnings(req, res) {
   } catch (error) {
     console.error("[admin.earnings] unexpected error", error);
     return res.status(500).send("Unable to load earnings");
+  }
+}
+
+export async function exportEarningsExcel(req, res) {
+  try {
+    const filter = req.query.filter || "weekly";
+    const { data: earningsData, error } = await supabase.from("earnings").select("*");
+    if (error) {
+      console.error("[admin.exportEarningsExcel] fetch failed", error);
+    }
+    const rows = safeData(earningsData);
+    const now = Date.now();
+    const days = filter === "today" ? 1 : filter === "monthly" ? 30 : filter === "all" ? 99999 : 7;
+    const filtered = rows.filter((row) => {
+      const created = new Date(row.createdAt || row.created_at || now).getTime();
+      return now - created <= days * 24 * 60 * 60 * 1000;
+    });
+
+    const rental = filtered
+      .filter((item) => item.type === "rental")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const delivery = filtered
+      .filter((item) => item.type === "delivery")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    const pendingPayout = payoutQueue
+      .filter((item) => item.status === "pending")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const totalPaidAmount = payoutQueue
+      .filter((item) => item.status === "paid")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    const { data: dbProfiles } = await supabase.from("users").select("id, full_name, name");
+    const profileMap = {};
+    (dbProfiles || []).forEach((p) => {
+      profileMap[p.id] = p.full_name || p.name || "BharBike Rider";
+    });
+
+    const summaryData = [
+      ["BHARBIKE FINANCIAL STATEMENT & AUDIT SUMMARY"],
+      ["Generated On:", new Date().toLocaleString("en-IN")],
+      ["Reporting Period Filter:", filter.toUpperCase()],
+      [],
+      ["Metric Indicator", "Calculation Value (INR)"],
+      ["Total Combined Revenue", rental + delivery],
+      ["Bike Rental Revenue", rental],
+      ["Delivery Partner Revenue", delivery],
+      ["Pending Released Payouts", pendingPayout],
+      ["Total Released Payouts", totalPaidAmount],
+      [],
+      ["This is a system-generated audit report verified for the official BharBike platform."]
+    ];
+
+    const ledgerHeaders = [["Transaction ID", "User/Rider Name", "Service Category", "Amount (INR)", "Status", "Timestamp"]];
+    const ledgerRows = filtered.map((item, index) => [
+      `TX-${2000 + index}`,
+      profileMap[item.userid] || "BharBike Rider",
+      item.type === "delivery" ? "Delivery Ops" : "Bike Rental",
+      Number(item.amount || 0),
+      Number(item.amount || 0) > 0 ? "Success" : "Pending",
+      (item.createdAt || item.created_at || new Date().toISOString()).slice(0, 19).replace('T', ' ')
+    ]);
+    const ledgerData = ledgerHeaders.concat(ledgerRows);
+
+    const payoutHeaders = [["Payout ID", "Linked Transaction", "Recipient User", "Disbursed Amount (INR)", "Status", "Disbursal Date"]];
+    const payoutRows = payoutQueue.map((item) => [
+      item.id,
+      item.transactionId,
+      item.user,
+      item.amount,
+      item.status.toUpperCase(),
+      item.paidAt || "—"
+    ]);
+    const payoutData = payoutHeaders.concat(payoutRows);
+
+    const wb = XLSX.utils.book_new();
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    const wsLedger = XLSX.utils.aoa_to_sheet(ledgerData);
+    const wsPayout = XLSX.utils.aoa_to_sheet(payoutData);
+
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Financial Summary");
+    XLSX.utils.book_append_sheet(wb, wsLedger, "Transaction Ledger");
+    XLSX.utils.book_append_sheet(wb, wsPayout, "Payout Activity");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=BharBike_Financial_Report_${filter}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    return res.send(buf);
+
+  } catch (error) {
+    console.error("[admin.exportEarningsExcel] unexpected error", error);
+    return res.status(500).send("Unable to generate Excel report");
+  }
+}
+
+export async function exportEarningsPDF(req, res) {
+  try {
+    const filter = req.query.filter || "weekly";
+    const { data: earningsData, error } = await supabase.from("earnings").select("*");
+    if (error) {
+      console.error("[admin.exportEarningsPDF] fetch failed", error);
+    }
+    const rows = safeData(earningsData);
+    const now = Date.now();
+    const days = filter === "today" ? 1 : filter === "monthly" ? 30 : filter === "all" ? 99999 : 7;
+    const filtered = rows.filter((row) => {
+      const created = new Date(row.createdAt || row.created_at || now).getTime();
+      return now - created <= days * 24 * 60 * 60 * 1000;
+    });
+
+    const rental = filtered
+      .filter((item) => item.type === "rental")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const delivery = filtered
+      .filter((item) => item.type === "delivery")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    const pendingPayout = payoutQueue
+      .filter((item) => item.status === "pending")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const totalPaidAmount = payoutQueue
+      .filter((item) => item.status === "paid")
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    const { data: dbProfiles } = await supabase.from("users").select("id, full_name, name");
+    const profileMap = {};
+    (dbProfiles || []).forEach((p) => {
+      profileMap[p.id] = p.full_name || p.name || "BharBike Rider";
+    });
+
+    const transactions = filtered.map((item, index) => ({
+      id: `TX-${2000 + index}`,
+      user: profileMap[item.userid] || "BharBike Rider",
+      type: item.type === "delivery" ? "Delivery" : "Bike Rental",
+      amount: Number(item.amount || 0),
+      status: Number(item.amount || 0) > 0 ? "Success" : "Pending",
+      date: (item.createdAt || item.created_at || new Date().toISOString()).slice(0, 10),
+    }));
+
+    const payoutHistory = payoutQueue.map((item) => ({
+      payoutId: item.id,
+      transactionId: item.transactionId,
+      user: item.user,
+      amount: item.amount,
+      status: item.status,
+      paidAt: item.paidAt || "—",
+    }));
+
+    return res.render("financial-report-print", {
+      title: "Financial Statement",
+      BRAND_NAME,
+      BRAND_PRODUCT_NAME,
+      formatBrand,
+      filter,
+      totals: {
+        rental,
+        delivery,
+        total: rental + delivery,
+      },
+      financeCards: {
+        todayEarnings: filtered
+          .filter((item) => new Date(item.createdAt || item.created_at || now).getTime() >= new Date().setHours(0,0,0,0))
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0),
+        pendingPayout,
+        totalPaidAmount,
+      },
+      transactions,
+      payoutHistory,
+    });
+  } catch (error) {
+    console.error("[admin.exportEarningsPDF] unexpected error", error);
+    return res.status(500).send("Unable to render PDF report");
+  }
+}
+
+export async function exportBikesExcel(req, res) {
+  try {
+    const { data: bikesData, error: bikesError } = await supabase.from("bikes").select("*");
+    if (bikesError) {
+      console.error("[admin.exportBikesExcel] fetch failed", bikesError);
+    }
+    
+    const allBikes = safeData(bikesData).map(normalizeBike);
+    const search = (req.query.search || "").trim().toLowerCase();
+    const statusFilter = (req.query.status || "all").toLowerCase();
+    const lowBatteryOnly = req.query.lowBattery === "true" || req.query.lowBattery === "checkbox" || req.query.lowBattery === "on";
+    
+    const filtered = allBikes.filter((bike) => {
+      if (search && !String(bike.bike_code).toLowerCase().includes(search)) return false;
+      if (statusFilter !== "all" && bike.status !== statusFilter) return false;
+      if (lowBatteryOnly && bike.battery > 20) return false;
+      return true;
+    });
+
+    const totalCount = filtered.length;
+    const available = filtered.filter((b) => b.status === "available").length;
+    const inUse = filtered.filter((b) => b.status === "in_use").length;
+    const maintenance = filtered.filter((b) => b.status === "maintenance").length;
+    const offline = filtered.filter((b) => b.status === "offline").length;
+    const lowBattery = filtered.filter((b) => b.battery <= 20).length;
+    const totalBattery = filtered.reduce((sum, b) => sum + Number(b.battery || 0), 0);
+    const avgBattery = totalCount > 0 ? (totalBattery / totalCount).toFixed(1) : 0;
+
+    const summaryData = [
+      ["BHARBIKE FLEET INVENTORY & STATUS SUMMARY"],
+      ["Generated On:", new Date().toLocaleString("en-IN")],
+      ["Search Filter:", search || "None"],
+      ["Status Filter:", statusFilter.toUpperCase()],
+      ["Low Battery Filter Only:", lowBatteryOnly ? "YES" : "NO"],
+      [],
+      ["Metric Indicator", "Fleet Count / Average Value"],
+      ["Total Active Fleet", totalCount],
+      ["Available Units", available],
+      ["In Service Units (Rented/In-Use)", inUse],
+      ["In Maintenance Queue", maintenance],
+      ["Offline Units", offline],
+      ["Low Battery Alerts (<=20%)", lowBattery],
+      ["Average Battery Level (%)", `${avgBattery}%`],
+      [],
+      ["This is a live live system-generated inventory report verified for the official BharBike fleet management system."]
+    ];
+
+    const fleetHeaders = [["Bike ID", "Status", "Lock State", "Usage State", "Battery (%)", "Location", "Last Service Date", "Health Score", "Health Status"]];
+    const fleetRows = filtered.map((bike) => [
+      bike.bike_code,
+      bike.statusLabel,
+      bike.is_locked !== false ? "Locked 🔒" : "Unlocked 🔓",
+      bike.usage,
+      Number(bike.battery || 0),
+      bike.location,
+      bike.lastServiceDate,
+      bike.healthScore || 0,
+      bike.healthStatus
+    ]);
+    const fleetData = fleetHeaders.concat(fleetRows);
+
+    const wb = XLSX.utils.book_new();
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    const wsFleet = XLSX.utils.aoa_to_sheet(fleetData);
+
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Fleet Summary");
+    XLSX.utils.book_append_sheet(wb, wsFleet, "Fleet Registry");
+
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=BharBike_Fleet_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    return res.send(buf);
+
+  } catch (error) {
+    console.error("[admin.exportBikesExcel] unexpected error", error);
+    return res.status(500).send("Unable to generate Fleet Excel report");
+  }
+}
+
+export async function exportBikesPDF(req, res) {
+  try {
+    const { data: bikesData, error: bikesError } = await supabase.from("bikes").select("*");
+    if (bikesError) {
+      console.error("[admin.exportBikesPDF] fetch failed", bikesError);
+    }
+    
+    const allBikes = safeData(bikesData).map(normalizeBike);
+    const search = (req.query.search || "").trim().toLowerCase();
+    const statusFilter = (req.query.status || "all").toLowerCase();
+    const lowBatteryOnly = req.query.lowBattery === "true" || req.query.lowBattery === "checkbox" || req.query.lowBattery === "on";
+    
+    const filtered = allBikes.filter((bike) => {
+      if (search && !String(bike.bike_code).toLowerCase().includes(search)) return false;
+      if (statusFilter !== "all" && bike.status !== statusFilter) return false;
+      if (lowBatteryOnly && bike.battery > 20) return false;
+      return true;
+    });
+
+    const totalCount = filtered.length;
+    const available = filtered.filter((b) => b.status === "available").length;
+    const inUse = filtered.filter((b) => b.status === "in_use").length;
+    const maintenance = filtered.filter((b) => b.status === "maintenance").length;
+    const offline = filtered.filter((b) => b.status === "offline").length;
+    const lowBattery = filtered.filter((b) => b.battery <= 20).length;
+    const totalBattery = filtered.reduce((sum, b) => sum + Number(b.battery || 0), 0);
+    const avgBattery = totalCount > 0 ? (totalBattery / totalCount).toFixed(1) : 0;
+
+    return res.render("fleet-report-print", {
+      title: "Fleet Inventory Statement",
+      BRAND_NAME,
+      BRAND_PRODUCT_NAME,
+      formatBrand,
+      filters: {
+        search,
+        status: statusFilter,
+        lowBattery: lowBatteryOnly,
+      },
+      totals: {
+        total: totalCount,
+        available,
+        inUse,
+        maintenance,
+        offline,
+        lowBattery,
+        avgBattery,
+      },
+      bikes: filtered,
+    });
+  } catch (error) {
+    console.error("[admin.exportBikesPDF] unexpected error", error);
+    return res.status(500).send("Unable to render Fleet PDF report");
   }
 }
 
@@ -1949,20 +2268,63 @@ export async function blockUser(req, res) {
 
 export async function addBike(req, res) {
   try {
-    const { bike_code, status } = req.body;
-    await supabase.from("bikes").insert([
-      {
-        bike_code,
-        status: status || "available",
-        battery_percentage: Number(req.body.battery || 0),
-        location: req.body.location || "Main Hub",
-        last_service_date: req.body.lastServiceDate || new Date().toISOString().slice(0, 10),
-      },
-    ]);
-    return res.json({ success: true, message: "Bike added" });
+    const { bike_code, status, device_uuid } = req.body;
+    const trimmedUuid = device_uuid ? device_uuid.trim() : "";
+
+    if (trimmedUuid) {
+      // Validate that this GPS Tracker is not already mapped to another bike
+      const { data: existing } = await supabase
+        .from("vehicles")
+        .select("bike_id")
+        .eq("vehicle_uuid", trimmedUuid)
+        .maybeSingle();
+
+      if (existing) {
+        const { data: otherBike } = await supabase
+          .from("bikes")
+          .select("bike_code")
+          .eq("id", existing.bike_id)
+          .maybeSingle();
+        const otherCode = otherBike ? otherBike.bike_code : existing.bike_id;
+        return res.status(400).json({
+          success: false,
+          message: `GPS Tracker/Device UUID is already mapped to Bike: ${otherCode}`
+        });
+      }
+    }
+
+    const { data: newBikes, error: insertError } = await supabase
+      .from("bikes")
+      .insert([
+        {
+          bike_code,
+          status: status || "available",
+          battery_percentage: Number(req.body.battery || 0),
+          location: req.body.location || "Main Hub",
+          last_service_date: req.body.lastServiceDate || new Date().toISOString().slice(0, 10),
+        },
+      ])
+      .select();
+
+    if (insertError) throw insertError;
+    const newBike = newBikes?.[0];
+    if (!newBike) throw new Error("Insert succeeded but returned no bike details");
+
+    if (trimmedUuid) {
+      const { error: vehicleError } = await supabase.from("vehicles").insert([
+        {
+          bike_id: newBike.id,
+          vehicle_uuid: trimmedUuid,
+          status: "active"
+        }
+      ]);
+      if (vehicleError) throw vehicleError;
+    }
+
+    return res.json({ success: true, message: "Bike added successfully!" });
   } catch (error) {
     console.error("[admin.addBike] failed", error);
-    return res.status(500).json({ success: false, message: "Unable to add bike" });
+    return res.status(500).json({ success: false, message: error.message || "Unable to add bike" });
   }
 }
 
@@ -2093,6 +2455,15 @@ export async function approvePartner(req, res) {
     await supabase.from("delivery_partners").update({ status: "approved" }).eq("user_id", userId);
     // 2. Update user profile
     await supabase.from("users").update({ is_delivery_partner: true, is_online: true }).eq("id", userId);
+
+    // Send KYC Application Approved Notification (non-blocking)
+    createUserNotification(
+      userId,
+      "KYC Verification Approved! 🟢",
+      "Congratulations! Your delivery partner application has been approved. You are now authorized to accept delivery orders.",
+      "success"
+    ).catch((err) => console.warn("[adminController.approvePartner] notification failed:", err?.message));
+
     return res.json({ success: true, message: "Partner approved" });
   } catch (error) {
     console.error("[admin.approvePartner] failed", error);
@@ -2105,6 +2476,15 @@ export async function rejectPartner(req, res) {
     const { userId } = req.params;
     await supabase.from("delivery_partners").update({ status: "rejected" }).eq("user_id", userId);
     await supabase.from("users").update({ is_delivery_partner: false, is_online: false }).eq("id", userId);
+
+    // Send KYC Application Rejected Notification (non-blocking)
+    createUserNotification(
+      userId,
+      "KYC Verification Rejected 🔴",
+      "We are sorry, but your delivery partner application could not be approved. Please review your submitted documents and try again.",
+      "error"
+    ).catch((err) => console.warn("[adminController.rejectPartner] notification failed:", err?.message));
+
     return res.json({ success: true, message: "Partner rejected" });
   } catch (error) {
     console.error("[admin.rejectPartner] failed", error);
@@ -2693,5 +3073,131 @@ export async function adminUnlockBike(req, res) {
     return res.status(500).json({ success: false, message: error.message });
   }
 }
+
+export async function linkGpsTracker(req, res) {
+  try {
+    const { bikeId } = req.params;
+    const { device_uuid } = req.body;
+
+    const trimmedUuid = device_uuid ? device_uuid.trim() : "";
+
+    if (trimmedUuid) {
+      // Validate that this GPS Tracker is not already mapped to another bike
+      const { data: existing } = await supabase
+        .from("vehicles")
+        .select("bike_id")
+        .eq("vehicle_uuid", trimmedUuid)
+        .maybeSingle();
+
+      if (existing && existing.bike_id !== bikeId) {
+        const { data: otherBike } = await supabase
+          .from("bikes")
+          .select("bike_code")
+          .eq("id", existing.bike_id)
+          .maybeSingle();
+        const otherCode = otherBike ? otherBike.bike_code : existing.bike_id;
+        return res.status(400).json({
+          success: false,
+          message: `GPS Tracker/Device UUID is already mapped to Bike: ${otherCode}`
+        });
+      }
+    }
+
+    // Delete any existing mappings in vehicles for this bike
+    await supabase.from("vehicles").delete().eq("bike_id", bikeId);
+
+    // If a non-empty tracker ID was provided, insert the new mapping
+    if (trimmedUuid) {
+      const { error: vehicleError } = await supabase.from("vehicles").insert([
+        {
+          bike_id: bikeId,
+          vehicle_uuid: trimmedUuid,
+          status: "active"
+        }
+      ]);
+      if (vehicleError) throw vehicleError;
+    }
+
+    return res.json({
+      success: true,
+      message: trimmedUuid ? "GPS Tracker linked successfully!" : "GPS Tracker unlinked successfully!"
+    });
+  } catch (error) {
+    console.error("[admin.linkGpsTracker] failed", error);
+    return res.status(500).json({ success: false, message: error.message || "Unable to link GPS Tracker" });
+  }
+}
+
+export async function sqlEditorPage(req, res) {
+  try {
+    let isRpcAvailable = false;
+    try {
+      const { error } = await supabase.rpc("exec_sql", { sql_query: "SELECT 1 AS test" });
+      if (!error || error.code !== "PGRST202") {
+        isRpcAvailable = true;
+      }
+    } catch (rpcErr) {
+      console.warn("[adminController.sqlEditorPage] RPC test exception:", rpcErr);
+    }
+
+    return renderPage(res, {
+      title: "SQL Console",
+      active: "sql-editor",
+      bodyView: "sql-editor",
+      isRpcAvailable,
+    });
+  } catch (error) {
+    console.error("[adminController.sqlEditorPage] failed", error);
+    return res.status(500).send("Unable to load SQL Console");
+  }
+}
+
+export async function runSqlQuery(req, res) {
+  try {
+    const { query } = req.body;
+    if (!query || !query.trim()) {
+      return res.status(400).json({ success: false, message: "SQL Query is required" });
+    }
+
+    const { data, error } = await supabase.rpc("exec_sql", { sql_query: query });
+
+    if (error) {
+      return res.json({
+        success: false,
+        message: error.message || "Database query execution failed",
+        error: error
+      });
+    }
+
+    if (data && typeof data === "object" && !Array.isArray(data) && data.error) {
+      return res.json({
+        success: false,
+        message: data.error,
+        error: { message: data.error }
+      });
+    }
+
+    if (Array.isArray(data) && data.length === 1 && data[0] && data[0].error) {
+      return res.json({
+        success: false,
+        message: data[0].error,
+        error: { message: data[0].error }
+      });
+    }
+
+    return res.json({
+      success: true,
+      results: Array.isArray(data) ? data : data ? [data] : []
+    });
+  } catch (error) {
+    console.error("[adminController.runSqlQuery] failed", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error executing query",
+      error
+    });
+  }
+}
+
 
 

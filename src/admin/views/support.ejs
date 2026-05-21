@@ -898,7 +898,7 @@
     document.getElementById('support-convert-modal').classList.remove('show');
   }
 
-  function confirmConvert(ticketId) {
+  async function confirmConvert(ticketId) {
     closeConvertModal();
     try {
       const res = await fetch(`/admin/support/${ticketId}/convert`, {

@@ -807,6 +807,243 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
   }
 });
 
+// Didit Hosted KYC: Helper function to initiate a verification session
+async function initiateDiditSession(userId) {
+  const apiKey = process.env.DIDIT_API_KEY || "m8c9swISCz8KddMoe0AweImRiOGcmnIfOxadzi8epvk";
+  let workflowId = "45c50b06-8873-4def-badb-de0ae91ead97"; // Default Custom KYC workflow
+
+  // Dynamically fetch workflows from Didit to find default or specific one
+  try {
+    const wResponse = await fetch("https://verification.didit.me/v3/workflows/", {
+      method: "GET",
+      headers: {
+        "x-api-key": apiKey
+      }
+    });
+    if (wResponse.ok) {
+      const workflows = await wResponse.json();
+      const activeKyc = workflows.results?.find(w => w.workflow_type === "kyc" && w.is_default);
+      if (activeKyc) {
+        workflowId = activeKyc.workflow_id;
+        console.log(`[Didit Session] Found active default workflow: ${workflowId} (${activeKyc.workflow_label})`);
+      }
+    }
+  } catch (wErr) {
+    console.warn("[Didit Session] Unable to fetch workflows, using default:", wErr.message);
+  }
+
+  // Call Didit API to create the Hosted Session
+  const response = await fetch("https://verification.didit.me/v3/session/", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      workflow_id: workflowId,
+      vendor_data: userId
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Didit session creation failed: ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+// Didit Hosted KYC: Initiate verification session (POST)
+api.post("/kyc/initiate-session", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || req.body?.user_id || req.query?.user_id || "").trim();
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "userId/user_id is required" });
+    }
+
+    const data = await initiateDiditSession(userId);
+    return res.status(201).json({
+      success: true,
+      session_id: data.session_id,
+      session_token: data.session_token,
+      url: data.url,
+      vendor_data: data.vendor_data
+    });
+  } catch (err) {
+    console.error("[POST /api/kyc/initiate-session] error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Server error" });
+  }
+});
+
+// Didit Hosted KYC: Initiate verification session (GET)
+api.get("/kyc/initiate-session", async (req, res) => {
+  try {
+    const userId = String(req.query?.userId || req.query?.user_id || "").trim();
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "userId/user_id is required" });
+    }
+    
+    const data = await initiateDiditSession(userId);
+    return res.status(201).json({
+      success: true,
+      session_id: data.session_id,
+      session_token: data.session_token,
+      url: data.url,
+      vendor_data: data.vendor_data
+    });
+  } catch (err) {
+    console.error("[GET /api/kyc/initiate-session] error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Server error" });
+  }
+});
+
+// Didit Hosted KYC: Webhook receiver
+api.post("/kyc/webhook", async (req, res) => {
+  try {
+    console.log("[POST /api/kyc/webhook] Received payload:", JSON.stringify(req.body, null, 2));
+
+    const signature = req.headers["x-didit-signature"] || req.headers["x-signature"];
+    const webhookSecret = process.env.DIDIT_WEBHOOK_SECRET;
+
+    if (webhookSecret && webhookSecret !== "mock_webhook_secret_for_local_testing" && !signature) {
+      console.warn("[POST /api/kyc/webhook] Warning: webhook secret is set but signature is missing.");
+    }
+
+    const payload = req.body || {};
+    const status = String(payload.status || payload.decision?.status || "").toUpperCase();
+    const userId = payload.vendor_data || payload.decision?.vendor_data;
+    const sessionId = payload.session_id || payload.decision?.session_id;
+
+    if (!userId) {
+      console.warn("[POST /api/kyc/webhook] Missing vendor_data/user_id in payload.");
+      return res.status(400).json({ success: false, message: "vendor_data/user_id is required" });
+    }
+
+    console.log(`[POST /api/kyc/webhook] Processing user ${userId} with status ${status}`);
+
+    // If it's a demo user, bypass database writes to avoid UUID syntax errors
+    if (isDemoUser(userId)) {
+      console.log(`[POST /api/kyc/webhook] Demo user ${userId} detected. Bypassing database writes.`);
+      return res.json({ success: true, message: "Demo user processed successfully" });
+    }
+
+    if (status === "APPROVED") {
+      const idVerifications = payload.decision?.id_verifications || payload.id_verifications || [];
+      console.log(`[POST /api/kyc/webhook] Found ${idVerifications.length} ID verifications.`);
+
+      let docType = "pan_card";
+      let docNumber = "";
+      let fullName = "";
+      let docFileUrl = "https://kyc.bharbike.local/didit_verified_placeholder.jpg";
+
+      if (idVerifications.length > 0) {
+        const primaryId = idVerifications[0];
+        docType = String(primaryId.document_type || "pan_card").toLowerCase();
+        docNumber = primaryId.document_number || "";
+        fullName = `${primaryId.first_name || ""} ${primaryId.last_name || ""}`.trim();
+        docFileUrl = primaryId.front_image_url || primaryId.image_url || docFileUrl;
+      }
+
+      // Map Didit document type to BharBike kyc_documents table 'type' column check constraint:
+      // CHECK (type IN ('aadhaar', 'driving_license', 'electricity_bill', 'pan_card'))
+      let mappedType = "pan_card";
+      if (docType.includes("aadhaar") || docType.includes("national")) {
+        mappedType = "aadhaar";
+      } else if (docType.includes("driver") || docType.includes("license") || docType.includes("dl")) {
+        mappedType = "driving_license";
+      } else if (docType.includes("bill")) {
+        mappedType = "electricity_bill";
+      } else if (docType.includes("pan")) {
+        mappedType = "pan_card";
+      }
+
+      const verifiedPayload = {
+        user_id: userId,
+        type: mappedType,
+        consumer_name: fullName || "Verified User",
+        consumer_number: docNumber || "N/A",
+        board_name: "Didit Auto Verification",
+        address: "Verified via Didit Hosted Flow",
+        file_url: docFileUrl,
+        status: "verified"
+      };
+
+      // 1. Update in-memory kycStore fallback
+      try {
+        addKycDocument(verifiedPayload);
+      } catch (storeErr) {
+        console.warn("[POST /api/kyc/webhook] kycStore insert skipped:", storeErr?.message);
+      }
+
+      // 2. Update real Supabase kyc_documents table
+      try {
+        const { error } = await supabase
+          .from("kyc_documents")
+          .upsert(verifiedPayload, { onConflict: "user_id,type" });
+        if (error) {
+          console.error("[POST /api/kyc/webhook] Supabase kyc_documents insert failed:", error);
+        } else {
+          console.log("[POST /api/kyc/webhook] Supabase kyc_documents updated successfully.");
+        }
+      } catch (dbErr) {
+        console.error("[POST /api/kyc/webhook] Supabase DB exception:", dbErr?.message);
+      }
+
+      // 3. Update matching column in users table for fallback
+      try {
+        let userColumn = "pan_card_url";
+        if (mappedType === "aadhaar") {
+          userColumn = "aadhaar_front_url";
+        } else if (mappedType === "driving_license") {
+          userColumn = "driving_license_url";
+        } else if (mappedType === "electricity_bill") {
+          userColumn = "electricity_bill_url";
+        }
+
+        const { error } = await supabase
+          .from("users")
+          .update({ [userColumn]: docFileUrl })
+          .eq("id", userId);
+        if (error) {
+          console.warn(`[POST /api/kyc/webhook] users column update failed: ${error.message}`);
+        } else {
+          console.log(`[POST /api/kyc/webhook] users.${userColumn} updated.`);
+        }
+      } catch (userErr) {
+        console.warn("[POST /api/kyc/webhook] users update skipped:", userErr?.message);
+      }
+
+      return res.json({ success: true, message: "KYC approved and database updated" });
+
+    } else if (status === "DECLINED" || status === "FAILED") {
+      const declineReason = payload.decision?.warnings?.join(", ") || payload.reason || "Verification failed";
+
+      const rejectedPayload = {
+        user_id: userId,
+        type: "pan_card",
+        status: "rejected",
+        reason: declineReason,
+        file_url: "https://kyc.bharbike.local/didit_rejected_placeholder.jpg"
+      };
+
+      try {
+        await supabase
+          .from("kyc_documents")
+          .upsert(rejectedPayload, { onConflict: "user_id,type" });
+      } catch (dbErr) {
+        console.error("[POST /api/kyc/webhook] Supabase decline update exception:", dbErr?.message);
+      }
+
+      return res.json({ success: true, message: "KYC rejected updated" });
+    }
+
+    return res.json({ success: true, message: "Webhook received (no-op)" });
+  } catch (err) {
+    console.error("[POST /api/kyc/webhook] unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 api.post("/kyc/electricity", async (req, res) => {
   try {
     const {

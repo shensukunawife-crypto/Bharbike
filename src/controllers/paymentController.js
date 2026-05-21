@@ -343,7 +343,7 @@ export const verifyPayment = async (req, res) => {
       }
 
       try {
-        await createSubscription(user_id, plan_id, paymentRecordId);
+        await createSubscription(user_id, plan_id, paymentRecordId, subAmount);
         console.log("[verifyPayment] subscription created via service");
       } catch (e) {
         console.warn("[verifyPayment] subscription service failed, trying direct insert:", e?.message);

@@ -205,7 +205,7 @@ export async function getUserSubscriptions(userId) {
 /**
  * Create a new subscription for user
  */
-export async function createSubscription(userId, planId, paymentId = null) {
+export async function createSubscription(userId, planId, paymentId = null, paidAmount = null) {
   try {
     // Get plan details
     const plan = await getSubscriptionPlanById(planId);
@@ -268,8 +268,11 @@ export async function createSubscription(userId, planId, paymentId = null) {
       throw error;
     }
 
+    // Use paidAmount if provided and greater than 0, otherwise default to plan.price
+    const finalBillingAmount = (paidAmount && Number(paidAmount) > 0) ? Number(paidAmount) : plan.price;
+
     // Create billing record
-    await createBillingRecord(data.id, userId, plan.price, "paid", paymentId);
+    await createBillingRecord(data.id, userId, finalBillingAmount, "paid", paymentId);
 
     // Trigger notification for real DB
     createUserNotification(
@@ -379,7 +382,29 @@ export async function getUserBillingHistory(userId, limit = 10) {
       if (isDatabaseError(error)) return [];
       throw error;
     }
-    return data || [];
+
+    const bills = data || [];
+    for (const bill of bills) {
+      try {
+        if (bill.subscription_id) {
+          const { data: subData } = await supabase
+            .from("user_subscriptions")
+            .select("*")
+            .eq("id", bill.subscription_id)
+            .maybeSingle();
+          if (subData) {
+            bill.subscription = subData;
+            // Enrich subscription with plan
+            const plan = await getSubscriptionPlanById(subData.plan_id);
+            bill.subscription.plan = plan || { display_name: "Active Plan" };
+          }
+        }
+      } catch (enrichErr) {
+        console.warn("[getUserBillingHistory] failed to enrich billing item:", enrichErr.message);
+      }
+    }
+
+    return bills;
   } catch (error) {
     console.error("[subscriptionService] getUserBillingHistory failed:", error.message);
     throw error;

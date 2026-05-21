@@ -159,7 +159,7 @@ export const getBillingHistory = async (req, res) => {
  */
 export const createSubscription = async (req, res) => {
   try {
-    const { user_id, plan_id, payment_id } = req.body;
+    const { user_id, plan_id, payment_id, amount } = req.body;
 
     if (!user_id || !plan_id) {
       return res.status(400).json({
@@ -181,7 +181,8 @@ export const createSubscription = async (req, res) => {
     const subscription = await subscriptionService.createSubscription(
       user_id,
       plan_id,
-      payment_id
+      payment_id,
+      amount
     );
 
     return res.status(201).json({

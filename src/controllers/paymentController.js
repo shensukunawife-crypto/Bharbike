@@ -419,8 +419,8 @@ export const verifyPayment = async (req, res) => {
         } catch (rpcErr) {
           console.warn("[verifyPayment] wallet RPC failed, trying direct insert:", rpcErr?.message);
           try {
-            // Upsert wallet_balances row
-            const { data: existing } = await supabase.from("wallet_balances").select("balance").eq("user_id", user_id).single();
+            // Upsert wallet_balances row safely (use maybeSingle to avoid 0-row query error on new accounts)
+            const { data: existing } = await supabase.from("wallet_balances").select("balance").eq("user_id", user_id).maybeSingle();
             const newBalance = (existing?.balance || 0) + addAmount;
             const { error: upsertErr } = await supabase.from("wallet_balances").upsert(
               { user_id: user_id, balance: newBalance, updated_at: new Date().toISOString() },

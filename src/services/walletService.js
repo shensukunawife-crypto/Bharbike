@@ -15,10 +15,13 @@ export async function getWalletBalance(userId) {
     throw new AppError("Unable to fetch wallet balance", 500);
   }
 
+  // Since RPC returns a TABLE, data is an array of rows
+  const row = Array.isArray(data) ? data[0] : data;
+
   return {
-    balance: Number(data.balance || 0),
-    currency: data.currency || "INR",
-    userId: data.user_id,
+    balance: Number(row?.balance || 0),
+    currency: row?.currency || "INR",
+    userId: row?.user_id || userId,
   };
 }
 

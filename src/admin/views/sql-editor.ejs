@@ -434,8 +434,25 @@
 RETURNS jsonb AS $$
 DECLARE
   result jsonb;
+  clean_query text;
+  first_word text;
 BEGIN
-  EXECUTE 'SELECT jsonb_agg(t) FROM (' || sql_query || ') t' INTO result;
+  -- Remove block comments
+  clean_query := regexp_replace(sql_query, '/\*.*?\*/', '', 'g');
+  -- Remove line comments
+  clean_query := regexp_replace(clean_query, '--.*$', '', 'g');
+  -- Trim leading/trailing whitespace
+  clean_query := trim(clean_query);
+  -- Extract first word
+  first_word := upper(split_part(regexp_replace(clean_query, '\s+', ' ', 'g'), ' ', 1));
+
+  IF first_word IN ('SELECT', 'WITH', 'SHOW') THEN
+    EXECUTE 'SELECT jsonb_agg(t) FROM (' || sql_query || ') t' INTO result;
+  ELSE
+    EXECUTE sql_query;
+    result := jsonb_build_object('status', 'Command executed successfully');
+  END IF;
+  
   RETURN result;
 EXCEPTION WHEN OTHERS THEN
   RETURN jsonb_build_object('error', SQLERRM);

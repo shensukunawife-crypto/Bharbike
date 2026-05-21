@@ -4,6 +4,7 @@ import { signToken } from "../middleware/auth.js";
 import { shapePublicUser } from "../utils/userShape.js";
 import { env } from "../config/env.js";
 import { createUserNotification } from "./notificationService.js";
+import { verifyFirebaseIdToken } from "../utils/firebaseAdmin.js";
 
 const OTP_TTL_SECONDS = 60;
 const OTP_THROTTLE_LIMIT = 3;
@@ -373,3 +374,76 @@ export async function loginWithEmail({ email, password }) {
     },
   };
 }
+
+// ─── Firebase Phone Auth ──────────────────────────────────────────────────────
+// The mobile app uses Firebase SDK to send & verify the OTP.
+// Once the user verifies the OTP, Firebase returns an ID token.
+// The app sends that ID token here. We verify it with the Admin SDK,
+// then upsert the user profile and return our own BharBike JWT.
+export async function verifyWithFirebaseToken({ idToken }) {
+  if (!idToken) throw new AppError("Firebase ID token is required", 422);
+
+  let decoded;
+  try {
+    decoded = await verifyFirebaseIdToken(idToken);
+  } catch (err) {
+    console.error("[authService.verifyWithFirebaseToken] invalid token:", err.message);
+    throw new AppError("Invalid or expired Firebase token", 401);
+  }
+
+  const firebaseUid = decoded.uid;
+  const phone = decoded.phone_number || null;
+  const email = decoded.email || null;
+
+  if (!phone && !email) {
+    throw new AppError("Firebase token missing phone/email claim", 422);
+  }
+
+  // Normalize phone for Indian numbers
+  const normalizedPhone = phone ? toIndianPhone(phone) : null;
+
+  // Try to find existing profile
+  let profile = null;
+  if (normalizedPhone) profile = await findProfileByPhone(normalizedPhone);
+  if (!profile && email) profile = await findProfileByEmail(email);
+
+  if (!profile) {
+    // Auto-create profile for new Firebase users
+    const emailAlias = normalizedPhone
+      ? `${normalizedPhone.replace(/\D/g, "")}@firebase.local`
+      : email;
+    const tempPassword = `Firebase#${firebaseUid.slice(0, 10)}`;
+
+    let authUser = null;
+    const loginRes = await supabase.auth.signInWithPassword({ email: emailAlias, password: tempPassword });
+    if (loginRes?.data?.user) {
+      authUser = loginRes.data.user;
+    } else {
+      const signupRes = await supabase.auth.signUp({
+        email: emailAlias,
+        password: tempPassword,
+        options: { data: { full_name: decoded.name || "Rider", phone: normalizedPhone } },
+      });
+      authUser = signupRes?.data?.user || null;
+      if (!authUser) throw new AppError("Unable to create user profile", 500);
+    }
+    profile = await upsertProfileFromAuthUser(authUser, normalizedPhone);
+  }
+
+  // Send login notification (non-blocking)
+  createUserNotification(
+    profile.id,
+    "New Login Detected 🛡️",
+    `A new login was detected on your account via Firebase OTP at ${new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })} (IST).`,
+    "info"
+  ).catch(() => {});
+
+  const appToken = signToken({ id: profile.id, phone: normalizedPhone });
+
+  return {
+    token: appToken,
+    user: profile,
+    firebase_uid: firebaseUid,
+  };
+}
+

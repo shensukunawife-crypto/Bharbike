@@ -86,6 +86,17 @@ export const logout = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: "Logged out" });
 });
 
+// Firebase Phone Auth — mobile app sends Firebase ID token after OTP verification
+export const verifyFirebaseToken = asyncHandler(async (req, res) => {
+  const idToken = req.body?.idToken || req.body?.id_token;
+  if (!idToken) {
+    return res.status(422).json({ success: false, message: "idToken is required" });
+  }
+  const data = await authService.verifyWithFirebaseToken({ idToken });
+  res.cookie("auth_token", data.token, cookieOptions());
+  res.status(200).json({ success: true, data });
+});
+
 export const session = asyncHandler(async (req, res) => {
   const token = resolveAuthToken(req);
   if (!token) {

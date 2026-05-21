@@ -12,6 +12,14 @@ r.post(
   authController.sendOtp
 );
 
+// Firebase Phone Auth — mobile app verifies OTP via Firebase SDK then sends ID token here
+r.post(
+  "/firebase-verify",
+  [body("idToken").trim().notEmpty().withMessage("Firebase idToken is required")],
+  validateRequest,
+  authController.verifyFirebaseToken
+);
+
 r.post(
   "/verify-otp",
   [

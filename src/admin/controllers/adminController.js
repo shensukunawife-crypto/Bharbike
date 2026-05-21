@@ -35,7 +35,7 @@ const dashboardSettings = {
   appName: `${BRAND_NAME} Admin`,
 };
 
-const maintenanceTickets = [
+export const maintenanceTickets = [
   {
     id: "MT-1001",
     bikeId: "bike-1",

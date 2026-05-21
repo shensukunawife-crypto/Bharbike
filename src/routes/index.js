@@ -33,7 +33,7 @@ import supabase from "../utils/supabaseClient.js";
 import os from "os";
 import { adminApiLogin } from "../controllers/adminAuthController.js";
 import { requireAdminAuth, requirePermission } from "../admin/middleware/adminAuth.js";
-import { apiJsonAdminOrders, apiJsonAdminPayments } from "../admin/controllers/adminController.js";
+import { apiJsonAdminOrders, apiJsonAdminPayments, maintenanceTickets } from "../admin/controllers/adminController.js";
 import * as workflowStoryController from "../controllers/workflowStoryController.js";
 import { addInMemoryBooking, listInMemoryBookings } from "../services/bookingStore.js";
 import {
@@ -716,6 +716,168 @@ api.put("/admin/support/:id", requireAdminAuth, requirePermission("manage_suppor
     return res.json({ success: true, data, message: "Ticket status updated" });
   } catch (err) {
     console.error("[PUT /api/admin/support/:id] unexpected:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// ==================== ADMIN MAINTENANCE REST ENDPOINTS ====================
+api.get("/admin/maintenance", requireAdminAuth, requirePermission("manage_bikes"), async (req, res) => {
+  try {
+    const filter = req.query.filter || "all";
+    const search = String(req.query.search || "").trim().toLowerCase();
+
+    // Fetch all bikes so we can return them for the "add to maintenance" selection
+    const { data: bikesData, error: bikesError } = await supabase
+      .from("bikes")
+      .select("*");
+
+    if (bikesError) {
+      console.error("[GET /api/admin/maintenance] bikes fetch failed:", bikesError);
+    }
+
+    const bikes = (bikesData || []).map(b => ({
+      id: b.id,
+      bike_code: b.bike_code || b.bikeCode || "BIKE-NEW",
+      status: b.status,
+    }));
+
+    const filteredTickets = maintenanceTickets.filter((ticket) => {
+      if (search && !String(ticket.bikeCode || "").toLowerCase().includes(search)) return false;
+      if (filter === "active") {
+        return ticket.status === "under_repair" || ticket.status === "in_progress";
+      }
+      if (filter === "completed") {
+        return ticket.status === "completed";
+      }
+      return true;
+    });
+
+    const maintenanceStats = {
+      total: filteredTickets.length,
+      inProgress: filteredTickets.filter((x) => x.status === "in_progress").length,
+      completed: filteredTickets.filter((x) => x.status === "completed").length,
+      totalCost: filteredTickets.reduce((sum, x) => sum + Number(x.repairCost || 0), 0),
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        tickets: filteredTickets,
+        bikes,
+        stats: maintenanceStats
+      }
+    });
+  } catch (err) {
+    console.error("[GET /api/admin/maintenance] unexpected:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.post("/admin/maintenance/add", requireAdminAuth, requirePermission("manage_bikes"), async (req, res) => {
+  try {
+    const { bikeId, issueType, description, technicianName, repairCost, reportedDate, expectedFixDate } = req.body;
+    if (!bikeId) {
+      return res.status(400).json({ success: false, message: "bikeId is required" });
+    }
+
+    // Fetch the bike from Supabase to get its code
+    const { data: bike, error: bikeError } = await supabase
+      .from("bikes")
+      .select("*")
+      .eq("id", bikeId)
+      .single();
+
+    if (bikeError || !bike) {
+      return res.status(400).json({ success: false, message: "Invalid bike ID" });
+    }
+
+    const ticket = {
+      id: `MT-${1000 + maintenanceTickets.length + 1}`,
+      bikeId: bike.id,
+      bikeCode: bike.bike_code || "BIKE-NEW",
+      issueType: issueType || "General Check",
+      description: description || "No details",
+      status: "under_repair",
+      technicianName: technicianName || "Unassigned",
+      repairCost: Number(repairCost || 0),
+      reportedDate: reportedDate || new Date().toISOString().slice(0, 10),
+      expectedFixDate: expectedFixDate || new Date().toISOString().slice(0, 10),
+      fixedDate: null,
+    };
+
+    maintenanceTickets.unshift(ticket);
+
+    // Update bike status to maintenance
+    await supabase.from("bikes").update({ status: "maintenance" }).eq("id", bike.id);
+
+    return res.json({ success: true, data: ticket, message: "Bike added to maintenance" });
+  } catch (err) {
+    console.error("[POST /api/admin/maintenance/add] failed:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.put("/admin/maintenance/:ticketId", requireAdminAuth, requirePermission("manage_bikes"), async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { status, technicianName, repairCost, expectedFixDate } = req.body;
+
+    const ticket = maintenanceTickets.find((item) => item.id === ticketId);
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    if (status) ticket.status = status;
+    if (technicianName !== undefined) ticket.technicianName = technicianName;
+    if (repairCost !== undefined) ticket.repairCost = Number(repairCost) || 0;
+    if (expectedFixDate !== undefined) ticket.expectedFixDate = expectedFixDate;
+
+    if (ticket.status === "completed") {
+      ticket.fixedDate = new Date().toISOString().slice(0, 10);
+      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
+    }
+
+    return res.json({ success: true, data: ticket, message: "Maintenance ticket updated" });
+  } catch (err) {
+    console.error("[PUT /api/admin/maintenance/:ticketId] failed:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.delete("/admin/maintenance/:ticketId", requireAdminAuth, requirePermission("manage_bikes"), async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const idx = maintenanceTickets.findIndex((item) => item.id === ticketId);
+    if (idx === -1) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    const [ticket] = maintenanceTickets.splice(idx, 1);
+    if (ticket.status !== "completed") {
+      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
+    }
+
+    return res.json({ success: true, message: "Maintenance ticket removed" });
+  } catch (err) {
+    console.error("[DELETE /api/admin/maintenance/:ticketId] failed:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.post("/admin/maintenance/bike/:bikeId/fixed", requireAdminAuth, requirePermission("manage_bikes"), async (req, res) => {
+  try {
+    const { bikeId } = req.params;
+    await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
+
+    const ticket = maintenanceTickets.find((item) => item.bikeId === bikeId);
+    if (ticket) {
+      ticket.status = "completed";
+      ticket.fixedDate = new Date().toISOString().slice(0, 10);
+    }
+
+    return res.json({ success: true, message: "Bike marked as fixed" });
+  } catch (err) {
+    console.error("[POST /api/admin/maintenance/bike/:bikeId/fixed] failed:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });

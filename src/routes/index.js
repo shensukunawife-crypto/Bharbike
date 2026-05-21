@@ -32,7 +32,7 @@ import { createUserNotification } from "../services/notificationService.js";
 import supabase from "../utils/supabaseClient.js";
 import os from "os";
 import { adminApiLogin } from "../controllers/adminAuthController.js";
-import { requireAdminAuth } from "../admin/middleware/adminAuth.js";
+import { requireAdminAuth, requirePermission } from "../admin/middleware/adminAuth.js";
 import { apiJsonAdminOrders, apiJsonAdminPayments } from "../admin/controllers/adminController.js";
 import * as workflowStoryController from "../controllers/workflowStoryController.js";
 import { addInMemoryBooking, listInMemoryBookings } from "../services/bookingStore.js";
@@ -656,7 +656,7 @@ api.get("/support/ticket/:id", async (req, res) => {
   }
 });
 
-api.get("/admin/support", async (req, res) => {
+api.get("/admin/support", requireAdminAuth, requirePermission("manage_support"), async (req, res) => {
   try {
     const status = String(req.query.status || "all").toLowerCase();
     const search = String(req.query.search || "").trim().toLowerCase();
@@ -689,7 +689,7 @@ api.get("/admin/support", async (req, res) => {
   }
 });
 
-api.put("/admin/support/:id", async (req, res) => {
+api.put("/admin/support/:id", requireAdminAuth, requirePermission("manage_support"), async (req, res) => {
   try {
     const { id } = req.params;
     const status = String(req.body?.status || "").toLowerCase();

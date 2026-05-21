@@ -614,7 +614,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;</pre>
   function loadTemplate(type) {
     const editor = document.getElementById("sql-editor-textarea");
     if (type === "migration") {
-      editor.value = `-- GPS pairing table schema migration\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS bike_id UUID REFERENCES public.bikes(id);\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS name TEXT;\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS registration_number TEXT;`;
+      editor.value = `-- GPS pairing table schema migration (bike_id is INTEGER to match bikes.id)\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS bike_id INTEGER;\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS name TEXT;\nALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS registration_number TEXT;`;
     } else if (type === "bikes") {
       editor.value = "SELECT id, bike_code, name, status, battery, location FROM public.bikes ORDER BY created_at DESC LIMIT 10;";
     } else if (type === "vehicles") {

@@ -10,7 +10,7 @@ import supabase from "../utils/supabaseClient.js";
  */
 export const createOrder = async (req, res) => {
   try {
-    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null } = req.body;
+    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null, is_demo = false } = req.body;
     const numericAmount = Number(amount);
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
@@ -22,13 +22,15 @@ export const createOrder = async (req, res) => {
     // Check if real Razorpay key is configured
     let config = null;
     let useRealRazorpay = false;
-    try {
-      config = await getActiveRazorpayConfig();
-      if (config && config.key_id && config.key_secret && config.key_id.startsWith("rzp_")) {
-        useRealRazorpay = true;
+    if (is_demo !== true) {
+      try {
+        config = await getActiveRazorpayConfig();
+        if (config && config.key_id && config.key_secret && config.key_id.startsWith("rzp_")) {
+          useRealRazorpay = true;
+        }
+      } catch (configError) {
+        console.log("[createOrder] Active Razorpay config not found or invalid. Falling back to Demo Mode:", configError.message);
       }
-    } catch (configError) {
-      console.log("[createOrder] Active Razorpay config not found or invalid. Falling back to Demo Mode:", configError.message);
     }
 
     if (useRealRazorpay) {
@@ -70,38 +72,74 @@ export const createOrder = async (req, res) => {
         key_secret: config.key_secret,
       });
 
-      // 3. Create real order on Razorpay servers
-      const amountInPaise = Math.round(normalizedAmount * 100);
-      const rzpOrder = await razorpay.orders.create({
-        amount: amountInPaise,
-        currency: currency || "INR",
-        receipt: receipt || `receipt_${appOrderId || Date.now()}`,
-      });
+      let rzpOrder;
+      let razorpayFailed = false;
 
-      // 4. Save to payments table
+      try {
+        // 3. Create real order on Razorpay servers
+        const amountInPaise = Math.round(normalizedAmount * 100);
+        rzpOrder = await razorpay.orders.create({
+          amount: amountInPaise,
+          currency: currency || "INR",
+          receipt: receipt || `receipt_${appOrderId || Date.now()}`,
+        });
+      } catch (rzpError) {
+        console.warn("[createOrder] Razorpay API order creation failed:", rzpError);
+        razorpayFailed = true;
+      }
+
+      if (!razorpayFailed && rzpOrder) {
+        // 4. Save to payments table
+        try {
+          await supabase.from("payments").insert([
+            {
+              order_id: appOrderId,
+              razorpay_order_id: rzpOrder.id,
+              status: "created",
+            },
+          ]);
+        } catch (paymentInsertError) {
+          console.warn("[createOrder] payments insert skipped in real mode:", paymentInsertError?.message);
+        }
+
+        // 5. Return actual order details and key_id to the frontend
+        return res.status(200).json({
+          success: true,
+          id: rzpOrder.id,
+          order_id: rzpOrder.id,
+          key_id: config.key_id,
+          amount: rzpOrder.amount,
+          currency: rzpOrder.currency || "INR",
+          app_order_id: appOrderId,
+          is_demo: false,
+          plan_id: plan_id || plan_name || null,
+        });
+      }
+
+      // If Razorpay failed, log and gracefully fall back to Demo Mode for this order
+      console.warn("[createOrder] Falling back to Demo Mode for order:", appOrderId);
+      const mockRazorpayOrderId = `order_demo_${Date.now()}`;
       try {
         await supabase.from("payments").insert([
           {
             order_id: appOrderId,
-            razorpay_order_id: rzpOrder.id,
+            razorpay_order_id: mockRazorpayOrderId,
             status: "created",
           },
         ]);
       } catch (paymentInsertError) {
-        console.warn("[createOrder] payments insert skipped in real mode:", paymentInsertError?.message);
+        console.warn("[createOrder] payments insert skipped on real-to-demo fallback:", paymentInsertError?.message);
       }
 
-      // 5. Return actual order details and key_id to the frontend
       return res.status(200).json({
         success: true,
-        id: rzpOrder.id,
-        order_id: rzpOrder.id,
-        key_id: config.key_id,
-        amount: rzpOrder.amount,
-        currency: rzpOrder.currency || "INR",
+        id: mockRazorpayOrderId,
+        amount: Math.round(normalizedAmount * 100),
+        currency: "INR",
         app_order_id: appOrderId,
-        is_demo: false,
+        is_demo: true,
         plan_id: plan_id || plan_name || null,
+        warning: "Razorpay API unavailable or authentication failed. Fell back to Demo Mode.",
       });
     }
 
@@ -166,7 +204,11 @@ export const createOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("[createOrder] Order creation error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    const errorMessage = error?.message || 
+                         error?.error?.description || 
+                         (typeof error === "string" ? error : null) || 
+                         "Server temporarily unavailable";
+    return res.status(500).json({ success: false, message: errorMessage });
   }
 };
 
@@ -409,6 +451,10 @@ export const verifyPayment = async (req, res) => {
     return res.json({ success: true, is_demo: isDemoMode, wallet: walletSummary });
   } catch (error) {
     console.error("[verifyPayment] Error:", error);
-    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+    const errorMessage = error?.message || 
+                         error?.error?.description || 
+                         (typeof error === "string" ? error : null) || 
+                         "Payment verification failed";
+    return res.status(error.statusCode || 500).json({ success: false, message: errorMessage });
   }
 };

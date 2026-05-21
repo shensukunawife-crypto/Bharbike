@@ -66,7 +66,17 @@ export async function toggleSkippedDayStatus(req, res) {
       return res.status(404).json({ success: false, message: "Record not found" });
     }
 
-    const nextStatus = current.status === "Active" ? "Inactive" : "Active";
+    const currentStatus = String(current.status || "").trim();
+    let nextStatus = "Active";
+    if (currentStatus === "Active") {
+      nextStatus = "Inactive";
+    } else if (currentStatus === "Inactive") {
+      nextStatus = "Attire Check Fail";
+    } else if (currentStatus === "Attire Check Fail") {
+      nextStatus = "Both";
+    } else {
+      nextStatus = "Active";
+    }
 
     const { data, error } = await supabase
       .from("rider_skipped_days")

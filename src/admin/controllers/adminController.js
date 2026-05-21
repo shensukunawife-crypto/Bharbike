@@ -3201,5 +3201,107 @@ export async function runSqlQuery(req, res) {
   }
 }
 
+export async function adsPage(req, res) {
+  try {
+    const { data, error } = await supabase
+      .from("ads")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[adminController.adsPage] DB Error:", error);
+    }
+
+    return renderPage(res, {
+      title: "Ads Management",
+      active: "ads",
+      bodyView: "ads",
+      ads: data || [],
+    });
+  } catch (error) {
+    console.error("[adminController.adsPage] unexpected:", error);
+    return renderPage(res, {
+      title: "Ads Management",
+      active: "ads",
+      bodyView: "ads",
+      ads: [],
+    });
+  }
+}
+
+export async function addAd(req, res) {
+  try {
+    const { title, image_url, link_url, status } = req.body;
+    if (!title || !image_url) {
+      return res.status(400).json({ success: false, message: "Title and Image URL are required" });
+    }
+
+    const { data, error } = await supabase
+      .from("ads")
+      .insert([{ title, image_url, link_url: link_url || null, status: status || "active" }])
+      .select();
+
+    if (error) {
+      console.error("[adminController.addAd] DB Error:", error);
+      return res.status(500).json({ success: false, message: error.message || "Failed to add advertisement" });
+    }
+
+    return res.json({ success: true, message: "Advertisement added successfully", data });
+  } catch (error) {
+    console.error("[adminController.addAd] unexpected:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function toggleAd(req, res) {
+  try {
+    const { id } = req.params;
+    const { data: current, error: getError } = await supabase
+      .from("ads")
+      .select("status")
+      .eq("id", id)
+      .single();
+
+    if (getError || !current) {
+      return res.status(404).json({ success: false, message: "Ad banner not found" });
+    }
+
+    const nextStatus = current.status === "active" ? "inactive" : "active";
+    const { data, error } = await supabase
+      .from("ads")
+      .update({ status: nextStatus })
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message || "Failed to toggle status" });
+    }
+
+    return res.json({ success: true, nextStatus, data });
+  } catch (error) {
+    console.error("[adminController.toggleAd] unexpected:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+export async function deleteAd(req, res) {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from("ads")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      return res.status(500).json({ success: false, message: error.message || "Failed to delete ad banner" });
+    }
+
+    return res.json({ success: true, message: "Advertisement deleted successfully" });
+  } catch (error) {
+    console.error("[adminController.deleteAd] unexpected:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
 
 

@@ -6,7 +6,9 @@ import supabase from "../utils/supabaseClient.js";
 export async function getActiveRazorpayConfig() {
   const envId = process.env.RAZORPAY_KEY_ID?.trim();
   const envSecret = process.env.RAZORPAY_KEY_SECRET?.trim();
-  if (envId && envSecret) {
+  const envEnabled = process.env.RAZORPAY_ENABLED?.trim().toLowerCase() === "true";
+  
+  if (envId && envSecret && envEnabled) {
     return {
       key_id: envId,
       key_secret: envSecret,

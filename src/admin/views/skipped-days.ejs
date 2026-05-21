@@ -264,6 +264,14 @@
     background: #dcfce7;
     color: #15803d;
   }
+  .skipped-status--attire {
+    background: #ffedd5;
+    color: #d97706;
+  }
+  .skipped-status--both {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
   .skipped-status--other {
     background: #f3f4f6;
     color: #4b5563;
@@ -332,6 +340,8 @@
   var cls = "skipped-status skipped-status--other";
   if (s === "inactive") cls = "skipped-status skipped-status--inactive";
   else if (s === "active") cls = "skipped-status skipped-status--active";
+  else if (s === "attire check fail") cls = "skipped-status skipped-status--attire";
+  else if (s === "both") cls = "skipped-status skipped-status--both";
   return '<span class="' + cls + '">' + escSkipped(st || "—") + "</span>";
 } %>
 
@@ -371,7 +381,9 @@
           <label class="skipped-label" for="sd-status">Status</label>
           <select id="sd-status" name="status" class="skipped-input">
             <option value="Active">Active</option>
-            <option value="Inactive" selected>Inactive</option>
+            <option value="Inactive" selected>Inactive (Absence/Leave)</option>
+            <option value="Attire Check Fail">Attire Check Fail</option>
+            <option value="Both">Both (Inactive & Attire Fail)</option>
           </select>
         </div>
         <button type="submit" class="skipped-btn" id="sd-submit">
@@ -472,6 +484,8 @@
       var cls = "skipped-status skipped-status--other";
       if (st === "inactive") cls = "skipped-status skipped-status--inactive";
       else if (st === "active") cls = "skipped-status skipped-status--active";
+      else if (st === "attire check fail") cls = "skipped-status skipped-status--attire";
+      else if (st === "both") cls = "skipped-status skipped-status--both";
       return '<span class="' + cls + '">' + escapeHtml(status || "—") + "</span>";
     }
 

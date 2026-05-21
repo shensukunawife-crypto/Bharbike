@@ -83,6 +83,12 @@ router.post("/support/:ticketId/convert", requirePermission("manage_support"), a
 router.get("/support/ticket/:ticketId/messages", requirePermission("manage_support"), adminController.getSupportMessages);
 router.post("/support/ticket/:ticketId/messages", requirePermission("manage_support"), adminController.sendSupportMessage);
 
+// Ads & Banners Management
+router.get("/ads", requirePermission("manage_support"), adminController.adsPage);
+router.post("/ads/add", requirePermission("manage_support"), adminController.addAd);
+router.post("/ads/:id/toggle", requirePermission("manage_support"), adminController.toggleAd);
+router.post("/ads/:id/delete", requirePermission("manage_support"), adminController.deleteAd);
+
 // System Settings
 router.get("/settings", requirePermission("manage_settings"), adminController.settingsPage);
 router.post("/settings/save", requirePermission("manage_settings"), adminController.saveSettings);

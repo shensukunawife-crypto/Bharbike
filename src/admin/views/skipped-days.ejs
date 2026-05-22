@@ -337,12 +337,13 @@
 } %>
 <% function statusBadgeSkipped(st) {
   var s = String(st || "").toLowerCase();
-  var cls = "skipped-status skipped-status--other";
-  if (s === "inactive") cls = "skipped-status skipped-status--inactive";
-  else if (s === "active") cls = "skipped-status skipped-status--active";
-  else if (s === "attire check fail") cls = "skipped-status skipped-status--attire";
-  else if (s === "both") cls = "skipped-status skipped-status--both";
-  return '<span class="' + cls + '">' + escSkipped(st || "—") + "</span>";
+  var cls = "skipped-status skipped-status--inactive";
+  var display = "Inactive";
+  if (s === "active") {
+    cls = "skipped-status skipped-status--active";
+    display = "Active";
+  }
+  return '<span class="' + cls + '">' + escSkipped(display) + "</span>";
 } %>
 
 <div class="skipped-page">
@@ -479,12 +480,13 @@
 
     function statusBadgeHtml(status) {
       var st = String(status || "").toLowerCase();
-      var cls = "skipped-status skipped-status--other";
-      if (st === "inactive") cls = "skipped-status skipped-status--inactive";
-      else if (st === "active") cls = "skipped-status skipped-status--active";
-      else if (st === "attire check fail") cls = "skipped-status skipped-status--attire";
-      else if (st === "both") cls = "skipped-status skipped-status--both";
-      return '<span class="' + cls + '">' + escapeHtml(status || "—") + "</span>";
+      var cls = "skipped-status skipped-status--inactive";
+      var display = "Inactive";
+      if (st === "active") {
+        cls = "skipped-status skipped-status--active";
+        display = "Active";
+      }
+      return '<span class="' + cls + '">' + escapeHtml(display) + "</span>";
     }
 
     function computeStats(rows) {

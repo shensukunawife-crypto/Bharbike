@@ -17,7 +17,12 @@ function getSupabaseKey() {
     try {
       const parts = key.split(".");
       if (parts.length !== 3) return null;
-      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
+      // Convert base64url to standard base64 and add padding
+      let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (base64.length % 4) {
+        base64 += "=";
+      }
+      const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
       return payload.role;
     } catch (e) {
       return null;

@@ -95,6 +95,21 @@
 
         <!-- Page Content -->
         <main class="page-content">
+          <% if (locals.isServiceRoleConfigured === false) { %>
+            <div class="rls-warning-banner" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 16px; color: var(--text);">
+              <div style="background: #dc2626; color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 18px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);">⚠️</div>
+              <div style="flex: 1;">
+                <h4 style="margin: 0 0 4px 0; font-size: 14.5px; font-weight: 700; color: var(--text);">Restricted Database Key Mode (RLS Active)</h4>
+                <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.45;">
+                  The backend server is running with the public anonymous key (Subject to Row Level Security) because the <strong>SUPABASE_SERVICE_ROLE_KEY</strong> environment variable is missing. Due to RLS policies, public SELECT queries on the <code>users</code> table are filtered, resulting in <strong>0 users</strong> being displayed on the dashboard and users page.
+                </p>
+                <div style="margin-top: 10px; display: flex; gap: 12px; align-items: center;">
+                  <span style="font-size: 11.5px; font-weight: 700; color: #ef4444; text-transform: uppercase; letter-spacing: 0.05em;"><%= locals.isProduction ? 'Action Required: Configure Render' : 'Action Required: Local .env File' %></span>
+                  <a href="#diagnostics-help" onclick="alert('How to Fix This:\n\n1. PRODUCTION (Render):\nGo to Render Dashboard -> bharbike-backend -> Environment. Add a new variable:\n- Key: SUPABASE_SERVICE_ROLE_KEY\n- Value: (Your Supabase service_role secret key from Project Settings -> API)\n\n2. LOCAL DEVELOPMENT:\nAdd SUPABASE_SERVICE_ROLE_KEY to your bike rental system backend/.env file and restart the npm server.')" style="font-size: 12.5px; font-weight: 700; color: var(--text); text-decoration: underline;">How to Fix This</a>
+                </div>
+              </div>
+            </div>
+          <% } %>
           <%- include(bodyView) %>
         </main>
 

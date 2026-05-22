@@ -37,7 +37,45 @@ const dashboardSettings = {
   maintenanceMode: false,
   debugMode: false,
   appName: `${BRAND_NAME} Admin`,
+  maintenanceMessage: "BharBike is currently under scheduled maintenance. We will be back online soon!",
 };
+
+let settingsInitialized = false;
+
+export async function ensureSettingsInitialized() {
+  if (settingsInitialized) return;
+  try {
+    const { data, error } = await supabase.from("system_settings").select("settings").eq("id", 1).maybeSingle();
+    if (error) {
+      if (error.code === "42P01") { // Relation does not exist
+        console.log("ℹ️ [adminController] system_settings table not found. Creating table and inserting defaults...");
+        await supabase.rpc("exec_sql", {
+          sql_query: `
+            CREATE TABLE IF NOT EXISTS system_settings (
+              id INTEGER PRIMARY KEY,
+              settings JSONB NOT NULL,
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+            );
+            INSERT INTO system_settings (id, settings)
+            VALUES (1, '${JSON.stringify(dashboardSettings).replace(/'/g, "''")}')
+            ON CONFLICT (id) DO NOTHING;
+          `
+        });
+        settingsInitialized = true;
+        return;
+      }
+      throw error;
+    }
+    if (data && data.settings) {
+      Object.assign(dashboardSettings, data.settings);
+    } else {
+      await supabase.from("system_settings").insert({ id: 1, settings: dashboardSettings });
+    }
+    settingsInitialized = true;
+  } catch (err) {
+    console.error("❌ [adminController.ensureSettingsInitialized] failed:", err.message);
+  }
+}
 
 export const maintenanceTickets = [
   {
@@ -341,10 +379,14 @@ async function loadAdminPaymentsData(req) {
 }
 
 function renderPage(res, data) {
+  const isServiceRoleConfigured = supabase.isServiceRole !== false;
+  const isProduction = process.env.NODE_ENV === "production";
   return res.render("layout", {
     BRAND_NAME,
     BRAND_PRODUCT_NAME,
     formatBrand,
+    isServiceRoleConfigured,
+    isProduction,
     ...data,
   });
 }
@@ -2029,11 +2071,36 @@ export async function notificationsPage(req, res) {
 
 
 export async function settingsPage(req, res) {
+  // Load settings persistently
+  await ensureSettingsInitialized();
+
   // Load promo codes from DB
   let promoCodes = [];
   try {
     const { data } = await supabase.from("promo_codes").select("*").order("created_at", { ascending: false });
     promoCodes = data || [];
+  } catch (_) {}
+
+  // Load active payment configuration
+  let activeRazorpay = null;
+  try {
+    activeRazorpay = await paymentConfigService.getActiveRazorpayConfig();
+  } catch (_) {
+    // No active gateway found
+  }
+
+  // Get server diagnostics
+  let serverUptime = "0s";
+  let serverMemory = "N/A";
+  try {
+    const uptimeRaw = process.uptime();
+    const uptimeHours = Math.floor(uptimeRaw / 3600);
+    const uptimeMinutes = Math.floor((uptimeRaw % 3600) / 60);
+    const uptimeSeconds = Math.floor(uptimeRaw % 60);
+    serverUptime = `${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`;
+
+    const memRaw = process.memoryUsage();
+    serverMemory = `${Math.round(memRaw.heapUsed / 1024 / 1024)}MB / ${Math.round(memRaw.heapTotal / 1024 / 1024)}MB`;
   } catch (_) {}
 
   return renderPage(res, {
@@ -2042,6 +2109,9 @@ export async function settingsPage(req, res) {
     bodyView: "settings",
     settings: dashboardSettings,
     promoCodes,
+    activeRazorpay,
+    serverUptime,
+    serverMemory,
   });
 }
 
@@ -2692,6 +2762,7 @@ export async function sendNotification(req, res) {
 }
 
 export async function saveSettings(req, res) {
+  await ensureSettingsInitialized();
   const payload = req.body || {};
   const booleans = new Set([
     "codEnabled",
@@ -2728,6 +2799,37 @@ export async function saveSettings(req, res) {
       continue;
     }
     dashboardSettings[key] = value;
+  }
+
+  // Handle Admin Password Update
+  if (payload.adminPasswordUi && payload.adminPasswordUi.trim()) {
+    try {
+      const adminId = req.admin?.id;
+      if (adminId) {
+        const hashedPassword = bcrypt.hashSync(payload.adminPasswordUi.trim(), 10);
+        const { error: pwdErr } = await supabase
+          .from("admin_users")
+          .update({ password: hashedPassword })
+          .eq("id", adminId);
+        if (pwdErr) throw pwdErr;
+        console.log(`🔐 [adminController.saveSettings] password updated for admin ${adminId}`);
+      }
+    } catch (pwdError) {
+      console.error("❌ [adminController.saveSettings] password update failed:", pwdError.message);
+      return res.status(500).json({ success: false, message: `Failed to update password: ${pwdError.message}` });
+    }
+  }
+
+  // Save to database
+  try {
+    const { error: saveErr } = await supabase
+      .from("system_settings")
+      .update({ settings: dashboardSettings, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (saveErr) throw saveErr;
+  } catch (dbErr) {
+    console.error("❌ [adminController.saveSettings] failed to persist settings:", dbErr.message);
+    return res.status(500).json({ success: false, message: `Failed to persist settings: ${dbErr.message}` });
   }
 
   return res.json({ success: true, message: "Settings saved", settings: dashboardSettings });

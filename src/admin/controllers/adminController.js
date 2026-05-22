@@ -235,7 +235,7 @@ async function fetchNameMapForIds(ids) {
   }
   const missing = unique.filter((id) => !map.get(id));
   if (missing.length) {
-    const { data: users } = await supabase.from("profiles").select("id, full_name").in("id", missing);
+    const { data: users } = await supabase.from("users").select("id, full_name").in("id", missing);
     for (const u of safeData(users)) {
       if (u?.id) map.set(u.id, u.full_name || "");
     }
@@ -501,23 +501,48 @@ export async function dashboard(req, res) {
       });
     }
 
-    const recentActivity = orders
+    const sortedRecent = orders
       .slice()
       .sort(
         (a, b) =>
           new Date(b.createdAt || b.created_at || now).getTime() -
           new Date(a.createdAt || a.created_at || now).getTime()
       )
-      .slice(0, 6)
-      .map((order) => ({
-        title: `Order ${order.orderId || order.id || "N/A"} is ${String(order.status || "pending")
+      .slice(0, 6);
+
+    const recentUserIds = sortedRecent.map((o) => o.user_id).filter(Boolean);
+    const recentNameMap = await fetchNameMapForIds(recentUserIds);
+
+    const recentActivity = sortedRecent.map((order) => {
+      const uid = order.user_id;
+      const userName = (uid && recentNameMap.get(uid)) || order.customer_name || "User";
+      
+      const rawId = order.id || "";
+      const shortId = rawId.includes("-") ? `#${rawId.split("-")[0]}` : `#${rawId.slice(0, 8)}`;
+
+      let detailsStr = "";
+      const pickup = order.pickup_location || order.pickup;
+      const drop = order.drop_location || order.drop;
+      
+      if (pickup && pickup !== "N/A" && drop && drop !== "N/A") {
+        detailsStr = `${pickup} to ${drop}`;
+      } else if (order.plan_name) {
+        detailsStr = `${order.plan_name}`;
+      } else if (order.amount) {
+        detailsStr = `₹${order.amount} Recharge`;
+      } else {
+        detailsStr = `Bike Rental`;
+      }
+
+      return {
+        title: `Order ${shortId} is ${String(order.status || "pending")
           .replace("_", " ")
           .toUpperCase()}`,
-        subtitle: `${order.userName || "Unknown user"} • ${order.pickup_location || "N/A"} to ${
-          order.drop_location || "N/A"
-        }`,
+        subtitle: `${userName} • ${detailsStr}`,
         time: new Date(order.createdAt || order.created_at || now).toLocaleString("en-IN"),
-      }));
+      };
+    });
+
 
     return renderPage(res, {
       title: "Dashboard",

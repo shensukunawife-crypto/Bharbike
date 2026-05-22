@@ -70,10 +70,6 @@ export async function toggleSkippedDayStatus(req, res) {
     let nextStatus = "Active";
     if (currentStatus === "Active") {
       nextStatus = "Inactive";
-    } else if (currentStatus === "Inactive") {
-      nextStatus = "Attire Check Fail";
-    } else if (currentStatus === "Attire Check Fail") {
-      nextStatus = "Both";
     } else {
       nextStatus = "Active";
     }

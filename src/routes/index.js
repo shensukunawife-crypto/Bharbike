@@ -76,6 +76,27 @@ api.get("/ads", async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+api.get("/hubs", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("hubs")
+      .select("*")
+      .eq("status", "active")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("[GET /api/hubs] failed:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+
+    return res.json({ success: true, data: data || [] });
+  } catch (err) {
+    console.error("[GET /api/hubs] unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -368,6 +389,173 @@ api.use("/admin", requireAdminAuth);
 
 api.get("/admin/orders", apiJsonAdminOrders);
 api.get("/admin/payments", apiJsonAdminPayments);
+
+// Admin Hubs CRUD Routes
+api.get("/admin/hubs", async (req, res) => {
+  try {
+    const [hubsRes, bikesRes] = await Promise.all([
+      supabase.from("hubs").select("*").order("created_at", { ascending: false }),
+      supabase.from("bikes").select("location")
+    ]);
+
+    if (hubsRes.error) {
+      console.error("[GET /api/admin/hubs] hubs fetch failed:", hubsRes.error);
+      return res.status(500).json({ success: false, message: hubsRes.error.message });
+    }
+
+    const hubs = hubsRes.data || [];
+    const bikes = bikesRes.data || [];
+
+    // Count bikes for each hub by matching bike.location with hub.name
+    const enrichedHubs = hubs.map(hub => {
+      const bikeCount = bikes.filter(b => b.location === hub.name).length;
+      return {
+        ...hub,
+        bike_count: bikeCount
+      };
+    });
+
+    return res.json({ success: true, data: enrichedHubs });
+  } catch (err) {
+    console.error("[GET /api/admin/hubs] unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.post("/admin/hubs", async (req, res) => {
+  try {
+    const { name, latitude, longitude, address, status } = req.body || {};
+    if (!name || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ success: false, message: "Name, latitude, and longitude are required" });
+    }
+
+    const payload = {
+      name: String(name).trim(),
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      address: address ? String(address).trim() : null,
+      status: status || "active"
+    };
+
+    const { data, error } = await supabase
+      .from("hubs")
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[POST /api/admin/hubs] create failed:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+
+    return res.status(201).json({ success: true, data, message: "Hub created successfully" });
+  } catch (err) {
+    console.error("[POST /api/admin/hubs] unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.put("/admin/hubs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, latitude, longitude, address, status } = req.body || {};
+
+    // Get the current hub to check the old name
+    const { data: oldHub, error: getErr } = await supabase
+      .from("hubs")
+      .select("name")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (getErr || !oldHub) {
+      return res.status(404).json({ success: false, message: "Hub not found" });
+    }
+
+    const updatePayload = {};
+    if (name !== undefined) updatePayload.name = String(name).trim();
+    if (latitude !== undefined) updatePayload.latitude = Number(latitude);
+    if (longitude !== undefined) updatePayload.longitude = Number(longitude);
+    if (address !== undefined) updatePayload.address = address ? String(address).trim() : null;
+    if (status !== undefined) updatePayload.status = status;
+
+    const { data: updatedHub, error: updateErr } = await supabase
+      .from("hubs")
+      .update(updatePayload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateErr) {
+      console.error("[PUT /api/admin/hubs/:id] update failed:", updateErr);
+      return res.status(500).json({ success: false, message: updateErr.message });
+    }
+
+    // If name changed, update bike locations matching old name to new name
+    if (name && oldHub.name !== updatedHub.name) {
+      try {
+        const { error: bikesUpdateErr } = await supabase
+          .from("bikes")
+          .update({ location: updatedHub.name })
+          .eq("location", oldHub.name);
+        if (bikesUpdateErr) {
+          console.warn("[PUT /api/admin/hubs] failed to cascade update matching bikes' locations:", bikesUpdateErr.message);
+        }
+      } catch (cascadeErr) {
+        console.warn("[PUT /api/admin/hubs] bike cascade update exception:", cascadeErr.message);
+      }
+    }
+
+    return res.json({ success: true, data: updatedHub, message: "Hub updated successfully" });
+  } catch (err) {
+    console.error("[PUT /api/admin/hubs/:id] unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+api.delete("/admin/hubs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch the hub first to get its name
+    const { data: hub, error: getErr } = await supabase
+      .from("hubs")
+      .select("name")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (getErr || !hub) {
+      return res.status(404).json({ success: false, message: "Hub not found" });
+    }
+
+    const { error: deleteErr } = await supabase
+      .from("hubs")
+      .delete()
+      .eq("id", id);
+
+    if (deleteErr) {
+      console.error("[DELETE /api/admin/hubs/:id] delete failed:", deleteErr);
+      return res.status(500).json({ success: false, message: deleteErr.message });
+    }
+
+    // Reset matching bikes' location to "Unknown Yard"
+    try {
+      const { error: bikesResetErr } = await supabase
+        .from("bikes")
+        .update({ location: "Unknown Yard" })
+        .eq("location", hub.name);
+      if (bikesResetErr) {
+        console.warn("[DELETE /api/admin/hubs] failed to reset matching bikes' locations:", bikesResetErr.message);
+      }
+    } catch (cascadeErr) {
+      console.warn("[DELETE /api/admin/hubs] bike reset exception:", cascadeErr.message);
+    }
+
+    return res.json({ success: true, message: "Hub deleted successfully" });
+  } catch (err) {
+    console.error("[DELETE /api/admin/hubs/:id] unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 // Payment Admin Routes
 api.use("/admin/payment", adminPaymentRoutes);

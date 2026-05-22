@@ -3499,5 +3499,59 @@ export async function deleteAd(req, res) {
   }
 }
 
+export async function hubsPage(req, res) {
+  try {
+    const [{ data: hubsData, error: hubsError }, { data: bikesData, error: bikesError }] = await Promise.all([
+      supabase.from("hubs").select("*").order("created_at", { ascending: false }),
+      supabase.from("bikes").select("*")
+    ]);
+
+    if (hubsError) console.error("[admin.hubsPage] hubs fetch failed", hubsError);
+    if (bikesError) console.error("[admin.hubsPage] bikes fetch failed", bikesError);
+
+    const rawHubs = safeData(hubsData);
+    const rawBikes = safeData(bikesData).map(normalizeBike);
+
+    // Compute fleet size at each hub
+    const hubs = rawHubs.map(hub => {
+      const matchingBikes = rawBikes.filter(bike => 
+        String(bike.location || "").trim().toLowerCase() === String(hub.name).trim().toLowerCase()
+      );
+      return {
+        ...hub,
+        fleetSize: matchingBikes.length,
+        bikes: matchingBikes
+      };
+    });
+
+    // Compute top-level stats
+    const stats = {
+      total: hubs.length,
+      active: hubs.filter(h => h.status === "active").length,
+      inactive: hubs.filter(h => h.status === "inactive").length,
+      totalBikes: rawBikes.length,
+      managedBikesCount: rawBikes.filter(b => 
+        hubs.some(h => String(b.location || "").trim().toLowerCase() === String(h.name).trim().toLowerCase())
+      ).length
+    };
+
+    return renderPage(res, {
+      title: "Hubs Management",
+      active: "hubs",
+      bodyView: "hubs",
+      hubs,
+      stats,
+      filters: {
+        search: (req.query.search || "").trim(),
+        status: (req.query.status || "all").toLowerCase()
+      }
+    });
+  } catch (error) {
+    console.error("[admin.hubsPage] unexpected error:", error);
+    return res.status(500).send("Unable to load hubs management page");
+  }
+}
+
+
 
 

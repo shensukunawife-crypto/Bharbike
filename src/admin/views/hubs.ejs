@@ -1,0 +1,630 @@
+<style>
+  /* Premium Hubs management view styling matching dashboard aesthetics */
+  .hubs-page {
+    animation: hubsFadeIn 0.35s ease-out;
+    accent-color: #d4af37; /* Amber Gold */
+  }
+
+  @keyframes hubsFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .hubs-hero {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .hubs-hero-text h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .hubs-hero-text p {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  /* Stats Grid */
+  .hubs-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .hubs-stat-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.25s ease;
+  }
+
+  .body-mode-dark .hubs-stat-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .hubs-stat-card:hover {
+    transform: translateY(-2px);
+    border-color: #d4af37;
+    box-shadow: 0 8px 15px -4px rgba(212, 175, 55, 0.15);
+  }
+
+  .hubs-stat-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    background: rgba(212, 175, 55, 0.1);
+    color: #d4af37;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .hubs-stat-info {
+    flex-grow: 1;
+  }
+
+  .hubs-stat-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .hubs-stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  /* Table panel */
+  .hubs-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2rem;
+  }
+
+  .body-mode-dark .hubs-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .hubs-table th {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: var(--text) !important;
+  }
+
+  .hubs-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .hubs-pin-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: rgba(212, 175, 55, 0.1);
+    color: #d4af37;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .hubs-name-label {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .hubs-address-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    max-width: 240px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .coords-badge {
+    background: var(--bg-body, #f3f4f6);
+    border: 1px solid var(--border-color, #e5e7eb);
+    color: var(--text);
+    font-family: monospace;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+  }
+
+  .body-mode-dark .coords-badge {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .coords-badge:hover {
+    border-color: #d4af37;
+    color: #d4af37;
+  }
+
+  /* Badge status */
+  .badge-pulse {
+    position: relative;
+    padding-left: 1.5rem !important;
+  }
+
+  .badge-pulse::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .badge-pulse.success::before {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4);
+    animation: badgeIndicatorPulse 1.8s infinite;
+  }
+
+  @keyframes badgeIndicatorPulse {
+    0% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0); }
+  }
+
+  /* Custom Edit Form */
+  .admin-form input, .admin-form select, .admin-form textarea {
+    background: var(--bg-body, #f8fafc);
+    border: 1px solid var(--border-color, #cbd5e1);
+    color: var(--text);
+  }
+
+  .body-mode-dark .admin-form input, 
+  .body-mode-dark .admin-form select, 
+  .body-mode-dark .admin-form textarea {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+
+  .admin-form input:focus, .admin-form select:focus, .admin-form textarea:focus {
+    border-color: #d4af37;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25);
+  }
+</style>
+
+<div class="hubs-page">
+  <!-- Hero Section -->
+  <div class="hubs-hero">
+    <div class="hubs-hero-text">
+      <h1>Operational Hubs & Charging Bays</h1>
+      <p>Configure regional pickup hubs, anchor geo-coordinates, and manage physical asset allocation.</p>
+    </div>
+    <div>
+      <button class="btn btn-gold glow" data-modal-target="add-hub-modal" style="padding: 10px 20px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Register New Hub
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <section class="hubs-stats-grid" aria-label="Operational Overview">
+    <div class="hubs-stat-card">
+      <div class="hubs-stat-icon">📍</div>
+      <div class="hubs-stat-info">
+        <div class="hubs-stat-label">Total Hubs</div>
+        <div class="hubs-stat-value" id="stats-total-hubs"><%= stats.total %></div>
+      </div>
+    </div>
+    <div class="hubs-stat-card">
+      <div class="hubs-stat-icon" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">🟢</div>
+      <div class="hubs-stat-info">
+        <div class="hubs-stat-label">Active Hubs</div>
+        <div class="hubs-stat-value" id="stats-active-hubs"><%= stats.active %></div>
+      </div>
+    </div>
+    <div class="hubs-stat-card">
+      <div class="hubs-stat-icon" style="color: #ef4444; background: rgba(239, 68, 68, 0.1);">🔴</div>
+      <div class="hubs-stat-info">
+        <div class="hubs-stat-label">Temporarily Inactive</div>
+        <div class="hubs-stat-value" id="stats-inactive-hubs"><%= stats.inactive %></div>
+      </div>
+    </div>
+    <div class="hubs-stat-card">
+      <div class="hubs-stat-icon" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">🚲</div>
+      <div class="hubs-stat-info">
+        <div class="hubs-stat-label">Bikes inside Hubs</div>
+        <div class="hubs-stat-value" id="stats-managed-bikes"><%= stats.managedBikesCount %> / <%= stats.totalBikes %></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; background: var(--bg-card, #ffffff); border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px; padding: 12px 16px;">
+    <form style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0; width: 100%;" onsubmit="event.preventDefault(); applyHubFilters();">
+      <div style="position: relative; flex-grow: 1; max-width: 320px;">
+        <input class="filter-input" type="text" id="hub-search-input" placeholder="Search by name or address..." value="<%= filters.search %>" style="margin: 0; padding: 8px 12px; padding-left: 32px; border-radius: 8px; width: 100%;" oninput="applyHubFilters();" />
+        <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: 0.5;">🔍</span>
+      </div>
+      <select class="filter-input" id="hub-status-filter" style="margin: 0; padding: 8px 12px; border-radius: 8px; width: 150px;" onchange="applyHubFilters();">
+        <option value="all" <%= filters.status === "all" ? "selected" : "" %>>All Statuses</option>
+        <option value="active" <%= filters.status === "active" ? "selected" : "" %>>Active Only</option>
+        <option value="inactive" <%= filters.status === "inactive" ? "selected" : "" %>>Inactive Only</option>
+      </select>
+      <button type="button" class="btn btn-ghost" onclick="resetHubFilters();" style="padding: 8px 16px; border-radius: 8px;">Reset</button>
+    </form>
+  </div>
+
+  <!-- Hubs Table -->
+  <div class="hubs-card">
+    <div class="table-wrap">
+      <table class="table hubs-table" id="hubs-main-table">
+        <thead>
+          <tr>
+            <th>Hub Name & Location</th>
+            <th>Address</th>
+            <th>Coordinates</th>
+            <th>Active Fleet</th>
+            <th>Operational Status</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!hubs.length) { %>
+          <tr id="empty-row"><td colspan="6" class="empty" style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">No hubs configured. Register one above to get started!</td></tr>
+          <% } else { %>
+            <% hubs.forEach((hub) => { %>
+            <tr class="hub-row" data-name="<%= hub.name.toLowerCase() %>" data-address="<%= (hub.address || '').toLowerCase() %>" data-status="<%= hub.status %>">
+              <td>
+                <div class="hubs-identity">
+                  <div class="hubs-pin-avatar">📍</div>
+                  <div>
+                    <span class="hubs-name-label"><%= hub.name %></span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="hubs-address-sub" title="<%= hub.address || 'No address provided' %>"><%= hub.address || '—' %></div>
+              </td>
+              <td>
+                <a href="https://www.google.com/maps/search/?api=1&query=<%= hub.latitude %>,<%= hub.longitude %>" target="_blank" class="coords-badge" title="View on Google Maps">
+                  <span>🗺️</span> <%= Number(hub.latitude).toFixed(5) %>, <%= Number(hub.longitude).toFixed(5) %>
+                </a>
+              </td>
+              <td>
+                <span class="badge <%= hub.fleetSize > 0 ? 'warning' : '' %>" style="font-weight: 700; border-radius: 6px; padding: 4px 8px; font-size: 12px;">
+                  <%= hub.fleetSize %> Bikes
+                </span>
+              </td>
+              <td>
+                <span class="badge badge-pulse <%= hub.status === 'active' ? 'success' : 'danger' %>" style="font-weight: 600;">
+                  <%= hub.status === 'active' ? 'Active' : 'Inactive' %>
+                </span>
+              </td>
+              <td class="actions" style="text-align: right;">
+                <div style="display: inline-flex; gap: 8px;">
+                  <button type="button" class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px;" onclick="openEditHubModal('<%= hub.id %>', '<%= hub.name %>', '<%= hub.address %>', '<%= hub.latitude %>', '<%= hub.longitude %>', '<%= hub.status %>')">✏️ Edit</button>
+                  <button type="button" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteHubRecord('<%= hub.id %>', '<%= hub.name %>')">🗑️ Delete</button>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal REGISTER (ADD) -->
+<div class="modal" id="add-hub-modal">
+  <div class="modal-card" style="max-width: 500px; width: 90%;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+      <h3 style="margin:0; font-size: 1.25rem; font-weight: 700; color: var(--text);">Register New Hub</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);" onclick="document.getElementById('add-hub-modal').classList.remove('show')">&times;</button>
+    </div>
+    <form class="admin-form" id="add-hub-form" autocomplete="off" onsubmit="submitAddHub(event)">
+      <div style="margin-bottom: 1rem;">
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Hub Name (Unique ID)</label>
+        <input name="name" id="add-name" placeholder="e.g. Bandra West Yard" required style="width: 100%; padding: 10px; border-radius: 6px;" />
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Full Street Address</label>
+        <textarea name="address" id="add-address" placeholder="Bandra Reclamation Yard, Mumbai, Maharashtra" style="width: 100%; padding: 10px; border-radius: 6px; height: 75px; resize: vertical; font-family: inherit; font-size: 14px;"></textarea>
+      </div>
+      <div style="display: flex; gap: 12px; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+          <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Latitude</label>
+          <input type="number" step="any" name="latitude" id="add-latitude" placeholder="e.g. 19.056" required style="width: 100%; padding: 10px; border-radius: 6px;" />
+        </div>
+        <div style="flex: 1;">
+          <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Longitude</label>
+          <input type="number" step="any" name="longitude" id="add-longitude" placeholder="e.g. 72.825" required style="width: 100%; padding: 10px; border-radius: 6px;" />
+        </div>
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Initial Operational Status</label>
+        <select name="status" id="add-status" style="width: 100%; padding: 10px; border-radius: 6px;">
+          <option value="active">Active (Available for pickups)</option>
+          <option value="inactive">Inactive (Offline / Construction)</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; padding: 12px; border-radius: 8px; font-weight: 600;">📍 Add Hub Location</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal EDIT -->
+<div class="modal" id="edit-hub-modal">
+  <div class="modal-card" style="max-width: 500px; width: 90%;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+      <h3 style="margin:0; font-size: 1.25rem; font-weight: 700; color: var(--text);">Modify Hub Location</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);" onclick="document.getElementById('edit-hub-modal').classList.remove('show')">&times;</button>
+    </div>
+    <form class="admin-form" id="edit-hub-form" autocomplete="off" onsubmit="submitEditHub(event)">
+      <input type="hidden" id="edit-hub-id" />
+      <div style="margin-bottom: 1rem;">
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Hub Name (Changing cascades matching bike locations)</label>
+        <input name="name" id="edit-name" placeholder="e.g. Bandra West Yard" required style="width: 100%; padding: 10px; border-radius: 6px;" />
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Full Street Address</label>
+        <textarea name="address" id="edit-address" placeholder="Bandra Reclamation Yard, Mumbai, Maharashtra" style="width: 100%; padding: 10px; border-radius: 6px; height: 75px; resize: vertical; font-family: inherit; font-size: 14px;"></textarea>
+      </div>
+      <div style="display: flex; gap: 12px; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+          <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Latitude</label>
+          <input type="number" step="any" name="latitude" id="edit-latitude" required style="width: 100%; padding: 10px; border-radius: 6px;" />
+        </div>
+        <div style="flex: 1;">
+          <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Longitude</label>
+          <input type="number" step="any" name="longitude" id="edit-longitude" required style="width: 100%; padding: 10px; border-radius: 6px;" />
+        </div>
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Operational Status</label>
+        <select name="status" id="edit-status" style="width: 100%; padding: 10px; border-radius: 6px;">
+          <option value="active">Active (Available for pickups)</option>
+          <option value="inactive">Inactive (Offline / Construction)</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-gold glow" style="width: 100%; padding: 12px; border-radius: 8px; font-weight: 600;">💾 Save Hub Coordinates</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Live local search & status filter logic
+  function applyHubFilters() {
+    const searchVal = document.getElementById('hub-search-input').value.trim().toLowerCase();
+    const statusVal = document.getElementById('hub-status-filter').value;
+    const rows = document.querySelectorAll('.hub-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+      const name = row.dataset.name;
+      const address = row.dataset.address;
+      const status = row.dataset.status;
+
+      const matchesSearch = !searchVal || name.includes(searchVal) || address.includes(searchVal);
+      const matchesStatus = statusVal === 'all' || status === statusVal;
+
+      if (matchesSearch && matchesStatus) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Handle empty state row
+    let emptyRow = document.getElementById('filter-empty-row');
+    if (visibleCount === 0) {
+      if (!emptyRow) {
+        const tbody = document.querySelector('#hubs-main-table tbody');
+        emptyRow = document.createElement('tr');
+        emptyRow.id = 'filter-empty-row';
+        emptyRow.innerHTML = `<td colspan="6" class="empty" style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">No hubs match your current filters.</td>`;
+        tbody.appendChild(emptyRow);
+      }
+      emptyRow.style.display = '';
+    } else if (emptyRow) {
+      emptyRow.style.display = 'none';
+    }
+  }
+
+  function resetHubFilters() {
+    document.getElementById('hub-search-input').value = '';
+    document.getElementById('hub-status-filter').value = 'all';
+    applyHubFilters();
+  }
+
+  // Edit Modal loading
+  function openEditHubModal(id, name, address, latitude, longitude, status) {
+    document.getElementById('edit-hub-id').value = id;
+    document.getElementById('edit-name').value = name;
+    document.getElementById('edit-address').value = address === 'null' || address === 'undefined' ? '' : address;
+    document.getElementById('edit-latitude').value = latitude;
+    document.getElementById('edit-longitude').value = longitude;
+    document.getElementById('edit-status').value = status;
+    document.getElementById('edit-hub-modal').classList.add('show');
+  }
+
+  // CRUD operation handlers using AJAX (fetch) with Bearer token authentication
+  function getHeaders() {
+    const adminToken = localStorage.getItem("adminToken");
+    return {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      ...(adminToken ? { "Authorization": `Bearer ${adminToken}` } : {})
+    };
+  }
+
+  async function submitAddHub(e) {
+    e.preventDefault();
+    const name = document.getElementById('add-name').value.trim();
+    const address = document.getElementById('add-address').value.trim();
+    const latitude = document.getElementById('add-latitude').value;
+    const longitude = document.getElementById('add-longitude').value;
+    const status = document.getElementById('add-status').value;
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    btn.textContent = "Adding Hub...";
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/admin/hubs', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ name, address, latitude, longitude, status })
+      });
+      const data = await res.json().catch(() => ({ success: false, message: "Server connection failed" }));
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to create hub");
+      }
+
+      if (typeof showToast === 'function') {
+        showToast("Hub Registered Successfully! 📍");
+      } else {
+        alert("Hub Registered Successfully! 📍");
+      }
+
+      document.getElementById('add-hub-modal').classList.remove('show');
+      document.getElementById('add-hub-form').reset();
+      
+      // Smooth hot reload to fetch fresh statistics and updated list
+      setTimeout(() => window.location.reload(), 600);
+    } catch (err) {
+      console.error("ADD HUB ERROR:", err);
+      alert("Registration Failed ❌: " + err.message);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  }
+
+  async function submitEditHub(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit-hub-id').value;
+    const name = document.getElementById('edit-name').value.trim();
+    const address = document.getElementById('edit-address').value.trim();
+    const latitude = document.getElementById('edit-latitude').value;
+    const longitude = document.getElementById('edit-longitude').value;
+    const status = document.getElementById('edit-status').value;
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    btn.textContent = "Saving Coordinates...";
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`/api/admin/hubs/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ name, address, latitude, longitude, status })
+      });
+      const data = await res.json().catch(() => ({ success: false, message: "Server connection failed" }));
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to save coordinates");
+      }
+
+      if (typeof showToast === 'function') {
+        showToast("Hub Coordinates Saved Successfully! 💾");
+      } else {
+        alert("Hub Coordinates Saved Successfully! 💾");
+      }
+
+      document.getElementById('edit-hub-modal').classList.remove('show');
+      
+      // Smooth reload to update state
+      setTimeout(() => window.location.reload(), 600);
+    } catch (err) {
+      console.error("EDIT HUB ERROR:", err);
+      alert("Save Failed ❌: " + err.message);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteHubRecord(id, name) {
+    if (!id || !name) return;
+    
+    const confirmation = confirm(
+      `⚠️ WARNING: Are you sure you want to delete "${name}"?\n\n` +
+      `This operation is permanent. Any bikes currently registered at this hub location will have their locations reset back to "Unknown Yard" automatically.`
+    );
+    
+    if (!confirmation) return;
+
+    try {
+      const res = await fetch(`/api/admin/hubs/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      const data = await res.json().catch(() => ({ success: false, message: "Server connection failed" }));
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to delete hub location");
+      }
+
+      if (typeof showToast === 'function') {
+        showToast("Hub Location Permanently Deleted.");
+      } else {
+        alert("Hub Location Permanently Deleted. ✅");
+      }
+
+      // Smooth hot reload
+      setTimeout(() => window.location.reload(), 600);
+    } catch (err) {
+      console.error("DELETE HUB ERROR:", err);
+      alert("Delete Failed ❌: " + err.message);
+    }
+  }
+</script>

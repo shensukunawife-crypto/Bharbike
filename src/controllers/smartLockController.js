@@ -27,7 +27,7 @@ export const getLockStatus = asyncHandler(async (req, res) => {
         hasActiveRental: true, // Set to true for demo
         rentalId: "demo-rental-123",
         bikeId: "demo-bike-456",
-        bikeName: "BharBike Demo Scooter",
+        bikeName: "BHAR BIKE Demo Scooter",
         licensePlate: "MH 01 DEMO",
         isLocked: true,
         batteryLevel: 92,

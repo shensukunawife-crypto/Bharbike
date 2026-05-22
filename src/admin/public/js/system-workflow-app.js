@@ -1,5 +1,5 @@
 /**
- * BhaरBike — full-width vertical animated workflow story
+ * BHAR BIKE — full-width vertical animated workflow story
  * React 18 + Framer Motion · optional Mapbox GL
  */
 import React, { useEffect, useRef, useState } from "https://esm.sh/react@18.3.1";
@@ -11,7 +11,7 @@ const e = React.createElement;
 const BRAND_NAME =
   typeof window !== "undefined" && window.__BRAND_NAME__
     ? window.__BRAND_NAME__
-    : "Bhaर";
+    : "BHAR BIKE";
 const BRAND_PRODUCT_NAME =
   typeof window !== "undefined" && window.__BRAND_PRODUCT_NAME__
     ? window.__BRAND_PRODUCT_NAME__

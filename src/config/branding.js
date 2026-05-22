@@ -2,10 +2,10 @@
  * Canonical brand strings for the BhaरBike product monorepo (backend + shared docs).
  * Latin “Bha” + Devanagari “र” — never “BHA”, “Bhar”, or “bhar” in UI copy.
  */
-export const BRAND_NAME = "Bhaर";
+export const BRAND_NAME = "BHAR BIKE";
 
 /** Product name when “Bike” follows the brand mark */
-export const BRAND_PRODUCT_NAME = `${BRAND_NAME}Bike`;
+export const BRAND_PRODUCT_NAME = "BHAR BIKE";
 
 /**
  * Normalize legacy API / DB / user-entered brand tokens.

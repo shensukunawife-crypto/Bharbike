@@ -12,10 +12,10 @@ import { createUserNotification } from "../../services/notificationService.js";
 
 
 const dashboardSettings = {
-  companyName: `${BRAND_NAME} Admin Pvt Ltd`,
+  companyName: "BHAR BIKE",
   supportEmail: "support@bikeadmin.pro",
   phone: "+91 90000 00000",
-  address: "Bangalore, India",
+  address: "me , Thane , Mumbai , India",
   codEnabled: true,
   onlinePaymentEnabled: true,
   minimumWalletBalance: 100,
@@ -37,7 +37,7 @@ const dashboardSettings = {
   maintenanceMode: false,
   debugMode: false,
   appName: `${BRAND_NAME} Admin`,
-  maintenanceMessage: "BharBike is currently under scheduled maintenance. We will be back online soon!",
+  maintenanceMessage: "BHAR BIKE is currently under scheduled maintenance. We will be back online soon!",
 };
 
 let settingsInitialized = false;
@@ -68,6 +68,21 @@ export async function ensureSettingsInitialized() {
     }
     if (data && data.settings) {
       Object.assign(dashboardSettings, data.settings);
+      
+      // Auto-migrate company name and address in the database if they contain old demo values
+      let needsUpdate = false;
+      if (dashboardSettings.companyName.includes("Bhaर") || dashboardSettings.companyName.includes("Admin") || dashboardSettings.companyName === "Bhaर Admin Pvt Ltd") {
+        dashboardSettings.companyName = "BHAR BIKE";
+        needsUpdate = true;
+      }
+      if (dashboardSettings.address === "Bangalore, India" || dashboardSettings.address === "Bangalore Corporate Office, Karnataka, India") {
+        dashboardSettings.address = "me , Thane , Mumbai , India";
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        await supabase.from("system_settings").update({ settings: dashboardSettings }).eq("id", 1);
+        console.log("ℹ️ [adminController] Programmatically updated system_settings with new company name BHAR BIKE and address.");
+      }
     } else {
       await supabase.from("system_settings").insert({ id: 1, settings: dashboardSettings });
     }
@@ -1377,12 +1392,12 @@ export async function earnings(req, res) {
     const { data: dbProfiles } = await supabase.from("users").select("id, full_name, name");
     const profileMap = {};
     (dbProfiles || []).forEach((p) => {
-      profileMap[p.id] = p.full_name || p.name || "BharBike Rider";
+      profileMap[p.id] = p.full_name || p.name || "BHAR BIKE Rider";
     });
 
     const transactions = filtered.slice(0, 20).map((item, index) => ({
       id: `TX-${2000 + index}`,
-      user: profileMap[item.userid] || "BharBike Rider",
+      user: profileMap[item.userid] || "BHAR BIKE Rider",
       type: item.type === "delivery" ? "Delivery" : "Bike Rental",
       amount: Number(item.amount || 0),
       status: Number(item.amount || 0) > 0 ? "Success" : "Pending",
@@ -1485,11 +1500,11 @@ export async function exportEarningsExcel(req, res) {
     const { data: dbProfiles } = await supabase.from("users").select("id, full_name, name");
     const profileMap = {};
     (dbProfiles || []).forEach((p) => {
-      profileMap[p.id] = p.full_name || p.name || "BharBike Rider";
+      profileMap[p.id] = p.full_name || p.name || "BHAR BIKE Rider";
     });
 
     const summaryData = [
-      ["BHARBIKE FINANCIAL STATEMENT & AUDIT SUMMARY"],
+      ["BHAR BIKE FINANCIAL STATEMENT & AUDIT SUMMARY"],
       ["Generated On:", new Date().toLocaleString("en-IN")],
       ["Reporting Period Filter:", filter.toUpperCase()],
       [],
@@ -1500,13 +1515,13 @@ export async function exportEarningsExcel(req, res) {
       ["Pending Released Payouts", pendingPayout],
       ["Total Released Payouts", totalPaidAmount],
       [],
-      ["This is a system-generated audit report verified for the official BharBike platform."]
+      ["This is a system-generated audit report verified for the official BHAR BIKE platform."]
     ];
 
     const ledgerHeaders = [["Transaction ID", "User/Rider Name", "Service Category", "Amount (INR)", "Status", "Timestamp"]];
     const ledgerRows = filtered.map((item, index) => [
       `TX-${2000 + index}`,
-      profileMap[item.userid] || "BharBike Rider",
+      profileMap[item.userid] || "BHAR BIKE Rider",
       item.type === "delivery" ? "Delivery Ops" : "Bike Rental",
       Number(item.amount || 0),
       Number(item.amount || 0) > 0 ? "Success" : "Pending",
@@ -1537,7 +1552,7 @@ export async function exportEarningsExcel(req, res) {
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=BharBike_Financial_Report_${filter}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    res.setHeader("Content-Disposition", `attachment; filename=BHAR_BIKE_Financial_Report_${filter}_${new Date().toISOString().slice(0, 10)}.xlsx`);
     return res.send(buf);
 
   } catch (error) {
@@ -1578,12 +1593,12 @@ export async function exportEarningsPDF(req, res) {
     const { data: dbProfiles } = await supabase.from("users").select("id, full_name, name");
     const profileMap = {};
     (dbProfiles || []).forEach((p) => {
-      profileMap[p.id] = p.full_name || p.name || "BharBike Rider";
+      profileMap[p.id] = p.full_name || p.name || "BHAR BIKE Rider";
     });
 
     const transactions = filtered.map((item, index) => ({
       id: `TX-${2000 + index}`,
-      user: profileMap[item.userid] || "BharBike Rider",
+      user: profileMap[item.userid] || "BHAR BIKE Rider",
       type: item.type === "delivery" ? "Delivery" : "Bike Rental",
       amount: Number(item.amount || 0),
       status: Number(item.amount || 0) > 0 ? "Success" : "Pending",
@@ -1655,7 +1670,7 @@ export async function exportBikesExcel(req, res) {
     const avgBattery = totalCount > 0 ? (totalBattery / totalCount).toFixed(1) : 0;
 
     const summaryData = [
-      ["BHARBIKE FLEET INVENTORY & STATUS SUMMARY"],
+      ["BHAR BIKE FLEET INVENTORY & STATUS SUMMARY"],
       ["Generated On:", new Date().toLocaleString("en-IN")],
       ["Search Filter:", search || "None"],
       ["Status Filter:", statusFilter.toUpperCase()],
@@ -1670,7 +1685,7 @@ export async function exportBikesExcel(req, res) {
       ["Low Battery Alerts (<=20%)", lowBattery],
       ["Average Battery Level (%)", `${avgBattery}%`],
       [],
-      ["This is a live live system-generated inventory report verified for the official BharBike fleet management system."]
+      ["This is a live system-generated inventory report verified for the official BHAR BIKE fleet management system."]
     ];
 
     const fleetHeaders = [["Bike ID", "Status", "Lock State", "Usage State", "Battery (%)", "Location", "Last Service Date", "Health Score", "Health Status"]];
@@ -1697,7 +1712,7 @@ export async function exportBikesExcel(req, res) {
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=BharBike_Fleet_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    res.setHeader("Content-Disposition", `attachment; filename=BHAR_BIKE_Fleet_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
     return res.send(buf);
 
   } catch (error) {

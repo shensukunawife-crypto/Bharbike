@@ -6,7 +6,7 @@ const MOCK_PLANS = [
     id: "plan_weekly",
     name: "weekly_plan",
     display_name: "Weekly Plan",
-    description: "Full access to BharBike fleet for 7 days.",
+    description: "Full access to BHAR BIKE fleet for 7 days.",
     price: 1950,
     duration_days: 7,
     features: JSON.stringify(["Unlock ALL hubs", "Unlimited daily rides", "Priority support", "Free maintenance"]),

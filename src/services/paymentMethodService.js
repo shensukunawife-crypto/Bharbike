@@ -259,7 +259,7 @@ class PaymentMethodService {
         status: payment.status === 'success' ? 'Paid' : payment.status === 'failed' ? 'Failed' : 'Pending',
         payment_method: payment.payment_method || 'Online',
         date: payment.created_at,
-        bike_name: payment.orders?.bikes?.name || 'BharBike Ride',
+        bike_name: payment.orders?.bikes?.name || 'BHAR BIKE Ride',
         bike_number: payment.orders?.bike_id ? String(payment.orders.bike_id).slice(0, 8) : 'N/A'
       }));
     } catch (err) {

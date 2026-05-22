@@ -204,7 +204,7 @@ export async function getTicketMessages(ticketId) {
         ticket_id: ticketId,
         sender_id: "demo-system",
         sender_type: "admin",
-        message: "Hello! Welcome to BharBike Live Support. How can we help you today?",
+        message: "Hello! Welcome to BHAR BIKE Live Support. How can we help you today?",
         created_at: new Date(Date.now() - 60000).toISOString(),
       }
     ];

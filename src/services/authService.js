@@ -227,8 +227,8 @@ export async function verifyOtp({ phone, otp }) {
     // Send Welcome Notification (non-blocking)
     createUserNotification(
       profile.id,
-      "Welcome to BharBike! 🚲",
-      `Hey ${profile.fullName || profile.full_name || "Rider"}, thank you for joining BharBike! Get ready to explore the city with our premium fleet.`,
+      "Welcome to BHAR BIKE! 🚲",
+      `Hey ${profile.fullName || profile.full_name || "Rider"}, thank you for joining BHAR BIKE! Get ready to explore the city with our premium fleet.`,
       "success"
     ).catch((err) => console.warn("[authService.verifyOtp] demo welcome notification failed:", err?.message));
 
@@ -308,8 +308,8 @@ export async function signupWithEmail({ email, password, full_name }) {
   // Send Welcome Notification (non-blocking)
   createUserNotification(
     data.user.id,
-    "Welcome to BharBike! 🚲",
-    `Hey ${profile.fullName || profile.full_name || "Rider"}, thank you for joining BharBike! Get ready to explore the city with our premium fleet.`,
+    "Welcome to BHAR BIKE! 🚲",
+    `Hey ${profile.fullName || profile.full_name || "Rider"}, thank you for joining BHAR BIKE! Get ready to explore the city with our premium fleet.`,
     "success"
   ).catch((err) => console.warn("[authService.signupWithEmail] welcome notification failed:", err?.message));
 

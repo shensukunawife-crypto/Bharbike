@@ -165,8 +165,8 @@ export const createUser = async (req, res) => {
   if (created && created.id) {
     createUserNotification(
       created.id,
-      "Welcome to BharBike! 🚲",
-      `Hey ${created.full_name || "Rider"}, thank you for joining BharBike! Get ready to explore the greenest fleet in the city.`,
+      "Welcome to BHAR BIKE! 🚲",
+      `Hey ${created.full_name || "Rider"}, thank you for joining BHAR BIKE! Get ready to explore the greenest fleet in the city.`,
       "success"
     ).catch((err) => console.warn("[userController.createUser] welcome notification failed:", err?.message));
   }
@@ -411,8 +411,8 @@ export const initializeUserData = asyncHandler(async (req, res) => {
     // Send Welcome Notification Series (non-blocking)
     createUserNotification(
       userId,
-      "Welcome to BharBike! 🚲",
-      "Thank you for choosing BharBike! Your wallet, rewards, and notification preferences have been configured.",
+      "Welcome to BHAR BIKE! 🚲",
+      "Thank you for choosing BHAR BIKE! Your wallet, rewards, and notification preferences have been configured.",
       "success"
     ).catch((err) => console.warn("[userController.initializeUserData] welcome notification failed:", err?.message));
 

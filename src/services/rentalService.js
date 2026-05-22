@@ -182,7 +182,7 @@ async function finalizeRental(rentalId, status) {
   const notifTitle = isExpired ? "Rental Subscription Expired ⚠️" : "Ride Completed Successfully! 🏁";
   const notifMsg = isExpired 
     ? `Your rental period for Bike #${rental.bike_id || "bike"} has expired. Please return and lock the bike at the nearest hub.`
-    : `Your rental has ended. Thank you for riding with BharBike! We charged you ₹${amount}. Check your stats under the dashboard.`;
+    : `Your rental has ended. Thank you for riding with BHAR BIKE! We charged you ₹${amount}. Check your stats under the dashboard.`;
   const notifType = isExpired ? "warning" : "success";
 
   createUserNotification(

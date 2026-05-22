@@ -361,7 +361,7 @@ CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON support_ticket
 INSERT INTO bikes (name, model, type, price_per_hour, price_per_day, available, location, battery_level, image_url)
 VALUES 
   ('Hero Electric', 'Optima E5', 'Electric Scooter', 50.00, 400.00, true, 'Delhi', 85, 'https://example.com/bike1.jpg'),
-  ('Ather 450X', '450X Gen 3', 'Electric Scooter', 80.00, 600.00, true, 'Bangalore', 92, 'https://example.com/bike2.jpg'),
+  ('Ather 450X', '450X Gen 3', 'Electric Scooter', 80.00, 600.00, true, 'Thane', 92, 'https://example.com/bike2.jpg'),
   ('Ola S1 Pro', 'S1 Pro', 'Electric Scooter', 70.00, 550.00, true, 'Mumbai', 78, 'https://example.com/bike3.jpg')
 ON CONFLICT DO NOTHING;
 

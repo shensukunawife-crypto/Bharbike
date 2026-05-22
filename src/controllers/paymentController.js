@@ -264,13 +264,19 @@ export const verifyPayment = async (req, res) => {
 
       // Update ticket status in DB
       try {
-        await supabase.from("support_tickets").update({ 
+        const { error: ticketUpdateError } = await supabase.from("support_tickets").update({ 
           payment_status: "paid",
           status: "resolved",
           updated_at: new Date().toISOString()
         }).eq("id", ticket_id);
+
+        if (ticketUpdateError) {
+          console.error("[verifyPayment] support_tickets status update failed:", ticketUpdateError);
+          return res.status(500).json({ success: false, message: "Database update failed: " + ticketUpdateError.message });
+        }
       } catch (e) {
-        console.warn("[verifyPayment] support_tickets status update failed:", e?.message);
+        console.error("[verifyPayment] support_tickets status update exception:", e);
+        return res.status(500).json({ success: false, message: "Internal server error updating ticket: " + e.message });
       }
 
       if (app_order_id) {

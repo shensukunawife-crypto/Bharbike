@@ -1268,7 +1268,7 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       if (!verification.isValid) {
         return res.status(400).json({
           success: false,
-          message: verification.reason || "Uploaded document is not detected as a valid PAN Card. Please upload a clear image of your PAN Card."
+          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
         });
       }
     }
@@ -1278,7 +1278,7 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       if (!verification.isValid) {
         return res.status(400).json({
           success: false,
-          message: verification.reason || "Uploaded document is not detected as a valid Aadhaar Card. Please upload a clear image of your Aadhaar Card."
+          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
         });
       }
     }
@@ -1288,7 +1288,7 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       if (!verification.isValid) {
         return res.status(400).json({
           success: false,
-          message: verification.reason || "Uploaded document is not detected as a valid Driving License. Please upload a clear image of your Driving License."
+          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
         });
       }
     }
@@ -1298,7 +1298,7 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       if (!verification.isValid) {
         return res.status(400).json({
           success: false,
-          message: verification.reason || "Uploaded document is not recognized as a valid Electricity Bill. Please upload a clear image of your bill."
+          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
         });
       }
     }
@@ -1308,7 +1308,7 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       if (!verification.isValid) {
         return res.status(400).json({
           success: false,
-          message: verification.reason || "No face could be detected in the uploaded selfie photo. Please take a clear, well-lit selfie photo."
+          message: "The selfie photo is not valid. Please try a clear and valid selfie.\n\nTip: Make sure your face is well-lit, looking directly at the camera, and not covered by a mask or sunglasses."
         });
       }
     }

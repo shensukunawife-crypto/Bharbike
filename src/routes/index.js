@@ -1156,27 +1156,6 @@ OR
  * @returns {Promise<{isValid: boolean, reason: string}>}
  */
 async function verifyDocumentWithAI(buffer, docType, originalName = "") {
-  const cleanName = String(originalName || "").trim().toLowerCase();
-
-  // 1. Strict Filename Pre-Filter Layer (Blocks generic/random uploads instantly)
-  if (cleanName) {
-    if (docType === "aadhaar" && !cleanName.includes("aadhaar") && !cleanName.includes("aadhar")) {
-      return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'aadhaar' or 'aadhar'. Please upload a valid Aadhaar Card image." };
-    }
-    if (docType === "pan" && !cleanName.includes("pan")) {
-      return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'pan'. Please upload a valid PAN Card image." };
-    }
-    if (docType === "driving_license" && !cleanName.includes("license") && !cleanName.includes("licence") && !cleanName.includes("dl") && !cleanName.includes("driving")) {
-      return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'license', 'dl', or 'driving'. Please upload a valid Driving License image." };
-    }
-    if (docType === "bill" && !cleanName.includes("bill") && !cleanName.includes("electricity")) {
-      return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'bill' or 'electricity'. Please upload a valid Address Proof image." };
-    }
-    if (docType === "selfie" && !cleanName.includes("selfie") && !cleanName.includes("face") && !cleanName.includes("photo")) {
-      return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'selfie', 'face', or 'photo'. Please upload a clear selfie photo." };
-    }
-  }
-
   // Reject files that are too small to be real documents (< 5KB)
   if (buffer.length < 5000) {
     return { isValid: false, reason: "The uploaded file is too small or corrupted. Please upload a clear photo of your document (minimum 5KB)." };
@@ -1199,8 +1178,8 @@ async function verifyDocumentWithAI(buffer, docType, originalName = "") {
     }
 
     if (!CF_ACCOUNT_ID || !CF_AI_TOKEN) {
-      console.warn("[verifyDocumentWithAI] Cloudflare AI credentials missing — falling back to pre-filter success");
-      return { isValid: true, reason: "Document passed pre-filter checks (AI offline)." };
+      console.error("[verifyDocumentWithAI] Cloudflare AI credentials missing on server.");
+      return { isValid: false, reason: "Verification service credentials missing on server. Please contact administrator." };
     }
 
     const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${CF_AI_MODEL}`;
@@ -1239,9 +1218,7 @@ async function verifyDocumentWithAI(buffer, docType, originalName = "") {
 
   } catch (err) {
     console.error(`[verifyDocumentWithAI] Cloudflare AI vision error for ${docType}:`, err?.response?.data || err.message);
-    // On API failure, we fail-closed for security if the filename is totally empty, 
-    // or let it pass with manual review flag if it passed strict filename checking.
-    return { isValid: true, reason: "AI verification service temporarily offline — document accepted for manual review." };
+    return { isValid: false, reason: "AI verification service temporarily offline or error encountered. Please make sure the uploaded image is a clear, well-lit document photo and try again." };
   }
 }
 

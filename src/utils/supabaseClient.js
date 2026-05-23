@@ -71,10 +71,22 @@ if (!supabaseUrl || !supabaseKey) {
 
 let supabase;
 try {
-  supabase = createClient(supabaseUrl, supabaseKey);
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  });
 } catch (err) {
   console.error("[supabaseClient] createClient failed:", err?.message || err);
-  supabase = createClient("", "");
+  supabase = createClient("", "", {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  });
 }
 
 // Attach custom property to indicate if we bypassed RLS

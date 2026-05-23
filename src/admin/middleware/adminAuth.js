@@ -31,6 +31,12 @@ export function requireAdminAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, env.jwtSecret);
+    if (!payload.role) {
+      if (onAdminSite && req.method === "GET") {
+        return res.redirect(302, "/admin/login");
+      }
+      return res.status(403).json({ success: false, message: "Forbidden: Admin privileges required" });
+    }
     req.admin = payload;
     res.locals.admin = payload;
     return next();

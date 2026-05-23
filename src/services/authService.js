@@ -90,12 +90,32 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone) {
     location: null,
   };
 
-  const { data, error } = await supabase.from("profiles").upsert(payload).select("*").single();
-  if (error) {
-    console.error("[authService.upsertProfileFromAuthUser] upsert failed", error);
+  // Upsert into both profiles and users tables for complete admin dashboard synchronization
+  const [res1, res2] = await Promise.all([
+    supabase.from("profiles").upsert(payload).select("*").single(),
+    supabase
+      .from("users")
+      .upsert({
+        id: userId,
+        full_name: fullName,
+        email: authUser?.email || null,
+        phone,
+        location: null,
+      })
+      .select("*")
+      .single()
+  ]);
+
+  if (res1.error) {
+    console.error("[authService.upsertProfileFromAuthUser] profiles upsert failed", res1.error);
     throw new AppError("Unable to prepare user profile", 500);
   }
-  return shapePublicUser(data);
+  
+  if (res2.error) {
+    console.warn("[authService.upsertProfileFromAuthUser] users upsert failed (non-blocking):", res2.error.message);
+  }
+
+  return shapePublicUser(res1.data);
 }
 
 async function findProfileByPhone(phone) {

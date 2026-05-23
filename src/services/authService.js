@@ -5,11 +5,13 @@ import { shapePublicUser } from "../utils/userShape.js";
 import { env } from "../config/env.js";
 import { createUserNotification } from "./notificationService.js";
 import { verifyFirebaseIdToken } from "../utils/firebaseAdmin.js";
+import axios from "axios";
 
 const OTP_TTL_SECONDS = 60;
 const OTP_THROTTLE_LIMIT = 3;
 const OTP_THROTTLE_WINDOW_MS = 10 * 60 * 1000;
 const otpThrottle = new Map();
+const exotelOtpStore = new Map();
 const DEMO_OTP = String(env.demoOtp || "123456").trim();
 
 function isDemoOtpEnabled() {
@@ -179,9 +181,98 @@ async function ensureDemoProfileByPhone(phone) {
   return upsertProfileFromAuthUser(authUser, phone);
 }
 
+async function ensureProfileByPhone(phone) {
+  const existingByPhone = await findProfileByPhone(phone);
+  if (existingByPhone?.id) return existingByPhone;
+
+  const emailAlias = `${phone.replace(/\D/g, "")}@bharbike.local`;
+  const password = `UserPhoneOtp#${phone.replace(/\D/g, "")}#Secured`;
+
+  let authUser = null;
+  const loginRes = await supabase.auth.signInWithPassword({
+    email: emailAlias,
+    password: password,
+  });
+
+  if (loginRes?.data?.user) {
+    authUser = loginRes.data.user;
+  } else {
+    const signupRes = await supabase.auth.signUp({
+      email: emailAlias,
+      password: password,
+      options: {
+        data: { full_name: "BharBike Rider", phone },
+      },
+    });
+
+    if (signupRes?.data?.user) {
+      authUser = signupRes.data.user;
+    } else {
+      if (String(signupRes?.error?.message || "").toLowerCase().includes("already registered")) {
+        const fallbackProfile = await findProfileByEmail(emailAlias);
+        if (fallbackProfile?.id) return fallbackProfile;
+      }
+      console.error("[authService.ensureProfileByPhone] unable to create phone auth user", {
+        loginError: loginRes?.error?.message,
+        signupError: signupRes?.error?.message,
+      });
+      throw new AppError("Unable to create user profile for this phone number", 500);
+    }
+  }
+
+  return upsertProfileFromAuthUser(authUser, phone);
+}
+
 export async function sendOtp({ phone, ip }) {
   const normalizedPhone = toIndianPhone(phone);
   assertOtpAllowed(normalizedPhone, ip);
+
+  // If Exotel is configured, send a real OTP via Exotel!
+  if (process.env.EXOTEL_API_KEY && process.env.EXOTEL_API_TOKEN) {
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    
+    // Store in-memory with 5-minute expiry
+    exotelOtpStore.set(normalizedPhone, {
+      code: otpCode,
+      expiresAt: Date.now() + 5 * 60 * 1000
+    });
+
+    try {
+      const apiKey = process.env.EXOTEL_API_KEY;
+      const apiToken = process.env.EXOTEL_API_TOKEN;
+      const accountSid = process.env.EXOTEL_ACCOUNT_SID || "bharbike1";
+      const subdomain = process.env.EXOTEL_SUBDOMAIN || "api.exotel.com";
+      const senderId = process.env.EXOTEL_SENDER_ID || "BHARBK";
+
+      const authHeader = Buffer.from(`${apiKey}:${apiToken}`).toString("base64");
+      const url = `https://${subdomain}/v1/Accounts/${accountSid}/Sms/send`;
+
+      const params = new URLSearchParams();
+      params.append("From", senderId);
+      params.append("To", normalizedPhone);
+      params.append("Body", `Your BharBike verification OTP is ${otpCode}. Valid for 5 minutes.`);
+
+      console.log(`[Exotel OTP] Dispatching SMS to ${normalizedPhone} via Exotel...`);
+      const res = await axios.post(url, params.toString(), {
+        headers: {
+          "Authorization": `Basic ${authHeader}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        timeout: 15000
+      });
+
+      console.log(`[Exotel OTP] Exotel responded with status ${res.status}:`, res.data);
+
+      return {
+        phone: normalizedPhone,
+        otp_ttl_seconds: 300,
+        message: "OTP sent successfully via Exotel",
+        exotel_used: true
+      };
+    } catch (exErr) {
+      console.error("[Exotel OTP] Exotel send failed, falling back to other providers...", exErr?.response?.data || exErr.message);
+    }
+  }
 
   if (isDemoOtpEnabled()) {
     return {
@@ -227,6 +318,42 @@ export async function verifyOtp({ phone, otp }) {
   const code = String(otp || "").trim();
   if (!/^\d{6}$/.test(code)) {
     throw new AppError("Please enter a valid 6-digit OTP", 422);
+  }
+
+  // Check Exotel OTP first
+  const activeOtp = exotelOtpStore.get(normalizedPhone);
+  if (activeOtp) {
+    if (activeOtp.expiresAt < Date.now()) {
+      exotelOtpStore.delete(normalizedPhone);
+      throw new AppError("OTP has expired. Please request a new one.", 401);
+    }
+    if (activeOtp.code === code) {
+      exotelOtpStore.delete(normalizedPhone);
+
+      // Provision profile
+      const profile = await ensureProfileByPhone(normalizedPhone);
+      const appToken = signToken({
+        id: profile.id,
+        phone: normalizedPhone,
+      });
+
+      // Send login detected notification (non-blocking)
+      createUserNotification(
+        profile.id,
+        "New Login Detected 🛡️",
+        `A new login was detected on your account via Exotel OTP at ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })} (IST).`,
+        "info"
+      ).catch((err) => console.warn("[authService.verifyOtp] Exotel login notification failed:", err?.message));
+
+      return {
+        token: appToken,
+        user: profile,
+        supabase: null,
+        exotel_used: true,
+      };
+    } else {
+      throw new AppError("Invalid OTP. Please check the code and try again.", 401);
+    }
   }
 
   if (isDemoOtpEnabled() && code === DEMO_OTP) {

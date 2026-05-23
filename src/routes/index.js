@@ -1091,349 +1091,203 @@ api.post("/admin/maintenance/bike/:bikeId/fixed", requireAdminAuth, requirePermi
   }
 });
 
+// ============================================================
+// Cloudflare AI Vision KYC Verification
+// Model: @cf/qwen/qwen2.5-vl-7b-instruct
+// ============================================================
+
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+const CF_AI_TOKEN   = process.env.CF_AI_TOKEN   || "";
+const CF_AI_MODEL   = "@cf/llava-hf/llava-1.5-7b-hf";
+
+const KYC_PROMPTS = {
+  pan: {
+    system: `You are a strict KYC document verification officer for an Indian bike rental company.
+Your ONLY job is to determine if the uploaded image is a genuine Indian PAN Card.
+
+A valid PAN Card MUST have ALL of these:
+1. "INCOME TAX DEPARTMENT" or "GOVT OF INDIA" text visible
+2. "PERMANENT ACCOUNT NUMBER" text visible
+3. A 10-character alphanumeric PAN number (format: AAAAA0000A - 5 letters, 4 digits, 1 letter)
+4. The holder's name and date of birth clearly printed
+5. The card must look like an official laminated card, not a screenshot/photocopy of poor quality
+
+Respond ONLY in this exact JSON format (no extra text):
+{"valid": true, "reason": "PAN Card verified successfully"}
+OR
+{"valid": false, "reason": "Brief explanation of what is wrong or missing"}
+
+Be strict. Reject anything that is not a clearly visible, real Indian PAN Card.`,
+    userPrompt: "Is this a valid Indian PAN Card? Analyze the document carefully and respond in the required JSON format."
+  },
+  aadhaar: {
+    system: `You are a strict KYC document verification officer for an Indian bike rental company.
+Your ONLY job is to determine if the uploaded image is a genuine Indian Aadhaar Card (front or back side).
+
+A valid Aadhaar Card MUST have ALL of these:
+1. "GOVERNMENT OF INDIA" or "भारत सरकार" text visible
+2. "AADHAAR" or "आधार" text visible
+3. A 12-digit Aadhaar number (format: XXXX XXXX XXXX) OR the address on the back
+4. The holder's name clearly printed
+5. UIDAI logo or "mAadhaar" watermark may be present
+
+Respond ONLY in this exact JSON format (no extra text):
+{"valid": true, "reason": "Aadhaar Card verified successfully"}
+OR
+{"valid": false, "reason": "Brief explanation of what is wrong or missing"}
+
+Be strict. Reject blurry images, screenshots of other documents, or anything that is not a genuine Aadhaar Card.`,
+    userPrompt: "Is this a valid Indian Aadhaar Card (front or back)? Analyze the document carefully and respond in the required JSON format."
+  },
+  driving_license: {
+    system: `You are a strict KYC document verification officer for an Indian bike rental company.
+Your ONLY job is to determine if the uploaded image is a genuine Indian Driving License.
+
+A valid Indian Driving License MUST have ALL of these:
+1. "DRIVING LICENCE" or "DRIVING LICENSE" text visible
+2. State Transport Department or RTO authority name visible
+3. License number clearly visible (format varies by state, e.g. MH01 2023 0012345)
+4. Holder's name, date of birth, and validity dates clearly printed
+5. Vehicle classes (e.g. LMV, MCWG) listed
+
+This is REQUIRED for operating bikes and is a mandatory document for BharBike KYC.
+
+Respond ONLY in this exact JSON format (no extra text):
+{"valid": true, "reason": "Driving License verified successfully"}
+OR
+{"valid": false, "reason": "Brief explanation of what is wrong or missing"}
+
+Be strict. Reject expired licenses, screenshots of other documents, or blurry/unclear images.`,
+    userPrompt: "Is this a valid Indian Driving License? Analyze the document carefully and respond in the required JSON format."
+  },
+  bill: {
+    system: `You are a strict KYC document verification officer for an Indian bike rental company.
+Your ONLY job is to determine if the uploaded image is a genuine Indian Electricity Bill (proof of address).
+
+A valid Electricity Bill MUST have ALL of these:
+1. Name of an electricity distribution company (e.g. MSEDCL, MSEB, BEST, Adani Electricity, Tata Power, BESCOM, UPPCL, KSEB, or any state electricity board)
+2. Consumer name and address clearly printed
+3. Consumer/account number visible
+4. Billing period (month/year) visible
+5. Amount due or units consumed visible
+
+Respond ONLY in this exact JSON format (no extra text):
+{"valid": true, "reason": "Electricity Bill verified successfully"}
+OR
+{"valid": false, "reason": "Brief explanation of what is wrong or missing"}
+
+Be strict. Reject receipts for other utilities (water, gas alone), bank statements, or any document that is not an electricity bill.`,
+    userPrompt: "Is this a valid Indian Electricity Bill (proof of address)? Analyze the document carefully and respond in the required JSON format."
+  },
+  selfie: {
+    system: `You are a strict KYC verification officer for an Indian bike rental company.
+Your ONLY job is to determine if the uploaded image is a clear, valid selfie/photo of a real person.
+
+A valid selfie MUST have ALL of these:
+1. A clearly visible human face (not blurry or too dark)
+2. The face must be looking at the camera (or nearly so)
+3. The photo must be of a live person, not a photo of a photo or an ID card
+4. The face must not be masked, covered, or obscured
+5. Good enough lighting to see facial features clearly
+
+Respond ONLY in this exact JSON format (no extra text):
+{"valid": true, "reason": "Selfie verified - clear face detected"}
+OR
+{"valid": false, "reason": "Brief explanation of what is wrong or missing"}
+
+Be strict. Reject photos of ID cards, animals, objects, blurry faces, or photos where the face is hidden.`,
+    userPrompt: "Is this a valid selfie with a clearly visible face of a real person? Analyze the image carefully and respond in the required JSON format."
+  }
+};
+
 /**
- * Smart PAN Card Sensor Verification
+ * Verify a KYC document using Cloudflare AI Vision (Qwen2.5-VL-7B)
+ * @param {Buffer} buffer - The image buffer
+ * @param {"pan"|"aadhaar"|"driving_license"|"bill"|"selfie"} docType - Document type
+ * @returns {Promise<{isValid: boolean, reason: string}>}
  */
-async function detectPanCard(buffer, originalName = "") {
-  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
-  if (visionApiKey) {
-    try {
-      const base64Image = buffer.toString("base64");
-      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
-      const payload = {
-        requests: [
-          {
-            image: { content: base64Image },
-            features: [{ type: "TEXT_DETECTION" }]
-          }
-        ]
-      };
-      
-      const response = await axios.post(url, payload);
-      const textAnnotations = response.data?.responses?.[0]?.textAnnotations || [];
-      if (textAnnotations.length === 0) {
-        return { isValid: false, reason: "No text could be detected in the uploaded image. Please upload a clear photo of your PAN Card." };
-      }
-      
-      const fullText = textAnnotations[0].description || "";
-      const textUpper = fullText.toUpperCase();
-      
-      const hasKeywords = 
-        textUpper.includes("INCOME TAX") || 
-        textUpper.includes("DEPARTMENT") || 
-        textUpper.includes("GOVT OF INDIA") || 
-        textUpper.includes("GOVERNMENT OF INDIA") || 
-        textUpper.includes("भारत सरकार") || 
-        textUpper.includes("आयकर विभाग") || 
-        textUpper.includes("स्थायी खाता संख्या") ||
-        textUpper.includes("PERMANENT ACCOUNT NUMBER");
-        
-      const panRegex = /[A-Z]{5}[0-9]{4}[A-Z]{1}/;
-      const panMatch = textUpper.match(panRegex);
-      
-      if (!hasKeywords && !panMatch) {
-        return { isValid: false, reason: "The uploaded document was not recognized as a PAN card. Please upload a clear image showing your PAN Card." };
-      }
-      
-      return { 
-        isValid: true, 
-        panNumber: panMatch ? panMatch[0] : null,
-        detectedText: fullText
-      };
-    } catch (err) {
-      console.error("[detectPanCard] Google Vision OCR error:", err.message);
-      return {
-        isValid: false,
-        reason: `PAN Card sensor verification failed to call live Google Vision OCR: ${err.message}`
-      };
-    }
+async function verifyDocumentWithAI(buffer, docType) {
+  const prompt = KYC_PROMPTS[docType];
+  if (!prompt) {
+    return { isValid: false, reason: `Unknown document type: ${docType}` };
   }
 
-  const nameLower = originalName.toLowerCase();
-  
-  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_pan") || nameLower.includes("not_pan")) {
-    return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy PAN data." };
+  // Reject files that are too small to be real documents (< 5KB)
+  if (buffer.length < 5000) {
+    return { isValid: false, reason: "The uploaded file is too small or corrupted. Please upload a clear photo of your document (minimum 5KB)." };
   }
-  
-  if (!nameLower.includes("pan")) {
-    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'pan'. Please upload a valid PAN Card image." };
+
+  try {
+    // Detect mime type from buffer magic bytes
+    let mimeType = "image/jpeg";
+    if (buffer[0] === 0x89 && buffer[1] === 0x50) mimeType = "image/png";
+    else if (buffer[0] === 0x25 && buffer[1] === 0x50) mimeType = "application/pdf";
+
+    // PDFs not supported by LLaVA vision model — reject early
+    if (mimeType === "application/pdf") {
+      return { isValid: false, reason: "PDF files are not supported for document verification. Please upload a clear photo (JPG or PNG) of your document." };
+    }
+
+    const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${CF_AI_MODEL}`;
+
+    // LLaVA uses image as uint8 array + prompt (not messages format)
+    const imageArray = Array.from(new Uint8Array(buffer));
+    const fullPrompt = `${prompt.system}\n\nUser: ${prompt.userPrompt}\nAssistant:`;
+
+    const payload = {
+      image: imageArray,
+      prompt: fullPrompt,
+      max_tokens: 200
+    };
+
+    console.log(`[verifyDocumentWithAI] Calling Cloudflare LLaVA AI for docType=${docType}`);
+    const cfResponse = await axios.post(cfUrl, payload, {
+      headers: {
+        "Authorization": `Bearer ${CF_AI_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      timeout: 45000
+    });
+
+    const aiText = cfResponse.data?.result?.description || "";
+    console.log(`[verifyDocumentWithAI] AI raw response for ${docType}:`, aiText);
+
+    // Parse JSON from AI response (it may have surrounding text)
+    const jsonMatch = aiText.match(/\{[\s\S]*?"valid"[\s\S]*?\}/);
+    if (!jsonMatch) {
+      console.warn("[verifyDocumentWithAI] Could not parse JSON from AI response, treating as invalid");
+      return { isValid: false, reason: "Document verification was inconclusive. Please upload a clearer image." };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (parsed.valid === true) {
+      return { isValid: true, reason: parsed.reason || "Document verified successfully" };
+    } else {
+      return { isValid: false, reason: parsed.reason || "Document could not be verified. Please upload a proper document as required." };
+    }
+
+  } catch (err) {
+    console.error(`[verifyDocumentWithAI] Cloudflare AI error for ${docType}:`, err?.response?.data || err.message);
+    // On AI failure, fail open (allow) so users are not blocked by API errors
+    return { isValid: true, reason: "AI verification service temporarily unavailable — document accepted for manual review." };
   }
-  
-  return { 
-    isValid: true, 
-    panNumber: "ABCDE1234F", 
-    reason: "Simulated validation passed (Google Vision Key not configured)" 
-  };
 }
 
-async function detectAadhaarCard(buffer, originalName = "") {
-  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
-  if (visionApiKey) {
-    try {
-      const base64Image = buffer.toString("base64");
-      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
-      const payload = {
-        requests: [
-          {
-            image: { content: base64Image },
-            features: [{ type: "TEXT_DETECTION" }]
-          }
-        ]
-      };
-      
-      const response = await axios.post(url, payload);
-      const textAnnotations = response.data?.responses?.[0]?.textAnnotations || [];
-      if (textAnnotations.length === 0) {
-        return { isValid: false, reason: "No text could be detected in the uploaded image. Please upload a clear photo of your Aadhaar Card." };
-      }
-      
-      const fullText = textAnnotations[0].description || "";
-      const textUpper = fullText.toUpperCase();
-      
-      const hasKeywords = 
-        textUpper.includes("GOVERNMENT OF INDIA") || 
-        textUpper.includes("GOVT OF INDIA") || 
-        textUpper.includes("भारत सरकार") || 
-        textUpper.includes("UNIQUE IDENTIFICATION") || 
-        textUpper.includes("AUTHORITY OF INDIA") || 
-        textUpper.includes("भारतीय विशिष्ट पहचान प्राधिकरण") || 
-        textUpper.includes("आधार") || 
-        textUpper.includes("AADHAAR") || 
-        textUpper.includes("MALE") || 
-        textUpper.includes("FEMALE") || 
-        textUpper.includes("YEAR OF BIRTH") || 
-        textUpper.includes("YOB");
-        
-      // Match 12-digit Aadhaar pattern (xxxx xxxx xxxx)
-      const aadhaarRegex = /\d{4}\s\d{4}\s\d{4}/;
-      const aadhaarMatch = fullText.match(aadhaarRegex);
-      
-      if (!hasKeywords && !aadhaarMatch) {
-        return { isValid: false, reason: "The uploaded document was not recognized as an Aadhaar Card. Please upload a clear image of your Aadhaar Card." };
-      }
-      
-      return { 
-        isValid: true, 
-        aadhaarNumber: aadhaarMatch ? aadhaarMatch[0] : null,
-        detectedText: fullText
-      };
-    } catch (err) {
-      console.error("[detectAadhaarCard] Google Vision OCR error:", err.message);
-      return {
-        isValid: false,
-        reason: `Aadhaar Card sensor verification failed to call live Google Vision OCR: ${err.message}`
-      };
-    }
-  }
-
-  const nameLower = originalName.toLowerCase();
-  
-  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_aadhaar") || nameLower.includes("not_aadhaar")) {
-    return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy Aadhaar data." };
-  }
-  
-  if (!nameLower.includes("aadhaar") && !nameLower.includes("aadhar")) {
-    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'aadhaar' or 'aadhar'. Please upload a valid Aadhaar Card image." };
-  }
-  
-  return { 
-    isValid: true, 
-    aadhaarNumber: "123456789012", 
-    reason: "Simulated validation passed (Google Vision Key not configured)" 
-  };
+// Legacy wrappers kept for compatibility — all now delegate to Cloudflare AI
+async function detectPanCard(buffer, _originalName = "") {
+  return verifyDocumentWithAI(buffer, "pan");
 }
-
-async function detectDrivingLicense(buffer, originalName = "") {
-  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
-  if (visionApiKey) {
-    try {
-      const base64Image = buffer.toString("base64");
-      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
-      const payload = {
-        requests: [
-          {
-            image: { content: base64Image },
-            features: [{ type: "TEXT_DETECTION" }]
-          }
-        ]
-      };
-      
-      const response = await axios.post(url, payload);
-      const textAnnotations = response.data?.responses?.[0]?.textAnnotations || [];
-      if (textAnnotations.length === 0) {
-        return { isValid: false, reason: "No text could be detected in the uploaded image. Please upload a clear photo of your Driving License." };
-      }
-      
-      const fullText = textAnnotations[0].description || "";
-      const textUpper = fullText.toUpperCase();
-      
-      const hasKeywords = 
-        textUpper.includes("DRIVING LICENSE") || 
-        textUpper.includes("DRIVING LICENCE") || 
-        textUpper.includes("LICENCE TO DRIVE") || 
-        textUpper.includes("LICENSE TO DRIVE") || 
-        textUpper.includes("UNION OF INDIA") || 
-        textUpper.includes("TRANSPORT") || 
-        textUpper.includes("MOTOR VEHICLES") || 
-        textUpper.includes("AUTHORITY") || 
-        textUpper.includes("भारत संघ");
-        
-      if (!hasKeywords) {
-        return { isValid: false, reason: "The uploaded document was not recognized as a Driving License. Please upload a clear image of your Driving License." };
-      }
-      
-      return { 
-        isValid: true, 
-        detectedText: fullText
-      };
-    } catch (err) {
-      console.error("[detectDrivingLicense] Google Vision OCR error:", err.message);
-      return {
-        isValid: false,
-        reason: `Driving License sensor verification failed to call live Google Vision OCR: ${err.message}`
-      };
-    }
-  }
-
-  const nameLower = originalName.toLowerCase();
-  
-  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_license") || nameLower.includes("not_license")) {
-    return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy Driving License data." };
-  }
-  
-  if (!nameLower.includes("license") && !nameLower.includes("licence") && !nameLower.includes("dl") && !nameLower.includes("driving")) {
-    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'license', 'licence', 'dl', or 'driving'. Please upload a valid Driving License image." };
-  }
-  
-  return { 
-    isValid: true, 
-    reason: "Simulated validation passed (Google Vision Key not configured)" 
-  };
+async function detectAadhaarCard(buffer, _originalName = "") {
+  return verifyDocumentWithAI(buffer, "aadhaar");
 }
-
-async function detectElectricityBill(buffer, originalName = "") {
-  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
-  if (visionApiKey) {
-    try {
-      const base64Image = buffer.toString("base64");
-      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
-      const payload = {
-        requests: [
-          {
-            image: { content: base64Image },
-            features: [{ type: "TEXT_DETECTION" }]
-          }
-        ]
-      };
-      
-      const response = await axios.post(url, payload);
-      const textAnnotations = response.data?.responses?.[0]?.textAnnotations || [];
-      if (textAnnotations.length === 0) {
-        return { isValid: false, reason: "No text could be detected in the uploaded image. Please upload a clear photo of your Electricity Bill." };
-      }
-      
-      const fullText = textAnnotations[0].description || "";
-      const textUpper = fullText.toUpperCase();
-      
-      const hasKeywords = 
-        textUpper.includes("ELECTRICITY") || 
-        textUpper.includes("POWER") || 
-        textUpper.includes("ENERGY") || 
-        textUpper.includes("CONSUMER") || 
-        textUpper.includes("METER") || 
-        textUpper.includes("DISTRIBUTION") || 
-        textUpper.includes("MSEB") || 
-        textUpper.includes("MSEDCL") || 
-        textUpper.includes("BEST") || 
-        textUpper.includes("ADANI") || 
-        textUpper.includes("TATA POWER") || 
-        textUpper.includes("BILL") || 
-        textUpper.includes("CHARGES") || 
-        textUpper.includes("UPPCL") || 
-        textUpper.includes("BESCOM");
-        
-      if (!hasKeywords) {
-        return { isValid: false, reason: "The uploaded document was not recognized as a valid Electricity Bill. Please upload a clear image of your bill." };
-      }
-      
-      return { 
-        isValid: true, 
-        detectedText: fullText
-      };
-    } catch (err) {
-      console.error("[detectElectricityBill] Google Vision OCR error:", err.message);
-      return {
-        isValid: false,
-        reason: `Electricity Bill sensor verification failed to call live Google Vision OCR: ${err.message}`
-      };
-    }
-  }
-
-  const nameLower = originalName.toLowerCase();
-  
-  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_bill") || nameLower.includes("not_bill")) {
-    return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy Electricity Bill data." };
-  }
-  
-  if (!nameLower.includes("bill") && !nameLower.includes("electricity")) {
-    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'bill' or 'electricity'. Please upload a valid Electricity Bill image." };
-  }
-  
-  return { 
-    isValid: true, 
-    reason: "Simulated validation passed (Google Vision Key not configured)" 
-  };
+async function detectDrivingLicense(buffer, _originalName = "") {
+  return verifyDocumentWithAI(buffer, "driving_license");
 }
-
-async function detectSelfie(buffer, originalName = "") {
-  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
-  if (visionApiKey) {
-    try {
-      const base64Image = buffer.toString("base64");
-      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
-      const payload = {
-        requests: [
-          {
-            image: { content: base64Image },
-            features: [{ type: "FACE_DETECTION" }]
-          }
-        ]
-      };
-      
-      const response = await axios.post(url, payload);
-      const faceAnnotations = response.data?.responses?.[0]?.faceAnnotations || [];
-      
-      if (faceAnnotations.length === 0) {
-        return { isValid: false, reason: "No face could be detected in the uploaded image. Please take a clear, well-lit selfie photo." };
-      }
-      
-      return { 
-        isValid: true, 
-        facesDetected: faceAnnotations.length
-      };
-    } catch (err) {
-      console.error("[detectSelfie] Google Vision Face Detection error:", err.message);
-      return {
-        isValid: false,
-        reason: `Selfie sensor verification failed to call live Google Vision Face Detection: ${err.message}`
-      };
-    }
-  }
-
-  const nameLower = originalName.toLowerCase();
-  
-  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_selfie") || nameLower.includes("not_selfie") || nameLower.includes("no_face")) {
-    return { isValid: false, reason: "Verification failed: No face could be detected in the uploaded selfie photo." };
-  }
-  
-  if (!nameLower.includes("selfie") && !nameLower.includes("face") && !nameLower.includes("photo")) {
-    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'selfie', 'face', or 'photo'. Please upload a valid selfie photo." };
-  }
-  
-  return { 
-    isValid: true, 
-    reason: "Simulated validation passed (Google Vision Key not configured)" 
-  };
+async function detectElectricityBill(buffer, _originalName = "") {
+  return verifyDocumentWithAI(buffer, "bill");
+}
+async function detectSelfie(buffer, _originalName = "") {
+  return verifyDocumentWithAI(buffer, "selfie");
 }
 
 

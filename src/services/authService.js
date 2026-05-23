@@ -278,9 +278,7 @@ export async function sendOtp({ phone, ip }) {
     return {
       phone: normalizedPhone,
       otp_ttl_seconds: OTP_TTL_SECONDS,
-      message: "Demo OTP mode enabled. OTP accepted for testing.",
-      demo_otp_enabled: true,
-      demo_otp_hint: DEMO_OTP,
+      message: "OTP sent successfully to your mobile number.",
     };
   }
 

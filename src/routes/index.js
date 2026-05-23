@@ -1102,49 +1102,49 @@ const CF_AI_MODEL   = "@cf/meta/llama-3.2-11b-vision-instruct";
 
 const KYC_PROMPTS = {
   pan: {
-    system: `You are a strict, helpful visual OCR checker. Analyze the text in the provided image.
-Your only job is to determine if the image is a genuine printed card or document containing the words "INCOME TAX DEPARTMENT" or "PERMANENT ACCOUNT NUMBER", and a 10-character alphanumeric code in the format of a PAN number (e.g., ABCDE1234F).
-Respond ONLY in this exact JSON format (no extra text):
+    system: `You are a helpful visual checker. Analyze the provided image.
+Your only job is to determine if the image is a printed PAN Card. A valid PAN Card typically contains: the words "INCOME TAX DEPARTMENT" or "PERMANENT ACCOUNT NUMBER", an alphanumeric code structure, a photo of a person, and typical blue/green official card layout.
+Respond in this exact JSON format:
 {"valid": true, "reason": "PAN card verified successfully"}
 OR
-{"valid": false, "reason": "Brief explanation of what is wrong or missing"}`,
-    userPrompt: "Verify if this image is a printed card containing 'INCOME TAX DEPARTMENT' and a valid 10-character code, and respond in the required JSON format."
+{"valid": false, "reason": "Image does not exhibit typical PAN Card layout or text details"}`,
+    userPrompt: "Determine if this image is a valid printed PAN Card. Check the visual layout and text, and respond in the required JSON format."
   },
   aadhaar: {
-    system: `You are a strict, helpful visual OCR checker. Analyze the text in the provided image.
-Your only job is to determine if the image is a genuine printed card or document containing the words "GOVERNMENT OF INDIA" or "भारत सरकार", and a 12-digit numeric identifier (e.g., 1234 5678 9012) or address details on the back.
-Respond ONLY in this exact JSON format (no extra text):
+    system: `You are a helpful visual checker. Analyze the provided image.
+Your only job is to determine if the image is a printed Aadhaar Card (front or back side). A valid Aadhaar Card typically contains: "GOVERNMENT OF INDIA" or "भारत सरकार" or "Unique Identification Authority" or the typical red/blue official card layout, a passport-style photo of a person (on the front), or address/relationships on the back.
+Respond in this exact JSON format:
 {"valid": true, "reason": "Aadhaar card verified successfully"}
 OR
-{"valid": false, "reason": "Brief explanation of what is wrong or missing"}`,
-    userPrompt: "Verify if this image is a printed card containing 'GOVERNMENT OF INDIA' and a valid 12-digit code, and respond in the required JSON format."
+{"valid": false, "reason": "Image does not exhibit typical Aadhaar Card layout or text details"}`,
+    userPrompt: "Determine if this image is a valid printed Aadhaar Card (front or back). Check the visual layout and text, and respond in the required JSON format."
   },
   driving_license: {
-    system: `You are a strict, helpful visual OCR checker. Analyze the text in the provided image.
-Your only job is to determine if the image is a genuine printed card or document containing the words "DRIVING LICENCE" or "DRIVING LICENSE" and a state transport code (e.g., MH01, DL03, KA51).
-Respond ONLY in this exact JSON format (no extra text):
+    system: `You are a helpful visual checker. Analyze the provided image.
+Your only job is to determine if the image is a printed Driving License. A valid Driving License typically contains: "DRIVING LICENCE" or "DRIVING LICENSE", state emblems or transport department headers, a passport photo of the holder, and typical official license layout.
+Respond in this exact JSON format:
 {"valid": true, "reason": "Driving license verified successfully"}
 OR
-{"valid": false, "reason": "Brief explanation of what is wrong or missing"}`,
-    userPrompt: "Verify if this image is a printed card containing 'DRIVING LICENCE' or 'DRIVING LICENSE', and respond in the required JSON format."
+{"valid": false, "reason": "Image does not exhibit typical Driving License layout or text details"}`,
+    userPrompt: "Determine if this image is a valid printed Driving License. Check the visual layout and text, and respond in the required JSON format."
   },
   bill: {
-    system: `You are a strict, helpful visual OCR checker. Analyze the text in the provided image.
-Your only job is to determine if the image is a genuine printed bill or paper containing the name of an electricity distribution company (e.g., MSEDCL, Tata Power, BESCOM, Adani Electricity, BESCOM) and billing address/units.
-Respond ONLY in this exact JSON format (no extra text):
+    system: `You are a helpful visual checker. Analyze the provided image.
+Your only job is to determine if the image is an electricity bill or utility bill document. It typically exhibits billing tables, name of a power utility or board (such as MSEDCL, Tata Power, BESCOM, Adani Electricity, etc.), and billing address or amounts.
+Respond in this exact JSON format:
 {"valid": true, "reason": "Electricity bill verified successfully"}
 OR
-{"valid": false, "reason": "Brief explanation of what is wrong or missing"}`,
-    userPrompt: "Verify if this image is a printed paper containing an electricity distribution company name and billing details, and respond in the required JSON format."
+{"valid": false, "reason": "Image does not exhibit typical electricity bill layout or text details"}`,
+    userPrompt: "Determine if this image is a valid printed electricity bill. Check the visual layout and text, and respond in the required JSON format."
   },
   selfie: {
-    system: `You are a strict, helpful visual checker. Analyze the provided image.
+    system: `You are a helpful visual checker. Analyze the provided image.
 Your only job is to determine if the image is a clear, well-lit selfie or close-up photo of a single human face looking at the camera. The face must not be masked, covered, or obscured.
-Respond ONLY in this exact JSON format (no extra text):
+Respond in this exact JSON format:
 {"valid": true, "reason": "Selfie face verified successfully"}
 OR
-{"valid": false, "reason": "Brief explanation of what is wrong or missing"}`,
-    userPrompt: "Verify if this image is a clear selfie with a clearly visible human face looking at the camera, and respond in the required JSON format."
+{"valid": false, "reason": "Image does not contain a clear, unmasked human face looking at the camera"}`,
+    userPrompt: "Determine if this image is a clear selfie with a clearly visible human face, and respond in the required JSON format."
   }
 };
 

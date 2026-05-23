@@ -6,6 +6,7 @@ import { env } from "../config/env.js";
 import { createUserNotification } from "./notificationService.js";
 import { verifyFirebaseIdToken } from "../utils/firebaseAdmin.js";
 import axios from "axios";
+import Zavu from "@zavudev/sdk";
 
 const OTP_TTL_SECONDS = 60;
 const OTP_THROTTLE_LIMIT = 3;
@@ -227,6 +228,45 @@ export async function sendOtp({ phone, ip }) {
   const normalizedPhone = toIndianPhone(phone);
   assertOtpAllowed(normalizedPhone, ip);
 
+  // If Zavu is configured, send a real OTP via Zavu!
+  if (process.env.ZAVU_API_KEY) {
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    
+    // Store in-memory with 5-minute expiry
+    exotelOtpStore.set(normalizedPhone, {
+      code: otpCode,
+      expiresAt: Date.now() + 5 * 60 * 1000
+    });
+
+    try {
+      const apiKey = process.env.ZAVU_API_KEY;
+      const senderId = process.env.ZAVU_SENDER_ID || "kd774ej1edqbvgrk60aw0fq0zh878bf0";
+
+      const zavu = new Zavu({ apiKey });
+      const messageText = `Your BharBike verification OTP is ${otpCode}. Valid for 5 minutes.`;
+
+      console.log(`[Zavu OTP] Dispatching SMS to ${normalizedPhone} via Zavu (Sender ID: ${senderId})...`);
+      const res = await zavu.messages.send({
+        to: normalizedPhone,
+        text: messageText,
+        zavuSender: senderId
+      });
+
+      console.log(`[Zavu OTP] Zavu responded successfully:`, JSON.stringify(res));
+
+      return {
+        phone: normalizedPhone,
+        otp_ttl_seconds: 300,
+        message: "OTP sent successfully via Zavu",
+        exotel_used: true
+      };
+    } catch (zavuErr) {
+      console.error("[Zavu OTP] Zavu send failed:", zavuErr?.message || zavuErr);
+      // Clean up in-memory OTP since sending failed, so fallback can work cleanly
+      exotelOtpStore.delete(normalizedPhone);
+    }
+  }
+
   // If Exotel is configured, send a real OTP via Exotel!
   if (process.env.EXOTEL_API_KEY && process.env.EXOTEL_API_TOKEN) {
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -271,6 +311,7 @@ export async function sendOtp({ phone, ip }) {
       };
     } catch (exErr) {
       console.error("[Exotel OTP] Exotel send failed, falling back to other providers...", exErr?.response?.data || exErr.message);
+      exotelOtpStore.delete(normalizedPhone);
     }
   }
 

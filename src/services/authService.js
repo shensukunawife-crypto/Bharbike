@@ -6,7 +6,6 @@ import { env } from "../config/env.js";
 import { createUserNotification } from "./notificationService.js";
 import { verifyFirebaseIdToken } from "../utils/firebaseAdmin.js";
 import axios from "axios";
-import Zavu from "@zavudev/sdk";
 
 const OTP_TTL_SECONDS = 60;
 const OTP_THROTTLE_LIMIT = 3;
@@ -228,42 +227,40 @@ export async function sendOtp({ phone, ip }) {
   const normalizedPhone = toIndianPhone(phone);
   assertOtpAllowed(normalizedPhone, ip);
 
-  // If Zavu is configured, send a real OTP via Zavu!
-  if (process.env.ZAVU_API_KEY) {
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    
-    // Store in-memory with 5-minute expiry
-    exotelOtpStore.set(normalizedPhone, {
-      code: otpCode,
-      expiresAt: Date.now() + 5 * 60 * 1000
-    });
-
+  // If Twilio Verify is configured, send dynamic SMS OTP via Twilio!
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID) {
     try {
-      const apiKey = process.env.ZAVU_API_KEY;
-      const senderId = process.env.ZAVU_SENDER_ID || "kd774ej1edqbvgrk60aw0fq0zh878bf0";
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
 
-      const zavu = new Zavu({ apiKey });
-      const messageText = `Your BharBike verification OTP is ${otpCode}. Valid for 5 minutes.`;
+      const authHeader = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+      const url = `https://verify.twilio.com/v2/Services/${serviceSid}/Verifications`;
 
-      console.log(`[Zavu OTP] Dispatching SMS to ${normalizedPhone} via Zavu (Sender ID: ${senderId})...`);
-      const res = await zavu.messages.send({
-        to: normalizedPhone,
-        text: messageText,
-        zavuSender: senderId
+      const params = new URLSearchParams();
+      params.append("To", normalizedPhone);
+      params.append("Channel", "sms");
+
+      console.log(`[Twilio Verify] Dispatching SMS OTP to ${normalizedPhone}...`);
+      const res = await axios.post(url, params.toString(), {
+        headers: {
+          "Authorization": `Basic ${authHeader}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        timeout: 15000
       });
 
-      console.log(`[Zavu OTP] Zavu responded successfully:`, JSON.stringify(res));
+      console.log(`[Twilio Verify] Twilio responded with status ${res.status}:`, res.data);
 
       return {
         phone: normalizedPhone,
-        otp_ttl_seconds: 300,
-        message: "OTP sent successfully via Zavu",
-        exotel_used: true
+        otp_ttl_seconds: 60,
+        message: "OTP sent successfully via Twilio Verify",
+        twilio_used: true
       };
-    } catch (zavuErr) {
-      console.error("[Zavu OTP] Zavu send failed:", zavuErr?.message || zavuErr);
-      // Clean up in-memory OTP since sending failed, so fallback can work cleanly
-      exotelOtpStore.delete(normalizedPhone);
+    } catch (twErr) {
+      console.error("[Twilio Verify] Twilio send failed:", twErr?.response?.data || twErr.message);
+      // If Twilio is active and fails, let it fall back or raise error
     }
   }
 
@@ -311,7 +308,6 @@ export async function sendOtp({ phone, ip }) {
       };
     } catch (exErr) {
       console.error("[Exotel OTP] Exotel send failed, falling back to other providers...", exErr?.response?.data || exErr.message);
-      exotelOtpStore.delete(normalizedPhone);
     }
   }
 
@@ -357,6 +353,67 @@ export async function verifyOtp({ phone, otp }) {
   const code = String(otp || "").trim();
   if (!/^\d{6}$/.test(code)) {
     throw new AppError("Please enter a valid 6-digit OTP", 422);
+  }
+
+  // If Twilio Verify is configured, check it first!
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID) {
+    try {
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+
+      const authHeader = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+      const url = `https://verify.twilio.com/v2/Services/${serviceSid}/VerificationCheck`;
+
+      const params = new URLSearchParams();
+      params.append("To", normalizedPhone);
+      params.append("Code", code);
+
+      console.log(`[Twilio Verify] Checking OTP code for ${normalizedPhone}...`);
+      const res = await axios.post(url, params.toString(), {
+        headers: {
+          "Authorization": `Basic ${authHeader}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        timeout: 15000
+      });
+
+      console.log(`[Twilio Verify] Twilio responded with status:`, res.data.status);
+
+      if (res.data.status === "approved") {
+        // Provision profile in profiles and users tables
+        const profile = await ensureProfileByPhone(normalizedPhone);
+        const appToken = signToken({
+          id: profile.id,
+          phone: normalizedPhone,
+        });
+
+        // Send login detected notification (non-blocking)
+        createUserNotification(
+          profile.id,
+          "New Login Detected 🛡️",
+          `A new login was detected on your account via Twilio Verify OTP at ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })} (IST).`,
+          "info"
+        ).catch((err) => console.warn("[authService.verifyOtp] Twilio login notification failed:", err?.message));
+
+        return {
+          token: appToken,
+          user: profile,
+          supabase: null,
+          twilio_used: true,
+        };
+      } else {
+        throw new AppError("Invalid OTP. Please check the code and try again.", 401);
+      }
+    } catch (twErr) {
+      console.error("[Twilio Verify] Twilio verification failed:", twErr?.response?.data || twErr.message);
+      if (twErr instanceof AppError) {
+        throw twErr;
+      }
+      // If the verification call failed with an explicit error, report it
+      const errorMsg = twErr?.response?.data?.message || "Invalid or expired OTP";
+      throw new AppError(errorMsg, 401);
+    }
   }
 
   // Check Exotel OTP first

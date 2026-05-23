@@ -1202,19 +1202,43 @@ async function verifyDocumentWithAI(buffer, docType, originalName = "") {
     const aiText = String(cfResponse.data?.result?.response || cfResponse.data?.result?.description || "").trim();
     console.log(`[verifyDocumentWithAI] AI Response for ${docType}:`, aiText);
 
-    // Parse JSON from AI response
-    const jsonMatch = aiText.match(/\{[\s\S]*?"valid"[\s\S]*?\}/);
-    if (!jsonMatch) {
-      console.warn("[verifyDocumentWithAI] Could not parse JSON from AI response, treating as inconclusive.");
-      return { isValid: false, reason: "Document verification was inconclusive. Please upload a clearer, well-lit image." };
+    // Parse the AI response using a tolerant, robust parser
+    let isValid = false;
+    let reason = "";
+
+    // 1. Extract valid status
+    const validMatch = aiText.match(/(?:"valid"|'valid'|\bvalid\b)\s*:\s*(true|false)/i);
+    if (validMatch) {
+      isValid = validMatch[1].toLowerCase() === "true";
+    } else {
+      // Fallback: simple text analysis if the model didn't return standard JSON-like structure
+      const lowerText = aiText.toLowerCase();
+      if (lowerText.includes("verified successfully") || lowerText.includes("face verified") || lowerText.includes("document verified")) {
+        isValid = true;
+      }
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (parsed.valid === true) {
-      return { isValid: true, reason: parsed.reason || "Document verified successfully" };
+    // 2. Extract reason
+    const reasonMatch = aiText.match(/(?:"reason"|'reason'|\breason\b)\s*:\s*["']([^"']+)["']/i);
+    if (reasonMatch) {
+      reason = reasonMatch[1];
     } else {
-      return { isValid: false, reason: parsed.reason || "Document could not be verified. Please upload a proper document photo." };
+      // Tolerate unquoted reason values or different quote characters
+      const rawReasonMatch = aiText.match(/(?:"reason"|'reason'|\breason\b)\s*:\s*([^\n,}]+)/i);
+      if (rawReasonMatch) {
+        reason = rawReasonMatch[1].replace(/["'}]/g, "").trim();
+      }
     }
+
+    if (!reason) {
+      reason = isValid 
+        ? "Document verified successfully" 
+        : "Document could not be verified. Please upload a proper document photo.";
+    }
+
+    console.log(`[verifyDocumentWithAI] Parsed result for ${docType}: isValid=${isValid}, reason="${reason}"`);
+
+    return { isValid, reason };
 
   } catch (err) {
     console.error(`[verifyDocumentWithAI] Cloudflare AI vision error for ${docType}:`, err?.response?.data || err.message);

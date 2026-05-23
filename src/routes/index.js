@@ -1142,13 +1142,21 @@ async function detectPanCard(buffer, originalName = "") {
       };
     } catch (err) {
       console.error("[detectPanCard] Google Vision OCR error:", err.message);
+      return {
+        isValid: false,
+        reason: `PAN Card sensor verification failed to call live Google Vision OCR: ${err.message}`
+      };
     }
   }
 
   const nameLower = originalName.toLowerCase();
   
-  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy")) {
+  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_pan") || nameLower.includes("not_pan")) {
     return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy PAN data." };
+  }
+  
+  if (!nameLower.includes("pan")) {
+    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'pan'. Please upload a valid PAN Card image." };
   }
   
   return { 
@@ -1211,6 +1219,10 @@ async function detectAadhaarCard(buffer, originalName = "") {
       };
     } catch (err) {
       console.error("[detectAadhaarCard] Google Vision OCR error:", err.message);
+      return {
+        isValid: false,
+        reason: `Aadhaar Card sensor verification failed to call live Google Vision OCR: ${err.message}`
+      };
     }
   }
 
@@ -1220,12 +1232,210 @@ async function detectAadhaarCard(buffer, originalName = "") {
     return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy Aadhaar data." };
   }
   
+  if (!nameLower.includes("aadhaar") && !nameLower.includes("aadhar")) {
+    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'aadhaar' or 'aadhar'. Please upload a valid Aadhaar Card image." };
+  }
+  
   return { 
     isValid: true, 
     aadhaarNumber: "123456789012", 
     reason: "Simulated validation passed (Google Vision Key not configured)" 
   };
 }
+
+async function detectDrivingLicense(buffer, originalName = "") {
+  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
+  if (visionApiKey) {
+    try {
+      const base64Image = buffer.toString("base64");
+      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
+      const payload = {
+        requests: [
+          {
+            image: { content: base64Image },
+            features: [{ type: "TEXT_DETECTION" }]
+          }
+        ]
+      };
+      
+      const response = await axios.post(url, payload);
+      const textAnnotations = response.data?.responses?.[0]?.textAnnotations || [];
+      if (textAnnotations.length === 0) {
+        return { isValid: false, reason: "No text could be detected in the uploaded image. Please upload a clear photo of your Driving License." };
+      }
+      
+      const fullText = textAnnotations[0].description || "";
+      const textUpper = fullText.toUpperCase();
+      
+      const hasKeywords = 
+        textUpper.includes("DRIVING LICENSE") || 
+        textUpper.includes("DRIVING LICENCE") || 
+        textUpper.includes("LICENCE TO DRIVE") || 
+        textUpper.includes("LICENSE TO DRIVE") || 
+        textUpper.includes("UNION OF INDIA") || 
+        textUpper.includes("TRANSPORT") || 
+        textUpper.includes("MOTOR VEHICLES") || 
+        textUpper.includes("AUTHORITY") || 
+        textUpper.includes("भारत संघ");
+        
+      if (!hasKeywords) {
+        return { isValid: false, reason: "The uploaded document was not recognized as a Driving License. Please upload a clear image of your Driving License." };
+      }
+      
+      return { 
+        isValid: true, 
+        detectedText: fullText
+      };
+    } catch (err) {
+      console.error("[detectDrivingLicense] Google Vision OCR error:", err.message);
+      return {
+        isValid: false,
+        reason: `Driving License sensor verification failed to call live Google Vision OCR: ${err.message}`
+      };
+    }
+  }
+
+  const nameLower = originalName.toLowerCase();
+  
+  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_license") || nameLower.includes("not_license")) {
+    return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy Driving License data." };
+  }
+  
+  if (!nameLower.includes("license") && !nameLower.includes("licence") && !nameLower.includes("dl") && !nameLower.includes("driving")) {
+    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'license', 'licence', 'dl', or 'driving'. Please upload a valid Driving License image." };
+  }
+  
+  return { 
+    isValid: true, 
+    reason: "Simulated validation passed (Google Vision Key not configured)" 
+  };
+}
+
+async function detectElectricityBill(buffer, originalName = "") {
+  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
+  if (visionApiKey) {
+    try {
+      const base64Image = buffer.toString("base64");
+      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
+      const payload = {
+        requests: [
+          {
+            image: { content: base64Image },
+            features: [{ type: "TEXT_DETECTION" }]
+          }
+        ]
+      };
+      
+      const response = await axios.post(url, payload);
+      const textAnnotations = response.data?.responses?.[0]?.textAnnotations || [];
+      if (textAnnotations.length === 0) {
+        return { isValid: false, reason: "No text could be detected in the uploaded image. Please upload a clear photo of your Electricity Bill." };
+      }
+      
+      const fullText = textAnnotations[0].description || "";
+      const textUpper = fullText.toUpperCase();
+      
+      const hasKeywords = 
+        textUpper.includes("ELECTRICITY") || 
+        textUpper.includes("POWER") || 
+        textUpper.includes("ENERGY") || 
+        textUpper.includes("CONSUMER") || 
+        textUpper.includes("METER") || 
+        textUpper.includes("DISTRIBUTION") || 
+        textUpper.includes("MSEB") || 
+        textUpper.includes("MSEDCL") || 
+        textUpper.includes("BEST") || 
+        textUpper.includes("ADANI") || 
+        textUpper.includes("TATA POWER") || 
+        textUpper.includes("BILL") || 
+        textUpper.includes("CHARGES") || 
+        textUpper.includes("UPPCL") || 
+        textUpper.includes("BESCOM");
+        
+      if (!hasKeywords) {
+        return { isValid: false, reason: "The uploaded document was not recognized as a valid Electricity Bill. Please upload a clear image of your bill." };
+      }
+      
+      return { 
+        isValid: true, 
+        detectedText: fullText
+      };
+    } catch (err) {
+      console.error("[detectElectricityBill] Google Vision OCR error:", err.message);
+      return {
+        isValid: false,
+        reason: `Electricity Bill sensor verification failed to call live Google Vision OCR: ${err.message}`
+      };
+    }
+  }
+
+  const nameLower = originalName.toLowerCase();
+  
+  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_bill") || nameLower.includes("not_bill")) {
+    return { isValid: false, reason: "Verification failed: The image was detected as containing invalid or dummy Electricity Bill data." };
+  }
+  
+  if (!nameLower.includes("bill") && !nameLower.includes("electricity")) {
+    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'bill' or 'electricity'. Please upload a valid Electricity Bill image." };
+  }
+  
+  return { 
+    isValid: true, 
+    reason: "Simulated validation passed (Google Vision Key not configured)" 
+  };
+}
+
+async function detectSelfie(buffer, originalName = "") {
+  const visionApiKey = process.env.GOOGLE_VISION_API_KEY;
+  if (visionApiKey) {
+    try {
+      const base64Image = buffer.toString("base64");
+      const url = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
+      const payload = {
+        requests: [
+          {
+            image: { content: base64Image },
+            features: [{ type: "FACE_DETECTION" }]
+          }
+        ]
+      };
+      
+      const response = await axios.post(url, payload);
+      const faceAnnotations = response.data?.responses?.[0]?.faceAnnotations || [];
+      
+      if (faceAnnotations.length === 0) {
+        return { isValid: false, reason: "No face could be detected in the uploaded image. Please take a clear, well-lit selfie photo." };
+      }
+      
+      return { 
+        isValid: true, 
+        facesDetected: faceAnnotations.length
+      };
+    } catch (err) {
+      console.error("[detectSelfie] Google Vision Face Detection error:", err.message);
+      return {
+        isValid: false,
+        reason: `Selfie sensor verification failed to call live Google Vision Face Detection: ${err.message}`
+      };
+    }
+  }
+
+  const nameLower = originalName.toLowerCase();
+  
+  if (nameLower.includes("fail") || nameLower.includes("invalid") || nameLower.includes("wrong") || nameLower.includes("dummy") || nameLower.includes("non_selfie") || nameLower.includes("not_selfie") || nameLower.includes("no_face")) {
+    return { isValid: false, reason: "Verification failed: No face could be detected in the uploaded selfie photo." };
+  }
+  
+  if (!nameLower.includes("selfie") && !nameLower.includes("face") && !nameLower.includes("photo")) {
+    return { isValid: false, reason: "Verification failed: The uploaded document filename does not contain 'selfie', 'face', or 'photo'. Please upload a valid selfie photo." };
+  }
+  
+  return { 
+    isValid: true, 
+    reason: "Simulated validation passed (Google Vision Key not configured)" 
+  };
+}
+
 
 api.post("/upload-document", upload.single("file"), async (req, res) => {
   try {
@@ -1265,6 +1475,36 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
         return res.status(400).json({
           success: false,
           message: verification.reason || "Uploaded document is not detected as a valid Aadhaar Card. Please upload a clear image of your Aadhaar Card."
+        });
+      }
+    }
+
+    if (type === "driving_license") {
+      const verification = await detectDrivingLicense(file.buffer, file.originalname);
+      if (!verification.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: verification.reason || "Uploaded document is not detected as a valid Driving License. Please upload a clear image of your Driving License."
+        });
+      }
+    }
+
+    if (type === "bill") {
+      const verification = await detectElectricityBill(file.buffer, file.originalname);
+      if (!verification.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: verification.reason || "Uploaded document is not recognized as a valid Electricity Bill. Please upload a clear image of your bill."
+        });
+      }
+    }
+
+    if (type === "selfie") {
+      const verification = await detectSelfie(file.buffer, file.originalname);
+      if (!verification.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: verification.reason || "No face could be detected in the uploaded selfie photo. Please take a clear, well-lit selfie photo."
         });
       }
     }

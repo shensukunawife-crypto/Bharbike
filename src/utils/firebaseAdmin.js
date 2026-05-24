@@ -36,6 +36,10 @@ export function getFirebaseAdmin() {
   try {
     const serviceAccount = loadServiceAccount();
 
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+    }
+
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       projectId: serviceAccount.project_id,

@@ -12,10 +12,21 @@ let firebaseApp = null;
 function loadServiceAccount() {
   // 1. Try environment variable first (production/Render)
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
     try {
-      return JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      return JSON.parse(rawJson);
     } catch (e) {
-      console.error("[Firebase] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON env var:", e.message);
+      console.warn("[Firebase] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON env var directly:", e.message);
+      try {
+        console.log("[Firebase] Attempting automatic self-healing repair for broken escape sequences (e.g. \\uz instead of \\nuz)...");
+        // Repair any broken \nu sequences where 'n' was stripped (resulting in \u followed by base64 chars)
+        const repairedJson = rawJson.replace(/\\u/g, '\\nu');
+        const parsed = JSON.parse(repairedJson);
+        console.log("[Firebase] Auto-repair SUCCESSFUL! Service account JSON parsed cleanly.");
+        return parsed;
+      } catch (repairErr) {
+        console.error("[Firebase] Auto-repair failed:", repairErr.message);
+      }
     }
   }
 

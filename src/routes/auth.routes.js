@@ -3,6 +3,7 @@ import { body } from "express-validator";
 import * as authController from "../controllers/authController.js";
 import { validateRequest } from "../middleware/validate.js";
 import admin from "firebase-admin";
+import { getFirebaseAdmin } from "../utils/firebaseAdmin.js";
 
 const r = Router();
 
@@ -67,11 +68,7 @@ r.get("/session", authController.session);
 
 r.get("/firebase-debug", (req, res) => {
   try {
-    const apps = admin.apps;
-    if (apps.length === 0) {
-      return res.json({ success: true, initialized: false, message: "No Firebase Admin app initialized" });
-    }
-    const app = apps[0];
+    const app = getFirebaseAdmin();
     return res.json({
       success: true,
       initialized: true,
@@ -80,7 +77,14 @@ r.get("/firebase-debug", (req, res) => {
       serviceAccountLength: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? process.env.FIREBASE_SERVICE_ACCOUNT_JSON.length : 0,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
+    return res.json({
+      success: false,
+      initialized: false,
+      error: err.message,
+      hasServiceAccountJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+      serviceAccountLength: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? process.env.FIREBASE_SERVICE_ACCOUNT_JSON.length : 0,
+      envKeys: Object.keys(process.env).filter(k => k.toLowerCase().includes("firebase")),
+    });
   }
 });
 

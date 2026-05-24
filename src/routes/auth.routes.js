@@ -2,6 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import * as authController from "../controllers/authController.js";
 import { validateRequest } from "../middleware/validate.js";
+import admin from "firebase-admin";
 
 const r = Router();
 
@@ -63,5 +64,24 @@ r.post(
 
 r.post("/logout", authController.logout);
 r.get("/session", authController.session);
+
+r.get("/firebase-debug", (req, res) => {
+  try {
+    const apps = admin.apps;
+    if (apps.length === 0) {
+      return res.json({ success: true, initialized: false, message: "No Firebase Admin app initialized" });
+    }
+    const app = apps[0];
+    return res.json({
+      success: true,
+      initialized: true,
+      projectId: app.options.projectId,
+      hasServiceAccountJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+      serviceAccountLength: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? process.env.FIREBASE_SERVICE_ACCOUNT_JSON.length : 0,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 export default r;

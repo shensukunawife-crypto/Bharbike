@@ -68,21 +68,42 @@ r.get("/session", authController.session);
 
 r.get("/firebase-debug", (req, res) => {
   try {
+    let parseError = null;
+    let envVal = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
+    let parsedValue = null;
+    try {
+      parsedValue = JSON.parse(envVal);
+    } catch (e) {
+      parseError = e.message;
+    }
+
     const app = getFirebaseAdmin();
     return res.json({
       success: true,
       initialized: true,
       projectId: app.options.projectId,
-      hasServiceAccountJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
-      serviceAccountLength: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? process.env.FIREBASE_SERVICE_ACCOUNT_JSON.length : 0,
+      hasServiceAccountJson: !!envVal,
+      serviceAccountLength: envVal.length,
+      parseError,
     });
   } catch (err) {
+    let envVal = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
+    let parseError = null;
+    try {
+      JSON.parse(envVal);
+    } catch (e) {
+      parseError = e.message;
+    }
+
     return res.json({
       success: false,
       initialized: false,
       error: err.message,
-      hasServiceAccountJson: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
-      serviceAccountLength: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? process.env.FIREBASE_SERVICE_ACCOUNT_JSON.length : 0,
+      parseError,
+      hasServiceAccountJson: !!envVal,
+      serviceAccountLength: envVal.length,
+      startChars: envVal.substring(0, 80),
+      endChars: envVal.substring(envVal.length - 80),
       envKeys: Object.keys(process.env).filter(k => k.toLowerCase().includes("firebase")),
     });
   }

@@ -95,6 +95,12 @@ r.get("/firebase-debug", (req, res) => {
       parseError = e.message;
     }
 
+    let maskedSnippet = "";
+    if (envVal.length > 1286) {
+      const rawSnippet = envVal.substring(Math.max(0, 1286 - 40), Math.min(envVal.length, 1286 + 40));
+      maskedSnippet = rawSnippet.replace(/[A-Za-z]/g, 'x').replace(/[0-9]/g, '9');
+    }
+
     return res.json({
       success: false,
       initialized: false,
@@ -104,6 +110,7 @@ r.get("/firebase-debug", (req, res) => {
       serviceAccountLength: envVal.length,
       startChars: envVal.substring(0, 80),
       endChars: envVal.substring(envVal.length - 80),
+      maskedSnippet,
       envKeys: Object.keys(process.env).filter(k => k.toLowerCase().includes("firebase")),
     });
   }

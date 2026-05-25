@@ -689,7 +689,12 @@
     container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">Syncing messages...</div>';
 
     try {
-      const res = await fetch(`/admin/support/ticket/${ticketId}/messages`);
+      const adminToken = localStorage.getItem("adminToken");
+      const res = await fetch(`/admin/support/ticket/${ticketId}/messages`, {
+        headers: {
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+        }
+      });
       const payload = await res.json();
 
       if (payload.success) {
@@ -705,7 +710,12 @@
   // Polling load (silent, doesn't flash loading spinner)
   async function pollMessages(ticketId) {
     try {
-      const res = await fetch(`/admin/support/ticket/${ticketId}/messages`);
+      const adminToken = localStorage.getItem("adminToken");
+      const res = await fetch(`/admin/support/ticket/${ticketId}/messages`, {
+        headers: {
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+        }
+      });
       const payload = await res.json();
       if (payload.success && activeTicketId === ticketId) {
         renderMessages(payload.data, true);
@@ -796,10 +806,12 @@
     container.scrollTop = container.scrollHeight;
 
     try {
+      const adminToken = localStorage.getItem("adminToken");
       const res = await fetch(`/admin/support/ticket/${activeTicketId}/messages`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
         },
         body: JSON.stringify({ message: text })
       });
@@ -826,10 +838,12 @@
   // Update support ticket status (Resolved, In Progress)
   async function updateTicketStatus(ticketId, status) {
     try {
-      const res = await fetch(`/api/support/ticket/${ticketId}/status`, {
-        method: 'PATCH',
+      const adminToken = localStorage.getItem("adminToken");
+      const res = await fetch(`/api/admin/support/${ticketId}`, {
+        method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
         },
         body: JSON.stringify({ status })
       });
@@ -871,9 +885,13 @@
 
   async function assignRepairCost(ticketId, cost) {
     try {
+      const adminToken = localStorage.getItem("adminToken");
       const res = await fetch(`/api/admin/support/${ticketId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+        },
         body: JSON.stringify({ repair_cost: cost })
       });
       const payload = await res.json();
@@ -901,8 +919,12 @@
   async function confirmConvert(ticketId) {
     closeConvertModal();
     try {
+      const adminToken = localStorage.getItem("adminToken");
       const res = await fetch(`/admin/support/${ticketId}/convert`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+        }
       });
       const payload = await res.json();
       if (payload.success) {
@@ -923,6 +945,7 @@
     document.getElementById('repair-cost-modal').classList.add('show');
   }
 
+  // Close repair cost modal
   function closeRepairCostModal() {
     document.getElementById('repair-cost-modal').classList.remove('show');
   }
@@ -934,9 +957,13 @@
     
     closeRepairCostModal();
     try {
+      const adminToken = localStorage.getItem("adminToken");
       const res = await fetch(`/api/admin/support/${activeTicketId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+        },
         body: JSON.stringify({ repair_cost: cost })
       });
       const payload = await res.json();
@@ -946,9 +973,13 @@
       }
 
       if (message.trim()) {
+        const adminTokenMessages = localStorage.getItem("adminToken");
         await fetch(`/admin/support/ticket/${activeTicketId}/messages`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminTokenMessages ? { Authorization: `Bearer ${adminTokenMessages}` } : {})
+          },
           body: JSON.stringify({ message: message.trim() })
         });
       }

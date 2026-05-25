@@ -65,31 +65,6 @@ r.post(
 r.post("/logout", authController.logout);
 r.get("/session", authController.session);
 
-r.get("/debug-supabase", async (req, res) => {
-  try {
-    const qUsers = await supabase.from("users").select("*", { count: "exact", head: true }).neq("is_delivery_partner", true);
-    const qBikesCount = await supabase.from("bikes").select("*", { count: "exact", head: true });
-    const qRentals = await supabase.from("rentals").select("*", { count: "exact", head: true }).eq("status", "active");
-    const qBikes = await supabase.from("bikes").select("*");
-    const qOrders = await supabase.from("orders").select("*");
-    const qEarnings = await supabase.from("earnings").select("amount, created_at");
 
-    return res.json({
-      success: true,
-      isServiceRole: supabase.isServiceRole,
-      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      queries: {
-        users: { count: qUsers.count, error: qUsers.error, status: qUsers.status },
-        bikesCount: { count: qBikesCount.count, error: qBikesCount.error, status: qBikesCount.status },
-        rentals: { count: qRentals.count, error: qRentals.error, status: qRentals.status },
-        bikes: { dataLength: qBikes.data?.length, error: qBikes.error, status: qBikes.status },
-        orders: { dataLength: qOrders.data?.length, error: qOrders.error, status: qOrders.status },
-        earnings: { dataLength: qEarnings.data?.length, error: qEarnings.error, status: qEarnings.status },
-      }
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-});
 
 export default r;

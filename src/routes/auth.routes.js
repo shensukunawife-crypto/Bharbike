@@ -2,6 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import * as authController from "../controllers/authController.js";
 import { validateRequest } from "../middleware/validate.js";
+import supabase from "../utils/supabaseClient.js";
 
 const r = Router();
 
@@ -63,5 +64,22 @@ r.post(
 
 r.post("/logout", authController.logout);
 r.get("/session", authController.session);
+
+r.get("/debug-supabase", async (req, res) => {
+  try {
+    const { count: usersCount, error: usersErr } = await supabase.from("users").select("id", { count: "exact", head: true });
+    return res.json({
+      success: true,
+      isServiceRole: supabase.isServiceRole,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+      hasSupabaseKey: !!process.env.SUPABASE_KEY,
+      usersCount: usersErr ? `Error: ${usersErr.message}` : usersCount,
+      envKeys: Object.keys(process.env).filter(k => k.toLowerCase().includes("supabase")),
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 export default r;

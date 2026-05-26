@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secure Checkout</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f8fafc;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .loader-container {
+        text-align: center;
+        padding: 30px;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        max-width: 90%;
+        width: 320px;
+      }
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #ff7a0020;
+        border-top-color: #ff7a00;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+      .title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: #64748b;
+        line-height: 1.5;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </head>
+  <body>
+    <div class="loader-container" id="status-card">
+      <div class="spinner"></div>
+      <div class="title" id="status-title">Launching Secure Gateway...</div>
+      <div class="subtitle" id="status-sub">Please do not close this window or press back.</div>
+    </div>
+
+    <script>
+      (function () {
+        const keyId = "<%= key_id %>";
+        const orderId = "<%= order_id %>";
+        const amount = "<%= amount %>";
+        const currency = "<%= currency %>";
+        const name = "<%= name %>";
+        const description = "<%= description %>";
+        const appOrderId = "<%= app_order_id %>";
+        const userId = "<%= user_id %>";
+        const planId = "<%= plan_id %>";
+        const amountRaw = "<%= amount_raw %>";
+
+        const updateStatus = (title, sub) => {
+          document.getElementById("status-title").textContent = title;
+          document.getElementById("status-sub").textContent = sub;
+        };
+
+        const options = {
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: name,
+          description: description,
+          order_id: orderId,
+          handler: async function (response) {
+            updateStatus("Verifying Payment...", "Processing with server. Please wait...");
+            try {
+              const res = await fetch("/api/verify-payment", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  app_order_id: appOrderId,
+                  user_id: userId,
+                  plan_id: planId || null,
+                  amount: amountRaw,
+                }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                updateStatus("Payment Successful!", "Redirecting you back shortly...");
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage(
+                    JSON.stringify({ status: "success", plan_name: description, price: amountRaw })
+                  );
+                } else {
+                  window.location.href = `/api/payment/success?plan_name=${encodeURIComponent(description)}&price=${amountRaw}`;
+                }
+              } else {
+                throw new Error(data.message || "Verification failed");
+              }
+            } catch (err) {
+              updateStatus("Verification Failed ❌", err.message || "Connection failed.");
+              setTimeout(() => {
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ status: "fail", error: err.message }));
+                } else {
+                  alert("Verification failed: " + err.message);
+                }
+              }, 1500);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              updateStatus("Payment Cancelled", "Window closed. Returning...");
+              setTimeout(() => {
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ status: "cancel" }));
+                } else {
+                  alert("Payment dismissed.");
+                }
+              }, 1000);
+            },
+          },
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.on("payment.failed", function (response) {
+          updateStatus("Payment Failed ❌", response.error.description || "Transaction failed");
+          setTimeout(() => {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({ status: "fail", error: response.error.description })
+              );
+            } else {
+              alert("Payment failed: " + response.error.description);
+            }
+          }, 1500);
+        });
+
+        // Auto-open Razorpay checkout modal
+        rzp.open();
+      })();
+    </script>
+  </body>
+</html>

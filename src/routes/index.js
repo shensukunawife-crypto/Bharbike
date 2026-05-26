@@ -136,6 +136,21 @@ api.post("/payment/create-order", authMiddleware, asyncHandler(paymentController
 api.post("/payment/verify", authMiddleware, asyncHandler(paymentController.verifyPayment));
 api.post("/create-order", asyncHandler(paymentController.createOrder));
 api.post("/verify-payment", asyncHandler(paymentController.verifyPayment));
+api.get("/payment/checkout", (req, res) => {
+  const { key_id, order_id, amount, currency = "INR", name = "BHAR BIKE", description = "Rental Payment", app_order_id, user_id, plan_id, amount_raw } = req.query;
+  res.render("checkout", {
+    key_id,
+    order_id,
+    amount,
+    currency,
+    name,
+    description,
+    app_order_id,
+    user_id,
+    plan_id: plan_id || "",
+    amount_raw
+  });
+});
 
 /** Workflow story page — unlock demo tied to latest verified payment + order status */
 api.post(

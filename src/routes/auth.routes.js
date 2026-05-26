@@ -6,6 +6,22 @@ import supabase from "../utils/supabaseClient.js";
 
 const r = Router();
 
+r.get("/debug-razorpay", async (req, res) => {
+  try {
+    return res.json({
+      success: true,
+      envEnabled: process.env.RAZORPAY_ENABLED,
+      hasKeyId: !!process.env.RAZORPAY_KEY_ID,
+      keyIdPref: process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.substring(0, 12) : "none",
+      hasKeySecret: !!process.env.RAZORPAY_KEY_SECRET,
+      mode: process.env.RAZORPAY_MODE,
+      nodeEnv: process.env.NODE_ENV,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 r.post(
   "/send-otp",
   [body("phone").trim().notEmpty().withMessage("Phone is required")],

@@ -8,6 +8,8 @@ const router = Router();
 router.get("/plans", subscriptionController.getPlans);
 
 // Protected routes (require authentication)
+router.use(authMiddleware);
+
 router.get("/active", subscriptionController.getActiveSubscription);
 router.get("/history", subscriptionController.getSubscriptionHistory);
 router.get("/billing", subscriptionController.getBillingHistory);

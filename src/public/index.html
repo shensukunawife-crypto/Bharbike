@@ -325,26 +325,89 @@
       font-weight: 700 !important;
     }
 
-    /* Workflow Cards Refinements */
+    /* Slanted Saffron Workflow Section Overrides */
+    .workflow-section {
+      position: relative !important;
+      padding: 9rem 0 !important;
+      background: linear-gradient(135deg, var(--accent-saffron) 30%, #E65100 100%) !important;
+      clip-path: polygon(0 4vw, 100% 0, 100% calc(100% - 4vw), 0 100%) !important;
+      margin: 6rem 0 !important;
+      border: none !important;
+      color: #ffffff !important;
+    }
+
+    .workflow-section h2 {
+      font-family: var(--font-display) !important;
+      font-size: 3rem !important;
+      font-weight: 850 !important;
+      color: #ffffff !important;
+      margin-bottom: 0.75rem !important;
+      letter-spacing: -0.8px !important;
+    }
+
+    .workflow-subtitle {
+      font-size: 1.15rem !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      max-width: 680px !important;
+      margin: 0 auto 4.5rem auto !important;
+      line-height: 1.65 !important;
+      font-weight: 400 !important;
+    }
+
+    .workflow-grid {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 3rem !important;
+      margin-top: 0 !important;
+    }
+
     .workflow-step {
-      border-radius: 28px !important;
-      padding: 3rem 2.25rem !important;
-      border: 1px solid rgba(15, 23, 42, 0.05) !important;
-      background: var(--bg-secondary) !important;
-      box-shadow: 0 5px 20px rgba(15, 23, 42, 0.01) !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      text-align: center !important;
+      transition: var(--transition-smooth) !important;
     }
-    
+
+    .workflow-step::after {
+      display: none !important; /* Remove any desktop connective arrows */
+    }
+
     .workflow-step:hover {
-      transform: translateY(-8px) !important;
-      border-color: var(--accent-saffron) !important;
-      box-shadow: 0 20px 40px rgba(255, 109, 0, 0.08) !important;
+      transform: translateY(-6px) !important;
     }
-    
-    .step-num {
-      width: 50px !important;
-      height: 50px !important;
-      font-size: 1.25rem !important;
+
+    .step-icon-circle {
+      width: 120px !important;
+      height: 120px !important;
+      background: #ffffff !important;
       border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin: 0 auto 1.75rem auto !important;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important;
+      transition: var(--transition-smooth) !important;
+    }
+
+    .workflow-step:hover .step-icon-circle {
+      transform: scale(1.08) rotate(3deg) !important;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    .workflow-step h3 {
+      display: none !important; /* Hide header text to match the reference layout */
+    }
+
+    .workflow-step p {
+      font-family: var(--font-sans) !important;
+      font-size: 1rem !important;
+      color: rgba(255, 255, 255, 0.95) !important;
+      line-height: 1.55 !important;
+      margin: 0 auto !important;
+      max-width: 250px !important;
+      font-weight: 500 !important;
     }
 
     /* Pricing Refinements */
@@ -1173,31 +1236,59 @@
     <!-- 4-Step User Workflow Section -->
     <section class="workflow-section" id="workflow">
       <div class="container">
-        <h2 style="font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Our Ride Workflow</h2>
-        <p style="color: var(--text-muted); text-align: center; font-size: 1rem; margin-bottom: 3rem;">Get riding in four easy steps using our intuitive mobile app.</p>
+        <h2>How it works?</h2>
+        <p class="workflow-subtitle">Embark on your green commute with affordable electric vehicle rentals from BhaरBike.</p>
         
         <div class="workflow-grid">
           <div class="workflow-step" id="step-locate">
-            <div class="step-num">1</div>
-            <h3>Locate</h3>
+            <div class="step-icon-circle">
+              <!-- Locate / Map Radar Outline Icon -->
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--accent-saffron)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3" fill="var(--accent-saffron-glow)"></circle>
+              </svg>
+            </div>
             <p>Find available electric vehicles on the live interactive map in the app, parked at any nearby secure Hub station.</p>
           </div>
           
           <div class="workflow-step" id="step-unlock">
-            <div class="step-num">2</div>
-            <h3>Book & Unlock</h3>
+            <div class="step-icon-circle">
+              <!-- Book & Unlock Smartphone Icon -->
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--accent-saffron)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <path d="M12 18h.01"></path>
+                <path d="M10 8a2 2 0 0 1 4 0v2H10z"></path>
+                <rect x="9" y="10" width="6" height="4" rx="0.5" fill="var(--accent-saffron-glow)"></rect>
+              </svg>
+            </div>
             <p>Recharge your wallet instantly, pick a flexible pass or subscription, and unlock the bike keylessly via Bluetooth or cellular.</p>
           </div>
           
           <div class="workflow-step" id="step-ride">
-            <div class="step-num">3</div>
-            <h3>Ride</h3>
+            <div class="step-icon-circle">
+              <!-- Ride / Electric Scooter Icon -->
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--accent-saffron)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="5.5" cy="17.5" r="2.5"></circle>
+                <circle cx="18.5" cy="17.5" r="2.5"></circle>
+                <path d="M15 6h2"></path>
+                <path d="M12 6h2.5L16 11.5"></path>
+                <path d="M8 17.5h8"></path>
+                <path d="M5.5 15V8H12v6H5.5z" fill="var(--accent-saffron-glow)"></path>
+                <path d="M12.5 12h-3l2-3.5"></path>
+              </svg>
+            </div>
             <p>Commute with a smart, eco-friendly EV. The app keeps track of your ride duration, distance, and battery health via real-time GPS.</p>
           </div>
           
           <div class="workflow-step" id="step-return">
-            <div class="step-num">4</div>
-            <h3>Return & Lock</h3>
+            <div class="step-icon-circle">
+              <!-- Return & Lock Destination Icon -->
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--accent-saffron)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" fill="var(--accent-saffron-glow)"></path>
+                <line x1="4" y1="22" x2="4" y2="15"></line>
+                <circle cx="12" cy="18" r="3"></circle>
+              </svg>
+            </div>
             <p>End your ride by parking at any designated BhaरBike hub and locking the smart lock directly from your mobile app screen.</p>
           </div>
         </div>

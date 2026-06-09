@@ -7,6 +7,8 @@
   <meta name="description" content="Rent eco-friendly EV bikes in India with BhaरBike. Easy bookings, instant wallet recharges, and zero-emission rides. Operated by Envirolux Biodiesel Private Limited.">
   <link rel="stylesheet" href="style.css">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
     /* Premium Styling Overrides & Enhancements */
     body {
       background-image: 
@@ -503,6 +505,157 @@
       margin-bottom: 0;
     }
 
+    /* Testimonials Section Styles */
+    .testimonials-section {
+      padding: 8rem 0;
+      border-top: 1px solid var(--border-color);
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .testimonials-left {
+      text-align: left;
+    }
+
+    .testimonials-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 3.2rem;
+      font-weight: 700;
+      color: #1e293b;
+      line-height: 1.25;
+      letter-spacing: -0.5px;
+      margin-bottom: 1.5rem;
+    }
+
+    .testimonials-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+      max-width: 340px;
+    }
+
+    .testimonials-nav {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .nav-arrow-btn {
+      background: transparent;
+      border: none;
+      color: #38bdf8;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      outline: none;
+      width: auto;
+      height: auto;
+    }
+
+    .nav-arrow-btn:hover {
+      background: transparent;
+      border-color: transparent;
+      color: var(--accent-saffron);
+      transform: scale(1.1);
+      box-shadow: none;
+    }
+
+    .testimonials-right {
+      position: relative;
+      width: 100%;
+    }
+
+    .testimonials-viewport {
+      width: 100%;
+      overflow: visible;
+    }
+
+    .testimonials-track {
+      display: flex;
+      gap: 2rem;
+      transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+      width: max-content;
+    }
+
+    .testimonial-card {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.03);
+      border-radius: 16px;
+      padding: 3.5rem 3rem;
+      width: 480px;
+      max-width: 100%;
+      flex-shrink: 0;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.04);
+      transition: var(--transition-smooth);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0.35;
+      transform: scale(0.96);
+    }
+
+    .testimonial-card.active {
+      opacity: 1;
+      transform: scale(1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.07);
+    }
+
+    .testimonial-quote {
+      font-family: var(--font-sans);
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 2rem;
+      font-style: normal;
+      text-align: left;
+    }
+
+    .reviewer-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .reviewer-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: none;
+      box-shadow: none;
+    }
+
+    .reviewer-details {
+      text-align: left;
+    }
+
+    .reviewer-details h4 {
+      font-family: var(--font-sans);
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+
+    .reviewer-details span {
+      font-size: 0.85rem;
+      color: #38bdf8;
+      font-weight: 500;
+    }
+
     /* Responsive Grid fixes */
     @media (max-width: 992px) {
       .hero-rental-grid {
@@ -530,6 +683,24 @@
       .why-choose-grid {
         grid-template-columns: 1fr;
         gap: 3rem;
+      }
+      .testimonials-grid {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+      .testimonials-left {
+        text-align: center;
+      }
+      .testimonials-subtitle {
+        max-width: 100%;
+      }
+      .testimonials-nav {
+        justify-content: center;
+      }
+      .testimonial-card {
+        width: 380px !important;
+        max-width: 90vw !important;
+        padding: 2.5rem 2rem !important;
       }
     }
     
@@ -742,6 +913,80 @@
           
         </div>
         
+      </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section" id="testimonials">
+      <div class="container">
+        <div class="testimonials-grid">
+          
+          <!-- Left side content & arrows -->
+          <div class="testimonials-left">
+            <h2 class="testimonials-title">What client say<br>about us</h2>
+            <p class="testimonials-subtitle">Proper mobility solution for your daily commute.</p>
+            <div class="testimonials-nav">
+              <button class="nav-arrow-btn" id="prev-testimonial" title="Previous Testimonial">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="20" y1="12" x2="4" y2="12"></line>
+                  <polyline points="10 18 4 12 10 6"></polyline>
+                </svg>
+              </button>
+              <button class="nav-arrow-btn" id="next-testimonial" title="Next Testimonial">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="12" x2="20" y2="12"></line>
+                  <polyline points="14 6 20 12 14 18"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Right side cards viewport -->
+          <div class="testimonials-right">
+            <div class="testimonials-viewport">
+              <div class="testimonials-track" id="testimonials-track">
+                
+                <!-- Card 1 -->
+                <div class="testimonial-card active">
+                  <p class="testimonial-quote">"BhaरBike has completely transformed my daily commute from Thane Station to Wagle Estate. The weekly pass at ₹1,950 is an absolute lifesaver. Keyless Bluetooth unlocking is super fast, and I never have to worry about looking for parking or buying fuel!"</p>
+                  <div class="reviewer-info">
+                    <img src="assets/avatar_1.png" alt="Rahul Sharma" class="reviewer-avatar">
+                    <div class="reviewer-details">
+                      <h4>Rahul Sharma</h4>
+                      <span>@rahul.sharma</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="testimonial-card">
+                  <p class="testimonial-quote">"I love the eco-friendly aspect! Being able to rent a fully charged EV scooter directly outside my apartment in Hiranandani Meadows is so convenient. The digital Aadhaar KYC verification took less than 2 minutes in the app."</p>
+                  <div class="reviewer-info">
+                    <img src="assets/avatar_2.png" alt="Priya Nair" class="reviewer-avatar">
+                    <div class="reviewer-details">
+                      <h4>Priya Nair</h4>
+                      <span>@priya.nair</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="testimonial-card">
+                  <p class="testimonial-quote">"Renting a BhaरBike for my delivery job has cut my daily operational costs to almost zero. No petrol bills, and the maintenance is fully covered in the plan. The dynamic UPI wallet makes recharges extremely easy."</p>
+                  <div class="reviewer-info">
+                    <img src="assets/avatar_3.png" alt="Amit Kadam" class="reviewer-avatar">
+                    <div class="reviewer-details">
+                      <h4>Amit Kadam</h4>
+                      <span>@amit.kadam</span>
+                    </div>
+                  </div>
+                </div>
+                
+              </div>
+            </div>
+          </div>
+          
+        </div>
       </div>
     </section>
 
@@ -1031,7 +1276,12 @@
             
             <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="store-btn app-store" id="download-appstore">
               <svg viewBox="0 0 384 512" width="22" height="22" fill="currentColor">
-                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3(truncated)
+                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.8 43-17.9 75.8-17.9 31.8 0 51 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-118.5-65.2-31.2-103.1-97.8-101.7-172.6zm-56.5-186.4c15.7-18.8 26.2-45.2 26.2-71.6 0-3.5-.4-7-.8-10.1-25.8 1-56.5 17.1-75.3 39.3-15.7 18.2-29.3 45.1-29.3 71.6 0 3.5.4 7 .8 10.5 28.5-.7 58.2-16.1 78.4-39.7z"/>
+              </svg>
+              <div class="store-btn-text">
+                <span>Download on the</span>
+                <strong>App Store</strong>
+              </div>
             </a>
           </div>
         </div>
@@ -1236,6 +1486,63 @@
       // Default end time to 3 hours later
       const later = new Date(now.getTime() + 3 * 60 * 60 * 1000);
       endInput.value = formatDateTime(later);
+    }
+
+    // Testimonials Slider Logic
+    const track = document.getElementById('testimonials-track');
+    const cards = document.querySelectorAll('.testimonial-card');
+    const prevBtn = document.getElementById('prev-testimonial');
+    const nextBtn = document.getElementById('next-testimonial');
+
+    if (track && cards.length > 0) {
+      let currentIndex = 0;
+      
+      const updateSlider = () => {
+        // Remove active class from all cards
+        cards.forEach((card, idx) => {
+          if (idx === currentIndex) {
+            card.classList.add('active');
+          } else {
+            card.classList.remove('active');
+          }
+        });
+        
+        // Calculate slide amount
+        const cardWidth = cards[0].offsetWidth;
+        const gap = 32; // 2rem in pixels (2 * 16px)
+        const amount = currentIndex * (cardWidth + gap);
+        
+        track.style.transform = `translateX(-${amount}px)`;
+      };
+      
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          if (currentIndex < cards.length - 1) {
+            currentIndex++;
+            updateSlider();
+          } else {
+            currentIndex = 0;
+            updateSlider();
+          }
+        });
+      }
+      
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          if (currentIndex > 0) {
+            currentIndex--;
+            updateSlider();
+          } else {
+            currentIndex = cards.length - 1;
+            updateSlider();
+          }
+        });
+      }
+      
+      // Window resize listener to handle active width calculations dynamically
+      window.addEventListener('resize', () => {
+        updateSlider();
+      });
     }
   </script>
 </body>

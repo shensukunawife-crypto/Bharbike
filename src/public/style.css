@@ -1,25 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  --bg-primary: hsl(222, 47%, 4%);
-  --bg-secondary: hsl(222, 35%, 8%);
-  --bg-tertiary: hsl(222, 28%, 12%);
-  --accent-saffron: hsl(22, 100%, 54%); /* #F26D21 Electric Saffron */
-  --accent-saffron-glow: hsla(22, 100%, 54%, 0.15);
-  --accent-teal: hsl(182, 100%, 45%); /* #00E5FF Electric Teal */
-  --accent-teal-glow: hsla(182, 100%, 45%, 0.15);
-  --accent-green: hsl(145, 100%, 45%); /* #00E676 Eco Green */
-  --accent-green-glow: hsla(145, 100%, 45%, 0.15);
-  --text-primary: hsl(210, 40%, 98%);
-  --text-secondary: hsl(215, 20%, 75%);
-  --text-muted: hsl(215, 15%, 55%);
-  --border-color: rgba(255, 255, 255, 0.06);
+  --bg-primary: hsl(220, 20%, 97%); /* Premium Off-White */
+  --bg-secondary: hsl(0, 0%, 100%); /* Pure White */
+  --bg-tertiary: hsl(220, 16%, 94%); /* Light Gray */
+  --accent-saffron: hsl(22, 100%, 52%); /* #FF6D00 Electric Saffron */
+  --accent-saffron-glow: rgba(255, 109, 0, 0.08);
+  --accent-teal: hsl(22, 100%, 45%); /* Secondary warm accent */
+  --accent-teal-glow: rgba(255, 109, 0, 0.05);
+  --accent-green: hsl(145, 80%, 40%); /* Eco Green for battery/success */
+  --accent-green-glow: rgba(46, 204, 113, 0.08);
+  --text-primary: hsl(222, 47%, 11%); /* Deep Slate for high contrast */
+  --text-secondary: hsl(215, 25%, 27%); /* Medium Slate */
+  --text-muted: hsl(215, 16%, 50%); /* Cool Gray */
+  --border-color: rgba(15, 23, 42, 0.06);
   --font-display: 'Outfit', sans-serif;
   --font-sans: 'Inter', sans-serif;
   --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  --shadow-glow: 0 10px 40px -10px var(--accent-saffron-glow);
-  --glass-bg: rgba(13, 18, 34, 0.45);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --shadow-glow: 0 15px 35px -5px rgba(255, 109, 0, 0.12), 0 5px 15px -5px rgba(0, 0, 0, 0.05);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(15, 23, 42, 0.05);
 }
 
 * {
@@ -36,15 +36,15 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 5% 15%, hsla(22, 100%, 54%, 0.06) 0%, transparent 45%),
-    radial-gradient(circle at 95% 75%, hsla(182, 100%, 45%, 0.05) 0%, transparent 45%);
+    radial-gradient(circle at 5% 15%, rgba(255, 109, 0, 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 95% 75%, rgba(255, 109, 0, 0.02) 0%, transparent 45%);
   background-attachment: fixed;
 }
 
 /* Custom Selection */
 ::selection {
   background: var(--accent-saffron);
-  color: #000;
+  color: #fff;
 }
 
 /* Scrollbar Styling */
@@ -70,7 +70,7 @@ header {
   left: 0;
   width: 100%;
   z-index: 1000;
-  background: rgba(5, 8, 17, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-color);
@@ -102,11 +102,11 @@ header {
 
 .logo .char-bhar {
   color: var(--accent-saffron);
-  text-shadow: 0 0 15px var(--accent-saffron-glow);
+  text-shadow: 0 0 10px var(--accent-saffron-glow);
 }
 
 .logo .brand-bike {
-  background: linear-gradient(135deg, #ffffff 50%, var(--accent-teal));
+  background: linear-gradient(135deg, var(--text-primary) 50%, var(--accent-saffron));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -161,7 +161,7 @@ header {
   line-height: 1.15;
   letter-spacing: -1.5px;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #ffffff 40%, var(--text-secondary));
+  background: linear-gradient(135deg, var(--text-primary) 60%, var(--text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -169,11 +169,11 @@ header {
 .hero-content h1 span.highlight-orange {
   color: var(--accent-saffron);
   -webkit-text-fill-color: initial;
-  text-shadow: 0 0 30px var(--accent-saffron-glow);
+  text-shadow: 0 0 20px rgba(255, 109, 0, 0.1);
 }
 
 .hero-content h1 span.highlight-teal {
-  background: linear-gradient(135deg, var(--text-primary), var(--accent-teal));
+  background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -197,7 +197,7 @@ header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--accent-saffron), hsl(22, 100%, 48%));
+  background: linear-gradient(135deg, var(--accent-saffron), hsl(22, 100%, 46%));
   color: #ffffff;
   font-family: var(--font-display);
   font-weight: 700;
@@ -207,27 +207,27 @@ header {
   border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
   transition: var(--transition-smooth);
-  box-shadow: 0 4px 20px rgba(242, 109, 33, 0.25);
+  box-shadow: 0 4px 15px rgba(255, 109, 0, 0.2);
   font-size: 1rem;
   letter-spacing: 0.25px;
 }
 
 .btn:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(242, 109, 33, 0.45);
+  box-shadow: 0 10px 25px rgba(255, 109, 0, 0.35);
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.04);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   box-shadow: none;
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--accent-teal);
-  box-shadow: 0 0 20px var(--accent-teal-glow);
+  background: rgba(15, 23, 42, 0.08);
+  border-color: var(--accent-saffron);
+  box-shadow: 0 0 15px var(--accent-saffron-glow);
   transform: translateY(-3px);
 }
 
@@ -251,14 +251,14 @@ header {
 .phone-frame {
   width: 290px;
   height: 585px;
-  background: #0d0e15;
+  background: #090a0f;
   border: 10px solid #1f2230;
   border-radius: 40px;
   position: relative;
   z-index: 2;
   box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.8),
-    0 0 40px rgba(242, 109, 33, 0.1);
+    0 25px 50px -12px rgba(15, 23, 42, 0.15),
+    0 0 30px rgba(255, 109, 0, 0.05);
   overflow: hidden;
 }
 
@@ -281,7 +281,7 @@ header {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #0b0d19;
+  background: #f8f9fa;
   position: relative;
 }
 
@@ -293,8 +293,8 @@ header {
   justify-content: space-between;
   align-items: center;
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.5);
-  font-weight: 500;
+  color: rgba(15, 23, 42, 0.6);
+  font-weight: 600;
   z-index: 9;
   margin-top: 2px;
 }
@@ -308,11 +308,11 @@ header {
 .phone-map-view {
   flex: 1;
   position: relative;
-  background: #0f1225;
+  background: #eaf0f6;
   background-image: 
-    radial-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 0),
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 0);
+    radial-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 0),
+    linear-gradient(rgba(15, 23, 42, 0.02) 1px, transparent 0),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.02) 1px, transparent 0);
   background-size: 40px 40px, 20px 20px, 20px 20px;
   overflow: hidden;
 }
@@ -320,7 +320,7 @@ header {
 /* Road / Paths */
 .map-road {
   position: absolute;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.8);
   border-radius: 10px;
 }
 .road-1 { top: 100px; left: 0; width: 100%; height: 16px; transform: rotate(-5deg); }
@@ -334,16 +334,16 @@ header {
   left: 110px;
   width: 14px;
   height: 14px;
-  background: var(--accent-teal);
+  background: var(--accent-saffron);
   border-radius: 50%;
-  box-shadow: 0 0 0 rgba(0, 229, 255, 0.4);
-  animation: pulse-teal 2s infinite;
+  box-shadow: 0 0 0 rgba(255, 109, 0, 0.4);
+  animation: pulse-orange 2s infinite;
 }
 
-@keyframes pulse-teal {
-  0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.7); }
-  70% { box-shadow: 0 0 0 10px rgba(0, 229, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); }
+@keyframes pulse-orange {
+  0% { box-shadow: 0 0 0 0 rgba(255, 109, 0, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 109, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 109, 0, 0); }
 }
 
 /* EV Bike pointers on mockup */
@@ -357,7 +357,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(242, 109, 33, 0.4);
+  box-shadow: 0 4px 10px rgba(255, 109, 0, 0.3);
 }
 
 .bike-marker::after {
@@ -378,7 +378,7 @@ header {
   left: 40px;
   width: 32px;
   height: 32px;
-  background: rgba(0, 230, 118, 0.15);
+  background: rgba(46, 204, 113, 0.15);
   border: 1.5px solid var(--accent-green);
   border-radius: 50%;
   display: flex;
@@ -404,31 +404,32 @@ header {
   top: 35px;
   left: 12px;
   right: 12px;
-  background: rgba(26, 31, 51, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 14px;
   padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   z-index: 8;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .phone-widget-wallet div {
   font-size: 0.65rem;
-  color: rgba(255,255,255,0.6);
+  color: rgba(15, 23, 42, 0.6);
 }
 
 .phone-widget-wallet strong {
   font-size: 0.75rem;
-  color: #fff;
+  color: var(--text-primary);
   display: block;
 }
 
 .phone-widget-wallet span.wallet-badge {
-  background: rgba(0, 229, 255, 0.1);
-  color: var(--accent-teal);
+  background: rgba(255, 109, 0, 0.1);
+  color: var(--accent-saffron);
   font-size: 0.55rem;
   padding: 3px 6px;
   border-radius: 20px;
@@ -437,8 +438,8 @@ header {
 
 /* Bottom Ride Controller Card Mockup */
 .phone-bottom-panel {
-  background: #151829;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #ffffff;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: 20px 20px 0 0;
   padding: 14px;
   z-index: 8;
@@ -453,7 +454,7 @@ header {
 
 .bike-details h4 {
   font-size: 0.85rem;
-  color: #fff;
+  color: var(--text-primary);
   font-family: var(--font-display);
 }
 
@@ -463,7 +464,7 @@ header {
 }
 
 .battery-gauge {
-  background: rgba(0, 230, 118, 0.1);
+  background: rgba(46, 204, 113, 0.1);
   color: var(--accent-green);
   font-size: 0.65rem;
   font-weight: 700;
@@ -475,7 +476,7 @@ header {
 }
 
 .unlock-slider {
-  background: linear-gradient(90deg, var(--accent-saffron), hsl(22, 100%, 48%));
+  background: linear-gradient(90deg, var(--accent-saffron), hsl(22, 100%, 46%));
   border-radius: 12px;
   height: 38px;
   display: flex;
@@ -484,7 +485,7 @@ header {
   position: relative;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(242, 109, 33, 0.3);
+  box-shadow: 0 4px 15px rgba(255, 109, 0, 0.2);
 }
 
 .unlock-slider-handle {
@@ -498,7 +499,7 @@ header {
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   animation: slide-demo 3s infinite alternate ease-in-out;
 }
 
@@ -532,7 +533,7 @@ header {
   font-size: 2.5rem;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 0.75rem;
 }
 
@@ -557,6 +558,7 @@ header {
   transition: var(--transition-smooth);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
 .feature-card::before {
@@ -586,7 +588,7 @@ header {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(15, 23, 42, 0.03);
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -607,7 +609,7 @@ header {
   font-family: var(--font-display);
   font-size: 1.4rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 0.75rem;
 }
 
@@ -621,7 +623,7 @@ header {
 .workflow-section {
   padding: 6rem 0;
   border-top: 1px solid var(--border-color);
-  background: linear-gradient(180deg, transparent, rgba(242, 109, 33, 0.01) 50%, transparent);
+  background: linear-gradient(180deg, transparent, rgba(255, 109, 0, 0.01) 50%, transparent);
 }
 
 .workflow-grid {
@@ -641,6 +643,7 @@ header {
   position: relative;
   transition: var(--transition-smooth);
   z-index: 5;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
 .workflow-step:hover {
@@ -652,9 +655,9 @@ header {
 .step-num {
   width: 44px;
   height: 44px;
-  background: rgba(242, 109, 33, 0.08);
+  background: rgba(255, 109, 0, 0.05);
   color: var(--accent-saffron);
-  border: 1px solid rgba(242, 109, 33, 0.3);
+  border: 1px solid rgba(255, 109, 0, 0.2);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -664,13 +667,12 @@ header {
   margin: 0 auto 1.5rem auto;
   font-size: 1.15rem;
   transition: var(--transition-smooth);
-  box-shadow: 0 0 10px rgba(242, 109, 33, 0.1);
 }
 
 .workflow-step:hover .step-num {
   background: var(--accent-saffron);
-  color: #000;
-  box-shadow: 0 0 20px var(--accent-saffron-glow);
+  color: #fff;
+  border-color: var(--accent-saffron);
 }
 
 .workflow-step h3 {
@@ -678,7 +680,7 @@ header {
   font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .workflow-step p {
@@ -696,7 +698,7 @@ header {
     right: -1.25rem;
     transform: translateY(-50%);
     font-size: 1.25rem;
-    color: rgba(255, 255, 255, 0.15);
+    color: rgba(15, 23, 42, 0.1);
     transition: var(--transition-smooth);
     pointer-events: none;
     z-index: 10;
@@ -732,12 +734,13 @@ header {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.02);
 }
 
 .pricing-card.popular {
   border-color: var(--accent-saffron);
   box-shadow: var(--shadow-glow);
-  background: linear-gradient(180deg, var(--bg-secondary), rgba(242, 109, 33, 0.02));
+  background: linear-gradient(180deg, var(--bg-secondary), rgba(255, 109, 0, 0.01));
 }
 
 .pricing-card.popular::after {
@@ -746,7 +749,7 @@ header {
   top: 25px;
   right: -35px;
   background: var(--accent-saffron);
-  color: #000;
+  color: #fff;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 0.65rem;
@@ -757,13 +760,8 @@ header {
 
 .pricing-card:hover {
   transform: translateY(-8px);
-  border-color: var(--accent-teal);
-  box-shadow: 0 10px 40px -10px var(--accent-teal-glow);
-}
-
-.pricing-card.popular:hover {
   border-color: var(--accent-saffron);
-  box-shadow: 0 10px 45px -5px rgba(242, 109, 33, 0.25);
+  box-shadow: var(--shadow-glow);
 }
 
 .pricing-plan-name {
@@ -784,7 +782,7 @@ header {
   font-family: var(--font-display);
   font-size: 3rem;
   font-weight: 900;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 1.75rem;
   line-height: 1;
 }
@@ -818,7 +816,7 @@ header {
 }
 
 .pricing-card.popular .btn {
-  background: linear-gradient(135deg, var(--accent-saffron), hsl(22, 100%, 48%));
+  background: linear-gradient(135deg, var(--accent-saffron), hsl(22, 100%, 46%));
   border: none;
 }
 
@@ -826,16 +824,180 @@ header {
   width: 100%;
 }
 
+/* Download App Section */
+.download-section {
+  margin: 6rem 0;
+}
+
+.download-card {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
+  border: 1px solid var(--border-color);
+  border-radius: 28px;
+  padding: 4rem;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 4rem;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.04);
+}
+
+.download-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -20%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, var(--accent-saffron-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.download-info h2 {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 850;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  letter-spacing: -0.5px;
+}
+
+.download-info p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+.store-buttons {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.store-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #0f172a;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: var(--transition-smooth);
+}
+
+.store-btn:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-saffron);
+  box-shadow: 0 5px 15px var(--accent-saffron-glow);
+}
+
+.store-btn svg {
+  color: #fff;
+}
+
+.store-btn-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.store-btn-text span {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.store-btn-text strong {
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+/* Mini Phone Visual Mockup for QR */
+.download-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mini-phone-frame {
+  width: 250px;
+  height: 380px;
+  background: #0d0e15;
+  border: 8px solid #1f2230;
+  border-radius: 32px;
+  position: relative;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  overflow: hidden;
+}
+
+.mini-phone-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 12px;
+  background: #1f2230;
+  border-radius: 0 0 10px 10px;
+  z-index: 10;
+}
+
+.mini-phone-screen {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.scan-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.qr-code-box {
+  background: #fff;
+  padding: 12px;
+  border-radius: 16px;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
+  color: #1f2230; /* QR code dark lines */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.qr-svg {
+  width: 100%;
+  height: 100%;
+}
+
 /* App Data / Corporate Info Card Layout */
 .corporate-note {
   margin: 6rem 0;
-  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
   border: 1px solid var(--border-color);
   border-radius: 28px;
   padding: 4rem;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.04);
 }
 
 .corporate-note::before {
@@ -845,7 +1007,7 @@ header {
   right: 0;
   width: 250px;
   height: 250px;
-  background: radial-gradient(circle, var(--accent-teal-glow) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--accent-saffron-glow) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -853,7 +1015,7 @@ header {
   font-family: var(--font-display);
   font-size: 2.2rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 1.25rem;
   letter-spacing: -0.5px;
 }
@@ -877,7 +1039,7 @@ main.container {
   border: 1px solid var(--border-color);
   border-radius: 28px;
   padding: 4.5rem 4rem;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.03);
   position: relative;
   overflow: hidden;
 }
@@ -889,7 +1051,7 @@ main.container {
   left: 0;
   width: 150px;
   height: 4px;
-  background: linear-gradient(90deg, var(--accent-saffron), var(--accent-teal));
+  background: linear-gradient(90deg, var(--accent-saffron), var(--accent-saffron));
   border-radius: 0 0 4px 0;
 }
 
@@ -899,7 +1061,7 @@ h1 {
   font-weight: 900;
   letter-spacing: -1.5px;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, #ffffff 40%, var(--text-secondary));
+  background: linear-gradient(135deg, var(--text-primary) 60%, var(--text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -943,14 +1105,14 @@ li {
 /* Contact Info Highlight Box */
 .info-box {
   background: var(--bg-tertiary);
-  border-left: 4px solid var(--accent-teal);
+  border-left: 4px solid var(--accent-saffron);
   border-radius: 0 16px 16px 0;
   padding: 2rem;
   margin: 3rem 0;
   border-top: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.02);
 }
 
 .info-box p {
@@ -968,7 +1130,7 @@ li {
 
 /* Modern Footer */
 footer {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-tertiary);
   border-top: 1px solid var(--border-color);
   padding: 6rem 2rem 4rem 2rem;
   margin-top: auto;
@@ -996,7 +1158,7 @@ footer {
 }
 
 .footer-brand h3 span.brand-bike {
-  background: linear-gradient(135deg, #ffffff 50%, var(--accent-teal));
+  background: linear-gradient(135deg, var(--text-primary) 50%, var(--accent-saffron));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -1091,6 +1253,18 @@ footer {
   }
 }
 
+@media (max-width: 900px) {
+  .download-card {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  .store-buttons {
+    justify-content: center;
+  }
+}
+
 @media (max-width: 768px) {
   .nav-container {
     flex-direction: column;
@@ -1131,181 +1305,5 @@ footer {
   .workflow-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
-  }
-}
-
-/* Download App Section */
-.download-section {
-  margin: 6rem 0;
-}
-
-.download-card {
-  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
-  border: 1px solid var(--border-color);
-  border-radius: 28px;
-  padding: 4rem;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 4rem;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-}
-
-.download-card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -20%;
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, var(--accent-saffron-glow) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.download-info h2 {
-  font-family: var(--font-display);
-  font-size: 2.8rem;
-  font-weight: 850;
-  color: #fff;
-  margin-bottom: 1rem;
-  letter-spacing: -0.5px;
-}
-
-.download-info p {
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  margin-bottom: 2.5rem;
-  line-height: 1.6;
-}
-
-.store-buttons {
-  display: flex;
-  gap: 1.25rem;
-  flex-wrap: wrap;
-}
-
-.store-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: #000;
-  color: #fff;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: var(--transition-smooth);
-}
-
-.store-btn:hover {
-  transform: translateY(-3px);
-  border-color: var(--accent-saffron);
-  box-shadow: 0 5px 15px var(--accent-saffron-glow);
-}
-
-.store-btn svg {
-  color: #fff;
-}
-
-.store-btn-text {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-
-.store-btn-text span {
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.store-btn-text strong {
-  font-size: 1rem;
-  font-weight: 700;
-  font-family: var(--font-sans);
-}
-
-/* Mini Phone Visual Mockup for QR */
-.download-visual {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.mini-phone-frame {
-  width: 250px;
-  height: 380px;
-  background: #0d0e15;
-  border: 8px solid #1f2230;
-  border-radius: 32px;
-  position: relative;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-  overflow: hidden;
-}
-
-.mini-phone-notch {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90px;
-  height: 12px;
-  background: #1f2230;
-  border-radius: 0 0 10px 10px;
-  z-index: 10;
-}
-
-.mini-phone-screen {
-  width: 100%;
-  height: 100%;
-  background: #151829;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 1.5rem;
-}
-
-.scan-text {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  text-align: center;
-  margin-top: 1rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.4;
-  font-weight: 500;
-}
-
-.qr-code-box {
-  background: #fff;
-  padding: 12px;
-  border-radius: 16px;
-  width: 150px;
-  height: 150px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
-  color: #151829; /* QR code dark lines */
-}
-
-.qr-svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* Responsive grid for download card */
-@media (max-width: 900px) {
-  .download-card {
-    grid-template-columns: 1fr;
-    gap: 3rem;
-    padding: 3rem 2rem;
-    text-align: center;
-  }
-  .store-buttons {
-    justify-content: center;
   }
 }

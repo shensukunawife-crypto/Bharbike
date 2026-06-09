@@ -6,6 +6,41 @@
   <title>BhaरBike - India's Smart EV Bike Rentals</title>
   <meta name="description" content="Rent eco-friendly EV bikes in India with BhaरBike. Easy bookings, instant wallet recharges, and zero-emission rides. Operated by Envirolux Biodiesel Private Limited.">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Custom hover styles for search result items */
+    .search-result-item:hover {
+      background-color: var(--bg-primary) !important;
+    }
+    .hero-logo-large {
+      font-family: var(--font-display);
+      font-size: 5rem;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      letter-spacing: -2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hero-logo-large .char-bhar {
+      color: var(--accent-saffron);
+    }
+    .hero-logo-large .brand-bike {
+      background: linear-gradient(135deg, #ffffff 50%, var(--accent-saffron));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    @media (max-width: 768px) {
+      .hero-logo-large {
+        font-size: 3.5rem;
+      }
+      .showcase-section .container {
+        grid-template-columns: 1fr !important;
+        gap: 2rem !important;
+        text-align: center;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -17,22 +52,200 @@
       <ul class="nav-links">
         <li><a href="index.html" class="active" id="nav-home">Home</a></li>
         <li><a href="#rates" id="nav-rates">Rates</a></li>
+        <li><a href="#faqs" id="nav-faqs">FAQ</a></li>
         <li><a href="contact.html" id="nav-contact">Contact Us</a></li>
+        <li><a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn" style="padding: 6px 16px; font-size: 0.85rem; border-radius: 8px;" id="nav-download">Download App</a></li>
       </ul>
     </div>
   </header>
 
   <main>
     
-    <!-- Hero Section -->
-    <section class="container hero-section">
-      <div class="hero-grid">
-        <div class="hero-content">
-          <h1>Sustainably Smarter<br><span class="highlight-orange">EV Bike Rentals</span><br><span class="highlight-teal">For Urban Transit</span></h1>
-          <p>Rent zero-emission electric bikes directly from your phone. Zero fuel costs, instant smart-lock unlocking, and seamless wallet-based payments. Move smarter, ride cleaner, pay less.</p>
-          <div class="hero-cta">
-            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn" id="btn-download-apk">Download App APK</a>
-            <a href="#workflow" class="btn btn-secondary" id="btn-learn-more">See How it Works</a>
+    <!-- Zomato-Style Hero Cover Banner -->
+    <section class="hero-cover">
+      <div class="hero-cover-content">
+        <div class="hero-logo-large">
+          <span>Bha<span class="char-bhar">र</span><span class="brand-bike">Bike</span></span>
+        </div>
+        <p class="hero-subtitle">Discover India's Smartest EV Rides</p>
+        
+        <!-- Centerpiece Search Container -->
+        <div class="search-container">
+          <div class="search-bar">
+            <div class="search-location-wrapper">
+              <span class="search-icon-pin">📍</span>
+              <select id="search-location">
+                <option value="thane" selected>Thane, MH</option>
+                <option value="wagle">Wagle Estate</option>
+                <option value="station">Thane Station Hub</option>
+                <option value="teenhath">Teen Hath Naka</option>
+                <option value="vartak">Vartak Nagar</option>
+                <option value="ghodbunder">Ghodbunder Road</option>
+              </select>
+            </div>
+            <div class="search-divider"></div>
+            <div class="search-input-wrapper">
+              <span class="search-icon-lens">🔍</span>
+              <input type="text" id="search-input" placeholder="Search for bikes, hubs or subscription plans..." oninput="handleSearch()">
+            </div>
+          </div>
+          <!-- Search results dropdown container -->
+          <div id="search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #ffffff; border-radius: 12px; margin-top: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--border-color); z-index: 1000; text-align: left; overflow: hidden;">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Categories cards -->
+    <section class="container category-section" id="categories">
+      <div class="category-grid">
+        
+        <a href="#rates" class="category-card" id="card-rentals">
+          <div class="category-image-box cimg-1">
+            <div class="category-icon">🚲</div>
+          </div>
+          <div class="category-info">
+            <h3>Daily EV Rentals</h3>
+            <p>Flexible, pay-as-you-go hourly and daily rentals starting at ₹49/hour.</p>
+          </div>
+        </a>
+
+        <a href="#rates" class="category-card" id="card-subscriptions">
+          <div class="category-image-box cimg-2">
+            <div class="category-icon">💳</div>
+          </div>
+          <div class="category-info">
+            <h3>Commuter Subscriptions</h3>
+            <p>Save big with our weekly and monthly pass options starting at ₹1,950.</p>
+          </div>
+        </a>
+
+        <a href="contact.html" class="category-card" id="card-careers">
+          <div class="category-image-box cimg-3">
+            <div class="category-icon">📦</div>
+          </div>
+          <div class="category-info">
+            <h3>Delivery Careers</h3>
+            <p>Partner with us, get a green EV vehicle, and earn on your own schedule.</p>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- Popular Localities Section -->
+    <section class="localities-section" id="localities">
+      <div class="container">
+        <h2 style="font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem; letter-spacing: -0.5px;">Popular localities in and around Thane</h2>
+        <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 2rem;">Explore hubs where you can pick up or drop off your BhaरBike.</p>
+        
+        <div class="localities-grid">
+          
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Thane Station Hub</h3>
+              <span>58 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Wagle Industrial Estate</h3>
+              <span>34 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Teen Hath Naka</h3>
+              <span>29 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Ghodbunder Road Hub</h3>
+              <span>42 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Hiranandani Meadows</h3>
+              <span>18 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Vartak Nagar Hub</h3>
+              <span>22 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Majiwada Hub</h3>
+              <span>26 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Pokhran Road No. 2</h3>
+              <span>19 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+          <a href="#rates" class="locality-card">
+            <div class="locality-details">
+              <h3>Kolshet Road</h3>
+              <span>15 bikes available</span>
+            </div>
+            <div class="locality-arrow">➔</div>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Showcase Section -->
+    <section class="showcase-section" id="showcase">
+      <div class="container" style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 4rem; align-items: center;">
+        <div class="showcase-content">
+          <h2 style="font-family: var(--font-display); font-size: 2.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 1.5rem; letter-spacing: -0.5px;">Live App Experience</h2>
+          <p style="font-size: 1.05rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.7;">See how easy it is to ride with BhaरBike. Locate a nearby smart vehicle directly on the live map, top up your wallet via UPI instantly, and slide to unlock keylessly.</p>
+          
+          <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 2rem;">
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="background: var(--accent-saffron-glow); color: var(--accent-saffron); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold;">✓</div>
+              <div>
+                <h4 style="font-size: 1.1rem; color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">Smart Lock Integration</h4>
+                <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0;">Unlocks in under 3 seconds using Bluetooth and GPS technology. No keys required.</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="background: var(--accent-saffron-glow); color: var(--accent-saffron); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold;">✓</div>
+              <div>
+                <h4 style="font-size: 1.1rem; color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">Dynamic Wallet Payments</h4>
+                <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0;">Pay-per-minute or buy weekly commuter passes directly from your wallet balance.</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="background: var(--accent-saffron-glow); color: var(--accent-saffron); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold;">✓</div>
+              <div>
+                <h4 style="font-size: 1.1rem; color: var(--text-primary); font-weight: 600; margin-bottom: 4px;">Real-Time GPS Tracking</h4>
+                <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0;">Track battery status, range, and navigation in real-time as you ride.</p>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -54,18 +267,14 @@
               <!-- Wallet Indicator -->
               <div class="phone-widget-wallet">
                 <div>
-                  <span>BhaरBike Wallet</span>
-                  <strong>₹450.00</strong>
+                  <span style="font-size: 0.65rem; color: var(--text-muted); display: block;">BhaरBike Wallet</span>
+                  <strong style="font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">₹450.00</strong>
                 </div>
-                <span class="wallet-badge">Active</span>
+                <span class="wallet-badge" style="background: var(--accent-green-glow); color: var(--accent-green); padding: 2px 8px; border-radius: 8px; font-size: 0.65rem; font-weight: 700;">Active</span>
               </div>
               
               <!-- Simulated Interactive Map -->
               <div class="phone-map-view">
-                <div class="map-road road-1"></div>
-                <div class="map-road road-2"></div>
-                <div class="map-road road-3"></div>
-                
                 <!-- Pulse user location dot -->
                 <div class="user-dot-pulse"></div>
                 
@@ -76,7 +285,7 @@
                 
                 <!-- Safe Hub -->
                 <div class="hub-marker">
-                  <span>Hub</span>
+                  <span style="font-size: 0.5rem; color: var(--accent-green); font-weight: 800;">Hub</span>
                 </div>
               </div>
               
@@ -84,17 +293,17 @@
               <div class="phone-bottom-panel">
                 <div class="bike-info-row">
                   <div class="bike-details">
-                    <h4>BhaरBike EV-204</h4>
-                    <span>180m away • Wagle Hub</span>
+                    <h4 style="margin: 0; font-family: var(--font-display); font-size: 0.85rem;">BhaरBike EV-204</h4>
+                    <span style="font-size: 0.65rem; color: var(--text-muted);">180m away • Wagle Hub</span>
                   </div>
                   <div class="battery-gauge">
                     <span>⚡</span> 92%
                   </div>
                 </div>
                 
-                <div class="unlock-slider">
-                  <div class="unlock-slider-handle">➔</div>
-                  <span class="unlock-slider-text">Slide to Unlock</span>
+                <div class="unlock-slider" id="interactive-unlock-slider">
+                  <div class="unlock-slider-handle" style="position: absolute; left: 4px; width: 30px; height: 30px; background: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-saffron); transition: left 0.3s ease;">➔</div>
+                  <span class="unlock-slider-text" style="color: #ffffff; font-size: 0.8rem; font-weight: 600; z-index: 1;">Slide to Unlock</span>
                 </div>
               </div>
               
@@ -107,10 +316,8 @@
     <!-- 4-Step User Workflow Section -->
     <section class="workflow-section" id="workflow">
       <div class="container">
-        <div class="section-header">
-          <h2>Our Ride Workflow</h2>
-          <p>Get riding in four easy steps using our intuitive mobile app.</p>
-        </div>
+        <h2 style="font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Our Ride Workflow</h2>
+        <p style="color: var(--text-muted); text-align: center; font-size: 1rem; margin-bottom: 3rem;">Get riding in four easy steps using our intuitive mobile app.</p>
         
         <div class="workflow-grid">
           <div class="workflow-step" id="step-locate">
@@ -140,41 +347,11 @@
       </div>
     </section>
 
-    <!-- Core Features Grid -->
-    <section class="features-section" id="features">
-      <div class="container">
-        <div class="section-header">
-          <h2>Key Features</h2>
-          <p>Engineered to deliver a superior, emission-free urban riding experience.</p>
-        </div>
-        
-        <div class="features-grid">
-          <div class="feature-card" id="feature-unlocks">
-            <div class="feature-icon-wrapper">🚲</div>
-            <h3>Smart Keyless Unlocks</h3>
-            <p>Locate any available EV bike nearby on the map and unlock it instantly using our secure smart Bluetooth/cellular locks. No physical keys required.</p>
-          </div>
-          <div class="feature-card" id="feature-wallet">
-            <div class="feature-icon-wrapper">💳</div>
-            <h3>Instant UPI Recharges</h3>
-            <p>Top-up your dynamic wallet using credit cards, UPI, or netbanking. Pay seamlessly only for the distance and time you ride. Fully secure.</p>
-          </div>
-          <div class="feature-card" id="feature-eco">
-            <div class="feature-icon-wrapper">🌱</div>
-            <h3>Eco-Friendly Transit</h3>
-            <p>100% emission-free green transit. Help reduce carbon footprints in urban areas with every single kilometer you pedal or ride. Green power, zero smoke.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Subscriptions & Plans Section -->
     <section class="pricing-section" id="rates">
       <div class="container">
-        <div class="section-header">
-          <h2>Select Your Rental Option</h2>
-          <p>Choose between flexible pay-per-ride bookings or an unlimited fleet subscription commute pass.</p>
-        </div>
+        <h2 style="font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Select Your Rental Option</h2>
+        <p style="color: var(--text-muted); text-align: center; font-size: 1rem; margin-bottom: 3rem;">Choose between flexible pay-per-ride bookings or an unlimited fleet subscription commute pass.</p>
         
         <div class="pricing-grid">
           
@@ -215,7 +392,7 @@
               <li>₹1,000 one-time registration fee</li>
               <li>Enables dynamic wallet pairing</li>
             </ul>
-            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqyqxvsFPmX.apk" class="btn btn-secondary">Learn More in App</a>
+            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn btn-secondary">Learn More in App</a>
           </div>
           
         </div>
@@ -307,10 +484,70 @@
       </div>
     </section>
 
+    <!-- FAQ Accordion Section -->
+    <section class="faq-section" id="faqs">
+      <div class="container">
+        <h2 style="font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Frequently Asked Questions</h2>
+        <p style="color: var(--text-muted); text-align: center; font-size: 1rem; margin-bottom: 2.5rem;">Got questions? Find quick answers about unlocking, KYC, fares, and deposits.</p>
+        
+        <div class="faq-container">
+          
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <h3>How do I unlock a BhaरBike?</h3>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>Once you locate a bike near you on the BhaरBike mobile app, ensure your phone's Bluetooth is turned on. Pick a dynamic rental pass or weekly commute subscription, and slide to unlock the bike keylessly. The smart lock opens automatically in under 3 seconds.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <h3>What are the hourly, daily, and weekly rates?</h3>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>We offer flexible and transparent rates. Pay-Per-Ride starts at ₹49/hour. For longer rides, get our 4-hour block pass at ₹149, full 24-hour day pass at ₹349, or a 7-day retention pass at ₹1,499. Regular commuters can opt for the Weekly Commuter plan at ₹1,950 for 7 days.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <h3>What documents are required for KYC verification?</h3>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>To ensure safety and comply with local regulations, first-time users must verify their identity. You will need to upload a photo of your Aadhaar card, PAN, or a valid Driving License directly within the BhaरBike mobile app. Verification is usually completed in less than 5 minutes.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <h3>Is the security deposit refundable?</h3>
+              <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>Yes! First-time users pay a registration deposit of ₹1,500, which includes a ₹1,000 one-time registration fee and ₹500 that is fully refundable back to your bank account or payment method immediately upon returning the bike to any designated hub and completing your subscription.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- Parent Legal Entity Note -->
     <section class="container" style="margin-bottom: 6rem;">
       <div class="corporate-note" id="corporate-card">
-        <h2>Corporate Information</h2>
+        <h2 style="font-family: var(--font-display); font-size: 2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 1rem;">Corporate Information</h2>
         <p>BhaरBike is a smart vehicle rental product designed, owned, and operated by <strong>Envirolux Biodiesel Private Limited</strong>. All payment transactions, wallet systems, and rental policies are officially managed by the parent legal entity under applicable Indian corporate regulations.</p>
         <a href="contact.html" class="btn" id="btn-corporate-contact">View Corporate Office Address</a>
       </div>
@@ -323,7 +560,7 @@
       <div class="footer-brand">
         <h3>Bha<span class="char-bhar">र</span><span class="brand-bike">Bike</span></h3>
         <p>Operated by Envirolux Biodiesel Private Limited. Join the sustainable electric revolution in urban transportation today.</p>
-        <p style="margin-top: 1rem; font-size: 0.8rem; opacity: 0.7;">
+        <p style="margin-top: 1.5rem; font-size: 0.85rem; opacity: 0.8; line-height: 1.6;">
           🏢 <strong>Office Address:</strong><br>
           Room No. 201, 2nd Floor, Sai Kiran,<br>
           Shivaji Nagar, Wagle Industrial Estate,<br>
@@ -368,5 +605,135 @@
     </div>
   </footer>
 
+  <!-- Script logic for header transitions, accordions, dynamic maps and centerpiece search -->
+  <script>
+    // Header Scroll Effect
+    const header = document.querySelector('header');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+
+    // FAQ Accordion
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    accordionHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const item = header.parentElement;
+        const content = item.querySelector('.accordion-content');
+        const isActive = item.classList.contains('active');
+        
+        // Close other active accordion items
+        document.querySelectorAll('.accordion-item').forEach(otherItem => {
+          if (otherItem !== item) {
+            otherItem.classList.remove('active');
+            otherItem.querySelector('.accordion-content').style.maxHeight = null;
+          }
+        });
+        
+        if (isActive) {
+          item.classList.remove('active');
+          content.style.maxHeight = null;
+        } else {
+          item.classList.add('active');
+          content.style.maxHeight = content.scrollHeight + 'px';
+        }
+      });
+    });
+
+    // Simulate unlock slider in the CSS mockup
+    const slider = document.getElementById('interactive-unlock-slider');
+    if (slider) {
+      slider.addEventListener('click', () => {
+        const handle = slider.querySelector('.unlock-slider-handle');
+        const text = slider.querySelector('.unlock-slider-text');
+        if (handle.style.left === 'calc(100% - 34px)') {
+          handle.style.left = '4px';
+          text.innerText = 'Slide to Unlock';
+          slider.style.background = 'linear-gradient(90deg, var(--accent-saffron), hsl(22, 100%, 46%))';
+        } else {
+          handle.style.left = 'calc(100% - 34px)';
+          text.innerText = 'Unlocked! Ready to Ride';
+          slider.style.background = 'var(--accent-green)';
+        }
+      });
+    }
+
+    // Search functionality matching Zomato's homepage style
+    const searchData = [
+      { name: 'Thane Station Hub', category: 'Hub Location', link: '#localities', desc: '58 EV bikes available nearby' },
+      { name: 'Wagle Estate Hub', category: 'Hub Location', link: '#localities', desc: '34 EV bikes available' },
+      { name: 'Teen Hath Naka Hub', category: 'Hub Location', link: '#localities', desc: '29 EV bikes available' },
+      { name: 'Ghodbunder Road Hub', category: 'Hub Location', link: '#localities', desc: '42 EV bikes available' },
+      { name: 'Hiranandani Meadows', category: 'Hub Location', link: '#localities', desc: '18 EV bikes available' },
+      { name: 'Vartak Nagar Hub', category: 'Hub Location', link: '#localities', desc: '22 EV bikes available' },
+      { name: 'Weekly Commuter Plan', category: 'Pricing Plan', link: '#rates', desc: '₹1,950 for 7 days, unlimited commutes' },
+      { name: 'Hourly Rental Plan', category: 'Pricing Plan', link: '#rates', desc: '₹49/hour flexible rides' },
+      { name: 'Refundable Security Deposit', category: 'Billing', link: '#rates', desc: '₹1,500 (₹500 fully refundable)' },
+      { name: 'Keyless Unlocks', category: 'App Feature', link: '#showcase', desc: 'Unlock bikes via Bluetooth/GPS' },
+      { name: 'UPI Wallet Topups', category: 'Payment', link: '#showcase', desc: 'Instant wallet recharges via UPI' }
+    ];
+
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+
+    function handleSearch() {
+      const query = searchInput.value.toLowerCase().trim();
+      if (!query) {
+        searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
+        return;
+      }
+      
+      const filtered = searchData.filter(item => 
+        item.name.toLowerCase().includes(query) || 
+        item.category.toLowerCase().includes(query) ||
+        item.desc.toLowerCase().includes(query)
+      );
+      
+      if (filtered.length === 0) {
+        searchResults.innerHTML = `
+          <div style="padding: 1rem; color: var(--text-muted); font-size: 0.95rem;">
+            No results found for "${escapeHtml(query)}"
+          </div>
+        `;
+        searchResults.style.display = 'block';
+        return;
+      }
+      
+      let html = '';
+      filtered.forEach(item => {
+        html += `
+          <a href="${item.link}" onclick="closeDropdown()" style="display: block; padding: 1rem; border-bottom: 1px solid var(--border-color); text-decoration: none; color: inherit; transition: var(--transition-smooth);" class="search-result-item">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: var(--text-primary); font-size: 0.95rem;">${item.name}</strong>
+              <span style="font-size: 0.75rem; background: var(--accent-saffron-glow); color: var(--accent-saffron); padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase;">${item.category}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">${item.desc}</div>
+          </a>
+        `;
+      });
+      
+      searchResults.innerHTML = html;
+      searchResults.style.display = 'block';
+    }
+
+    function closeDropdown() {
+      searchResults.style.display = 'none';
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-container')) {
+        closeDropdown();
+      }
+    });
+  </script>
 </body>
 </html>

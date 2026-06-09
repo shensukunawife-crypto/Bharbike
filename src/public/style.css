@@ -90,7 +90,6 @@ header.scrolled {
   justify-content: space-between;
   align-items: center;
 }
-
 .logo {
   font-family: var(--font-display);
   font-weight: 900;
@@ -100,6 +99,19 @@ header.scrolled {
   text-decoration: none;
   display: flex;
   align-items: center;
+  transition: var(--transition-smooth);
+}
+
+.brand-logo-img {
+  height: 38px;
+  width: auto;
+  border-radius: 8px;
+  margin-right: 12px;
+  vertical-align: middle;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 2px;
   transition: var(--transition-smooth);
 }
 

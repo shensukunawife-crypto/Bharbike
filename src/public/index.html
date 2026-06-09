@@ -32,67 +32,249 @@
       opacity: 1;
     }
 
-    .search-bar {
-      border-radius: 16px !important;
-      padding: 12px 20px !important;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.22) !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      backdrop-filter: blur(10px);
-    }
-    
-    .search-location-wrapper select {
-      font-size: 1rem !important;
-      font-weight: 600 !important;
-    }
-    
-    .search-input-wrapper input {
-      font-size: 1rem !important;
+    /* Premium Rental Hero Section (Boongg Style) */
+    .hero-rental {
+      position: relative;
+      background-color: #0b0c10;
+      padding: 9rem 0 7rem 0;
+      overflow: hidden;
+      min-height: 580px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      /* City skyline silhouette background overlay */
+      background-image: linear-gradient(180deg, rgba(11, 12, 16, 0.82) 0%, rgba(11, 12, 16, 0.96) 100%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" opacity="0.04"><path d="M0,300 L0,220 L30,220 L30,240 L50,240 L50,180 L80,180 L80,210 L100,210 L100,160 L140,160 L140,240 L160,240 L160,190 L190,190 L190,230 L210,230 L210,130 L260,130 L260,240 L280,240 L280,170 L320,170 L320,210 L350,210 L350,150 L390,150 L390,260 L420,260 L420,200 L450,200 L450,230 L480,230 L480,110 L540,110 L540,250 L560,250 L560,180 L600,180 L600,220 L640,220 L640,140 L690,140 L690,250 L720,250 L720,190 L750,190 L750,220 L780,220 L780,130 L840,130 L840,260 L870,260 L870,170 L910,170 L910,210 L940,210 L940,150 L980,150 L980,260 L1010,260 L1010,180 L1050,180 L1050,220 L1090,220 L1090,120 L1150,120 L1150,250 L1200,250 L1200,300 Z" fill="%23ffffff"/></svg>');
+      background-repeat: repeat-x;
+      background-position: bottom;
+      background-size: 1200px 300px;
     }
 
-    /* Custom hover styles for search result items */
-    .search-results-dropdown {
-      backdrop-filter: blur(20px);
-      background: rgba(255, 255, 255, 0.98) !important;
-      border: 1px solid rgba(15, 23, 42, 0.08) !important;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12) !important;
-      border-radius: 16px !important;
-      margin-top: 10px !important;
+    .hero-rental-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 3rem;
+      align-items: center;
+      position: relative;
+      z-index: 2;
     }
-    
-    .search-result-item {
-      transition: all 0.25s ease !important;
-      border-bottom: 1px solid rgba(15, 23, 42, 0.04) !important;
-    }
-    
-    .search-result-item:last-child {
-      border-bottom: none !important;
-    }
-    
-    .search-result-item:hover {
-      background-color: var(--accent-saffron-glow) !important;
-      padding-left: 1.5rem !important;
-    }
-    
-    .hero-logo-large {
-      font-family: var(--font-display);
-      font-size: 5rem;
-      font-weight: 900;
+
+    .hero-rental-left {
       color: #ffffff;
-      margin-bottom: 0.5rem;
-      letter-spacing: -2px;
+      text-align: left;
+    }
+
+    .hero-rental-left h1 {
+      font-family: var(--font-display);
+      font-size: 4rem;
+      font-weight: 850;
+      line-height: 1.15;
+      margin-bottom: 1.5rem;
+      color: #ffffff;
+      letter-spacing: -1.5px;
+    }
+
+    .hero-rental-left h1 em {
+      font-style: italic;
+      font-family: var(--font-display);
+      font-weight: 900;
+      color: var(--accent-saffron);
+    }
+
+    .rating-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 2rem;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .stars-container {
+      color: var(--accent-saffron);
+      font-size: 1.25rem;
+    }
+
+    .hero-rental-right {
+      position: relative;
+      height: 380px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .orange-backdrop-panel {
+      position: absolute;
+      right: -10%;
+      width: 95%;
+      height: 90%;
+      background: linear-gradient(135deg, var(--accent-saffron) 30%, #E65100 100%);
+      border-radius: 50px 0 0 50px;
+      z-index: 1;
+      box-shadow: 0 15px 40px rgba(230, 81, 0, 0.25);
+      overflow: hidden;
+    }
+
+    .orange-backdrop-panel::before {
+      content: '';
+      position: absolute;
+      width: 150%;
+      height: 150%;
+      background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 60%);
+      top: -20%;
+      left: -20%;
+    }
+
+    .ev-bike-image-blend {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: auto;
+      max-height: 340px;
+      object-fit: contain;
+      mix-blend-mode: screen; /* Blends the black background of the image with the backdrop! */
+      filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));
+    }
+
+    /* Floating labels around the bike */
+    .bike-label-badge {
+      position: absolute;
+      z-index: 5;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 8px 14px;
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      transition: var(--transition-smooth);
+    }
+
+    .bike-label-badge:hover {
+      transform: scale(1.05) translateY(-2px);
+      border-color: var(--accent-saffron);
+    }
+
+    .bike-label-badge.primary-accent {
+      background: var(--accent-saffron);
+      border-color: transparent;
+      color: #ffffff;
+      box-shadow: 0 8px 25px rgba(255, 109, 0, 0.35);
+    }
+
+    .badge-top {
+      top: 10%;
+      right: 12%;
+    }
+
+    .badge-bottom-left {
+      bottom: 10%;
+      left: -5%;
+    }
+
+    .badge-bottom-right {
+      bottom: 12%;
+      right: 5%;
+    }
+
+    /* Selection panel overlay at the bottom */
+    .rental-selector-panel {
+      background: #181a20;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.45);
+      margin-top: -3.5rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    .rental-selector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 0.6fr;
+      gap: 1.25rem;
+      align-items: center;
+    }
+
+    .selector-field {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 8px 16px;
+      transition: var(--transition-smooth);
+    }
+
+    .selector-field:focus-within {
+      border-color: var(--accent-saffron);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .field-icon {
+      font-size: 1.2rem;
+      color: var(--accent-saffron);
+    }
+
+    .field-content {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .field-content label {
+      font-size: 0.65rem;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+      text-align: left;
+    }
+
+    .field-content select, 
+    .field-content input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .field-content input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+    }
+
+    /* Call Dial float button */
+    .dial-float {
+      position: fixed;
+      bottom: 2.5rem;
+      right: 2.5rem;
+      width: 60px;
+      height: 60px;
+      background-color: var(--accent-saffron);
+      color: #ffffff;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 10px 25px rgba(255, 109, 0, 0.4);
+      text-decoration: none;
+      font-size: 1.5rem;
+      z-index: 999;
+      transition: var(--transition-smooth);
+      animation: pulse-orange 2s infinite;
     }
-    
-    .hero-logo-large .char-bhar {
-      color: var(--accent-saffron);
-    }
-    
-    .hero-logo-large .brand-bike {
-      background: linear-gradient(135deg, #ffffff 50%, var(--accent-saffron));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+
+    .dial-float:hover {
+      transform: scale(1.1) rotate(15deg);
+      background-color: #E65100;
     }
     
     /* Category Zoom Refinements */
@@ -215,15 +397,41 @@
       padding: 0 2rem 1.75rem 2rem !important;
     }
 
-    /* Showcase Layout Grid Fix */
-    @media (max-width: 768px) {
-      .hero-logo-large {
-        font-size: 3.5rem;
-      }
-      .showcase-section .container {
-        grid-template-columns: 1fr !important;
-        gap: 2rem !important;
+    /* Responsive Grid fixes */
+    @media (max-width: 992px) {
+      .hero-rental-grid {
+        grid-template-columns: 1fr;
         text-align: center;
+        gap: 3rem;
+      }
+      .hero-rental-left {
+        text-align: center;
+      }
+      .hero-rental-left h1 {
+        font-size: 3rem;
+      }
+      .rating-badge-row {
+        justify-content: center;
+      }
+      .orange-backdrop-panel {
+        right: 0%;
+        width: 100%;
+        border-radius: 40px;
+      }
+      .rental-selector-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .rental-selector-grid {
+        grid-template-columns: 1fr;
+      }
+      .badge-bottom-left {
+        left: 2%;
+      }
+      .hero-rental {
+        padding-top: 8rem;
       }
     }
   </style>
@@ -247,38 +455,85 @@
 
   <main>
     
-    <!-- Zomato-Style Hero Cover Banner -->
-    <section class="hero-cover">
-      <div class="hero-cover-content">
-        <div class="hero-logo-large">
-          <span>Bha<span class="char-bhar">र</span><span class="brand-bike">Bike</span></span>
+    <!-- Boongg-Style Hero Section with BhaरBike Branding -->
+    <section class="hero-rental">
+      <div class="container">
+        <div class="hero-rental-grid">
+          
+          <div class="hero-rental-left">
+            <h1 style="text-align: left; background: none; -webkit-text-fill-color: initial;">Rent an EV<br><em>in Your City</em></h1>
+            <p style="font-size: 1.15rem; color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 2rem;">
+              Instant keyless unlocking, smart digital KYC, and zero emissions.<br>
+              Operated by Envirolux Biodiesel Private Limited.
+            </p>
+            <div class="rating-badge-row">
+              <span class="stars-container">★★★★★</span>
+              <strong>15k+ Happy Riders</strong>
+              <span>|</span>
+              <span>4.8 Rating</span>
+            </div>
+          </div>
+          
+          <div class="hero-rental-right">
+            <!-- Orange Background Shape -->
+            <div class="orange-backdrop-panel"></div>
+            
+            <!-- Blender Mockup Image -->
+            <img src="assets/ev_bike_hero.png" alt="BhaरBike Smart EV" class="ev-bike-image-blend">
+            
+            <!-- Floating Labels -->
+            <div class="bike-label-badge primary-accent badge-top">
+              Hourly EV Rental Starts @ ₹49*
+            </div>
+            
+            <div class="bike-label-badge badge-bottom-left">
+              Daily EV Rental Starts @ ₹349*
+            </div>
+            
+            <div class="bike-label-badge badge-bottom-right">
+              Weekly Commuter Starts @ ₹1,950*
+            </div>
+          </div>
+          
         </div>
-        <p class="hero-subtitle">Discover India's Smartest EV Rides</p>
         
-        <!-- Centerpiece Search Container -->
-        <div class="search-container">
-          <div class="search-bar">
-            <div class="search-location-wrapper">
-              <span class="search-icon-pin">📍</span>
-              <select id="search-location">
-                <option value="thane" selected>Thane, MH</option>
-                <option value="wagle">Wagle Estate</option>
-                <option value="station">Thane Station Hub</option>
-                <option value="teenhath">Teen Hath Naka</option>
-                <option value="vartak">Vartak Nagar</option>
-                <option value="ghodbunder">Ghodbunder Road</option>
-              </select>
+        <!-- Selection Selector Floating Panel -->
+        <div class="rental-selector-panel">
+          <div class="rental-selector-grid">
+            
+            <div class="selector-field">
+              <span class="field-icon">📍</span>
+              <div class="field-content">
+                <label>Current City</label>
+                <select id="rental-city">
+                  <option value="thane" selected>Thane, MH</option>
+                  <option value="mumbai">Mumbai, MH</option>
+                  <option value="pune">Pune, MH</option>
+                </select>
+              </div>
             </div>
-            <div class="search-divider"></div>
-            <div class="search-input-wrapper">
-              <span class="search-icon-lens">🔍</span>
-              <input type="text" id="search-input" placeholder="Search for bikes, hubs or subscription plans..." oninput="handleSearch()">
+            
+            <div class="selector-field">
+              <span class="field-icon">📅</span>
+              <div class="field-content">
+                <label>Start Date & Time</label>
+                <input type="datetime-local" id="start-time">
+              </div>
             </div>
-          </div>
-          <!-- Search results dropdown container -->
-          <div id="search-results" class="search-results-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #ffffff; border-radius: 12px; margin-top: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--border-color); z-index: 1000; text-align: left; overflow: hidden;">
+            
+            <div class="selector-field">
+              <span class="field-icon">📅</span>
+              <div class="field-content">
+                <label>End Date & Time</label>
+                <input type="datetime-local" id="end-time">
+              </div>
+            </div>
+            
+            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn" style="width: 100%; border-radius: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Rent Now</a>
+            
           </div>
         </div>
+        
       </div>
     </section>
 
@@ -792,6 +1047,11 @@
     </div>
   </footer>
 
+  <!-- Floating Call Support Dial Button -->
+  <a href="tel:+919325296264" class="dial-float" id="float-dial-btn" title="Call Customer Support">
+    📞
+  </a>
+
   <!-- Script logic for header transitions, accordions, dynamic maps and centerpiece search -->
   <script>
     // Header Scroll Effect
@@ -848,79 +1108,29 @@
       });
     }
 
-    // Search functionality matching Zomato's homepage style
-    const searchData = [
-      { name: 'Thane Station Hub', category: 'Hub Location', link: '#localities', desc: '58 EV bikes available nearby' },
-      { name: 'Wagle Estate Hub', category: 'Hub Location', link: '#localities', desc: '34 EV bikes available' },
-      { name: 'Teen Hath Naka Hub', category: 'Hub Location', link: '#localities', desc: '29 EV bikes available' },
-      { name: 'Ghodbunder Road Hub', category: 'Hub Location', link: '#localities', desc: '42 EV bikes available' },
-      { name: 'Hiranandani Meadows', category: 'Hub Location', link: '#localities', desc: '18 EV bikes available' },
-      { name: 'Vartak Nagar Hub', category: 'Hub Location', link: '#localities', desc: '22 EV bikes available' },
-      { name: 'Weekly Commuter Plan', category: 'Pricing Plan', link: '#rates', desc: '₹1,950 for 7 days, unlimited commutes' },
-      { name: 'Hourly Rental Plan', category: 'Pricing Plan', link: '#rates', desc: '₹49/hour flexible rides' },
-      { name: 'Refundable Security Deposit', category: 'Billing', link: '#rates', desc: '₹1,500 (₹500 fully refundable)' },
-      { name: 'Keyless Unlocks', category: 'App Feature', link: '#showcase', desc: 'Unlock bikes via Bluetooth/GPS' },
-      { name: 'UPI Wallet Topups', category: 'Payment', link: '#showcase', desc: 'Instant wallet recharges via UPI' }
-    ];
-
-    const searchInput = document.getElementById('search-input');
-    const searchResults = document.getElementById('search-results');
-
-    function handleSearch() {
-      const query = searchInput.value.toLowerCase().trim();
-      if (!query) {
-        searchResults.style.display = 'none';
-        searchResults.innerHTML = '';
-        return;
-      }
+    // Initialize times in selector panel
+    const startInput = document.getElementById('start-time');
+    const endInput = document.getElementById('end-time');
+    if (startInput && endInput) {
+      const now = new Date();
       
-      const filtered = searchData.filter(item => 
-        item.name.toLowerCase().includes(query) || 
-        item.category.toLowerCase().includes(query) ||
-        item.desc.toLowerCase().includes(query)
-      );
+      // Format as YYYY-MM-DDThh:mm
+      const formatDateTime = (date) => {
+        const pad = (num) => String(num).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        const mm = pad(date.getMonth() + 1);
+        const dd = pad(date.getDate());
+        const hh = pad(date.getHours());
+        const min = pad(date.getMinutes());
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+      };
       
-      if (filtered.length === 0) {
-        searchResults.innerHTML = `
-          <div style="padding: 1rem; color: var(--text-muted); font-size: 0.95rem;">
-            No results found for "${escapeHtml(query)}"
-          </div>
-        `;
-        searchResults.style.display = 'block';
-        return;
-      }
+      startInput.value = formatDateTime(now);
       
-      let html = '';
-      filtered.forEach(item => {
-        html += `
-          <a href="${item.link}" onclick="closeDropdown()" style="display: block; padding: 1rem; border-bottom: 1px solid var(--border-color); text-decoration: none; color: inherit; transition: var(--transition-smooth);" class="search-result-item">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <strong style="color: var(--text-primary); font-size: 0.95rem;">${item.name}</strong>
-              <span style="font-size: 0.75rem; background: var(--accent-saffron-glow); color: var(--accent-saffron); padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase;">${item.category}</span>
-            </div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">${item.desc}</div>
-          </a>
-        `;
-      });
-      
-      searchResults.innerHTML = html;
-      searchResults.style.display = 'block';
+      // Default end time to 3 hours later
+      const later = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+      endInput.value = formatDateTime(later);
     }
-
-    function closeDropdown() {
-      searchResults.style.display = 'none';
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.search-container')) {
-        closeDropdown();
-      }
-    });
   </script>
 </body>
 </html>

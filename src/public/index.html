@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BharBike - Smart EV Bike Rentals in India</title>
+  <meta name="description" content="Rent eco-friendly EV bikes in India with BharBike. Easy bookings, instant wallet recharges, and zero-emission rides. Powered by Envirolux Biodiesel Private Limited.">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Hero section specific styling */
+    .hero {
+      text-align: center;
+      padding: 6rem 0 4rem 0;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      max-width: 650px;
+      margin: 0 auto 2.5rem auto;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      margin: 4rem 0;
+    }
+    .feature-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: var(--transition-smooth);
+    }
+    .feature-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent-cyan);
+      box-shadow: var(--shadow-glow);
+    }
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: var(--accent-cyan);
+    }
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      margin-bottom: 0.75rem;
+      color: var(--text-primary);
+    }
+    .feature-card p {
+      font-size: 0.95rem;
+      margin-bottom: 0;
+    }
+    .cta-container {
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 3rem;
+      text-align: center;
+      position: relative;
+    }
+    .cta-container::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(circle, var(--accent-cyan-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+      .cta-container {
+        padding: 2rem 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">
+        <span>BharBike</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="contact.html">Contact Us</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 1200px;">
+    
+    <!-- Hero Section -->
+    <section class="hero">
+      <h1>Sustainably Smarter<br><span>EV Bike Rentals</span></h1>
+      <p>Rent zero-emission electric bikes directly from your phone. Zero fuel costs, zero emissions, and instant unlocks. Move smarter, ride cleaner.</p>
+      <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn" id="btn-download">Download App APK</a>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🚲</div>
+        <h3>Smart Unlocks</h3>
+        <p>Locate any available EV bike nearby on the map and unlock it instantly using our secure smart Bluetooth/cellular locks.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💳</div>
+        <h3>Instant Recharges</h3>
+        <p>Top-up your dynamic wallet using credit cards, UPI, or netbanking. Pay seamlessly only for the distance and time you ride.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌱</div>
+        <h3>Eco-Friendly Rides</h3>
+        <p>100% emission-free green transit. Help reduce carbon footprints in urban areas with every single kilometer you pedal or ride.</p>
+      </div>
+    </section>
+
+    <!-- Parent Legal Entity Note -->
+    <section class="cta-container" style="margin-bottom: 6rem;">
+      <h2 style="margin-top: 0; margin-bottom: 1rem;">Corporate Information</h2>
+      <p style="max-width: 800px; margin: 0 auto 2rem auto;">BharBike is a smart vehicle rental product designed, owned, and operated by <strong>Envirolux Biodiesel Private Limited</strong>. All payment transactions, wallet systems, and rental policies are officially managed by the parent legal entity under applicable Indian corporate regulations.</p>
+      <a href="contact.html" class="btn" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-primary);">View Corporate Office Address</a>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-brand">
+        <h3>BharBike</h3>
+        <p>Operated by Envirolux Biodiesel Private Limited. Join the sustainable electric revolution in urban transportation today.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Legal & Policies</h4>
+        <ul>
+          <li><a href="terms.html">Terms & Conditions</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="refund.html">Refund & Cancellation</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Company Support</h4>
+        <ul>
+          <li><a href="contact.html">Contact Us</a></li>
+          <li><a href="https://expo.dev/accounts/eres07/projects/BharBike/builds/c064b116-f892-4444-a680-0905ba9726f3" target="_blank">EAS Build Logs</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>
+        <p>&copy; 2026 Envirolux Biodiesel Private Limited (BharBike). All rights reserved.</p>
+        <p class="legal-notice">CIN: U23201MH2022PTC380424 | Registered at Thane, Maharashtra, India.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

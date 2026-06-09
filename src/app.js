@@ -56,11 +56,11 @@ app.options("*", cors());
 app.get("/health", (req, res) => res.status(200).send("OK"));
 app.head("/health", (req, res) => res.status(200).end());
 
-app.get("/", (req, res) => res.status(200).send("Backend running"));
-app.head("/", (req, res) => res.status(200).end());
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Serve compliance landing page static files
+app.use(express.static(path.join(__dirname, "public")));
 
 app.use(express.json({ limit: "15mb" }));
 

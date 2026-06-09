@@ -397,6 +397,112 @@
       padding: 0 2rem 1.75rem 2rem !important;
     }
 
+    /* Why Choose Us Section Styles */
+    .why-choose-us-section {
+      padding: 6rem 0;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    .why-choose-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 4rem;
+      align-items: center;
+      margin-top: 3rem;
+    }
+
+    .why-choose-left {
+      display: flex;
+      justify-content: center;
+    }
+
+    .illustration-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 28px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.02);
+      text-align: center;
+      width: 100%;
+      max-width: 580px;
+    }
+
+    .why-choose-illustration {
+      width: 100%;
+      height: auto;
+      border-radius: 20px;
+      object-fit: contain;
+      margin-bottom: 1.5rem;
+    }
+
+    .illustration-caption {
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      border-top: 2px dashed rgba(255, 109, 0, 0.2);
+      padding-top: 1.25rem;
+    }
+
+    .why-choose-right {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .why-choose-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 1.75rem 2rem;
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+      transition: var(--transition-smooth);
+      box-shadow: 0 4px 15px rgba(15, 23, 42, 0.01);
+    }
+
+    .why-choose-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-saffron);
+      box-shadow: 0 15px 35px rgba(255, 109, 0, 0.05);
+    }
+
+    .why-choose-icon-wrapper {
+      background: var(--accent-saffron-glow);
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .why-icon {
+      font-size: 1.6rem;
+    }
+
+    .why-choose-text {
+      text-align: left;
+    }
+
+    .why-choose-text h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 750;
+      color: var(--accent-saffron);
+      margin-bottom: 0.5rem;
+    }
+
+    .why-choose-text p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 0;
+    }
+
     /* Responsive Grid fixes */
     @media (max-width: 992px) {
       .hero-rental-grid {
@@ -420,6 +526,10 @@
       }
       .rental-selector-grid {
         grid-template-columns: 1fr 1fr;
+      }
+      .why-choose-grid {
+        grid-template-columns: 1fr;
+        gap: 3rem;
       }
     }
     
@@ -571,6 +681,67 @@
           </div>
         </a>
 
+      </div>
+    </section>
+
+    <!-- Why Choose Us Section (Boongg Style layout) -->
+    <section class="why-choose-us-section" id="why-choose-us">
+      <div class="container">
+        
+        <div style="text-align: center; margin-bottom: 4rem;">
+          <h2 style="font-family: var(--font-display); font-size: 2.5rem; font-weight: 850; color: var(--text-primary); letter-spacing: -0.5px; margin-bottom: 0.75rem;">Why Choose Us?</h2>
+          <p style="color: var(--accent-saffron); font-weight: 600; font-size: 0.95rem;">Rent a smart, eco-friendly EV bike from BhaरBike and enjoy clean, affordable two-wheeler micro-mobility.</p>
+        </div>
+        
+        <div class="why-choose-grid">
+          
+          <!-- Left side illustration -->
+          <div class="why-choose-left">
+            <div class="illustration-card">
+              <img src="assets/why_choose_us.png" alt="BhaरBike fleet maintenance and sanitization" class="why-choose-illustration">
+              <div class="illustration-caption">
+                We Fully Inspect & Recharge Every Vehicle After Every Ride!
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right side vertical cards stack -->
+          <div class="why-choose-right">
+            
+            <div class="why-choose-card">
+              <div class="why-choose-icon-wrapper">
+                <span class="why-icon">🪖</span>
+              </div>
+              <div class="why-choose-text">
+                <h3>Complementary Helmet</h3>
+                <p>Your safety is our top priority. We provide sanitised complementary helmets and hairnets with every ride booked.</p>
+              </div>
+            </div>
+            
+            <div class="why-choose-card">
+              <div class="why-choose-icon-wrapper">
+                <span class="why-icon">💳</span>
+              </div>
+              <div class="why-choose-text">
+                <h3>Refundable Deposit</h3>
+                <p>Enjoy transparent billing with BhaरBike. ₹500 of your initial security deposit is fully refundable instantly back to your bank account upon vehicle return.</p>
+              </div>
+            </div>
+            
+            <div class="why-choose-card">
+              <div class="why-choose-icon-wrapper">
+                <span class="why-icon">🏷️</span>
+              </div>
+              <div class="why-choose-text">
+                <h3>Lowest Price Guarantee</h3>
+                <p>Count on us for the best bike rental rates in Thane. Ride at just ₹49/hour or purchase weekly passes for unlimited daily commutes.</p>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div>
+        
       </div>
     </section>
 
@@ -860,12 +1031,7 @@
             
             <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="store-btn app-store" id="download-appstore">
               <svg viewBox="0 0 384 512" width="22" height="22" fill="currentColor">
-                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.8 43-17.9 75.8-17.9 31.8 0 51 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-118.5-65.2-31.2-103.1-97.8-101.7-172.6zm-56.5-186.4c15.7-18.8 26.2-45.2 26.2-71.6 0-3.5-.4-7-.8-10.1-25.8 1-56.5 17.1-75.3 39.3-15.7 18.2-29.3 45.1-29.3 71.6 0 3.5.4 7 .8 10.5 28.5-.7 58.2-16.1 78.4-39.7z"/>
-              </svg>
-              <div class="store-btn-text">
-                <span>Download on the</span>
-                <strong>App Store</strong>
-              </div>
+                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3(truncated)
             </a>
           </div>
         </div>
@@ -922,66 +1088,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- FAQ Accordion Section -->
-    <section class="faq-section" id="faqs">
-      <div class="container">
-        <h2 style="font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Frequently Asked Questions</h2>
-        <p style="color: var(--text-muted); text-align: center; font-size: 1rem; margin-bottom: 2.5rem;">Got questions? Find quick answers about unlocking, KYC, fares, and deposits.</p>
-        
-        <div class="faq-container">
-          
-          <div class="accordion-item">
-            <div class="accordion-header">
-              <h3>How do I unlock a BhaरBike?</h3>
-              <span class="accordion-icon">▼</span>
-            </div>
-            <div class="accordion-content">
-              <div class="accordion-content-inner">
-                <p>Once you locate a bike near you on the BhaरBike mobile app, ensure your phone's Bluetooth is turned on. Pick a dynamic rental pass or weekly commute subscription, and slide to unlock the bike keylessly. The smart lock opens automatically in under 3 seconds.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="accordion-item">
-            <div class="accordion-header">
-              <h3>What are the hourly, daily, and weekly rates?</h3>
-              <span class="accordion-icon">▼</span>
-            </div>
-            <div class="accordion-content">
-              <div class="accordion-content-inner">
-                <p>We offer flexible and transparent rates. Pay-Per-Ride starts at ₹49/hour. For longer rides, get our 4-hour block pass at ₹149, full 24-hour day pass at ₹349, or a 7-day retention pass at ₹1,499. Regular commuters can opt for the Weekly Commuter plan at ₹1,950 for 7 days.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="accordion-item">
-            <div class="accordion-header">
-              <h3>What documents are required for KYC verification?</h3>
-              <span class="accordion-icon">▼</span>
-            </div>
-            <div class="accordion-content">
-              <div class="accordion-content-inner">
-                <p>To ensure safety and comply with local regulations, first-time users must verify their identity. You will need to upload a photo of your Aadhaar card, PAN, or a valid Driving License directly within the BhaरBike mobile app. Verification is usually completed in less than 5 minutes.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="accordion-item">
-            <div class="accordion-header">
-              <h3>Is the security deposit refundable?</h3>
-              <span class="accordion-icon">▼</span>
-            </div>
-            <div class="accordion-content">
-              <div class="accordion-content-inner">
-                <p>Yes! First-time users pay a registration deposit of ₹1,500, which includes a ₹1,000 one-time registration fee and ₹500 that is fully refundable back to your bank account or payment method immediately upon returning the bike to any designated hub and completing your subscription.</p>
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
     </section>

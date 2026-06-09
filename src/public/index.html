@@ -428,38 +428,109 @@
       box-shadow: 0 20px 45px rgba(255, 109, 0, 0.09) !important;
     }
 
-    /* FAQ Accordion Transitions */
+    /* FAQ Accordion Transitions Overhaul */
+    .faq-section {
+      padding: 6rem 0 !important;
+      background-color: var(--bg-primary) !important;
+    }
+    
+    .faq-header-wrapper {
+      text-align: center !important;
+      margin-bottom: 3.5rem !important;
+    }
+    
+    .faq-main-title {
+      font-family: 'Playfair Display', Georgia, serif !important;
+      font-size: 3rem !important;
+      font-weight: 700 !important;
+      color: #1e293b !important;
+      margin-bottom: 0.75rem !important;
+      letter-spacing: -0.5px !important;
+    }
+    
+    .faq-subtitle {
+      font-family: var(--font-sans) !important;
+      font-size: 1.05rem !important;
+      color: #64748b !important;
+      font-weight: 400 !important;
+      margin-bottom: 0 !important;
+    }
+    
+    .faq-accordion {
+      max-width: 800px !important;
+      margin: 0 auto !important;
+      padding: 0 1.5rem !important;
+    }
+    
     .accordion-item {
-      border-radius: 16px !important;
-      border: 1px solid rgba(15, 23, 42, 0.05) !important;
-      box-shadow: 0 4px 15px rgba(15, 23, 42, 0.01) !important;
-      margin-bottom: 0.5rem;
+      background: #ffffff !important;
+      border: 1px solid rgba(15, 23, 42, 0.04) !important;
+      border-radius: 12px !important;
+      margin-bottom: 1.25rem !important;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.015) !important;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      overflow: hidden !important;
     }
     
     .accordion-item:hover {
-      border-color: var(--accent-saffron) !important;
+      border-color: rgba(255, 109, 0, 0.25) !important;
+      box-shadow: 0 15px 35px rgba(255, 109, 0, 0.025) !important;
+      transform: translateY(-1px) !important;
     }
     
     .accordion-header {
-      padding: 1.5rem 2rem !important;
-      border-radius: 16px !important;
+      padding: 1.75rem 2.25rem !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      cursor: pointer !important;
+      user-select: none !important;
+      background: #ffffff !important;
+      border-radius: 12px !important;
+      transition: all 0.3s ease !important;
     }
     
-    .accordion-header h3 {
+    .accordion-title {
+      font-family: var(--font-sans) !important;
       font-size: 1.2rem !important;
       font-weight: 600 !important;
+      color: #1e293b !important;
+      line-height: 1.4 !important;
     }
     
-    .accordion-icon {
-      transition: transform 0.3s ease !important;
+    .accordion-toggle-btn {
+      font-size: 1.8rem !important;
+      font-weight: 300 !important;
+      color: #64748b !important;
+      line-height: 1 !important;
+      transition: all 0.2s ease !important;
+      display: inline-block !important;
+      margin-left: 1.5rem !important;
+      user-select: none !important;
     }
     
-    .accordion-item.active .accordion-icon {
-      transform: rotate(180deg) !important;
+    .accordion-item:hover .accordion-toggle-btn {
+      color: var(--accent-saffron) !important;
+    }
+    
+    .accordion-content {
+      max-height: 0;
+      overflow: hidden !important;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      background: #ffffff !important;
     }
     
     .accordion-content-inner {
-      padding: 0 2rem 1.75rem 2rem !important;
+      padding: 0 2.25rem 2rem 2.25rem !important;
+      border-top: none !important;
+    }
+    
+    .accordion-content-inner p {
+      font-family: var(--font-sans) !important;
+      font-size: 1.02rem !important;
+      color: #64748b !important;
+      line-height: 1.75 !important;
+      margin: 0 !important;
     }
 
     /* Why Choose Us Section Styles */
@@ -1835,6 +1906,92 @@
         
       </div>
     </section>
+ 
+    <!-- FAQ Accordion Section -->
+    <section class="faq-section" id="faqs">
+      <div class="faq-container">
+        <div class="faq-header-wrapper">
+          <h2 class="faq-main-title">Getting Started</h2>
+          <p class="faq-subtitle">Proper mobility solution for your developing daily urban commute.</p>
+        </div>
+        
+        <div class="faq-accordion">
+          
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">How to contact rider support in case of an emergency?</span>
+              <span class="accordion-toggle-btn">+</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>For immediate on-road assistance, call our dedicated Support Helpline at <strong>+91 93252 96264</strong> or email us at <strong>support@bharbike.com</strong>. You can also tap the float dialer icon on our app to initiate an instant call with our operations team, available 24/7 for emergency vehicle swaps, breakdown support, and safety assistance.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">App installation or GPS search failed, how to update?</span>
+              <span class="accordion-toggle-btn">+</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>If you encounter an installation error or the live vehicle search fails, ensure your device meets the minimum OS requirements (Android 8.0+ or iOS 13+). Clear your app store cache, update your device's Google Play Services, and verify that High Accuracy Location/GPS and Bluetooth permissions are granted to the BhaरBike App. You can download the latest official APK directly from our Expo build portal.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">Smart lock taking time or not opening, how to troubleshoot?</span>
+              <span class="accordion-toggle-btn">+</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>Ensure that your mobile device's Bluetooth and GPS are both turned on and you are standing within 2 meters of the vehicle. If the lock doesn't click open within 3 seconds of sliding the app handle, toggle your Bluetooth off and on, restart the app, and try scanning the QR code again. If the issue persists, the vehicle may have entered deep-sleep mode, and our backend support can trigger a remote cellular unlock for you.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">What are the hourly, daily, and weekly rental rates?</span>
+              <span class="accordion-toggle-btn">+</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>BhaरBike provides extremely affordable rates for urban micro-mobility: Pay-Per-Ride starts at <strong>₹49/hour</strong>. For longer journeys, choose our 4-Hour Block at <strong>₹149</strong>, the full 24-Hour Day Pass at <strong>₹349</strong>, or the Weekly Commuter Pass at <strong>₹1,950</strong>. All rides require a one-time registration deposit, allowing you to top up and commute without fuel or hidden charges.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">What documents are required for KYC verification?</span>
+              <span class="accordion-toggle-btn">+</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>To comply with local regulations and ensure fleet security, first-time riders must verify their identity. Simply upload a clear photo of your Aadhaar Card (front and back), PAN Card, or a valid Indian Driving License during signup in the mobile app. Our AI KYC integration processes and approves your details in under 2 minutes so you can start riding immediately.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <span class="accordion-title">How does the refundable security deposit work?</span>
+              <span class="accordion-toggle-btn">+</span>
+            </div>
+            <div class="accordion-content">
+              <div class="accordion-content-inner">
+                <p>To enable vehicle unlock privileges, first-time users pay a security deposit of <strong>₹1,500</strong>. This comprises a ₹1,000 non-refundable one-time setup and registration fee, and a <strong>₹500 fully refundable security deposit</strong>. The ₹500 portion is refunded instantly to your original payment method (UPI/Card) the moment you return the bike to any designated hub and complete your subscription.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
 
     <!-- Parent Legal Entity Note -->
     <section class="container" style="margin-bottom: 6rem;">
@@ -1927,15 +2084,27 @@
           if (otherItem !== item) {
             otherItem.classList.remove('active');
             otherItem.querySelector('.accordion-content').style.maxHeight = null;
+            const otherBtn = otherItem.querySelector('.accordion-toggle-btn');
+            if (otherBtn) {
+              otherBtn.innerText = '+';
+            }
           }
         });
         
         if (isActive) {
           item.classList.remove('active');
           content.style.maxHeight = null;
+          const btn = header.querySelector('.accordion-toggle-btn');
+          if (btn) {
+            btn.innerText = '+';
+          }
         } else {
           item.classList.add('active');
           content.style.maxHeight = content.scrollHeight + 'px';
+          const btn = header.querySelector('.accordion-toggle-btn');
+          if (btn) {
+            btn.innerText = '−'; // Unicode minus sign
+          }
         }
       });
     });

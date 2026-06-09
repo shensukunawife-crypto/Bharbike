@@ -3,137 +3,231 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BharBike - Smart EV Bike Rentals in India</title>
-  <meta name="description" content="Rent eco-friendly EV bikes in India with BharBike. Easy bookings, instant wallet recharges, and zero-emission rides. Powered by Envirolux Biodiesel Private Limited.">
+  <title>BhaरBike - India's Smart EV Bike Rentals</title>
+  <meta name="description" content="Rent eco-friendly EV bikes in India with BhaरBike. Easy bookings, instant wallet recharges, and zero-emission rides. Operated by Envirolux Biodiesel Private Limited.">
   <link rel="stylesheet" href="style.css">
-  <style>
-    /* Hero section specific styling */
-    .hero {
-      text-align: center;
-      padding: 6rem 0 4rem 0;
-    }
-    .hero h1 {
-      font-size: 3.5rem;
-      line-height: 1.2;
-      margin-bottom: 1.5rem;
-      background: linear-gradient(135deg, #ffffff 40%, var(--accent-cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .hero p {
-      font-size: 1.2rem;
-      color: var(--text-secondary);
-      max-width: 650px;
-      margin: 0 auto 2.5rem auto;
-    }
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 2rem;
-      margin: 4rem 0;
-    }
-    .feature-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 2rem;
-      transition: var(--transition-smooth);
-    }
-    .feature-card:hover {
-      transform: translateY(-5px);
-      border-color: var(--accent-cyan);
-      box-shadow: var(--shadow-glow);
-    }
-    .feature-icon {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-      color: var(--accent-cyan);
-    }
-    .feature-card h3 {
-      font-family: var(--font-display);
-      font-size: 1.25rem;
-      margin-bottom: 0.75rem;
-      color: var(--text-primary);
-    }
-    .feature-card p {
-      font-size: 0.95rem;
-      margin-bottom: 0;
-    }
-    .cta-container {
-      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      padding: 3rem;
-      text-align: center;
-      position: relative;
-    }
-    .cta-container::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      width: 150px;
-      height: 150px;
-      background: radial-gradient(circle, var(--accent-cyan-glow) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    @media (max-width: 768px) {
-      .hero h1 {
-        font-size: 2.5rem;
-      }
-      .cta-container {
-        padding: 2rem 1.5rem;
-      }
-    }
-  </style>
 </head>
 <body>
 
   <header>
     <div class="nav-container">
-      <a href="index.html" class="logo">
-        <span>BharBike</span>
+      <a href="index.html" class="logo" id="header-logo">
+        <span class="logo-text">Bha<span class="char-bhar">र</span><span class="brand-bike">Bike</span></span>
       </a>
       <ul class="nav-links">
-        <li><a href="index.html" class="active">Home</a></li>
-        <li><a href="contact.html">Contact Us</a></li>
+        <li><a href="index.html" class="active" id="nav-home">Home</a></li>
+        <li><a href="contact.html" id="nav-contact">Contact Us</a></li>
       </ul>
     </div>
   </header>
 
-  <main class="container" style="max-width: 1200px;">
+  <main>
     
     <!-- Hero Section -->
-    <section class="hero">
-      <h1>Sustainably Smarter<br><span>EV Bike Rentals</span></h1>
-      <p>Rent zero-emission electric bikes directly from your phone. Zero fuel costs, zero emissions, and instant unlocks. Move smarter, ride cleaner.</p>
-      <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn" id="btn-download">Download App APK</a>
+    <section class="container hero-section">
+      <div class="hero-grid">
+        <div class="hero-content">
+          <h1>Sustainably Smarter<br><span class="highlight-orange">EV Bike Rentals</span><br><span class="highlight-teal">For Urban Transit</span></h1>
+          <p>Rent zero-emission electric bikes directly from your phone. Zero fuel costs, instant smart-lock unlocking, and seamless wallet-based payments. Move smarter, ride cleaner, pay less.</p>
+          <div class="hero-cta">
+            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn" id="btn-download-apk">Download App APK</a>
+            <a href="#workflow" class="btn btn-secondary" id="btn-learn-more">See How it Works</a>
+          </div>
+        </div>
+        
+        <!-- Live CSS App Preview Mockup -->
+        <div class="phone-mockup-wrapper">
+          <div class="phone-frame" id="app-preview-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              
+              <!-- Status Bar -->
+              <div class="phone-status-bar">
+                <span>09:41</span>
+                <div class="status-icons">
+                  <span>📶</span>
+                  <span>🔋</span>
+                </div>
+              </div>
+              
+              <!-- Wallet Indicator -->
+              <div class="phone-widget-wallet">
+                <div>
+                  <span>BhaरBike Wallet</span>
+                  <strong>₹450.00</strong>
+                </div>
+                <span class="wallet-badge">Active</span>
+              </div>
+              
+              <!-- Simulated Interactive Map -->
+              <div class="phone-map-view">
+                <div class="map-road road-1"></div>
+                <div class="map-road road-2"></div>
+                <div class="map-road road-3"></div>
+                
+                <!-- Pulse user location dot -->
+                <div class="user-dot-pulse"></div>
+                
+                <!-- Bike pins -->
+                <div class="bike-marker bm-1"></div>
+                <div class="bike-marker bm-2"></div>
+                <div class="bike-marker bm-3"></div>
+                
+                <!-- Safe Hub -->
+                <div class="hub-marker">
+                  <span>Hub</span>
+                </div>
+              </div>
+              
+              <!-- Booking Panel -->
+              <div class="phone-bottom-panel">
+                <div class="bike-info-row">
+                  <div class="bike-details">
+                    <h4>BhaरBike EV-204</h4>
+                    <span>180m away • Wagle Hub</span>
+                  </div>
+                  <div class="battery-gauge">
+                    <span>⚡</span> 92%
+                  </div>
+                </div>
+                
+                <div class="unlock-slider">
+                  <div class="unlock-slider-handle">➔</div>
+                  <span class="unlock-slider-text">Slide to Unlock</span>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">🚲</div>
-        <h3>Smart Unlocks</h3>
-        <p>Locate any available EV bike nearby on the map and unlock it instantly using our secure smart Bluetooth/cellular locks.</p>
+    <!-- 4-Step User Workflow Section -->
+    <section class="workflow-section" id="workflow">
+      <div class="container">
+        <div class="section-header">
+          <h2>Our Ride Workflow</h2>
+          <p>Get riding in four easy steps using our intuitive mobile app.</p>
+        </div>
+        
+        <div class="workflow-grid">
+          <div class="workflow-step" id="step-locate">
+            <div class="step-num">1</div>
+            <h3>Locate</h3>
+            <p>Find available electric vehicles on the live interactive map in the app, parked at any nearby secure Hub station.</p>
+          </div>
+          
+          <div class="workflow-step" id="step-unlock">
+            <div class="step-num">2</div>
+            <h3>Book & Unlock</h3>
+            <p>Recharge your wallet instantly, pick a flexible pass or subscription, and unlock the bike keylessly via Bluetooth or cellular.</p>
+          </div>
+          
+          <div class="workflow-step" id="step-ride">
+            <div class="step-num">3</div>
+            <h3>Ride</h3>
+            <p>Commute with a smart, eco-friendly EV. The app keeps track of your ride duration, distance, and battery health via real-time GPS.</p>
+          </div>
+          
+          <div class="workflow-step" id="step-return">
+            <div class="step-num">4</div>
+            <h3>Return & Lock</h3>
+            <p>End your ride by parking at any designated BhaरBike hub and locking the smart lock directly from your mobile app screen.</p>
+          </div>
+        </div>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">💳</div>
-        <h3>Instant Recharges</h3>
-        <p>Top-up your dynamic wallet using credit cards, UPI, or netbanking. Pay seamlessly only for the distance and time you ride.</p>
+    </section>
+
+    <!-- Core Features Grid -->
+    <section class="features-section" id="features">
+      <div class="container">
+        <div class="section-header">
+          <h2>Key Features</h2>
+          <p>Engineered to deliver a superior, emission-free urban riding experience.</p>
+        </div>
+        
+        <div class="features-grid">
+          <div class="feature-card" id="feature-unlocks">
+            <div class="feature-icon-wrapper">🚲</div>
+            <h3>Smart Keyless Unlocks</h3>
+            <p>Locate any available EV bike nearby on the map and unlock it instantly using our secure smart Bluetooth/cellular locks. No physical keys required.</p>
+          </div>
+          <div class="feature-card" id="feature-wallet">
+            <div class="feature-icon-wrapper">💳</div>
+            <h3>Instant UPI Recharges</h3>
+            <p>Top-up your dynamic wallet using credit cards, UPI, or netbanking. Pay seamlessly only for the distance and time you ride. Fully secure.</p>
+          </div>
+          <div class="feature-card" id="feature-eco">
+            <div class="feature-icon-wrapper">🌱</div>
+            <h3>Eco-Friendly Transit</h3>
+            <p>100% emission-free green transit. Help reduce carbon footprints in urban areas with every single kilometer you pedal or ride. Green power, zero smoke.</p>
+          </div>
+        </div>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">🌱</div>
-        <h3>Eco-Friendly Rides</h3>
-        <p>100% emission-free green transit. Help reduce carbon footprints in urban areas with every single kilometer you pedal or ride.</p>
+    </section>
+
+    <!-- Subscriptions & Plans Section -->
+    <section class="pricing-section" id="pricing">
+      <div class="container">
+        <div class="section-header">
+          <h2>Select Your Rental Plan</h2>
+          <p>Choose a pass that fits your daily commute. Cancel or swap plans at any time.</p>
+        </div>
+        
+        <div class="pricing-grid">
+          
+          <!-- Plan 1 -->
+          <div class="pricing-card" id="plan-daily">
+            <div class="pricing-plan-name">Daily Explorer</div>
+            <div class="pricing-price">₹149<span> / day</span></div>
+            <ul class="pricing-features">
+              <li>2 Hours of total ride time</li>
+              <li>Unlimited hub unlocks</li>
+              <li>Active GPS tracking</li>
+              <li>Ideal for brief city runs</li>
+            </ul>
+            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn btn-secondary">Get Daily Pass</a>
+          </div>
+          
+          <!-- Plan 2 -->
+          <div class="pricing-card popular" id="plan-weekly">
+            <div class="pricing-plan-name">Weekly Commuter</div>
+            <div class="pricing-price">₹799<span> / week</span></div>
+            <ul class="pricing-features">
+              <li>15 Hours of total ride time</li>
+              <li>Unlimited hub unlocks</li>
+              <li>15% off extra minutes</li>
+              <li>Priority vehicle booking</li>
+            </ul>
+            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn">Get Weekly Pass</a>
+          </div>
+          
+          <!-- Plan 3 -->
+          <div class="pricing-card" id="plan-monthly">
+            <div class="pricing-plan-name">Monthly Pro</div>
+            <div class="pricing-price">₹2,999<span> / month</span></div>
+            <ul class="pricing-features">
+              <li>75 Hours of total ride time</li>
+              <li>Unlimited hub unlocks</li>
+              <li>30% off extra minutes</li>
+              <li>Zero security deposit required</li>
+              <li>24/7 priority support</li>
+            </ul>
+            <a href="https://expo.dev/artifacts/eas/pKWoKP8vDKKyqyqxvsFPmX.apk" class="btn btn-secondary">Get Monthly Pass</a>
+          </div>
+          
+        </div>
       </div>
     </section>
 
     <!-- Parent Legal Entity Note -->
-    <section class="cta-container" style="margin-bottom: 6rem;">
-      <h2 style="margin-top: 0; margin-bottom: 1rem;">Corporate Information</h2>
-      <p style="max-width: 800px; margin: 0 auto 2rem auto;">BharBike is a smart vehicle rental product designed, owned, and operated by <strong>Envirolux Biodiesel Private Limited</strong>. All payment transactions, wallet systems, and rental policies are officially managed by the parent legal entity under applicable Indian corporate regulations.</p>
-      <a href="contact.html" class="btn" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-primary);">View Corporate Office Address</a>
+    <section class="container" style="margin-bottom: 6rem;">
+      <div class="corporate-note" id="corporate-card">
+        <h2>Corporate Information</h2>
+        <p>BhaरBike is a smart vehicle rental product designed, owned, and operated by <strong>Envirolux Biodiesel Private Limited</strong>. All payment transactions, wallet systems, and rental policies are officially managed by the parent legal entity under applicable Indian corporate regulations.</p>
+        <a href="contact.html" class="btn" id="btn-corporate-contact">View Corporate Office Address</a>
+      </div>
     </section>
 
   </main>
@@ -141,29 +235,29 @@
   <footer>
     <div class="footer-content">
       <div class="footer-brand">
-        <h3>BharBike</h3>
+        <h3>Bha<span class="char-bhar">र</span><span class="brand-bike">Bike</span></h3>
         <p>Operated by Envirolux Biodiesel Private Limited. Join the sustainable electric revolution in urban transportation today.</p>
       </div>
       <div class="footer-links">
         <h4>Legal & Policies</h4>
         <ul>
-          <li><a href="terms.html">Terms & Conditions</a></li>
-          <li><a href="privacy.html">Privacy Policy</a></li>
-          <li><a href="refund.html">Refund & Cancellation</a></li>
+          <li><a href="terms.html" id="link-terms">Terms & Conditions</a></li>
+          <li><a href="privacy.html" id="link-privacy">Privacy Policy</a></li>
+          <li><a href="refund.html" id="link-refund">Refund & Cancellation</a></li>
         </ul>
       </div>
       <div class="footer-links">
         <h4>Company Support</h4>
         <ul>
-          <li><a href="contact.html">Contact Us</a></li>
-          <li><a href="https://expo.dev/accounts/eres07/projects/BharBike/builds/c064b116-f892-4444-a680-0905ba9726f3" target="_blank">EAS Build Logs</a></li>
+          <li><a href="contact.html" id="link-contact">Contact Us</a></li>
+          <li><a href="https://expo.dev/accounts/eres07/projects/BharBike/builds/c064b116-f892-4444-a680-0905ba9726f3" target="_blank" id="link-builds">EAS Build Logs</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <div>
-        <p>&copy; 2026 Envirolux Biodiesel Private Limited (BharBike). All rights reserved.</p>
-        <p class="legal-notice">CIN: U23201MH2022PTC380424 | Registered at Thane, Maharashtra, India.</p>
+        <p>&copy; 2026 Envirolux Biodiesel Private Limited (BhaरBike). All rights reserved.</p>
+        <p class="legal-notice" id="legal-footer-notice">CIN: U23201MH2022PTC380424 | Registered at Thane, Maharashtra, India.</p>
       </div>
     </div>
   </footer>

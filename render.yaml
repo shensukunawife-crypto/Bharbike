@@ -30,7 +30,7 @@ services:
       - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: RAZORPAY_MODE
-        value: test
+        value: live
       - key: CORS_ORIGINS
         value: https://bharbike.com,https://www.bharbike.com
       - key: ENABLE_DEMO_OTP

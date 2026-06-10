@@ -10,7 +10,7 @@ import supabase from "../utils/supabaseClient.js";
  */
 export const createOrder = async (req, res) => {
   try {
-    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null, is_demo = false } = req.body;
+    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null } = req.body;
     const numericAmount = Number(amount);
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
@@ -19,129 +19,15 @@ export const createOrder = async (req, res) => {
 
     const normalizedAmount = amount_in_paise ? numericAmount / 100 : numericAmount;
 
-    // Check if real Razorpay key is configured
-    let config = null;
-    let useRealRazorpay = false;
-    if (is_demo !== true) {
-      try {
-        config = await getActiveRazorpayConfig();
-        if (config && config.key_id && config.key_secret && config.key_id.startsWith("rzp_")) {
-          useRealRazorpay = true;
-        }
-      } catch (configError) {
-        console.log("[createOrder] Active Razorpay config not found or invalid. Falling back to Demo Mode:", configError.message);
-      }
+    // Retrieve active Razorpay config (must be real keys)
+    const config = await getActiveRazorpayConfig();
+    if (!config || !config.key_id || !config.key_secret || !config.key_id.startsWith("rzp_")) {
+      return res.status(500).json({ success: false, message: "Payment gateway is not configured on this server." });
     }
 
-    if (useRealRazorpay) {
-      console.log(`[createOrder] Real Razorpay Mode Active (${config.mode})`);
+    console.log(`[createOrder] Real Razorpay Mode Active (${config.mode})`);
 
-      // 1. Create order record in app database first (pending)
-      const { data: appOrder, error: appOrderError } = await supabase
-        .from("orders")
-        .insert([
-          {
-            user_id: user_id || null,
-            plan_name: plan_name || null,
-            amount: Math.round(normalizedAmount),
-            status: "pending",
-            order_code: `ORD-RZP-${Date.now()}`,
-          },
-        ])
-        .select("id")
-        .single();
-
-      let appOrderId = appOrder?.id ?? null;
-      if (appOrderError) {
-        console.error("[createOrder] database order insert failed:", appOrderError);
-        // Always fall back to a random UUID — never crash the payment flow
-        // This handles UUID syntax errors, RLS blocks, missing tables, etc.
-        appOrderId = crypto.randomUUID();
-        console.warn("[createOrder] orders insert failed, using generated ID:", appOrderId, "|", appOrderError.message);
-      }
-
-      // 2. Initialize Razorpay Client
-      const razorpay = new Razorpay({
-        key_id: config.key_id,
-        key_secret: config.key_secret,
-      });
-
-      let rzpOrder;
-      let razorpayFailed = false;
-
-      try {
-        // 3. Create real order on Razorpay servers
-        const amountInPaise = Math.round(normalizedAmount * 100);
-        rzpOrder = await razorpay.orders.create({
-          amount: amountInPaise,
-          currency: currency || "INR",
-          receipt: receipt || `receipt_${appOrderId || Date.now()}`,
-        });
-      } catch (rzpError) {
-        console.warn("[createOrder] Razorpay API order creation failed:", rzpError);
-        razorpayFailed = true;
-      }
-
-      if (!razorpayFailed && rzpOrder) {
-        // 4. Save to payments table
-        try {
-          await supabase.from("payments").insert([
-            {
-              order_id: appOrderId,
-              razorpay_order_id: rzpOrder.id,
-              status: "created",
-            },
-          ]);
-        } catch (paymentInsertError) {
-          console.warn("[createOrder] payments insert skipped in real mode:", paymentInsertError?.message);
-        }
-
-        // 5. Return actual order details and key_id to the frontend
-        return res.status(200).json({
-          success: true,
-          id: rzpOrder.id,
-          order_id: rzpOrder.id,
-          key_id: config.key_id,
-          amount: rzpOrder.amount,
-          currency: rzpOrder.currency || "INR",
-          app_order_id: appOrderId,
-          is_demo: false,
-          plan_id: plan_id || plan_name || null,
-        });
-      }
-
-      // If Razorpay failed, log and gracefully fall back to Demo Mode for this order
-      console.warn("[createOrder] Falling back to Demo Mode for order:", appOrderId);
-      const mockRazorpayOrderId = `order_demo_${Date.now()}`;
-      try {
-        await supabase.from("payments").insert([
-          {
-            order_id: appOrderId,
-            razorpay_order_id: mockRazorpayOrderId,
-            status: "created",
-          },
-        ]);
-      } catch (paymentInsertError) {
-        console.warn("[createOrder] payments insert skipped on real-to-demo fallback:", paymentInsertError?.message);
-      }
-
-      return res.status(200).json({
-        success: true,
-        id: mockRazorpayOrderId,
-        amount: Math.round(normalizedAmount * 100),
-        currency: "INR",
-        app_order_id: appOrderId,
-        is_demo: true,
-        plan_id: plan_id || plan_name || null,
-        warning: "Razorpay API unavailable or authentication failed. Fell back to Demo Mode.",
-      });
-    }
-
-    // DEMO MODE FALLBACK: Skip Razorpay and create a mock order
-    console.log("[createOrder] DEMO MODE ACTIVE - Skipping Razorpay");
-    
-    const mockRazorpayOrderId = `order_demo_${Date.now()}`;
-
+    // 1. Create order record in app database first (pending)
     const { data: appOrder, error: appOrderError } = await supabase
       .from("orders")
       .insert([
@@ -150,7 +36,7 @@ export const createOrder = async (req, res) => {
           plan_name: plan_name || null,
           amount: Math.round(normalizedAmount),
           status: "pending",
-          order_code: `ORD-DEMO-${Date.now()}`,
+          order_code: `ORD-RZP-${Date.now()}`,
         },
       ])
       .select("id")
@@ -158,18 +44,31 @@ export const createOrder = async (req, res) => {
 
     let appOrderId = appOrder?.id ?? null;
     if (appOrderError) {
-      console.error("[createOrder] demo order insert failed:", appOrderError);
-      // Always fall back to a random UUID — never crash the payment flow
+      console.error("[createOrder] database order insert failed:", appOrderError);
       appOrderId = crypto.randomUUID();
-      console.warn("[createOrder] demo orders insert failed, using generated ID:", appOrderId, "|", appOrderError.message);
+      console.warn("[createOrder] orders insert failed, using generated ID:", appOrderId, "|", appOrderError.message);
     }
 
-    // Try inserting payment record, but don't fail if table is missing/RLS
+    // 2. Initialize Razorpay Client
+    const razorpay = new Razorpay({
+      key_id: config.key_id,
+      key_secret: config.key_secret,
+    });
+
+    // 3. Create real order on Razorpay servers
+    const amountInPaise = Math.round(normalizedAmount * 100);
+    const rzpOrder = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency: currency || "INR",
+      receipt: receipt || `receipt_${appOrderId || Date.now()}`,
+    });
+
+    // 4. Save to payments table
     try {
       await supabase.from("payments").insert([
         {
           order_id: appOrderId,
-          razorpay_order_id: mockRazorpayOrderId,
+          razorpay_order_id: rzpOrder.id,
           status: "created",
         },
       ]);
@@ -177,18 +76,19 @@ export const createOrder = async (req, res) => {
       console.warn("[createOrder] payments insert skipped:", paymentInsertError?.message);
     }
 
-    // Return mock data that looks like a Razorpay order
+    // 5. Return actual order details and key_id to the frontend
     return res.status(200).json({
       success: true,
-      id: mockRazorpayOrderId,
-      amount: Math.round(normalizedAmount * 100),
-      currency: "INR",
+      id: rzpOrder.id,
+      order_id: rzpOrder.id,
+      key_id: config.key_id,
+      amount: rzpOrder.amount,
+      currency: rzpOrder.currency || "INR",
       app_order_id: appOrderId,
-      is_demo: true,
-      // Pass through plan_id if provided (UUID from subscription_plans)
-      // Fall back to plan_name so verifyPayment can look it up
+      is_demo: false,
       plan_id: plan_id || plan_name || null,
     });
+
   } catch (error) {
     console.error("[createOrder] Order creation error:", error);
     const errorMessage = error?.message || 
@@ -200,41 +100,38 @@ export const createOrder = async (req, res) => {
 };
 
 /**
- * Verifies Payment (Supports Cryptographic Signature Check & Demo Bypass)
+ * Verifies Payment (Supports Cryptographic Signature Check)
  */
 export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, app_order_id, user_id, plan_id, ticket_id, payment_method, amount } = req.body;
     
-    let resolvedPaymentId = `pay_demo_${Date.now()}`;
-    let isDemoMode = true;
+    let resolvedPaymentId = razorpay_payment_id;
 
-    // Cryptographic signature check if a real Razorpay signature is supplied
-    if (razorpay_signature) {
-      console.log("[verifyPayment] Real Razorpay signature received. Verifying...");
-      try {
-        const config = await getActiveRazorpayConfig();
-        if (config && config.key_secret) {
-          const hmac = crypto.createHmac("sha256", config.key_secret);
-          hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
-          const generatedSignature = hmac.digest("hex");
-          
-          if (generatedSignature !== razorpay_signature) {
-            console.error("[verifyPayment] Cryptographic signature mismatch!");
-            return res.status(400).json({ success: false, message: "Payment verification failed: Signature mismatch" });
-          }
-          console.log("[verifyPayment] Cryptographic signature verified successfully!");
-          resolvedPaymentId = razorpay_payment_id;
-          isDemoMode = false;
-        } else {
-          console.warn("[verifyPayment] Real signature received but no active key secret found. Falling back to Demo Mode.");
-        }
-      } catch (err) {
-        console.error("[verifyPayment] Error retrieving key secret for verification:", err.message);
-        return res.status(400).json({ success: false, message: "Verification failed: Could not load Razorpay config" });
-      }
+    if (payment_method === "wallet") {
+      // Wallet payments do not use Razorpay
+      resolvedPaymentId = `wallet_${Date.now()}`;
     } else {
-      console.log("[verifyPayment] DEMO MODE - Auto-verifying payment");
+      // Direct payment via Razorpay gateway — MUST verify signature
+      if (!razorpay_signature || !razorpay_order_id || !razorpay_payment_id) {
+        return res.status(400).json({ success: false, message: "Cryptographic signature and order/payment IDs are required for verification" });
+      }
+
+      console.log("[verifyPayment] Real Razorpay signature received. Verifying...");
+      const config = await getActiveRazorpayConfig();
+      if (!config || !config.key_secret) {
+        return res.status(500).json({ success: false, message: "Payment configuration not found on this server." });
+      }
+
+      const hmac = crypto.createHmac("sha256", config.key_secret);
+      hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+      const generatedSignature = hmac.digest("hex");
+      
+      if (generatedSignature !== razorpay_signature) {
+        console.error("[verifyPayment] Cryptographic signature mismatch!");
+        return res.status(400).json({ success: false, message: "Payment verification failed: Signature mismatch" });
+      }
+      console.log("[verifyPayment] Cryptographic signature verified successfully!");
     }
 
     // Check if this is a support ticket repair cost payment
@@ -283,7 +180,7 @@ export const verifyPayment = async (req, res) => {
         }
       }
 
-      return res.json({ success: true, is_demo: isDemoMode, wallet: walletSummary });
+      return res.json({ success: true, is_demo: false, wallet: walletSummary });
     }
 
     // Wrap all DB operations in try/catch — don't fail on RLS or missing tables
@@ -330,7 +227,6 @@ export const verifyPayment = async (req, res) => {
       // If paying via wallet, we MUST have enough balance
       if (payment_method === "wallet" && subAmount > 0) {
         console.log(`[verifyPayment] Wallet payment detected. Deducting ₹${subAmount}`);
-        // Remove try-catch so AppError (Insufficient balance) propagates to the user
         await walletService.deductMoney(user_id, subAmount, `Subscription: ${planDisplayName}`);
         console.log("[verifyPayment] wallet deducted successfully");
       }
@@ -340,7 +236,7 @@ export const verifyPayment = async (req, res) => {
         console.log("[verifyPayment] subscription created via service");
       } catch (e) {
         console.warn("[verifyPayment] subscription service failed, trying direct insert:", e?.message);
-        // Fallback: insert subscription directly — look up plan UUID first
+        // Fallback: insert subscription directly
         try {
           let planUuid = plan_id;
           let durationDays = 30;
@@ -357,7 +253,6 @@ export const verifyPayment = async (req, res) => {
             }
           } catch (planErr) {
             console.warn("[verifyPayment] plan lookup skipped:", planErr?.message);
-            // BharBike only has a 7-day weekly plan — default to 7, not 30
             durationDays = plan_id?.toLowerCase().includes("month") ? 30 :
                            plan_id?.toLowerCase().includes("week") ? 7 :
                            plan_id?.toLowerCase().includes("year") ? 365 : 7;
@@ -412,7 +307,6 @@ export const verifyPayment = async (req, res) => {
         } catch (rpcErr) {
           console.warn("[verifyPayment] wallet RPC failed, trying direct insert:", rpcErr?.message);
           try {
-            // Upsert wallet_balances row safely (use maybeSingle to avoid 0-row query error on new accounts)
             const { data: existing } = await supabase.from("wallet_balances").select("balance").eq("user_id", user_id).maybeSingle();
             const newBalance = (existing?.balance || 0) + addAmount;
             const { error: upsertErr } = await supabase.from("wallet_balances").upsert(
@@ -420,7 +314,6 @@ export const verifyPayment = async (req, res) => {
               { onConflict: "user_id" }
             );
             if (upsertErr) console.warn("[verifyPayment] wallet upsert failed:", upsertErr.message);
-            // Insert transaction record
             await supabase.from("wallet_transactions").insert({
               user_id, amount: addAmount, type: "credit", title: "Wallet Recharge",
               payment_id: resolvedPaymentId, order_id: razorpay_order_id, status: "completed"
@@ -441,7 +334,7 @@ export const verifyPayment = async (req, res) => {
       }
     }
 
-    return res.json({ success: true, is_demo: isDemoMode, wallet: walletSummary });
+    return res.json({ success: true, is_demo: false, wallet: walletSummary });
   } catch (error) {
     console.error("[verifyPayment] Error:", error);
     const errorMessage = error?.message || 

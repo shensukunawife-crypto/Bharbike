@@ -72,6 +72,9 @@
         const planId = "<%= plan_id %>";
         const amountRaw = "<%= amount_raw %>";
 
+        const prefillEmail = "<%= prefill_email %>";
+        const prefillContact = "<%= prefill_contact %>";
+
         const updateStatus = (title, sub) => {
           document.getElementById("status-title").textContent = title;
           document.getElementById("status-sub").textContent = sub;
@@ -139,6 +142,15 @@
             },
           },
         };
+
+        if (prefillEmail && prefillEmail !== "undefined" && prefillEmail !== "null") {
+          options.prefill = options.prefill || {};
+          options.prefill.email = prefillEmail;
+        }
+        if (prefillContact && prefillContact !== "undefined" && prefillContact !== "null") {
+          options.prefill = options.prefill || {};
+          options.prefill.contact = prefillContact;
+        }
 
         const rzp = new Razorpay(options);
         rzp.on("payment.failed", function (response) {

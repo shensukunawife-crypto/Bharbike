@@ -123,21 +123,14 @@ api.use("/smartlock", smartlockRoutes);
 api.use("/support", supportRoutes);
 api.use("/addresses", addressRoutes);
 api.use("/notifications", notificationRoutes);
-api.use("/payment", paymentMethodRoutes);
-api.use("/skipped-days", skippedDaysRoutes);
-api.use("/subscription", subscriptionRoutes);
-api.use("/", trackingRoutes);
-api.use("/", bookingRoutes);
-api.post("/promo/apply", authMiddleware, walletController.applyPromo);
-api.get("/bookings", authMiddleware, rentalController.bookings);
-
-// Payment Routes
-api.post("/payment/create-order", authMiddleware, asyncHandler(paymentController.createOrder));
-api.post("/payment/verify", authMiddleware, asyncHandler(paymentController.verifyPayment));
-api.post("/create-order", asyncHandler(paymentController.createOrder));
-api.post("/verify-payment", asyncHandler(paymentController.verifyPayment));
+// ⚠️ PUBLIC: Checkout WebView page MUST be registered BEFORE paymentMethodRoutes
+// because paymentMethodRoutes applies authMiddleware to ALL /payment/* paths
 api.get("/payment/checkout", (req, res) => {
   const { key_id, order_id, amount, currency = "INR", name = "BHAR BIKE", description = "Rental Payment", app_order_id, user_id, plan_id, amount_raw } = req.query;
+  // Basic validation — never render raw query params without sanitization
+  if (!key_id || !order_id || !amount) {
+    return res.status(400).send("<h3>Invalid checkout request</h3>");
+  }
   res.render("checkout", {
     key_id,
     order_id,
@@ -151,6 +144,21 @@ api.get("/payment/checkout", (req, res) => {
     amount_raw
   });
 });
+
+api.use("/payment", paymentMethodRoutes);
+api.use("/skipped-days", skippedDaysRoutes);
+api.use("/subscription", subscriptionRoutes);
+api.use("/", trackingRoutes);
+api.use("/", bookingRoutes);
+api.post("/promo/apply", authMiddleware, walletController.applyPromo);
+api.get("/bookings", authMiddleware, rentalController.bookings);
+
+// Payment Routes
+api.post("/payment/create-order", authMiddleware, asyncHandler(paymentController.createOrder));
+api.post("/payment/verify", authMiddleware, asyncHandler(paymentController.verifyPayment));
+api.post("/create-order", asyncHandler(paymentController.createOrder));
+api.post("/verify-payment", asyncHandler(paymentController.verifyPayment));
+// NOTE: /payment/checkout is already registered above (before paymentMethodRoutes)
 
 /** Workflow story page — unlock demo tied to latest verified payment + order status */
 api.post(

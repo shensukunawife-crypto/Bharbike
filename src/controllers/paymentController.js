@@ -60,7 +60,7 @@ export const createOrder = async (req, res) => {
     const rzpOrder = await razorpay.orders.create({
       amount: amountInPaise,
       currency: currency || "INR",
-      receipt: receipt || `receipt_${appOrderId || Date.now()}`,
+      receipt: receipt || String(appOrderId || Date.now()),
     });
 
     // 4. Save to payments table

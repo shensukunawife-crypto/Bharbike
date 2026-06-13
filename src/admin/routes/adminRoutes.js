@@ -93,7 +93,6 @@ router.post("/ads/:id/delete", requirePermission("manage_support"), adminControl
 // System Settings
 router.get("/settings", requirePermission("manage_settings"), adminController.settingsPage);
 router.post("/settings/save", requirePermission("manage_settings"), adminController.saveSettings);
-router.post("/settings/reset-database", requirePermission("manage_settings"), adminController.resetDatabase);
 router.get("/sql-editor", requirePermission("manage_settings"), adminController.sqlEditorPage);
 router.post("/sql-editor/run", requirePermission("manage_settings"), adminController.runSqlQuery);
 

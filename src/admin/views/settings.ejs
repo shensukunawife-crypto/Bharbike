@@ -193,17 +193,6 @@
       <button type="submit" class="btn btn-gold glow" style="width: 100%; justify-content: center; margin-top: 8px;">💾 Save System Settings</button>
     </form>
   </div>
-
-  <!-- Production Reset (Danger Zone) -->
-  <div class="settings-card" style="border: 1px solid rgba(220, 38, 38, 0.4); background: rgba(220, 38, 38, 0.03);">
-    <h3 style="color: #ef4444; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">⚠️ Danger Zone: Production Reset</h3>
-    <p style="margin-bottom: 16px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5;">
-      Wipe all test customer accounts, transaction histories, wallet balances, bookings, rentals, and support tickets to start live production fresh. This does not delete bikes, hubs, or admin accounts.
-    </p>
-    <form class="admin-form ajax-form" data-url="/admin/settings/reset-database" method="POST" onsubmit="return confirm('🚨 CRITICAL WARNING:\n\nThis will permanently delete all test user accounts, KYC documents, rentals, orders, support tickets, and wallets.\n\nThis action CANNOT BE UNDONE.\n\nAre you sure you want to perform a production reset?')">
-      <button type="submit" class="btn btn-danger glow" style="width: 100%; justify-content: center; background: #dc2626; color: white;">🧹 Wipe Database & Start Fresh</button>
-    </form>
-  </div>
 </div>
 
 <!-- Promo Codes Section -->

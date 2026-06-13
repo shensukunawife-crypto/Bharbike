@@ -2952,10 +2952,9 @@ export async function resetDatabase(req, res) {
       DECLARE
         t_name TEXT;
         tables_to_truncate TEXT[] := ARRAY[
-          'rider_skipped_days',
-          'payments',
           'ticket_messages',
-          'support_tickets',
+          'payments',
+          'rider_skipped_days',
           'kyc_documents',
           'delivery_partners',
           'bookings',
@@ -2965,14 +2964,12 @@ export async function resetDatabase(req, res) {
           'wallet_balances',
           'notifications',
           'admin_notifications',
+          'support_tickets',
           'users',
           'profiles'
         ];
       BEGIN
-        -- 1. Disable triggers and constraints
-        SET session_replication_role = 'replica';
-
-        -- 2. Loop through tables and truncate if they exist
+        -- Loop through tables and truncate in dependency order (children first)
         FOREACH t_name IN ARRAY tables_to_truncate LOOP
           IF EXISTS (
             SELECT FROM information_schema.tables 
@@ -2983,11 +2980,8 @@ export async function resetDatabase(req, res) {
           END IF;
         END LOOP;
 
-        -- 3. Delete all users in auth.users (Supabase Authentication mapping)
+        -- Delete all users in auth.users (Supabase Authentication mapping)
         DELETE FROM auth.users;
-
-        -- 4. Restore triggers
-        SET session_replication_role = 'origin';
       END;
       $$;
     `;

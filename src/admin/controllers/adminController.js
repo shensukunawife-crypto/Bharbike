@@ -2404,12 +2404,13 @@ export async function editUser(req, res) {
   try {
     const { userId } = req.params;
     const full_name = req.body.full_name ?? req.body.name;
-    const { phone, email, location } = req.body;
+    const { phone, email, location, is_prepaid } = req.body;
     const updates = {
       ...(full_name !== undefined && { full_name }),
       ...(phone !== undefined && { phone }),
       ...(email !== undefined && { email }),
       ...(location !== undefined && { location }),
+      ...(is_prepaid !== undefined && { is_prepaid: is_prepaid === "true" || is_prepaid === true }),
     };
     await Promise.all([
       supabase.from("users").update(updates).eq("id", userId),

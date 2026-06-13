@@ -126,7 +126,7 @@ api.use("/notifications", notificationRoutes);
 // ⚠️ PUBLIC: Checkout WebView page MUST be registered BEFORE paymentMethodRoutes
 // because paymentMethodRoutes applies authMiddleware to ALL /payment/* paths
 api.get("/payment/checkout", async (req, res) => {
-  const { key_id, order_id, amount, currency = "INR", name = "BHAR BIKE", description = "Rental Payment", app_order_id, user_id, plan_id, amount_raw } = req.query;
+  const { key_id, order_id, amount, currency = "INR", name = "BHAR BIKE", description = "Rental Payment", app_order_id, user_id, plan_id, amount_raw, ticket_id } = req.query;
   // Basic validation — never render raw query params without sanitization
   if (!key_id || !order_id || !amount) {
     return res.status(400).send("<h3>Invalid checkout request</h3>");
@@ -166,6 +166,7 @@ api.get("/payment/checkout", async (req, res) => {
     user_id,
     plan_id: plan_id || "",
     amount_raw,
+    ticket_id: ticket_id || "",
     prefill_email: prefillEmail,
     prefill_contact: prefillContact
   });

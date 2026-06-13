@@ -142,6 +142,8 @@ document.querySelectorAll(".open-edit-user").forEach((btn) => {
     if (emailInput) emailInput.value = btn.dataset.email || "";
     const locationInput = document.getElementById("edit-user-location");
     if (locationInput) locationInput.value = btn.dataset.location || "";
+    const prepaidCb = document.getElementById("edit-user-is-prepaid");
+    if (prepaidCb) prepaidCb.checked = btn.dataset.isPrepaid === "true";
     form.dataset.url = `/admin/users/${btn.dataset.id}/edit`;
     modal.classList.add("show");
   });

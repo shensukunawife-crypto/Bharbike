@@ -72,6 +72,7 @@
                 data-full-name="<%= user.full_name || '' %>"
                 data-phone="<%= user.phone || '' %>"
                 data-email="<%= user.email || '' %>"
+                data-is-prepaid="<%= user.is_prepaid ? 'true' : 'false' %>"
                 data-location="<%= user.location || '' %>">Edit</button>
               <button class="btn btn-sm <%= user.isBlocked ? 'btn-primary' : 'btn-danger' %> admin-action"
                 data-url="/admin/users/<%= user.id %>/block" data-method="POST">
@@ -122,6 +123,10 @@
         <div class="form-group"><label>Phone</label><input name="phone" id="edit-user-phone" placeholder="Phone" required /></div>
         <div class="form-group"><label>Email</label><input name="email" id="edit-user-email" placeholder="Email" /></div>
         <div class="form-group"><label>Location</label><input name="location" id="edit-user-location" placeholder="Location" /></div>
+        <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:10px;margin-bottom:10px;">
+          <input type="checkbox" name="is_prepaid" id="edit-user-is-prepaid" value="true" style="width:20px;height:20px;margin:0;" />
+          <label for="edit-user-is-prepaid" style="margin:0;font-weight:600;">Pre-paid (Offline Paid)</label>
+        </div>
         <button type="submit" class="btn btn-primary">Update User</button>
       </form>
     </div>

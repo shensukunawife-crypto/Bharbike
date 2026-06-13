@@ -71,6 +71,7 @@
         const userId = "<%= user_id %>";
         const planId = "<%= plan_id %>";
         const amountRaw = "<%= amount_raw %>";
+        const ticketId = "<%= typeof ticket_id !== 'undefined' ? ticket_id : '' %>";
 
         const prefillEmail = "<%= prefill_email %>";
         const prefillContact = "<%= prefill_contact %>";
@@ -102,6 +103,7 @@
                   app_order_id: appOrderId,
                   user_id: userId,
                   plan_id: planId || null,
+                  ticket_id: ticketId || null,
                   amount: amountRaw,
                 }),
               });

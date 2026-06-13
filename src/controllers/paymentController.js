@@ -19,6 +19,35 @@ export const createOrder = async (req, res) => {
 
     const normalizedAmount = amount_in_paise ? numericAmount / 100 : numericAmount;
 
+    // Check if the user is prepaid (offline paid)
+    if (user_id) {
+      try {
+        const { data: userProfile } = await supabase
+          .from("profiles")
+          .select("is_prepaid")
+          .eq("id", user_id)
+          .maybeSingle();
+
+        if (userProfile && userProfile.is_prepaid) {
+          console.log(`[createOrder] User ${user_id} is marked as prepaid. Bypassing Razorpay order creation.`);
+          const mockOrderId = `bypass_order_${Date.now()}`;
+          return res.status(200).json({
+            success: true,
+            id: mockOrderId,
+            order_id: mockOrderId,
+            key_id: "bypass",
+            amount: Math.round(normalizedAmount * 100),
+            currency: currency || "INR",
+            app_order_id: mockOrderId,
+            is_prepaid: true,
+            plan_id: plan_id || plan_name || null,
+          });
+        }
+      } catch (err) {
+        console.warn("[createOrder] prepaid status check failed:", err.message);
+      }
+    }
+
     // Retrieve active Razorpay config (must be real keys)
     const config = await getActiveRazorpayConfig();
     if (!config || !config.key_id || !config.key_secret || !config.key_id.startsWith("rzp_")) {
@@ -108,7 +137,32 @@ export const verifyPayment = async (req, res) => {
     
     let resolvedPaymentId = razorpay_payment_id;
 
-    if (payment_method === "wallet") {
+    if (razorpay_signature === "bypass_signature" && razorpay_payment_id === "bypass_payment_id") {
+      console.log(`[verifyPayment] Bypass request received for user ${user_id}`);
+      // Security Check: Verify in database that the user is actually marked as prepaid
+      if (!user_id) {
+        return res.status(400).json({ success: false, message: "User ID is required for verification" });
+      }
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("is_prepaid")
+        .eq("id", user_id)
+        .maybeSingle();
+
+      if (!userProfile || !userProfile.is_prepaid) {
+        console.error("[verifyPayment] Security Check Failed: User is not marked as prepaid in DB");
+        return res.status(403).json({ success: false, message: "Unauthorized payment bypass request." });
+      }
+
+      resolvedPaymentId = `bypass_${Date.now()}`;
+
+      // Reset the prepaid flag so they can't reuse it
+      try {
+        await supabase.from("profiles").update({ is_prepaid: false }).eq("id", user_id);
+      } catch (err) {
+        console.warn("[verifyPayment] Failed to reset is_prepaid flag:", err.message);
+      }
+    } else if (payment_method === "wallet") {
       // Wallet payments do not use Razorpay
       resolvedPaymentId = `wallet_${Date.now()}`;
     } else {

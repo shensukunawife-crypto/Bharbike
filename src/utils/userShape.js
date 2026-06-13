@@ -14,5 +14,6 @@ export function shapePublicUser(row) {
     emergency_contact_name: row.emergency_contact_name ?? null,
     emergency_contact_phone: row.emergency_contact_phone ?? null,
     created_at: row.created_at ?? null,
+    is_prepaid: row.is_prepaid === true || row.is_prepaid === "true",
   };
 }

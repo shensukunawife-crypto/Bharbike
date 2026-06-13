@@ -2948,41 +2948,67 @@ export async function saveSettings(req, res) {
 export async function resetDatabase(req, res) {
   try {
     const wipeQuery = `
-      -- 1. Temporarily disable database triggers/constraints
-      SET session_replication_role = 'replica';
+      DO $$
+      DECLARE
+        t_name TEXT;
+        tables_to_truncate TEXT[] := ARRAY[
+          'rider_skipped_days',
+          'payments',
+          'ticket_messages',
+          'support_tickets',
+          'kyc_documents',
+          'delivery_partners',
+          'bookings',
+          'rentals',
+          'orders',
+          'wallet_transactions',
+          'wallet_balances',
+          'notifications',
+          'admin_notifications',
+          'users',
+          'profiles'
+        ];
+      BEGIN
+        -- 1. Disable triggers and constraints
+        SET session_replication_role = 'replica';
 
-      -- 2. Wipe customer transactions, notifications, activities, and documents
-      TRUNCATE TABLE public.rider_skipped_days RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.payments RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.ticket_messages RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.support_tickets RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.kyc_documents RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.delivery_partners RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.bookings RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.rentals RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.orders RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.wallet_transactions RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.wallet_balances RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.notifications RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.admin_notifications RESTART IDENTITY CASCADE;
+        -- 2. Loop through tables and truncate if they exist
+        FOREACH t_name IN ARRAY tables_to_truncate LOOP
+          IF EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+              AND table_name = t_name
+          ) THEN
+            EXECUTE format('TRUNCATE TABLE public.%I RESTART IDENTITY CASCADE', t_name);
+          END IF;
+        END LOOP;
 
-      -- 3. Wipe regular customer profiles
-      TRUNCATE TABLE public.users RESTART IDENTITY CASCADE;
-      TRUNCATE TABLE public.profiles RESTART IDENTITY CASCADE;
+        -- 3. Delete all users in auth.users (Supabase Authentication mapping)
+        DELETE FROM auth.users;
 
-      -- 4. Delete all users in auth.users (Supabase Authentication mapping)
-      DELETE FROM auth.users;
-
-      -- 5. Re-enable standard trigger behavior
-      SET session_replication_role = 'origin';
+        -- 4. Restore triggers
+        SET session_replication_role = 'origin';
+      END;
+      $$;
     `;
 
     console.log("⚠️ [adminController.resetDatabase] Triggering production reset...");
     const { data, error } = await supabase.rpc("exec_sql", { sql_query: wipeQuery });
 
     if (error) {
-      console.error("❌ [adminController.resetDatabase] failed:", error.message);
+      console.error("❌ [adminController.resetDatabase] RPC failed:", error.message);
       return res.status(500).json({ success: false, message: `Wipe failed: ${error.message}` });
+    }
+
+    // Check for SQL errors swallowed by exec_sql
+    if (data && typeof data === "object" && !Array.isArray(data) && data.error) {
+      console.error("❌ [adminController.resetDatabase] SQL failed:", data.error);
+      return res.status(500).json({ success: false, message: `Wipe failed: ${data.error}` });
+    }
+
+    if (Array.isArray(data) && data.length === 1 && data[0] && data[0].error) {
+      console.error("❌ [adminController.resetDatabase] SQL failed:", data[0].error);
+      return res.status(500).json({ success: false, message: `Wipe failed: ${data[0].error}` });
     }
 
     console.log("✅ [adminController.resetDatabase] Production reset completed successfully!");

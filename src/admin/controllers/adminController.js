@@ -2945,6 +2945,54 @@ export async function saveSettings(req, res) {
   return res.json({ success: true, message: "Settings saved", settings: dashboardSettings });
 }
 
+export async function resetDatabase(req, res) {
+  try {
+    const wipeQuery = `
+      -- 1. Temporarily disable database triggers/constraints
+      SET session_replication_role = 'replica';
+
+      -- 2. Wipe customer transactions, notifications, activities, and documents
+      TRUNCATE TABLE public.rider_skipped_days RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.payments RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.ticket_messages RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.support_tickets RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.kyc_documents RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.delivery_partners RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.bookings RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.rentals RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.orders RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.wallet_transactions RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.wallet_balances RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.notifications RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.admin_notifications RESTART IDENTITY CASCADE;
+
+      -- 3. Wipe regular customer profiles
+      TRUNCATE TABLE public.users RESTART IDENTITY CASCADE;
+      TRUNCATE TABLE public.profiles RESTART IDENTITY CASCADE;
+
+      -- 4. Delete all users in auth.users (Supabase Authentication mapping)
+      DELETE FROM auth.users;
+
+      -- 5. Re-enable standard trigger behavior
+      SET session_replication_role = 'origin';
+    `;
+
+    console.log("⚠️ [adminController.resetDatabase] Triggering production reset...");
+    const { data, error } = await supabase.rpc("exec_sql", { sql_query: wipeQuery });
+
+    if (error) {
+      console.error("❌ [adminController.resetDatabase] failed:", error.message);
+      return res.status(500).json({ success: false, message: `Wipe failed: ${error.message}` });
+    }
+
+    console.log("✅ [adminController.resetDatabase] Production reset completed successfully!");
+    return res.json({ success: true, message: "Production reset completed successfully! All test users and customer data have been wiped." });
+  } catch (error) {
+    console.error("❌ [adminController.resetDatabase] internal error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Internal server error performing reset" });
+  }
+}
+
 export async function adminsPage(req, res) {
   try {
     const { data: admins, error } = await supabase.from("admin_users").select("*").order("created_at", { ascending: false });

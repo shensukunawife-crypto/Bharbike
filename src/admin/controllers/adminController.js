@@ -33,6 +33,11 @@ const dashboardSettings = {
   pushEnabled: true,
   smsEnabled: true,
   emailEnabled: true,
+  socialFacebook: "https://facebook.com",
+  socialInstagram: "https://instagram.com",
+  socialTwitter: "https://twitter.com",
+  socialLinkedin: "https://linkedin.com",
+  socialYoutube: "https://youtube.com",
   brandColor: "#D4AF37",
   theme: "dark",
   maintenanceMode: false,
@@ -3515,6 +3520,7 @@ export async function adsPage(req, res) {
       active: "ads",
       bodyView: "ads",
       ads: data || [],
+      settings: dashboardSettings,
     });
   } catch (error) {
     console.error("[adminController.adsPage] unexpected:", error);
@@ -3523,6 +3529,7 @@ export async function adsPage(req, res) {
       active: "ads",
       bodyView: "ads",
       ads: [],
+      settings: dashboardSettings,
     });
   }
 }
@@ -3653,6 +3660,32 @@ export async function hubsPage(req, res) {
     return res.status(500).send("Unable to load hubs management page");
   }
 }
+
+export async function saveSocials(req, res) {
+  try {
+    await ensureSettingsInitialized();
+    const { facebook, instagram, twitter, linkedin, youtube } = req.body || {};
+
+    dashboardSettings.socialFacebook = (facebook || "").trim();
+    dashboardSettings.socialInstagram = (instagram || "").trim();
+    dashboardSettings.socialTwitter = (twitter || "").trim();
+    dashboardSettings.socialLinkedin = (linkedin || "").trim();
+    dashboardSettings.socialYoutube = (youtube || "").trim();
+
+    const { error: saveErr } = await supabase
+      .from("system_settings")
+      .update({ settings: dashboardSettings, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+
+    if (saveErr) throw saveErr;
+
+    return res.json({ success: true, message: "Social links updated successfully", settings: dashboardSettings });
+  } catch (error) {
+    console.error("[adminController.saveSocials] failed:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to save social links" });
+  }
+}
+
 
 
 

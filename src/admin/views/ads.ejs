@@ -318,6 +318,36 @@
         <div class="label">Inactive Drafts</div>
         <div class="value" id="stat-inactive"><%= _inactiveCount %></div>
       </div>
+
+      <!-- Social Links Editor Card -->
+      <section class="ads-card" style="margin-top: 0.5rem;" aria-labelledby="socials-heading">
+        <h2 id="socials-heading" class="ads-card-title" style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">🔗 Website Socials</h2>
+        <form id="socials-form" class="ads-form-stack" autocomplete="off">
+          <div>
+            <label class="ads-label" for="social-fb">Facebook</label>
+            <input id="social-fb" name="facebook" class="ads-input" type="url" placeholder="https://facebook.com/..." value="<%= settings.socialFacebook || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label class="ads-label" for="social-ig">Instagram</label>
+            <input id="social-ig" name="instagram" class="ads-input" type="url" placeholder="https://instagram.com/..." value="<%= settings.socialInstagram || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label class="ads-label" for="social-tw">Twitter / X</label>
+            <input id="social-tw" name="twitter" class="ads-input" type="url" placeholder="https://twitter.com/..." value="<%= settings.socialTwitter || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label class="ads-label" for="social-li">LinkedIn</label>
+            <input id="social-li" name="linkedin" class="ads-input" type="url" placeholder="https://linkedin.com/..." value="<%= settings.socialLinkedin || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label class="ads-label" for="social-yt">YouTube</label>
+            <input id="social-yt" name="youtube" class="ads-input" type="url" placeholder="https://youtube.com/..." value="<%= settings.socialYoutube || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <button type="submit" class="ads-btn" id="socials-submit" style="padding: 0.65rem 1rem; font-size: 0.85rem; margin-top: 0.25rem;">
+            Save Social Links
+          </button>
+        </form>
+      </section>
     </aside>
   </div>
 
@@ -521,5 +551,39 @@
         alert("Failed to delete campaign: " + err.message);
       }
     };
+
+    var socialsForm = document.getElementById("socials-form");
+    if (socialsForm) {
+      socialsForm.addEventListener("submit", async function (ev) {
+        ev.preventDefault();
+        var facebook = document.getElementById("social-fb").value.trim();
+        var instagram = document.getElementById("social-ig").value.trim();
+        var twitter = document.getElementById("social-tw").value.trim();
+        var linkedin = document.getElementById("social-li").value.trim();
+        var youtube = document.getElementById("social-yt").value.trim();
+
+        try {
+          var res = await fetch("/admin/ads/save-socials", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ facebook, instagram, twitter, linkedin, youtube }),
+          });
+          var data = await res.json();
+          if (!res.ok) {
+            alert(data.message || "Failed to update social links");
+            return;
+          }
+
+          if (typeof showToast === "function") {
+            showToast("Social links updated successfully! 🔗");
+          } else {
+            alert("Social links updated successfully! 🔗");
+          }
+        } catch (err) {
+          console.error("SOCIAL SAVE ERROR:", err);
+          alert("Save Failed ❌");
+        }
+      });
+    }
   })();
 </script>

@@ -2207,4 +2207,35 @@ api.get("/admin/health", async (req, res) => {
   }
 });
 
+api.get("/social-links", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("settings")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (error || !data || !data.settings) {
+      return res.json({
+        facebook: "https://facebook.com",
+        instagram: "https://instagram.com",
+        twitter: "https://twitter.com",
+        linkedin: "https://linkedin.com",
+        youtube: "https://youtube.com"
+      });
+    }
+
+    const s = data.settings;
+    return res.json({
+      facebook: s.socialFacebook || "https://facebook.com",
+      instagram: s.socialInstagram || "https://instagram.com",
+      twitter: s.socialTwitter || "https://twitter.com",
+      linkedin: s.socialLinkedin || "https://linkedin.com",
+      youtube: s.socialYoutube || "https://youtube.com"
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Failed to fetch social links" });
+  }
+});
+
 export default api;

@@ -87,6 +87,7 @@ router.post("/support/ticket/:ticketId/messages", requirePermission("manage_supp
 // Ads & Banners Management
 router.get("/ads", requirePermission("manage_support"), adminController.adsPage);
 router.post("/ads/add", requirePermission("manage_support"), adminController.addAd);
+router.post("/ads/save-socials", requirePermission("manage_support"), adminController.saveSocials);
 router.post("/ads/:id/toggle", requirePermission("manage_support"), adminController.toggleAd);
 router.post("/ads/:id/delete", requirePermission("manage_support"), adminController.deleteAd);
 

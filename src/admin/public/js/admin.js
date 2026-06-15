@@ -144,6 +144,12 @@ document.querySelectorAll(".open-edit-user").forEach((btn) => {
     if (locationInput) locationInput.value = btn.dataset.location || "";
     const prepaidCb = document.getElementById("edit-user-is-prepaid");
     if (prepaidCb) prepaidCb.checked = btn.dataset.isPrepaid === "true";
+    const subStartInput = document.getElementById("edit-user-sub-start");
+    if (subStartInput) subStartInput.value = btn.dataset.subStart || "";
+    const subEndInput = document.getElementById("edit-user-sub-end");
+    if (subEndInput) subEndInput.value = btn.dataset.subEnd || "";
+    const subPlanSelect = document.getElementById("edit-user-sub-plan");
+    if (subPlanSelect) subPlanSelect.value = btn.dataset.subPlan || "none";
     form.dataset.url = `/admin/users/${btn.dataset.id}/edit`;
     modal.classList.add("show");
   });

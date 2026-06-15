@@ -9,6 +9,7 @@ import * as paymentConfigService from "../../services/paymentConfigService.js";
 import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../config/branding.js";
 import XLSX from "xlsx";
 import { createUserNotification } from "../../services/notificationService.js";
+import * as walletService from "../../services/walletService.js";
 
 
 const dashboardSettings = {
@@ -758,13 +759,17 @@ export async function operationsDashboard(req, res) {
 
 export async function users(req, res) {
   try {
-    const [{ data: usersData, error: usersError }, { data: ordersData, error: ordersError }] =
-      await Promise.all([
-        supabase.from("users").select("*"),
-        supabase.from("orders").select("*"),
-      ]);
-    if (usersError || ordersError) {
-      console.error("[admin.users] fetch failed", usersError || ordersError);
+    const [
+      { data: usersData, error: usersError },
+      { data: ordersData, error: ordersError },
+      { data: subsData, error: subsError }
+    ] = await Promise.all([
+      supabase.from("users").select("*"),
+      supabase.from("orders").select("*"),
+      supabase.from("user_subscriptions").select("*")
+    ]);
+    if (usersError || ordersError || subsError) {
+      console.error("[admin.users] fetch failed", usersError || ordersError || subsError);
     }
 
     const search = (req.query.search || "").trim().toLowerCase();
@@ -800,6 +805,15 @@ export async function users(req, res) {
               new Date(b.createdAt || b.created_at || now).getTime() -
               new Date(a.createdAt || a.created_at || now).getTime()
           )[0]?.createdAt;
+        const userSub = (subsData || []).find(s => String(s.user_id).toLowerCase() === String(base.id).toLowerCase());
+        const formatDateTimeLocal = (dateStr) => {
+          if (!dateStr) return "";
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return "";
+          const offset = d.getTimezoneOffset();
+          const adjusted = new Date(d.getTime() - (offset * 60 * 1000));
+          return adjusted.toISOString().slice(0, 16);
+        };
         return {
           ...base,
           email:
@@ -813,6 +827,13 @@ export async function users(req, res) {
           lastOrderAt: lastOrderAt || "-",
           lastLogin: row.last_login || row.lastLogin || joinedDate,
           lastActive: row.is_online ? "Online now" : "Recently",
+          subscription: userSub ? {
+            id: userSub.id,
+            plan_id: userSub.plan_id,
+            status: userSub.status,
+            start_date: formatDateTimeLocal(userSub.start_date),
+            end_date: formatDateTimeLocal(userSub.end_date)
+          } : null
         };
       })
       .filter((user) => {
@@ -2404,7 +2425,7 @@ export async function editUser(req, res) {
   try {
     const { userId } = req.params;
     const full_name = req.body.full_name ?? req.body.name;
-    const { phone, email, location, is_prepaid } = req.body;
+    const { phone, email, location, is_prepaid, sub_plan, sub_start, sub_end, wallet_credit_amount, wallet_credit_desc } = req.body;
     const updates = {
       ...(full_name !== undefined && { full_name }),
       ...(phone !== undefined && { phone }),
@@ -2412,11 +2433,56 @@ export async function editUser(req, res) {
       ...(location !== undefined && { location }),
       ...(is_prepaid !== undefined && { is_prepaid: is_prepaid === "true" || is_prepaid === true }),
     };
+    
+    // 1. Update basic profile info
     await Promise.all([
       supabase.from("users").update(updates).eq("id", userId),
       supabase.from("profiles").update(updates).eq("id", userId),
     ]);
-    return res.json({ success: true, message: "User updated" });
+
+    // 2. Handle Subscription Override updates
+    if (sub_plan && sub_plan !== "none") {
+      const startIso = sub_start ? new Date(sub_start).toISOString() : new Date().toISOString();
+      const endIso = sub_end ? new Date(sub_end).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      const subUpdates = {
+        user_id: userId,
+        plan_id: sub_plan,
+        status: "active",
+        start_date: startIso,
+        end_date: endIso,
+        updated_at: new Date().toISOString()
+      };
+      
+      const { error: subErr } = await supabase
+        .from("user_subscriptions")
+        .upsert(subUpdates, { onConflict: "user_id" });
+        
+      if (subErr) {
+        console.error("❌ [admin.editUser] failed to save subscription:", subErr.message);
+        return res.status(500).json({ success: false, message: `Failed to save user subscription: ${subErr.message}` });
+      }
+    } else if (sub_plan === "none") {
+      // If plan is set to "none", remove active subscription record
+      await supabase.from("user_subscriptions").delete().eq("user_id", userId);
+    }
+
+    // 3. Handle Wallet manual credits
+    const creditAmount = Number(wallet_credit_amount);
+    if (!isNaN(creditAmount) && creditAmount > 0) {
+      try {
+        await walletService.addMoney(
+          userId,
+          creditAmount,
+          wallet_credit_desc || "Admin Manual Credit"
+        );
+      } catch (walletErr) {
+        console.error("❌ [admin.editUser] failed to credit wallet:", walletErr.message);
+        return res.status(500).json({ success: false, message: `Profile updated, but wallet credit failed: ${walletErr.message}` });
+      }
+    }
+
+    return res.json({ success: true, message: "User updated successfully" });
   } catch (error) {
     console.error("[admin.editUser] failed", error);
     return res.status(500).json({ success: false, message: "Unable to update user" });

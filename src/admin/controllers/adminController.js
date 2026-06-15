@@ -817,6 +817,19 @@ export async function users(req, res) {
           const adjusted = new Date(d.getTime() - (offset * 60 * 1000));
           return adjusted.toISOString().slice(0, 16);
         };
+        const formatReadableDate = (dateStr) => {
+          if (!dateStr) return "";
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return "";
+          const day = String(d.getDate()).padStart(2, '0');
+          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+        };
+        let subText = "None / Inactive";
+        if (userSub && userSub.status === "active") {
+          const planName = String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1);
+          subText = `${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
+        }
         return {
           ...base,
           email:
@@ -831,6 +844,7 @@ export async function users(req, res) {
           lastLogin: row.last_login || row.lastLogin || joinedDate,
           lastActive: row.is_online ? "Online now" : "Recently",
           walletBalance: userWallet ? Number(userWallet.balance || 0) : 0,
+          subscriptionText: subText,
           subscription: userSub ? {
             id: userSub.id,
             plan_id: userSub.plan_id,

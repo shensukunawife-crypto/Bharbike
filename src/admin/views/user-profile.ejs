@@ -2,7 +2,7 @@
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">👤</span><span class="stat-label">User</span></div><strong class="stat-value"><%= user.full_name || "N/A" %></strong></div>
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">🧾</span><span class="stat-label">Total Orders</span></div><strong class="stat-value"><%= user.totalOrders %></strong></div>
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">💳</span><span class="stat-label">Total Spent</span></div><strong class="stat-value revenue-positive">₹<%= Number(user.totalSpent || 0).toFixed(2) %></strong></div>
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Payment Method</span></div><strong class="stat-value"><%= user.paymentMethod %></strong></div>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Wallet Balance</span></div><strong class="stat-value" style="color: var(--accent);">₹<%= Number(user.walletBalance || 0).toFixed(2) %></strong></div>
 </div>
 
 <div class="analytics-grid">

@@ -762,14 +762,16 @@ export async function users(req, res) {
     const [
       { data: usersData, error: usersError },
       { data: ordersData, error: ordersError },
-      { data: subsData, error: subsError }
+      { data: subsData, error: subsError },
+      { data: walletsData, error: walletsError }
     ] = await Promise.all([
       supabase.from("users").select("*"),
       supabase.from("orders").select("*"),
-      supabase.from("user_subscriptions").select("*")
+      supabase.from("user_subscriptions").select("*"),
+      supabase.from("wallet_balances").select("*")
     ]);
-    if (usersError || ordersError || subsError) {
-      console.error("[admin.users] fetch failed", usersError || ordersError || subsError);
+    if (usersError || ordersError || subsError || walletsError) {
+      console.error("[admin.users] fetch failed", usersError || ordersError || subsError || walletsError);
     }
 
     const search = (req.query.search || "").trim().toLowerCase();
@@ -806,6 +808,7 @@ export async function users(req, res) {
               new Date(a.createdAt || a.created_at || now).getTime()
           )[0]?.createdAt;
         const userSub = (subsData || []).find(s => String(s.user_id).toLowerCase() === String(base.id).toLowerCase());
+        const userWallet = (walletsData || []).find(w => String(w.user_id).toLowerCase() === String(base.id).toLowerCase());
         const formatDateTimeLocal = (dateStr) => {
           if (!dateStr) return "";
           const d = new Date(dateStr);
@@ -827,6 +830,7 @@ export async function users(req, res) {
           lastOrderAt: lastOrderAt || "-",
           lastLogin: row.last_login || row.lastLogin || joinedDate,
           lastActive: row.is_online ? "Online now" : "Recently",
+          walletBalance: userWallet ? Number(userWallet.balance || 0) : 0,
           subscription: userSub ? {
             id: userSub.id,
             plan_id: userSub.plan_id,
@@ -893,9 +897,10 @@ export async function users(req, res) {
 export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
-    const [{ data: userRow }, { data: ordersData }] = await Promise.all([
+    const [{ data: userRow }, { data: ordersData }, { data: walletRow }] = await Promise.all([
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
+      supabase.from("wallet_balances").select("*").eq("user_id", userId).maybeSingle(),
     ]);
     if (!userRow) {
       return res.status(404).send("User not found");
@@ -928,6 +933,7 @@ export async function userProfile(req, res) {
       totalOrders: orders.length,
       totalSpent,
       paymentMethod,
+      walletBalance: walletRow ? Number(walletRow.balance || 0) : 0,
     };
 
     return renderPage(res, {

@@ -41,14 +41,14 @@
     <table style="width:100%;border-collapse:collapse;">
       <thead>
         <tr style="background:var(--border-light);border-bottom:1px solid var(--border);">
-          <% ['Name','Email','Phone','Location','Status','Orders','Spent','Joined','Actions'].forEach(h => { %>
+          <% ['Name','Email','Phone','Location','Status','Orders','Spent','Wallet','Joined','Actions'].forEach(h => { %>
           <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><%=h%></th>
           <% }) %>
         </tr>
       </thead>
       <tbody id="users-tbody">
         <% if (!users.length) { %>
-        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:48px;">No users found</td></tr>
+        <tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:48px;">No users found</td></tr>
         <% } %>
         <% users.forEach(user => { %>
         <tr style="border-bottom:1px solid var(--border-light);" data-user-id="<%= user.id %>" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background=''">
@@ -63,6 +63,7 @@
           </td>
           <td style="padding:13px 16px;font-size:13px;text-align:center;"><%= user.totalOrders %></td>
           <td style="padding:13px 16px;font-size:13px;font-weight:600;color:#16a34a;">₹<%= Number(user.totalSpent || 0).toFixed(2) %></td>
+          <td style="padding:13px 16px;font-size:13px;font-weight:600;color:var(--accent);">₹<%= Number(user.walletBalance || 0).toFixed(2) %></td>
           <td style="padding:13px 16px;font-size:12px;color:var(--text-muted);"><%= String(user.joinedDate).slice(0, 10) %></td>
           <td style="padding:13px 16px;">
             <div class="row-actions">

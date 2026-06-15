@@ -1,4 +1,6 @@
 import supabase from "../utils/supabaseClient.js";
+import { NOTIFICATION_TEMPLATES } from "../constants/notificationTemplates.js";
+
 
 const DEFAULT_SETTINGS = {
     push_enabled: true,
@@ -152,4 +154,33 @@ export async function createUserNotification(userId, title, message, type = "inf
         return null;
     }
 }
+
+/**
+ * Send a predefined templated notification
+ */
+export async function sendTemplatedNotification(userId, templateKey, variables = {}) {
+    try {
+        const template = NOTIFICATION_TEMPLATES[templateKey];
+        if (!template) {
+            console.error(`[notificationService] Predefined template '${templateKey}' not found.`);
+            return null;
+        }
+
+        let title = template.title;
+        let message = template.message;
+
+        // Replace placeholders (e.g. {amount}, {reason}) with variable values
+        for (const [key, value] of Object.entries(variables)) {
+            const placeholder = `{${key}}`;
+            title = title.replaceAll(placeholder, String(value));
+            message = message.replaceAll(placeholder, String(value));
+        }
+
+        return await createUserNotification(userId, title, message, template.type);
+    } catch (err) {
+        console.error(`[notificationService] sendTemplatedNotification failed for user ${userId}:`, err?.message || err);
+        return null;
+    }
+}
+
 

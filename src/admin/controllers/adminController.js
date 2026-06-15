@@ -3506,6 +3506,7 @@ export async function runSqlQuery(req, res) {
 
 export async function adsPage(req, res) {
   try {
+    await ensureSettingsInitialized();
     const { data, error } = await supabase
       .from("ads")
       .select("*")

@@ -542,3 +542,66 @@ export async function expireOldSubscriptions() {
     throw error;
   }
 }
+
+/**
+ * Send warning notifications to users whose subscriptions expire in exactly 2 days
+ */
+export async function sendSubscriptionExpiryWarnings() {
+  try {
+    const now = new Date();
+    // Query subscriptions ending between now and 48 hours (2 days) from now
+    const targetMax = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
+
+    const { data: subs, error } = await supabase
+      .from("user_subscriptions")
+      .select("*")
+      .in("status", ["active", "cancelled"])
+      .lte("end_date", targetMax)
+      .gt("end_date", now.toISOString());
+
+    if (error) throw error;
+    console.log(`[subscriptionService] Found ${subs?.length || 0} subscriptions expiring in the next 48 hours`);
+
+    if (subs && subs.length > 0) {
+      for (const sub of subs) {
+        // To prevent duplicate warning notifications in a short timeframe (e.g. within 3 days),
+        // we check if a subscription_warning notification was already sent to this user.
+        // We query the notifications table for this user with type 'subscription_warning' in the last 3 days.
+        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+        
+        const { data: existingNotif, error: notifError } = await supabase
+          .from("notifications")
+          .select("id")
+          .eq("user_id", sub.user_id)
+          .eq("type", "subscription_warning")
+          .gt("created_at", threeDaysAgo)
+          .limit(1);
+
+        if (notifError) {
+          console.warn(`[subscriptionService] Warning check failed for user ${sub.user_id}:`, notifError.message);
+          continue;
+        }
+
+        if (existingNotif && existingNotif.length > 0) {
+          // Warning already sent recently
+          continue;
+        }
+
+        // Send warning notification
+        await createUserNotification(
+          sub.user_id,
+          "Subscription Expiring Soon! ⚠️",
+          "Your plan expires in 2 days. Recharge to continue riding.",
+          "subscription_warning"
+        );
+        console.log(`[subscriptionService] Sent 2-day expiry warning to user ${sub.user_id}`);
+      }
+    }
+
+    return subs || [];
+  } catch (error) {
+    console.error("[subscriptionService] sendSubscriptionExpiryWarnings failed:", error.message);
+    throw error;
+  }
+}
+

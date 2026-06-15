@@ -578,11 +578,14 @@ input:focus, select:focus, textarea:focus {
   background: var(--surface);
   width: 100%;
   max-width: 520px;
+  max-height: calc(100vh - 40px);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   box-shadow: 0 20px 40px rgba(0,0,0,0.15);
   animation: modalIn 0.2s ease;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modalIn {
@@ -604,7 +607,11 @@ input:focus, select:focus, textarea:focus {
   color: var(--text);
 }
 
-.modal-body { padding: 22px; }
+.modal-body {
+  padding: 22px;
+  overflow-y: auto;
+  flex: 1;
+}
 
 .modal-footer {
   padding: 14px 22px;

@@ -19,9 +19,9 @@
   <div class="chart-card">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <h3 style="margin: 0;">User Details</h3>
-      <button onclick="document.getElementById('edit-profile-modal').classList.add('show')" class="btn btn-sm btn-ghost" style="font-size: 12px; padding: 4px 8px;">Edit Profile</button>
+      <button onclick="document.getElementById('edit-profile-modal').classList.add('show')" class="btn btn-gold glow" style="font-size: 14px; padding: 6px 16px;">Edit Profile</button>
     </div>
-    <div class="summary-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+    <div class="summary-list" style="display: flex; flex-direction: column; gap: 16px; margin-top: 20px;">
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">User ID</span>
         <strong style="text-align: right; word-break: break-all; max-width: 60%; cursor: help;" title="<%= user.id %>">
@@ -50,20 +50,20 @@
         <span style="color: #6b7280; font-weight: 500;">Emergency Contact</span>
         <strong style="text-align: right;"><%= user.emergency_contact_name %> <br> <span style="font-size: 12px; color: var(--text-muted);"><%= user.emergency_contact_phone %></span></strong>
       </div>
-      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
-        <span style="color: #6b7280; font-weight: 500;">Location</span>
-        <strong style="text-align: right;"><%= user.location || "N/A" %></strong>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Location</span>
+        <strong style="text-align: right; font-size: 15px;"><%= user.location || "N/A" %></strong>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
-        <span style="color: #6b7280; font-weight: 500;">Assigned Bike</span>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <strong style="text-align: right; color: var(--accent);"><%= user.assignedBike %></strong>
-          <button onclick="document.getElementById('change-bike-modal').classList.add('show')" class="btn btn-sm" style="font-size: 11px; padding: 2px 6px; background: #e5e7eb; color: #333;">Change</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Assigned Bike</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <strong style="text-align: right; color: var(--accent); font-size: 15px;"><%= user.assignedBike %></strong>
+          <button onclick="document.getElementById('change-bike-modal').classList.add('show')" class="btn btn-gold" style="font-size: 13px; padding: 4px 12px;">Change</button>
         </div>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
-        <span style="color: #6b7280; font-weight: 500;">Joined Date</span>
-        <strong style="text-align: right;"><%= String(user.joinedDate).slice(0, 10) %></strong>
+        <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Joined Date</span>
+        <strong style="text-align: right; font-size: 15px;"><%= String(user.joinedDate).slice(0, 10) %></strong>
       </div>
     </div>
   </div>
@@ -94,82 +94,82 @@
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px;">
     
     <!-- Aadhaar Front -->
-    <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Aadhaar Front</h4>
+    <div style="border: 1px solid var(--border-light); padding: 16px; border-radius: 8px; display: flex; flex-direction: column;">
+      <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-muted);">Aadhaar Front</h4>
       <% if (user.aadhaar_front_url) { %>
         <a href="<%= user.aadhaar_front_url %>" target="_blank">
-          <img src="<%= user.aadhaar_front_url %>" alt="Aadhaar Front" style="width: 100%; height: 120px; object-fit: contain; border-radius: 4px; background: #f3f4f6;">
+          <img src="<%= user.aadhaar_front_url %>" alt="Aadhaar Front" style="width: 100%; height: 140px; object-fit: contain; border-radius: 6px; background: #f3f4f6;">
         </a>
       <% } else { %>
-        <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
+        <div style="height: 140px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 6px; color: #9ca3af; font-size: 13px;">Not Uploaded</div>
       <% } %>
-      <form class="upload-doc-form" data-type="aadhaar_front" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
-        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      <form class="upload-doc-form" data-type="aadhaar_front" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
+        <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
     </div>
 
     <!-- Aadhaar Back -->
-    <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Aadhaar Back</h4>
+    <div style="border: 1px solid var(--border-light); padding: 16px; border-radius: 8px; display: flex; flex-direction: column;">
+      <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-muted);">Aadhaar Back</h4>
       <% if (user.aadhaar_back_url) { %>
         <a href="<%= user.aadhaar_back_url %>" target="_blank">
-          <img src="<%= user.aadhaar_back_url %>" alt="Aadhaar Back" style="width: 100%; height: 120px; object-fit: contain; border-radius: 4px; background: #f3f4f6;">
+          <img src="<%= user.aadhaar_back_url %>" alt="Aadhaar Back" style="width: 100%; height: 140px; object-fit: contain; border-radius: 6px; background: #f3f4f6;">
         </a>
       <% } else { %>
-        <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
+        <div style="height: 140px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 6px; color: #9ca3af; font-size: 13px;">Not Uploaded</div>
       <% } %>
-      <form class="upload-doc-form" data-type="aadhaar_back" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
-        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      <form class="upload-doc-form" data-type="aadhaar_back" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
+        <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
     </div>
 
     <!-- Driving License -->
-    <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Driving License</h4>
+    <div style="border: 1px solid var(--border-light); padding: 16px; border-radius: 8px; display: flex; flex-direction: column;">
+      <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-muted);">Driving License</h4>
       <% if (user.driving_license_url) { %>
         <a href="<%= user.driving_license_url %>" target="_blank">
-          <img src="<%= user.driving_license_url %>" alt="Driving License" style="width: 100%; height: 120px; object-fit: contain; border-radius: 4px; background: #f3f4f6;">
+          <img src="<%= user.driving_license_url %>" alt="Driving License" style="width: 100%; height: 140px; object-fit: contain; border-radius: 6px; background: #f3f4f6;">
         </a>
       <% } else { %>
-        <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
+        <div style="height: 140px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 6px; color: #9ca3af; font-size: 13px;">Not Uploaded</div>
       <% } %>
-      <form class="upload-doc-form" data-type="driving_license" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
-        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      <form class="upload-doc-form" data-type="driving_license" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
+        <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
     </div>
 
     <!-- PAN Card -->
-    <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">PAN Card</h4>
+    <div style="border: 1px solid var(--border-light); padding: 16px; border-radius: 8px; display: flex; flex-direction: column;">
+      <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-muted);">PAN Card</h4>
       <% if (user.pan_card_url) { %>
         <a href="<%= user.pan_card_url %>" target="_blank">
-          <img src="<%= user.pan_card_url %>" alt="PAN Card" style="width: 100%; height: 120px; object-fit: contain; border-radius: 4px; background: #f3f4f6;">
+          <img src="<%= user.pan_card_url %>" alt="PAN Card" style="width: 100%; height: 140px; object-fit: contain; border-radius: 6px; background: #f3f4f6;">
         </a>
       <% } else { %>
-        <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
+        <div style="height: 140px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 6px; color: #9ca3af; font-size: 13px;">Not Uploaded</div>
       <% } %>
-      <form class="upload-doc-form" data-type="pan_card" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
-        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      <form class="upload-doc-form" data-type="pan_card" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
+        <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
     </div>
 
     <!-- Electricity Bill -->
-    <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Electricity Bill</h4>
+    <div style="border: 1px solid var(--border-light); padding: 16px; border-radius: 8px; display: flex; flex-direction: column;">
+      <h4 style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-muted);">Electricity Bill</h4>
       <% if (user.electricity_bill_url) { %>
         <a href="<%= user.electricity_bill_url %>" target="_blank">
-          <img src="<%= user.electricity_bill_url %>" alt="Electricity Bill" style="width: 100%; height: 120px; object-fit: contain; border-radius: 4px; background: #f3f4f6;">
+          <img src="<%= user.electricity_bill_url %>" alt="Electricity Bill" style="width: 100%; height: 140px; object-fit: contain; border-radius: 6px; background: #f3f4f6;">
         </a>
       <% } else { %>
-        <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
+        <div style="height: 140px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 6px; color: #9ca3af; font-size: 13px;">Not Uploaded</div>
       <% } %>
-      <form class="upload-doc-form" data-type="electricity_bill" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
-        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      <form class="upload-doc-form" data-type="electricity_bill" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
+        <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
     </div>
 

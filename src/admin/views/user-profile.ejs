@@ -280,7 +280,7 @@
       formData.append('file', fileInput.files[0]);
 
       try {
-        const res = await fetch(/admin/users/<%= user.id %>/upload-doc, {
+        const res = await fetch("/admin/users/<%= user.id %>/upload-doc", {
           method: 'POST',
           body: formData
         });

@@ -46,15 +46,22 @@
     font-size: 0.9rem;
     color: var(--muted);
   }
+  .ads-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
   .ads-split {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: 1fr;
     align-items: start;
+    margin-bottom: 1.5rem;
   }
   @media (min-width: 1024px) {
     .ads-split {
-      grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
     }
   }
   .ads-card {
@@ -269,14 +276,31 @@
 
 <div class="ads-page">
   <div class="ads-hero">
-    <h1>Advertisement & Banner Campaigns</h1>
+    <h1>Advertisement &amp; Banner Campaigns</h1>
     <p>Manage in-app promotional banners displayed on the rider home and discover pages.</p>
   </div>
 
+  <!-- Stats Row (3 columns at top) -->
+  <div class="ads-stats-row">
+    <div class="ads-stat-mini">
+      <div class="label">Total Campaigns</div>
+      <div class="value" id="stat-total"><%= _ads.length %></div>
+    </div>
+    <div class="ads-stat-mini">
+      <div class="label">Active Live Banners</div>
+      <div class="value" id="stat-active"><%= _activeCount %></div>
+    </div>
+    <div class="ads-stat-mini">
+      <div class="label">Inactive Drafts</div>
+      <div class="value" id="stat-inactive"><%= _inactiveCount %></div>
+    </div>
+  </div>
+
+  <!-- 2-Column Split: Campaign Form | Socials & Contacts Form -->
   <div class="ads-split">
-    <!-- Form Panel -->
+    <!-- Left: Add Campaign Banner Form -->
     <section class="ads-card ads-card--form" aria-labelledby="ads-form-heading">
-      <h2 id="ads-form-heading" class="ads-card-title">Add Campaign Banner</h2>
+      <h2 id="ads-form-heading" class="ads-card-title">📢 Add Campaign Banner</h2>
       <form id="ads-form" class="ads-form-stack" autocomplete="off">
         <div>
           <label class="ads-label" for="ad-title">Campaign Title</label>
@@ -304,25 +328,12 @@
       </form>
     </section>
 
-    <!-- Stats Panel -->
-    <aside class="ads-stats-stack" aria-label="Summary statistics">
-      <div class="ads-stat-mini">
-        <div class="label">Total Campaigns</div>
-        <div class="value" id="stat-total"><%= _ads.length %></div>
-      </div>
-      <div class="ads-stat-mini">
-        <div class="label">Active Live Banners</div>
-        <div class="value" id="stat-active"><%= _activeCount %></div>
-      </div>
-      <div class="ads-stat-mini">
-        <div class="label">Inactive Drafts</div>
-        <div class="value" id="stat-inactive"><%= _inactiveCount %></div>
-      </div>
-
-      <!-- Social Links & Contacts Editor Card -->
-      <section class="ads-card" style="margin-top: 0.5rem;" aria-labelledby="socials-heading">
-        <h2 id="socials-heading" class="ads-card-title" style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">🔗 Socials & Contacts</h2>
-        <form id="socials-form" class="ads-form-stack" autocomplete="off">
+    <!-- Right: Socials & Contacts Form -->
+    <section class="ads-card" aria-labelledby="socials-heading">
+      <h2 id="socials-heading" class="ads-card-title" style="display: flex; align-items: center; gap: 6px;">🔗 Socials &amp; Contacts</h2>
+      <p style="font-size:0.8rem; color: var(--muted); margin: -0.5rem 0 1rem;">Update your website's social links and contact info.</p>
+      <form id="socials-form" class="ads-form-stack" autocomplete="off">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div>
             <label class="ads-label" for="social-fb">Facebook</label>
             <input id="social-fb" name="facebook" class="ads-input" type="url" placeholder="https://facebook.com/..." value="<%= settings.socialFacebook || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
@@ -339,11 +350,13 @@
             <label class="ads-label" for="social-li">LinkedIn</label>
             <input id="social-li" name="linkedin" class="ads-input" type="url" placeholder="https://linkedin.com/..." value="<%= settings.socialLinkedin || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
-          <div>
+          <div style="grid-column: 1 / -1;">
             <label class="ads-label" for="social-yt">YouTube</label>
             <input id="social-yt" name="youtube" class="ads-input" type="url" placeholder="https://youtube.com/..." value="<%= settings.socialYoutube || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
-          <hr style="border-top: 1px solid var(--border); margin: 0.75rem 0;" />
+        </div>
+        <hr style="border-top: 1px solid var(--border); margin: 0.25rem 0;" />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div>
             <label class="ads-label" for="contact-company">Company Name</label>
             <input id="contact-company" name="companyName" class="ads-input" type="text" placeholder="BHAR BIKE" value="<%= settings.companyName || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
@@ -352,20 +365,20 @@
             <label class="ads-label" for="contact-phone">Phone Number</label>
             <input id="contact-phone" name="phone" class="ads-input" type="text" placeholder="+91 90000 00000" value="<%= settings.phone || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
-          <div>
+          <div style="grid-column: 1 / -1;">
             <label class="ads-label" for="contact-email">Support Email</label>
             <input id="contact-email" name="email" class="ads-input" type="email" placeholder="info@bharbike.com" value="<%= settings.supportEmail || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
-          <div>
+          <div style="grid-column: 1 / -1;">
             <label class="ads-label" for="contact-address">Address</label>
             <textarea id="contact-address" name="address" class="ads-input" rows="2" placeholder="Corporate Address..." style="padding: 0.5rem 0.75rem; font-size: 0.85rem; resize: vertical;"><%= settings.address || '' %></textarea>
           </div>
-          <button type="submit" class="ads-btn" id="socials-submit" style="padding: 0.65rem 1rem; font-size: 0.85rem; margin-top: 0.25rem;">
-            Save Socials & Contacts
-          </button>
-        </form>
-      </section>
-    </aside>
+        </div>
+        <button type="submit" class="ads-btn" id="socials-submit" style="margin-top: 0.25rem;">
+          💾 Save Socials &amp; Contacts
+        </button>
+      </form>
+    </section>
   </div>
 
   <!-- Table List Panel -->

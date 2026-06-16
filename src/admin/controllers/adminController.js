@@ -768,12 +768,14 @@ export async function users(req, res) {
       { data: usersData, error: usersError },
       { data: ordersData, error: ordersError },
       { data: subsData, error: subsError },
-      { data: walletsData, error: walletsError }
+      { data: walletsData, error: walletsError },
+      { data: plansData }
     ] = await Promise.all([
       supabase.from("users").select("*"),
       supabase.from("orders").select("*"),
       supabase.from("user_subscriptions").select("*"),
-      supabase.from("wallet_balances").select("*")
+      supabase.from("wallet_balances").select("*"),
+      supabase.from("subscription_plans").select("*")
     ]);
     if (usersError || ordersError || subsError || walletsError) {
       console.error("[admin.users] fetch failed", usersError || ordersError || subsError || walletsError);
@@ -832,7 +834,8 @@ export async function users(req, res) {
         };
         let subText = "None / Inactive";
         if (userSub && userSub.status === "active") {
-          const planName = String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1);
+          const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
+          const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
           subText = `${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
         }
         return {
@@ -3697,21 +3700,31 @@ export async function saveSocials(req, res) {
 
 export async function subscriptionsPage(req, res) {
   try {
-    const { data: subs } = await supabase
+    const { data: subs, error } = await supabase
       .from("user_subscriptions")
-      .select(`
-        *,
-        users ( full_name, email, phone )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
       
+    if (error) console.error("[adminController.subscriptionsPage] subs fetch error:", error);
+
+    const { data: users } = await supabase.from("users").select("id, full_name, email, phone");
     const { data: plans } = await supabase.from("subscription_plans").select("*");
+
+    const mergedSubs = (subs || []).map(s => {
+      const user = (users || []).find(u => u.id === s.user_id);
+      const plan = (plans || []).find(p => p.id === s.plan_id || p.name === s.plan_id);
+      return {
+        ...s,
+        users: user || {},
+        plan_display: plan ? plan.display_name : s.plan_id
+      };
+    });
 
     res.render("layout", {
       title: "Subscriptions",
       active: "subscriptions",
       bodyView: "subscriptions",
-      subs: subs || [],
+      subs: mergedSubs,
       plans: plans || [],
       BRAND_NAME,
       BRAND_PRODUCT_NAME,

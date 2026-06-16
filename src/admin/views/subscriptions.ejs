@@ -30,7 +30,7 @@
               <strong><%= s.users ? s.users.full_name : s.user_id %></strong><br/>
               <span class="muted-small"><%= s.users ? s.users.phone || s.users.email : '' %></span>
             </td>
-            <td><span class="badge badge-soft" style="text-transform: capitalize;"><%= (s.plan_id || '').replace('_', ' ') %></span></td>
+            <td><span class="badge badge-soft" style="text-transform: capitalize;"><%= s.plan_display || s.plan_id %></span></td>
             <td>
               <% if (s.status === 'active') { %>
                 <span class="badge success">Active</span>

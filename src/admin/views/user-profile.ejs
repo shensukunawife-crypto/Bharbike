@@ -8,22 +8,49 @@
 <div class="analytics-grid">
   <div class="chart-card">
     <h3>User Details</h3>
-    <div class="summary-list">
-      <div><span>User ID</span><strong><%= user.id %></strong></div>
-      <div><span>Full name</span><strong><%= user.full_name || "N/A" %></strong></div>
-      <div><span>Phone</span><strong><%= user.phone || "N/A" %></strong></div>
-      <div><span>Email</span><strong><%= user.email || "N/A" %></strong></div>
-      <div><span>Location</span><strong><%= user.location || "N/A" %></strong></div>
-      <div><span>Joined Date</span><strong><%= String(user.joinedDate).slice(0, 10) %></strong></div>
+    <div class="summary-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">User ID</span>
+        <strong style="text-align: right; word-break: break-all; max-width: 60%;"><%= user.id %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Full Name</span>
+        <strong style="text-align: right;"><%= user.full_name || "N/A" %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Phone</span>
+        <strong style="text-align: right;"><%= user.phone || "N/A" %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Email</span>
+        <strong style="text-align: right; word-break: break-all; max-width: 60%;"><%= user.email || "N/A" %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Location</span>
+        <strong style="text-align: right;"><%= user.location || "N/A" %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
+        <span style="color: #6b7280; font-weight: 500;">Joined Date</span>
+        <strong style="text-align: right;"><%= String(user.joinedDate).slice(0, 10) %></strong>
+      </div>
     </div>
   </div>
 
   <div class="chart-card">
     <h3>User Activity</h3>
-    <div class="summary-list">
-      <div><span>Last Login</span><strong><%= String(user.lastLogin).slice(0, 16).replace("T", " ") %></strong></div>
-      <div><span>Last Order</span><strong><%= user.lastOrder %></strong></div>
-      <div><span>Last Active</span><strong><%= user.lastActive %></strong></div>
+    <div class="summary-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Last Login</span>
+        <strong style="text-align: right;"><%= String(user.lastLogin).slice(0, 16).replace("T", " ") %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Last Order ID</span>
+        <strong style="text-align: right; word-break: break-all; max-width: 60%;"><%= user.lastOrder %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
+        <span style="color: #6b7280; font-weight: 500;">Last Active</span>
+        <strong style="text-align: right;"><%= user.lastActive %></strong>
+      </div>
     </div>
   </div>
 </div>

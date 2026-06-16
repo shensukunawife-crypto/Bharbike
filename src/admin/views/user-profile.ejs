@@ -87,6 +87,7 @@
   <h3>KYC & Documents</h3>
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px;">
     
+    <!-- Aadhaar Front -->
     <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
       <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Aadhaar Front</h4>
       <% if (user.aadhaar_front_url) { %>
@@ -96,8 +97,13 @@
       <% } else { %>
         <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
       <% } %>
+      <form class="upload-doc-form" data-type="aadhaar_front" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
+        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      </form>
     </div>
 
+    <!-- Aadhaar Back -->
     <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
       <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Aadhaar Back</h4>
       <% if (user.aadhaar_back_url) { %>
@@ -107,8 +113,13 @@
       <% } else { %>
         <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
       <% } %>
+      <form class="upload-doc-form" data-type="aadhaar_back" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
+        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      </form>
     </div>
 
+    <!-- Driving License -->
     <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
       <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Driving License</h4>
       <% if (user.driving_license_url) { %>
@@ -118,8 +129,13 @@
       <% } else { %>
         <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
       <% } %>
+      <form class="upload-doc-form" data-type="driving_license" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
+        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      </form>
     </div>
 
+    <!-- PAN Card -->
     <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
       <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">PAN Card</h4>
       <% if (user.pan_card_url) { %>
@@ -129,8 +145,13 @@
       <% } else { %>
         <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
       <% } %>
+      <form class="upload-doc-form" data-type="pan_card" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
+        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      </form>
     </div>
 
+    <!-- Electricity Bill -->
     <div style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px;">
       <h4 style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-muted);">Electricity Bill</h4>
       <% if (user.electricity_bill_url) { %>
@@ -140,6 +161,10 @@
       <% } else { %>
         <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 4px; color: #9ca3af; font-size: 12px;">Not Uploaded</div>
       <% } %>
+      <form class="upload-doc-form" data-type="electricity_bill" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <input type="file" accept="image/*,application/pdf" required style="font-size: 11px;">
+        <button type="submit" class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;">Upload / Replace</button>
+      </form>
     </div>
 
   </div>
@@ -177,3 +202,41 @@
     </table>
   </div>
 </div>
+<script>
+  document.querySelectorAll('.upload-doc-form').forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = form.querySelector('input[type="file"]');
+      const docType = form.getAttribute('data-type');
+      if (!fileInput.files[0]) return;
+      
+      const btn = form.querySelector('button');
+      const originalText = btn.innerText;
+      btn.innerText = 'Uploading...';
+      btn.disabled = true;
+
+      const formData = new FormData();
+      formData.append('docType', docType);
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const res = await fetch(/admin/users/<%= user.id %>/upload-doc, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Document uploaded successfully!');
+          window.location.reload();
+        } else {
+          alert(data.message || 'Upload failed');
+        }
+      } catch (err) {
+        alert('Upload failed: ' + err.message);
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    });
+  });
+</script>

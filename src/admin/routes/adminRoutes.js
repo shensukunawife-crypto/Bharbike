@@ -1,7 +1,13 @@
 import { Router } from "express";
+import multer from "multer";
 import * as adminController from "../controllers/adminController.js";
 import { adminLoginPage } from "../../controllers/adminAuthController.js";
 import { requireAdminAuth, requirePermission } from "../middleware/adminAuth.js";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 const router = Router();
 
@@ -27,6 +33,7 @@ router.post("/users/add", requirePermission("manage_users"), adminController.add
 router.post("/users/:userId/edit", requirePermission("manage_users"), adminController.editUser);
 router.post("/users/:userId/block", requirePermission("manage_users"), adminController.blockUser);
 router.post("/users/:userId/delete", requirePermission("manage_users"), adminController.deleteUser);
+router.post("/users/:userId/upload-doc", requirePermission("manage_users"), upload.single("file"), adminController.uploadUserDocument);
 
 // Subscriptions
 router.get("/subscriptions", requirePermission("manage_users"), adminController.subscriptionsPage);

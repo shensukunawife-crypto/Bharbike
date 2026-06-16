@@ -1,5 +1,15 @@
 <div class="stats-grid">
-  <div class="stat-card"><div class="stat-head"><span class="stat-icon">👤</span><span class="stat-label">User</span></div><strong class="stat-value"><%= user.full_name || "N/A" %></strong></div>
+  <div class="stat-card" style="display: flex; align-items: center; gap: 16px;">
+    <% if (user.selfie_url) { %>
+      <img src="<%= user.selfie_url %>" alt="User Selfie" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+    <% } else { %>
+      <div style="width: 50px; height: 50px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>
+    <% } %>
+    <div>
+      <div class="stat-head" style="margin-bottom: 4px;"><span class="stat-label">User</span></div>
+      <strong class="stat-value"><%= user.full_name || "N/A" %></strong>
+    </div>
+  </div>
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">🧾</span><span class="stat-label">Total Orders</span></div><strong class="stat-value"><%= user.totalOrders %></strong></div>
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">💳</span><span class="stat-label">Total Spent</span></div><strong class="stat-value revenue-positive">₹<%= Number(user.totalSpent || 0).toFixed(2) %></strong></div>
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Wallet Balance</span></div><strong class="stat-value" style="color: var(--accent);">₹<%= Number(user.walletBalance || 0).toFixed(2) %></strong></div>
@@ -28,6 +38,10 @@
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Location</span>
         <strong style="text-align: right;"><%= user.location || "N/A" %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Assigned Bike</span>
+        <strong style="text-align: right; color: var(--accent);"><%= user.assignedBike %></strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
         <span style="color: #6b7280; font-weight: 500;">Joined Date</span>

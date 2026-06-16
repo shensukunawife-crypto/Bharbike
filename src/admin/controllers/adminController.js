@@ -919,10 +919,11 @@ export async function users(req, res) {
 export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
-    const [{ data: userRow }, { data: ordersData }, { data: walletRow }] = await Promise.all([
+    const [{ data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRental }] = await Promise.all([
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
       supabase.from("wallet_balances").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("rentals").select("*").eq("user_id", userId).eq("status", "ongoing").maybeSingle(),
     ]);
     if (!userRow) {
       return res.status(404).send("User not found");
@@ -943,6 +944,11 @@ export async function userProfile(req, res) {
       );
     const totalSpent = orders.reduce((sum, order) => ["assigned", "ongoing", "completed", "paid", "success"].includes(order.status) ? sum + Number(order.amount || 0) : sum, 0);
     const paymentMethod = totalSpent > 0 ? "Online" : "Cash";
+    let assignedBike = "None";
+    if (activeRental && activeRental.bike_id) {
+      const { data: bikeRow } = await supabase.from("bikes").select("bike_code").eq("id", activeRental.bike_id).maybeSingle();
+      if (bikeRow) assignedBike = bikeRow.bike_code;
+    }
     const profile = {
       ...base,
       email:
@@ -956,6 +962,8 @@ export async function userProfile(req, res) {
       totalSpent,
       paymentMethod,
       walletBalance: walletRow ? Number(walletRow.balance || 0) : 0,
+      selfie_url: userRow.selfie_url || null,
+      assignedBike
     };
 
     return renderPage(res, {

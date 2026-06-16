@@ -427,8 +427,8 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
         </td>
         <td>
           <% const stText = (item.title || '').toLowerCase(); %>
-          <span class="status-dot <%= stText.includes('completed') ? 'status-completed' : stText.includes('accepted') || stText.includes('active') || stText.includes('ongoing') ? 'status-active' : stText.includes('cancelled') || stText.includes('rejected') ? 'status-cancelled' : 'status-pending' %>">
-            <%= stText.includes('completed') ? 'Completed' : stText.includes('accepted') || stText.includes('ongoing') ? 'Active' : stText.includes('cancelled') || stText.includes('rejected') ? 'Cancelled' : 'Pending' %>
+          <span class="status-dot <%= stText.includes('completed') || stText.includes('paid') ? 'status-completed' : stText.includes('accepted') || stText.includes('active') || stText.includes('ongoing') ? 'status-active' : stText.includes('cancelled') || stText.includes('rejected') ? 'status-cancelled' : 'status-pending' %>">
+            <%= stText.includes('completed') || stText.includes('paid') ? 'Paid' : stText.includes('accepted') || stText.includes('ongoing') ? 'Active' : stText.includes('cancelled') || stText.includes('rejected') ? 'Cancelled' : 'Pending' %>
           </span>
         </td>
       </tr>

@@ -151,6 +151,8 @@ document.querySelectorAll(".open-edit-user").forEach((btn) => {
     const subPlanSelect = document.getElementById("edit-user-sub-plan");
     if (subPlanSelect) subPlanSelect.value = btn.dataset.subPlan || "none";
     form.dataset.url = `/admin/users/${btn.dataset.id}/edit`;
+    const deleteBtn = document.getElementById("edit-user-delete-btn");
+    if (deleteBtn) deleteBtn.dataset.url = `/admin/users/${btn.dataset.id}/delete`;
     modal.classList.add("show");
   });
 });

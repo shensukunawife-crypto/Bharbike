@@ -1,6 +1,6 @@
 <style>
   /* Premium Ad management view styling */
-  main.main-content > section.panel:has(.ads-page) {
+  main.main-content > section.panel:has(.promo-page) {
     outline: none !important;
     border: none !important;
     box-shadow: none !important;
@@ -8,17 +8,17 @@
     padding: 0 !important;
   }
 
-  .ads-page {
-    --ads-ring: rgba(234, 179, 8, 0.45);
+  .promo-page {
+    --promo-ring: rgba(234, 179, 8, 0.45);
     animation: adsFade 0.35s ease-out;
     accent-color: #ca8a04;
   }
-  .ads-page .ads-card--form,
-  .ads-page #ads-form,
-  .ads-page section.ads-card {
+  .promo-page .promo-card--form,
+  .promo-page #promo-form,
+  .promo-page section.promo-card {
     outline: none !important;
   }
-  .ads-page #ads-form:focus-within {
+  .promo-page #promo-form:focus-within {
     outline: none !important;
   }
   @keyframes adsFade {
@@ -31,28 +31,28 @@
       transform: translateY(0);
     }
   }
-  .ads-hero {
+  .promo-hero {
     margin-bottom: 1.5rem;
   }
-  .ads-hero h1 {
+  .promo-hero h1 {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--text);
   }
-  .ads-hero p {
+  .promo-hero p {
     margin: 0.35rem 0 0;
     font-size: 0.9rem;
     color: var(--muted);
   }
-  .ads-stats-row {
+  .promo-stats-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
-  .ads-split {
+  .promo-split {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: 1fr;
@@ -60,11 +60,11 @@
     margin-bottom: 1.5rem;
   }
   @media (min-width: 1024px) {
-    .ads-split {
+    .promo-split {
       grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
     }
   }
-  .ads-card {
+  .promo-card {
     background: #ffffff;
     border-radius: 1rem;
     border: 1px solid #e5e7eb;
@@ -74,24 +74,24 @@
     padding: 1.5rem;
     transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.2s ease;
   }
-  .ads-card:hover {
+  .promo-card:hover {
     border-color: #d1d5db;
     box-shadow:
       0 10px 15px -3px rgb(15 23 42 / 0.08),
       0 4px 6px -4px rgb(15 23 42 / 0.05);
   }
-  .ads-card-title {
+  .promo-card-title {
     margin: 0 0 1rem;
     font-size: 1rem;
     font-weight: 600;
     color: var(--text);
   }
-  .ads-form-stack {
+  .promo-form-stack {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
-  .ads-label {
+  .promo-label {
     display: block;
     font-size: 0.75rem;
     font-weight: 600;
@@ -100,7 +100,7 @@
     color: var(--muted);
     margin-bottom: 0.35rem;
   }
-  .ads-input {
+  .promo-input {
     width: 100%;
     padding: 0.75rem 1rem;
     border-radius: 0.5rem;
@@ -113,12 +113,12 @@
       border-color 0.2s ease,
       box-shadow 0.2s ease;
   }
-  .ads-input:focus {
+  .promo-input:focus {
     border-color: #eab308;
-    box-shadow: 0 0 0 3px var(--ads-ring);
+    box-shadow: 0 0 0 3px var(--promo-ring);
     outline: none;
   }
-  .ads-btn {
+  .promo-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -139,20 +139,20 @@
       box-shadow 0.2s ease,
       filter 0.2s ease;
   }
-  .ads-btn:hover {
+  .promo-btn:hover {
     filter: brightness(1.05);
     box-shadow: 0 10px 15px -3px rgb(234 179 8 / 0.35);
     transform: translateY(-1px);
   }
-  .ads-btn:active {
+  .promo-btn:active {
     transform: translateY(0);
   }
-  .ads-stats-stack {
+  .promo-stats-stack {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
-  .ads-stat-mini {
+  .promo-stat-mini {
     background: #ffffff;
     padding: 1rem;
     border-radius: 0.75rem;
@@ -163,12 +163,12 @@
       border-color 0.25s ease,
       box-shadow 0.25s ease;
   }
-  .ads-stat-mini:hover {
+  .promo-stat-mini:hover {
     transform: translateY(-2px);
     border-color: rgba(234, 179, 8, 0.35);
     box-shadow: 0 8px 15px -4px rgb(0 0 0 / 0.1);
   }
-  .ads-stat-mini .label {
+  .promo-stat-mini .label {
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -176,13 +176,13 @@
     color: #6b7280;
     margin-bottom: 0.35rem;
   }
-  .ads-stat-mini .value {
+  .promo-stat-mini .value {
     font-size: 1.65rem;
     font-weight: 700;
     color: #111827;
     line-height: 1.2;
   }
-  .ads-table-wrap {
+  .promo-table-wrap {
     margin-top: 1.5rem;
     background: #ffffff;
     border-radius: 1rem;
@@ -192,13 +192,13 @@
       0 4px 6px -4px rgb(0 0 0 / 0.06);
     padding: 1rem;
   }
-  .ads-table-inner {
+  .promo-table-inner {
     overflow-x: auto;
   }
-  .ads-table-wrap .table {
+  .promo-table-wrap .table {
     margin: 0;
   }
-  .ads-table-wrap .table th {
+  .promo-table-wrap .table th {
     text-transform: uppercase;
     font-size: 0.65rem;
     letter-spacing: 0.08em;
@@ -207,36 +207,36 @@
     padding-top: 0.85rem;
     padding-bottom: 0.85rem;
   }
-  .ads-table-wrap .table tbody tr:hover {
+  .promo-table-wrap .table tbody tr:hover {
     background: #fffbeb !important;
   }
-  .ads-status {
+  .promo-status {
     display: inline-block;
     padding: 0.25rem 0.65rem;
     border-radius: 999px;
     font-size: 0.7rem;
     font-weight: 600;
   }
-  .ads-status--inactive {
+  .promo-status--inactive {
     background: #fee2e2;
     color: #dc2626;
   }
-  .ads-status--active {
+  .promo-status--active {
     background: #dcfce7;
     color: #15803d;
   }
-  .ads-empty {
+  .promo-empty {
     text-align: center;
     padding: 3rem 1.5rem;
     color: #6b7280;
   }
-  .ads-empty-icon {
+  .promo-empty-icon {
     font-size: 2.75rem;
     line-height: 1;
     margin-bottom: 0.75rem;
     opacity: 0.85;
   }
-  .ads-action-btn {
+  .promo-action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -250,17 +250,17 @@
     font-size: 0.9rem;
     transition: all 0.2s ease;
   }
-  .ads-action-btn:hover {
+  .promo-action-btn:hover {
     background: #f3f4f6;
     border-color: #d1d5db;
     transform: scale(1.05);
   }
-  .ads-action-btn--delete:hover {
+  .promo-action-btn--delete:hover {
     background: #fee2e2;
     border-color: #fca5a5;
     color: #dc2626;
   }
-  .ads-thumbnail {
+  .promo-thumbnail {
     width: 80px;
     height: 45px;
     object-fit: cover;
@@ -274,54 +274,54 @@
 <% var _activeCount = _ads.filter(a => a.status === 'active').length; %>
 <% var _inactiveCount = _ads.filter(a => a.status === 'inactive').length; %>
 
-<div class="ads-page">
-  <div class="ads-hero">
+<div class="promo-page">
+  <div class="promo-hero">
     <h1>Advertisement &amp; Banner Campaigns</h1>
     <p>Manage in-app promotional banners displayed on the rider home and discover pages.</p>
   </div>
 
   <!-- Stats Row (3 columns at top) -->
-  <div class="ads-stats-row">
-    <div class="ads-stat-mini">
+  <div class="promo-stats-row">
+    <div class="promo-stat-mini">
       <div class="label">Total Campaigns</div>
       <div class="value" id="stat-total"><%= _ads.length %></div>
     </div>
-    <div class="ads-stat-mini">
+    <div class="promo-stat-mini">
       <div class="label">Active Live Banners</div>
       <div class="value" id="stat-active"><%= _activeCount %></div>
     </div>
-    <div class="ads-stat-mini">
+    <div class="promo-stat-mini">
       <div class="label">Inactive Drafts</div>
       <div class="value" id="stat-inactive"><%= _inactiveCount %></div>
     </div>
   </div>
 
   <!-- 2-Column Split: Campaign Form | Socials & Contacts Form -->
-  <div class="ads-split">
+  <div class="promo-split">
     <!-- Left: Add Campaign Banner Form -->
-    <section class="ads-card ads-card--form" aria-labelledby="ads-form-heading">
-      <h2 id="ads-form-heading" class="ads-card-title">📢 Add Campaign Banner</h2>
-      <form id="ads-form" class="ads-form-stack" autocomplete="off">
+    <section class="promo-card promo-card--form" aria-labelledby="promo-form-heading">
+      <h2 id="promo-form-heading" class="promo-card-title">📢 Add Campaign Banner</h2>
+      <form id="promo-form" class="promo-form-stack" autocomplete="off">
         <div>
-          <label class="ads-label" for="ad-title">Campaign Title</label>
-          <input id="ad-title" name="title" class="ads-input" type="text" placeholder="e.g. Monsoon Rider Discount 20%" required />
+          <label class="promo-label" for="ad-title">Campaign Title</label>
+          <input id="ad-title" name="title" class="promo-input" type="text" placeholder="e.g. Monsoon Rider Discount 20%" required />
         </div>
         <div>
-          <label class="ads-label" for="ad-image">Banner Image URL</label>
-          <input id="ad-image" name="image_url" class="ads-input" type="url" placeholder="https://example.com/banner.jpg" required />
+          <label class="promo-label" for="ad-image">Banner Image URL</label>
+          <input id="ad-image" name="image_url" class="promo-input" type="url" placeholder="https://example.com/banner.jpg" required />
         </div>
         <div>
-          <label class="ads-label" for="ad-link">Target Link URL (Optional)</label>
-          <input id="ad-link" name="link_url" class="ads-input" type="url" placeholder="https://example.com/promo-details" />
+          <label class="promo-label" for="ad-link">Target Link URL (Optional)</label>
+          <input id="ad-link" name="link_url" class="promo-input" type="url" placeholder="https://example.com/promo-details" />
         </div>
         <div>
-          <label class="ads-label" for="ad-status">Initial Status</label>
-          <select id="ad-status" name="status" class="ads-input">
+          <label class="promo-label" for="ad-status">Initial Status</label>
+          <select id="ad-status" name="status" class="promo-input">
             <option value="active" selected>Active (Live immediately)</option>
             <option value="inactive">Inactive (Draft)</option>
           </select>
         </div>
-        <button type="submit" class="ads-btn" id="ad-submit">
+        <button type="submit" class="promo-btn" id="ad-submit">
           <span>📢</span>
           Launch Banner Campaign
         </button>
@@ -329,52 +329,52 @@
     </section>
 
     <!-- Right: Socials & Contacts Form -->
-    <section class="ads-card" aria-labelledby="socials-heading">
-      <h2 id="socials-heading" class="ads-card-title" style="display: flex; align-items: center; gap: 6px;">🔗 Socials &amp; Contacts</h2>
+    <section class="promo-card" aria-labelledby="socials-heading">
+      <h2 id="socials-heading" class="promo-card-title" style="display: flex; align-items: center; gap: 6px;">🔗 Socials &amp; Contacts</h2>
       <p style="font-size:0.8rem; color: var(--muted); margin: -0.5rem 0 1rem;">Update your website's social links and contact info.</p>
-      <form id="socials-form" class="ads-form-stack" autocomplete="off">
+      <form id="socials-form" class="promo-form-stack" autocomplete="off">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div>
-            <label class="ads-label" for="social-fb">Facebook</label>
-            <input id="social-fb" name="facebook" class="ads-input" type="url" placeholder="https://facebook.com/..." value="<%= settings.socialFacebook || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="social-fb">Facebook</label>
+            <input id="social-fb" name="facebook" class="promo-input" type="url" placeholder="https://facebook.com/..." value="<%= settings.socialFacebook || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
           <div>
-            <label class="ads-label" for="social-ig">Instagram</label>
-            <input id="social-ig" name="instagram" class="ads-input" type="url" placeholder="https://instagram.com/..." value="<%= settings.socialInstagram || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="social-ig">Instagram</label>
+            <input id="social-ig" name="instagram" class="promo-input" type="url" placeholder="https://instagram.com/..." value="<%= settings.socialInstagram || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
           <div>
-            <label class="ads-label" for="social-tw">Twitter / X</label>
-            <input id="social-tw" name="twitter" class="ads-input" type="url" placeholder="https://twitter.com/..." value="<%= settings.socialTwitter || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="social-tw">Twitter / X</label>
+            <input id="social-tw" name="twitter" class="promo-input" type="url" placeholder="https://twitter.com/..." value="<%= settings.socialTwitter || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
           <div>
-            <label class="ads-label" for="social-li">LinkedIn</label>
-            <input id="social-li" name="linkedin" class="ads-input" type="url" placeholder="https://linkedin.com/..." value="<%= settings.socialLinkedin || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="social-li">LinkedIn</label>
+            <input id="social-li" name="linkedin" class="promo-input" type="url" placeholder="https://linkedin.com/..." value="<%= settings.socialLinkedin || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
           <div style="grid-column: 1 / -1;">
-            <label class="ads-label" for="social-yt">YouTube</label>
-            <input id="social-yt" name="youtube" class="ads-input" type="url" placeholder="https://youtube.com/..." value="<%= settings.socialYoutube || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="social-yt">YouTube</label>
+            <input id="social-yt" name="youtube" class="promo-input" type="url" placeholder="https://youtube.com/..." value="<%= settings.socialYoutube || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
         </div>
         <hr style="border-top: 1px solid var(--border); margin: 0.25rem 0;" />
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div>
-            <label class="ads-label" for="contact-company">Company Name</label>
-            <input id="contact-company" name="companyName" class="ads-input" type="text" placeholder="BHAR BIKE" value="<%= settings.companyName || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="contact-company">Company Name</label>
+            <input id="contact-company" name="companyName" class="promo-input" type="text" placeholder="BHAR BIKE" value="<%= settings.companyName || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
           <div>
-            <label class="ads-label" for="contact-phone">Phone Number</label>
-            <input id="contact-phone" name="phone" class="ads-input" type="text" placeholder="+91 90000 00000" value="<%= settings.phone || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="contact-phone">Phone Number</label>
+            <input id="contact-phone" name="phone" class="promo-input" type="text" placeholder="+91 90000 00000" value="<%= settings.phone || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
           <div style="grid-column: 1 / -1;">
-            <label class="ads-label" for="contact-email">Support Email</label>
-            <input id="contact-email" name="email" class="ads-input" type="email" placeholder="info@bharbike.com" value="<%= settings.supportEmail || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+            <label class="promo-label" for="contact-email">Support Email</label>
+            <input id="contact-email" name="email" class="promo-input" type="email" placeholder="info@bharbike.com" value="<%= settings.supportEmail || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
           <div style="grid-column: 1 / -1;">
-            <label class="ads-label" for="contact-address">Address</label>
-            <textarea id="contact-address" name="address" class="ads-input" rows="2" placeholder="Corporate Address..." style="padding: 0.5rem 0.75rem; font-size: 0.85rem; resize: vertical;"><%= settings.address || '' %></textarea>
+            <label class="promo-label" for="contact-address">Address</label>
+            <textarea id="contact-address" name="address" class="promo-input" rows="2" placeholder="Corporate Address..." style="padding: 0.5rem 0.75rem; font-size: 0.85rem; resize: vertical;"><%= settings.address || '' %></textarea>
           </div>
         </div>
-        <button type="submit" class="ads-btn" id="socials-submit" style="margin-top: 0.25rem;">
+        <button type="submit" class="promo-btn" id="socials-submit" style="margin-top: 0.25rem;">
           💾 Save Socials &amp; Contacts
         </button>
       </form>
@@ -382,21 +382,21 @@
   </div>
 
   <!-- Table List Panel -->
-  <div class="ads-table-wrap">
-    <h2 class="ads-card-title" style="margin: 0 0 0.75rem">Campaign Registry</h2>
-    <div id="ads-table-container">
+  <div class="promo-table-wrap">
+    <h2 class="promo-card-title" style="margin: 0 0 0.75rem">Campaign Registry</h2>
+    <div id="promo-table-container">
       <% if (!_ads.length) { %>
-      <div id="ads-empty" class="ads-empty">
-        <div class="ads-empty-icon">📢</div>
+      <div id="promo-empty" class="promo-empty">
+        <div class="promo-empty-icon">📢</div>
         <h3>No advertising campaigns found</h3>
         <p>Use the form above to add and schedule your first promotional banner.</p>
       </div>
-      <div id="ads-table-inner" class="ads-table-inner" style="display: none;"></div>
+      <div id="promo-table-inner" class="promo-table-inner" style="display: none;"></div>
       <% } else { %>
-      <div id="ads-empty" class="ads-empty" style="display: none"></div>
-      <div id="ads-table-inner" class="ads-table-inner">
+      <div id="promo-empty" class="promo-empty" style="display: none"></div>
+      <div id="promo-table-inner" class="promo-table-inner">
         <div class="table-wrap">
-          <table class="table" id="ads-table">
+          <table class="table" id="promo-table">
             <thead>
               <tr>
                 <th>Banner Preview</th>
@@ -406,23 +406,23 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="ads-tbody">
+            <tbody id="promo-tbody">
               <% _ads.forEach(function(ad) { %>
               <tr>
                 <td>
-                  <img src="<%= ad.image_url %>" class="ads-thumbnail" alt="Banner Preview" onerror="this.src='/admin/static/images/logo.png'" />
+                  <img src="<%= ad.image_url %>" class="promo-thumbnail" alt="Banner Preview" onerror="this.src='/admin/static/images/logo.png'" />
                 </td>
                 <td style="font-weight: 600; color: #111;"><%= ad.title %></td>
                 <td><a href="<%= ad.link_url || '#' %>" target="_blank" style="color: #ca8a04; text-decoration: underline;"><%= ad.link_url || '—' %></a></td>
                 <td>
-                  <span class="ads-status <%= ad.status === 'active' ? 'ads-status--active' : 'ads-status--inactive' %>">
+                  <span class="promo-status <%= ad.status === 'active' ? 'promo-status--active' : 'promo-status--inactive' %>">
                     <%= ad.status === 'active' ? 'Active' : 'Inactive' %>
                   </span>
                 </td>
                 <td>
                   <div style="display: flex; gap: 0.35rem;">
-                    <button type="button" class="ads-action-btn" onclick="toggleAdStatus('<%= ad.id %>')" title="Toggle Live State">🔄</button>
-                    <button type="button" class="ads-action-btn ads-action-btn--delete" onclick="deleteAdRecord('<%= ad.id %>')" title="Delete Campaign">🗑️</button>
+                    <button type="button" class="promo-action-btn" onclick="toggleAdStatus('<%= ad.id %>')" title="Toggle Live State">🔄</button>
+                    <button type="button" class="promo-action-btn promo-action-btn--delete" onclick="deleteAdRecord('<%= ad.id %>')" title="Delete Campaign">🗑️</button>
                   </div>
                 </td>
               </tr>
@@ -438,9 +438,9 @@
 
 <script>
   (function () {
-    var form = document.getElementById("ads-form");
-    var emptyEl = document.getElementById("ads-empty");
-    var tableInner = document.getElementById("ads-table-inner");
+    var form = document.getElementById("promo-form");
+    var emptyEl = document.getElementById("promo-empty");
+    var tableInner = document.getElementById("promo-table-inner");
 
     function escapeHtml(s) {
       var d = document.createElement("div");
@@ -465,22 +465,22 @@
       emptyEl.style.display = "none";
       tableInner.style.display = "block";
 
-      var html = '<div class="table-wrap"><table class="table" id="ads-table"><thead><tr>' +
+      var html = '<div class="table-wrap"><table class="table" id="promo-table"><thead><tr>' +
         '<th>Banner Preview</th><th>Campaign Title</th><th>Target Action URL</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
 
       rows.forEach(function (ad) {
-        var statusClass = ad.status === 'active' ? 'ads-status--active' : 'ads-status--inactive';
+        var statusClass = ad.status === 'active' ? 'promo-status--active' : 'promo-status--inactive';
         var statusLabel = ad.status === 'active' ? 'Active' : 'Inactive';
         var targetLink = ad.link_url ? '<a href="' + escapeHtml(ad.link_url) + '" target="_blank" style="color: #ca8a04; text-decoration: underline;">' + escapeHtml(ad.link_url) + '</a>' : '—';
 
         html += '<tr>' +
-          '<td><img src="' + escapeHtml(ad.image_url) + '" class="ads-thumbnail" alt="Banner Preview" onerror="this.src=\'/admin/static/images/logo.png\'" /></td>' +
+          '<td><img src="' + escapeHtml(ad.image_url) + '" class="promo-thumbnail" alt="Banner Preview" onerror="this.src=\'/admin/static/images/logo.png\'" /></td>' +
           '<td style="font-weight: 600; color: #111;">' + escapeHtml(ad.title) + '</td>' +
           '<td>' + targetLink + '</td>' +
-          '<td><span class="ads-status ' + statusClass + '">' + statusLabel + '</span></td>' +
+          '<td><span class="promo-status ' + statusClass + '">' + statusLabel + '</span></td>' +
           '<td><div style="display: flex; gap: 0.35rem;">' +
-          '<button type="button" class="ads-action-btn" onclick="toggleAdStatus(\'' + escapeHtml(ad.id) + '\')" title="Toggle Live State">🔄</button>' +
-          '<button type="button" class="ads-action-btn ads-action-btn--delete" onclick="deleteAdRecord(\'' + escapeHtml(ad.id) + '\')" title="Delete Campaign">🗑️</button>' +
+          '<button type="button" class="promo-action-btn" onclick="toggleAdStatus(\'' + escapeHtml(ad.id) + '\')" title="Toggle Live State">🔄</button>' +
+          '<button type="button" class="promo-action-btn promo-action-btn--delete" onclick="deleteAdRecord(\'' + escapeHtml(ad.id) + '\')" title="Delete Campaign">🗑️</button>' +
           '</div></td></tr>';
       });
 

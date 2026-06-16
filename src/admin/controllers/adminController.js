@@ -4065,7 +4065,7 @@ export async function uploadUserDocument(req, res) {
       return res.status(400).json({ success: false, message: "Missing required fields or file" });
     }
     const safeMimeExtension = file.mimetype === "application/pdf" ? "pdf" : file.mimetype === "image/png" ? "png" : "jpg";
-    const filePath = "${userId}/_${Date.now()}.";
+    const filePath = `${userId}/${docType}_${Date.now()}.${safeMimeExtension}`;
     const { error: uploadError } = await supabase.storage.from("kyc-documents").upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
     if (uploadError) throw uploadError;
     const { data: publicData } = supabase.storage.from("kyc-documents").getPublicUrl(filePath);

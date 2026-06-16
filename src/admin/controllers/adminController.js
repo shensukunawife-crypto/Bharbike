@@ -1165,13 +1165,13 @@ export async function kycDocumentsPage(req, res) {
         .order("created_at", { ascending: false }),
       supabase
         .from("users")
-        .select("id, full_name, name, phone"),
+        .select("id, full_name, name, phone, address, address_verified"),
     ]);
 
     if (kycError) console.error("[admin.kycDocumentsPage] kyc_documents fetch failed", kycError);
     if (usersError) console.error("[admin.kycDocumentsPage] profiles fetch failed", usersError);
 
-    const profileNameMap = new Map(safeData(usersData).map((p) => [String(p.id), p.full_name || p.name || p.phone || "User"]));
+    const userMap = new Map(safeData(usersData).map(u => [String(u.id), u]));
 
     let documents = [];
     if (safeData(kycData).length > 0) {
@@ -1180,7 +1180,14 @@ export async function kycDocumentsPage(req, res) {
       for (const doc of safeData(kycData)) {
         const uid = String(doc.user_id);
         if (!byUser.has(uid)) {
-          byUser.set(uid, { id: uid, user_name: profileNameMap.get(uid) || "User", docs: [] });
+          const userObj = userMap.get(uid) || {};
+          byUser.set(uid, { 
+            id: uid, 
+            user_name: userObj.full_name || userObj.name || userObj.phone || "User", 
+            address: userObj.address || "No Address Provided",
+            address_verified: !!userObj.address_verified,
+            docs: [] 
+          });
         }
         byUser.get(uid).docs.push(doc);
       }
@@ -1213,13 +1220,15 @@ export async function kycDocumentsPage(req, res) {
       // Fallback: read from users/profiles table columns
       const { data: usersKycData } = await supabase
         .from("users")
-        .select("id, full_name, aadhaar_front_url, aadhaar_back_url, pan_card_url, electricity_bill_url, selfie_url, driving_license_url, updated_at")
+        .select("id, full_name, address, address_verified, aadhaar_front_url, aadhaar_back_url, pan_card_url, electricity_bill_url, selfie_url, driving_license_url, updated_at")
         .order("updated_at", { ascending: false });
       documents = safeData(usersKycData)
         .filter((item) => item?.aadhaar_front_url || item?.pan_card_url || item?.electricity_bill_url || item?.selfie_url || item?.driving_license_url)
         .map((item) => ({
           ...item,
-          user_name: item.full_name || profileNameMap.get(String(item.id)) || "User",
+          user_name: item.full_name || userMap.get(String(item.id))?.full_name || "User",
+          address: item.address || "No Address Provided",
+          address_verified: !!item.address_verified,
           aadhaar: item.aadhaar_front_url ? { file_url: item.aadhaar_front_url, status: "pending" } : null,
           pan: item.pan_card_url ? { file_url: item.pan_card_url, status: "pending" } : null,
           electricity_bill: item.electricity_bill_url ? { file_url: item.electricity_bill_url, status: "pending" } : null,
@@ -1281,6 +1290,25 @@ export async function kycUpdateStatus(req, res) {
     return res.json({ success: true, doc: data });
   } catch (err) {
     console.error("[admin.kycUpdateStatus] unexpected error", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+export async function verifyAddress(req, res) {
+  try {
+    const { userId } = req.params;
+    const { verified } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ success: false, error: "Missing userId" });
+    }
+    
+    const { error } = await supabase.from("users").update({ address_verified: !!verified }).eq("id", userId);
+    if (error) throw error;
+    
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[admin.verifyAddress] unexpected error", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 }
@@ -2498,6 +2526,10 @@ export async function editUser(req, res) {
     // 3. Handle Wallet manual credits/debits
     const amount = Number(wallet_amount);
     if (!isNaN(amount) && amount > 0 && wallet_action && wallet_action !== "none") {
+      const expectedPasscode = process.env.ADMIN_PASSCODE || "4812";
+      if (req.body.admin_passcode !== expectedPasscode) {
+        return res.status(401).json({ success: false, message: "Invalid Admin Passcode for wallet changes." });
+      }
       try {
         if (wallet_action === "add") {
           await walletService.addMoney(

@@ -73,7 +73,7 @@ function assertOtpAllowed(phone, ip) {
   otpThrottle.set(key, rec);
 }
 
-async function upsertProfileFromAuthUser(authUser, fallbackPhone) {
+async function upsertProfileFromAuthUser(authUser, fallbackPhone, address = null) {
   const userId = authUser?.id;
   if (!userId) throw new AppError("Invalid auth user", 500);
 
@@ -90,6 +90,7 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone) {
     email: authUser?.email || null,
     phone,
     location: null,
+    ...(address && { address }),
   };
 
   // Upsert into both profiles and users tables for complete admin dashboard synchronization
@@ -97,13 +98,7 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone) {
     supabase.from("profiles").upsert(payload).select("*").single(),
     supabase
       .from("users")
-      .upsert({
-        id: userId,
-        full_name: fullName,
-        email: authUser?.email || null,
-        phone,
-        location: null,
-      })
+      .upsert(payload)
       .select("*")
       .single()
   ]);
@@ -525,7 +520,7 @@ export async function loginWithPhone({ phone, otp }) {
   return verifyOtp({ phone, otp });
 }
 
-export async function signupWithEmail({ email, password, full_name }) {
+export async function signupWithEmail({ email, password, full_name, address }) {
   const cleanEmail = String(email || "").trim().toLowerCase();
   const cleanPassword = String(password || "");
   if (!cleanEmail) throw new AppError("Email is required", 422);
@@ -537,6 +532,7 @@ export async function signupWithEmail({ email, password, full_name }) {
     options: {
       data: {
         full_name: String(full_name || "").trim() || undefined,
+        address: String(address || "").trim() || undefined,
       },
     },
   });
@@ -546,7 +542,7 @@ export async function signupWithEmail({ email, password, full_name }) {
     throw new AppError(error?.message || "Unable to create account", 400);
   }
 
-  const profile = await upsertProfileFromAuthUser(data.user, null);
+  const profile = await upsertProfileFromAuthUser(data.user, null, address);
 
   // Send Welcome Notification (non-blocking)
   createUserNotification(

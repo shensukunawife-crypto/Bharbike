@@ -69,6 +69,7 @@ export const signup = asyncHandler(async (req, res) => {
     email: req.body?.email,
     password: req.body?.password,
     full_name: req.body?.full_name,
+    address: req.body?.address,
   });
   if (data?.token) {
     res.cookie("auth_token", data.token, cookieOptions());

@@ -21,6 +21,7 @@ router.get("/users", requirePermission("manage_users"), adminController.users);
 router.get("/users/:userId", requirePermission("manage_users"), adminController.userProfile);
 router.get("/kyc-documents", requirePermission("manage_users"), adminController.kycDocumentsPage);
 router.post("/kyc-documents/:docId/status", requirePermission("manage_users"), adminController.kycUpdateStatus);
+router.post("/users/:userId/verify-address", requirePermission("manage_users"), adminController.verifyAddress);
 
 router.post("/users/add", requirePermission("manage_users"), adminController.addUser);
 router.post("/users/:userId/edit", requirePermission("manage_users"), adminController.editUser);

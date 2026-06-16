@@ -41,7 +41,7 @@
     <table style="width:100%;border-collapse:collapse;">
       <thead>
         <tr style="background:var(--border-light);border-bottom:1px solid var(--border);">
-          <% ['User Info','Phone','Location','Status','Subscription','Orders','Spent','Wallet','Joined','Actions'].forEach(h => { %>
+          <% ['User Info','Phone','Location','Status','Subscription','Payment','Wallet','Joined','Actions'].forEach(h => { %>
           <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><%=h%></th>
           <% }) %>
         </tr>
@@ -57,7 +57,12 @@
             <div style="font-size:11px;color:var(--text-muted);font-weight:400;margin-top:2px;"><%= user.email || 'N/A' %></div>
           </td>
           <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);"><%= user.phone || 'N/A' %></td>
-          <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);"><%= user.location || 'N/A' %></td>
+          <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);">
+            <%= user.location || 'N/A' %>
+            <div style="font-size:11px; margin-top:2px;">
+              <strong>Address:</strong> <%= user.address || 'N/A' %>
+            </div>
+          </td>
           <td style="padding:13px 16px;">
             <span class="st-dot <%= user.isBlocked ? 'st-cancelled' : 'st-ongoing' %>">
               <%= user.statusLabel %>
@@ -70,7 +75,6 @@
               <span class="badge badge-gray" style="font-size:11px; font-weight:500; text-transform:none; padding:4px 10px;"><%= user.subscriptionText %></span>
             <% } %>
           </td>
-          <td style="padding:13px 16px;font-size:13px;text-align:center;"><%= user.totalOrders %></td>
           <td style="padding:13px 16px;font-size:13px;font-weight:600;color:#16a34a;">₹<%= Number(user.totalSpent || 0).toFixed(2) %></td>
           <td style="padding:13px 16px;font-size:13px;font-weight:600;color:var(--accent);">₹<%= Number(user.walletBalance || 0).toFixed(2) %></td>
           <td style="padding:13px 16px;font-size:12px;color:var(--text-muted);"><%= String(user.joinedDate).slice(0, 10) %></td>
@@ -180,6 +184,10 @@
             <label>Reason / Title</label>
             <input type="text" name="wallet_desc" placeholder="e.g. Promotional Bonus or Penalty" />
           </div>
+          <div class="form-group" id="wallet-auth-group" style="display:none; margin-bottom: 10px;">
+            <label style="color:#ef4444; font-weight:600;">Admin Passcode Required</label>
+            <input type="password" name="admin_passcode" id="admin_passcode" placeholder="Enter Admin Passcode" />
+          </div>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
           <button type="button" class="btn btn-danger admin-action" data-url="" id="edit-user-delete-btn" data-confirm="Are you sure you want to permanently delete this user?">Delete User</button>
@@ -220,5 +228,20 @@
     go(1);
   }
   paginate('users-tbody','users-pagination','users-pg-info','users-pg-btns','users-count-info');
+
+  const walletActionSelect = document.querySelector('select[name="wallet_action"]');
+  const walletAuthGroup = document.getElementById('wallet-auth-group');
+  const adminPasscodeInput = document.getElementById('admin_passcode');
+  if (walletActionSelect) {
+    walletActionSelect.addEventListener('change', function() {
+      if (this.value === 'add' || this.value === 'deduct') {
+        walletAuthGroup.style.display = 'block';
+        adminPasscodeInput.required = true;
+      } else {
+        walletAuthGroup.style.display = 'none';
+        adminPasscodeInput.required = false;
+      }
+    });
+  }
 })();
 </script>

@@ -3691,6 +3691,242 @@ export async function saveSocials(req, res) {
   }
 }
 
+// ==========================================
+// SUBSCRIPTIONS MANAGEMENT
+// ==========================================
+
+export async function subscriptionsPage(req, res) {
+  try {
+    const { data: subs } = await supabase
+      .from("user_subscriptions")
+      .select(`
+        *,
+        users ( full_name, email, phone )
+      `)
+      .order("created_at", { ascending: false });
+      
+    const { data: plans } = await supabase.from("subscription_plans").select("*");
+
+    res.render("layout", {
+      title: "Subscriptions",
+      active: "subscriptions",
+      bodyView: "subscriptions",
+      subs: subs || [],
+      plans: plans || [],
+      BRAND_NAME,
+      BRAND_PRODUCT_NAME,
+      formatBrand,
+      locals: res.locals
+    });
+  } catch (error) {
+    console.error("[adminController.subscriptionsPage] failed", error);
+    res.status(500).send("Server Error");
+  }
+}
+
+export async function addSubscription(req, res) {
+  try {
+    const { user_id, plan_id, end_date } = req.body;
+    if (!user_id || !plan_id) return res.status(400).json({ success: false, message: "User ID and Plan ID are required" });
+
+    const expiry = end_date ? new Date(end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    
+    // Check user exists
+    const { data: user } = await supabase.from("users").select("id").eq("id", user_id).maybeSingle();
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const { error } = await supabase.from("user_subscriptions").insert([{
+      user_id,
+      plan_id,
+      status: "active",
+      start_date: new Date().toISOString(),
+      end_date: expiry.toISOString(),
+      auto_renew: false
+    }]);
+
+    if (error) throw error;
+    res.json({ success: true, message: "Subscription added successfully" });
+  } catch (error) {
+    console.error("[adminController.addSubscription] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to add subscription" });
+  }
+}
+
+export async function editSubscription(req, res) {
+  try {
+    const { subId } = req.params;
+    const { end_date, status } = req.body;
+    
+    const updates = {};
+    if (end_date) updates.end_date = new Date(end_date).toISOString();
+    if (status) updates.status = status;
+    
+    const { error } = await supabase.from("user_subscriptions").update(updates).eq("id", subId);
+    if (error) throw error;
+    
+    res.json({ success: true, message: "Subscription updated successfully" });
+  } catch (error) {
+    console.error("[adminController.editSubscription] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to edit subscription" });
+  }
+}
+
+export async function cancelSubscription(req, res) {
+  try {
+    const { subId } = req.params;
+    const { error } = await supabase.from("user_subscriptions").update({
+      status: "cancelled",
+      cancelled_at: new Date().toISOString()
+    }).eq("id", subId);
+    
+    if (error) throw error;
+    res.json({ success: true, message: "Subscription cancelled successfully" });
+  } catch (error) {
+    console.error("[adminController.cancelSubscription] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to cancel subscription" });
+  }
+}
+
+// ==========================================
+// SUBSCRIPTION PLANS (SETTINGS)
+// ==========================================
+
+export async function subscriptionPlansPage(req, res) {
+  try {
+    const { data: plans } = await supabase.from("subscription_plans").select("*").order("price", { ascending: true });
+    
+    res.render("layout", {
+      title: "Subscription Plans",
+      active: "settings",
+      bodyView: "subscription-plans",
+      plans: plans || [],
+      BRAND_NAME,
+      BRAND_PRODUCT_NAME,
+      formatBrand,
+      locals: res.locals
+    });
+  } catch (error) {
+    console.error("[adminController.subscriptionPlansPage] failed", error);
+    res.status(500).send("Server Error");
+  }
+}
+
+export async function addSubscriptionPlan(req, res) {
+  try {
+    const { name, display_name, description, price, duration_days } = req.body;
+    if (!name || !display_name || !price || !duration_days) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const { error } = await supabase.from("subscription_plans").insert([{
+      name, display_name, description, 
+      price: Number(price), 
+      duration_days: Number(duration_days),
+      is_active: true
+    }]);
+
+    if (error) throw error;
+    res.json({ success: true, message: "Plan added successfully" });
+  } catch (error) {
+    console.error("[adminController.addSubscriptionPlan] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to add plan" });
+  }
+}
+
+export async function editSubscriptionPlan(req, res) {
+  try {
+    const { planId } = req.params;
+    const { name, display_name, description, price, duration_days, is_active } = req.body;
+    
+    const updates = { updated_at: new Date().toISOString() };
+    if (name !== undefined) updates.name = name;
+    if (display_name !== undefined) updates.display_name = display_name;
+    if (description !== undefined) updates.description = description;
+    if (price !== undefined) updates.price = Number(price);
+    if (duration_days !== undefined) updates.duration_days = Number(duration_days);
+    if (is_active !== undefined) updates.is_active = is_active === "true" || is_active === true;
+    
+    const { error } = await supabase.from("subscription_plans").update(updates).eq("id", planId);
+    if (error) throw error;
+    
+    res.json({ success: true, message: "Plan updated successfully" });
+  } catch (error) {
+    console.error("[adminController.editSubscriptionPlan] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to update plan" });
+  }
+}
+
+export async function deleteSubscriptionPlan(req, res) {
+  try {
+    const { planId } = req.params;
+    const { error } = await supabase.from("subscription_plans").delete().eq("id", planId);
+    
+    if (error) throw error;
+    res.json({ success: true, message: "Plan deleted successfully" });
+  } catch (error) {
+    console.error("[adminController.deleteSubscriptionPlan] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to delete plan" });
+  }
+}
+
+// ==========================================
+// MANUAL PAYMENTS CRUD
+// ==========================================
+
+export async function addPayment(req, res) {
+  try {
+    const { user_id, amount, status, razorpay_payment_id, order_id } = req.body;
+    if (!user_id || !amount) {
+      return res.status(400).json({ success: false, message: "User ID and Amount are required" });
+    }
+
+    const { error } = await supabase.from("payments").insert([{
+      user_id,
+      amount: Number(amount),
+      status: status || "success",
+      razorpay_payment_id: razorpay_payment_id || "manual_cash",
+      order_id: order_id || null
+    }]);
+
+    if (error) throw error;
+    res.json({ success: true, message: "Payment added successfully" });
+  } catch (error) {
+    console.error("[adminController.addPayment] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to add payment" });
+  }
+}
+
+export async function editPayment(req, res) {
+  try {
+    const { paymentId } = req.params;
+    const { status } = req.body;
+    
+    if (!status) return res.status(400).json({ success: false, message: "Status is required" });
+    
+    const { error } = await supabase.from("payments").update({ status }).eq("id", paymentId);
+    if (error) throw error;
+    
+    res.json({ success: true, message: "Payment updated successfully" });
+  } catch (error) {
+    console.error("[adminController.editPayment] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to edit payment" });
+  }
+}
+
+export async function deletePayment(req, res) {
+  try {
+    const { paymentId } = req.params;
+    const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+    
+    if (error) throw error;
+    res.json({ success: true, message: "Payment deleted successfully" });
+  } catch (error) {
+    console.error("[adminController.deletePayment] failed", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to delete payment" });
+  }
+}
+
+
 
 
 

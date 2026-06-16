@@ -52,9 +52,13 @@
     </form>
 
     <div class="premium-card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">Payment transactions</h2>
-        <p class="card-subtitle">From Supabase <code>payments</code> + linked orders.</p>
+    <div class="premium-card" style="margin-bottom: 24px;">
+      <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2 class="card-title">Payment transactions</h2>
+          <p class="card-subtitle">From Supabase <code>payments</code> + linked orders.</p>
+        </div>
+        <button class="btn btn-gold" style="padding: 10px 16px; background: #eab308; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="document.getElementById('add-payment-modal').classList.add('show')">+ Log Manual Payment</button>
       </div>
       <div style="overflow-x: auto;">
         <table class="table-custom">
@@ -67,6 +71,7 @@
               <th>Razorpay payment_id</th>
               <th>Razorpay order_id</th>
               <th>Created</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="admin-payments-tbody">
@@ -91,10 +96,73 @@
               <td><span class="code-badge"><%= p.razorpay_payment_id %></span></td>
               <td><span class="code-badge"><%= p.razorpay_order_id %></span></td>
               <td><%= p.created_at ? String(p.created_at).replace('T',' ').slice(0,19) : '—' %></td>
+              <td style="display:flex; gap:8px;">
+                <button class="btn btn-sm btn-outline open-edit-payment" style="padding:4px 8px; font-size:12px;"
+                  data-id="<%= p.id %>" 
+                  data-status="<%= String(p.status).toLowerCase() %>">Edit</button>
+                <button class="btn btn-sm btn-danger admin-action" style="padding:4px 8px; font-size:12px; background:white; color:#ef4444; border:1px solid #fca5a5;" data-url="/admin/payments/<%= p.id %>/delete" data-method="POST" data-confirm="Are you sure you want to delete this payment?">Delete</button>
+              </td>
             </tr>
             <% }); %>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Add Payment Modal -->
+    <div class="modal" id="add-payment-modal">
+      <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+          <h3>Log Manual Payment</h3>
+          <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('add-payment-modal').classList.remove('show')">&times;</button>
+        </div>
+        <form class="admin-form ajax-form" data-url="/admin/payments/add">
+          <div class="form-group">
+            <label>User ID</label>
+            <input name="user_id" placeholder="Enter UUID" required />
+          </div>
+          <div class="form-row" style="display:flex; gap:16px;">
+            <div class="form-group" style="flex:1;">
+              <label>Amount (₹)</label>
+              <input type="number" name="amount" required />
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Status</label>
+              <select name="status">
+                <option value="success">Success</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Reference / Razorpay ID (Optional)</label>
+            <input name="razorpay_payment_id" placeholder="e.g. manual_cash" />
+          </div>
+          <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Save Payment</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Payment Modal -->
+    <div class="modal" id="edit-payment-modal">
+      <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+          <h3>Edit Payment Status</h3>
+          <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('edit-payment-modal').classList.remove('show')">&times;</button>
+        </div>
+        <form class="admin-form ajax-form" id="edit-payment-form" data-url="">
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status" id="edit-payment-status">
+              <option value="success">Success</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+              <option value="refunded">Refunded</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Update Status</button>
+        </form>
       </div>
     </div>
 
@@ -495,6 +563,10 @@ document.addEventListener('DOMContentLoaded', () => {
             "<td>" +
             escapeHtml(created) +
             "</td>" +
+            "<td style='display:flex; gap:8px;'>" +
+            '<button class="btn btn-sm btn-outline open-edit-payment" style="padding:4px 8px; font-size:12px;" data-id="' + escapeHtml(p.id) + '" data-status="' + escapeHtml(st) + '">Edit</button>' +
+            '<button class="btn btn-sm btn-danger admin-action" style="padding:4px 8px; font-size:12px; background:white; color:#ef4444; border:1px solid #fca5a5;" data-url="/admin/payments/' + escapeHtml(p.id) + '/delete" data-method="POST" data-confirm="Are you sure?">Delete</button>' +
+            "</td>" +
             "</tr>"
           );
         })
@@ -508,5 +580,14 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(function () {
     if (document.visibilityState === "visible") window.refreshAdminPayments();
   }, 12000);
+
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('open-edit-payment')) {
+      const btn = e.target;
+      document.getElementById('edit-payment-form').dataset.url = '/admin/payments/' + btn.dataset.id + '/edit';
+      document.getElementById('edit-payment-status').value = btn.dataset.status;
+      document.getElementById('edit-payment-modal').classList.add('show');
+    }
+  });
 })();
 </script>

@@ -1,0 +1,133 @@
+<div class="dashboard-container">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+      <h2 class="card-title">User Subscriptions</h2>
+      <p class="card-subtitle">Manage user active subscriptions and manual assignments.</p>
+    </div>
+    <button class="btn btn-gold" data-modal-target="add-subscription-modal">+ Assign Subscription</button>
+  </div>
+
+  <div class="premium-card">
+    <div style="overflow-x: auto;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Plan</th>
+            <th>Status</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!subs || !subs.length) { %>
+          <tr><td colspan="6" style="text-align:center;padding:28px;color:#64748b;">No subscriptions found</td></tr>
+          <% } %>
+          <% (subs || []).forEach(function(s) { %>
+          <tr>
+            <td>
+              <strong><%= s.users ? s.users.full_name : s.user_id %></strong><br/>
+              <span class="muted-small"><%= s.users ? s.users.phone || s.users.email : '' %></span>
+            </td>
+            <td><span class="badge badge-soft" style="text-transform: capitalize;"><%= (s.plan_id || '').replace('_', ' ') %></span></td>
+            <td>
+              <% if (s.status === 'active') { %>
+                <span class="badge success">Active</span>
+              <% } else if (s.status === 'cancelled') { %>
+                <span class="badge danger">Cancelled</span>
+              <% } else { %>
+                <span class="badge warning"><%= s.status %></span>
+              <% } %>
+            </td>
+            <td><%= s.start_date ? String(s.start_date).replace('T',' ').slice(0,19) : '—' %></td>
+            <td>
+              <span style="font-family: monospace; font-weight: 500;">
+                <%= s.end_date ? String(s.end_date).replace('T',' ').slice(0,19) : '—' %>
+              </span>
+            </td>
+            <td style="display:flex;gap:8px;">
+              <button class="btn btn-sm btn-outline open-edit-sub" 
+                data-id="<%= s.id %>" 
+                data-status="<%= s.status %>" 
+                data-end="<%= s.end_date ? String(s.end_date).slice(0,16) : '' %>">Edit</button>
+              
+              <% if (s.status === 'active') { %>
+                <button class="btn btn-sm btn-danger admin-action" data-url="/admin/subscriptions/<%= s.id %>/cancel" data-method="POST">Cancel</button>
+              <% } %>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Subscription Modal -->
+<div class="modal" id="add-subscription-modal">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h3>Assign Subscription Manually</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('add-subscription-modal').classList.remove('show')">&times;</button>
+    </div>
+    <form class="admin-form ajax-form" data-url="/admin/subscriptions/add">
+      <div class="form-group">
+        <label>User ID</label>
+        <input name="user_id" placeholder="Enter full UUID of the user" required />
+      </div>
+      <div class="form-group">
+        <label>Subscription Plan</label>
+        <select name="plan_id" required>
+          <% (plans || []).forEach(p => { %>
+            <option value="<%= p.id %>"><%= p.display_name %> (₹<%= p.price %>)</option>
+          <% }) %>
+          <option value="weekly">Legacy Weekly</option>
+          <option value="monthly">Legacy Monthly</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>End Date (Optional Override)</label>
+        <input type="datetime-local" name="end_date" />
+        <small class="muted-small">Leave blank to default to +30 days</small>
+      </div>
+      <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Assign Subscription</button>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Subscription Modal -->
+<div class="modal" id="edit-subscription-modal">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h3>Edit Subscription</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('edit-subscription-modal').classList.remove('show')">&times;</button>
+    </div>
+    <form class="admin-form ajax-form" id="edit-subscription-form" data-url="">
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status" id="edit-sub-status">
+          <option value="active">Active</option>
+          <option value="expired">Expired</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>End Date</label>
+        <input type="datetime-local" name="end_date" id="edit-sub-end" required />
+      </div>
+      <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.open-edit-sub').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('edit-subscription-form').dataset.url = '/admin/subscriptions/' + btn.dataset.id + '/edit';
+      document.getElementById('edit-sub-status').value = btn.dataset.status;
+      document.getElementById('edit-sub-end').value = btn.dataset.end;
+      document.getElementById('edit-subscription-modal').classList.add('show');
+    });
+  });
+</script>

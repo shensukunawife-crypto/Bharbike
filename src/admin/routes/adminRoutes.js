@@ -26,6 +26,12 @@ router.post("/users/add", requirePermission("manage_users"), adminController.add
 router.post("/users/:userId/edit", requirePermission("manage_users"), adminController.editUser);
 router.post("/users/:userId/block", requirePermission("manage_users"), adminController.blockUser);
 
+// Subscriptions
+router.get("/subscriptions", requirePermission("manage_users"), adminController.subscriptionsPage);
+router.post("/subscriptions/add", requirePermission("manage_users"), adminController.addSubscription);
+router.post("/subscriptions/:subId/edit", requirePermission("manage_users"), adminController.editSubscription);
+router.post("/subscriptions/:subId/cancel", requirePermission("manage_users"), adminController.cancelSubscription);
+
 // Vehicle & Fleet Control
 router.get("/bikes", requirePermission("manage_bikes"), adminController.bikes);
 router.get("/hubs", requirePermission("manage_bikes"), adminController.hubsPage);
@@ -71,6 +77,9 @@ router.get("/earnings/export/excel", requirePermission("manage_finance"), adminC
 router.get("/earnings/export/pdf", requirePermission("manage_finance"), adminController.exportEarningsPDF);
 router.get("/analytics", requirePermission("manage_finance"), adminController.analytics);
 router.get("/payments", requirePermission("manage_finance"), adminController.paymentsPage);
+router.post("/payments/add", requirePermission("manage_finance"), adminController.addPayment);
+router.post("/payments/:paymentId/edit", requirePermission("manage_finance"), adminController.editPayment);
+router.post("/payments/:paymentId/delete", requirePermission("manage_finance"), adminController.deletePayment);
 router.post("/earnings/payout/:payoutId/release", requirePermission("manage_finance"), adminController.releasePayout);
 router.post("/promo/add", requirePermission("manage_finance"), adminController.addPromoCode);
 router.post("/promo/:promoId/toggle", requirePermission("manage_finance"), adminController.togglePromoCode);
@@ -96,6 +105,12 @@ router.get("/settings", requirePermission("manage_settings"), adminController.se
 router.post("/settings/save", requirePermission("manage_settings"), adminController.saveSettings);
 router.get("/sql-editor", requirePermission("manage_settings"), adminController.sqlEditorPage);
 router.post("/sql-editor/run", requirePermission("manage_settings"), adminController.runSqlQuery);
+
+// Subscription Plans (Settings)
+router.get("/subscription-plans", requirePermission("manage_settings"), adminController.subscriptionPlansPage);
+router.post("/subscription-plans/add", requirePermission("manage_settings"), adminController.addSubscriptionPlan);
+router.post("/subscription-plans/:planId/edit", requirePermission("manage_settings"), adminController.editSubscriptionPlan);
+router.post("/subscription-plans/:planId/delete", requirePermission("manage_settings"), adminController.deleteSubscriptionPlan);
 
 // Sub-Admins Management
 router.get("/admins", requirePermission("manage_admins"), adminController.adminsPage);

@@ -1,0 +1,150 @@
+<div class="dashboard-container">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+      <h2 class="card-title">Subscription Plans</h2>
+      <p class="card-subtitle">Manage available subscription tiers and pricing.</p>
+    </div>
+    <button class="btn btn-gold" data-modal-target="add-plan-modal">+ Create Plan</button>
+  </div>
+
+  <div class="premium-card">
+    <div style="overflow-x: auto;">
+      <table class="table-custom">
+        <thead>
+          <tr>
+            <th>Name (ID)</th>
+            <th>Display Name</th>
+            <th>Duration (Days)</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!plans || !plans.length) { %>
+          <tr><td colspan="6" style="text-align:center;padding:28px;color:#64748b;">No plans configured</td></tr>
+          <% } %>
+          <% (plans || []).forEach(function(p) { %>
+          <tr>
+            <td><strong><%= p.name %></strong></td>
+            <td><%= p.display_name %></td>
+            <td><%= p.duration_days %> Days</td>
+            <td>₹<%= p.price %></td>
+            <td>
+              <% if (p.is_active) { %>
+                <span class="badge success">Active</span>
+              <% } else { %>
+                <span class="badge danger">Inactive</span>
+              <% } %>
+            </td>
+            <td style="display:flex;gap:8px;">
+              <button class="btn btn-sm btn-outline open-edit-plan" 
+                data-id="<%= p.id %>" 
+                data-name="<%= p.name %>"
+                data-display="<%= p.display_name %>"
+                data-desc="<%= p.description %>"
+                data-price="<%= p.price %>"
+                data-duration="<%= p.duration_days %>"
+                data-active="<%= p.is_active %>">Edit</button>
+              
+              <button class="btn btn-sm btn-danger admin-action" data-url="/admin/subscription-plans/<%= p.id %>/delete" data-method="POST" data-confirm="Are you sure you want to delete this plan? This may break active subscriptions using it.">Delete</button>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Plan Modal -->
+<div class="modal" id="add-plan-modal">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h3>Create New Plan</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('add-plan-modal').classList.remove('show')">&times;</button>
+    </div>
+    <form class="admin-form ajax-form" data-url="/admin/subscription-plans/add">
+      <div class="form-group">
+        <label>Plan ID (e.g. weekly_plan)</label>
+        <input name="name" required />
+      </div>
+      <div class="form-group">
+        <label>Display Name (e.g. Weekly Pro)</label>
+        <input name="display_name" required />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" rows="3"></textarea>
+      </div>
+      <div class="form-row" style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+          <label>Duration (Days)</label>
+          <input type="number" name="duration_days" required />
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Price (₹)</label>
+          <input type="number" name="price" required />
+        </div>
+      </div>
+      <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Create Plan</button>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Plan Modal -->
+<div class="modal" id="edit-plan-modal">
+  <div class="modal-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h3>Edit Plan</h3>
+      <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('edit-plan-modal').classList.remove('show')">&times;</button>
+    </div>
+    <form class="admin-form ajax-form" id="edit-plan-form" data-url="">
+      <div class="form-group">
+        <label>Plan ID</label>
+        <input name="name" id="edit-plan-name" required />
+      </div>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input name="display_name" id="edit-plan-display" required />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" id="edit-plan-desc" rows="3"></textarea>
+      </div>
+      <div class="form-row" style="display:flex; gap:16px;">
+        <div class="form-group" style="flex:1;">
+          <label>Duration (Days)</label>
+          <input type="number" name="duration_days" id="edit-plan-duration" required />
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Price (₹)</label>
+          <input type="number" name="price" id="edit-plan-price" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Is Active?</label>
+        <select name="is_active" id="edit-plan-active">
+          <option value="true">Active (Purchasable)</option>
+          <option value="false">Inactive (Hidden)</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.open-edit-plan').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('edit-plan-form').dataset.url = '/admin/subscription-plans/' + btn.dataset.id + '/edit';
+      document.getElementById('edit-plan-name').value = btn.dataset.name;
+      document.getElementById('edit-plan-display').value = btn.dataset.display;
+      document.getElementById('edit-plan-desc').value = btn.dataset.desc;
+      document.getElementById('edit-plan-duration').value = btn.dataset.duration;
+      document.getElementById('edit-plan-price').value = btn.dataset.price;
+      document.getElementById('edit-plan-active').value = btn.dataset.active;
+      document.getElementById('edit-plan-modal').classList.add('show');
+    });
+  });
+</script>

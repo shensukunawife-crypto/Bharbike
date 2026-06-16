@@ -54,18 +54,36 @@
         <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Location</span>
         <strong style="text-align: right; font-size: 15px;"><%= user.location || "N/A" %></strong>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
-        <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Assigned Bike</span>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <strong style="text-align: right; color: var(--accent); font-size: 15px;"><%= user.assignedBike %></strong>
-          <button onclick="document.getElementById('change-bike-modal').classList.add('show')" class="btn btn-gold" style="font-size: 13px; padding: 4px 12px;">Change</button>
-        </div>
-      </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
         <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Joined Date</span>
         <strong style="text-align: right; font-size: 15px;"><%= String(user.joinedDate).slice(0, 10) %></strong>
       </div>
     </div>
+  </div>
+
+  <!-- Dedicated Assigned Bike Section -->
+  <div class="chart-card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 32px 16px;">
+    <h3 style="margin: 0 0 16px 0; color: #6b7280; font-size: 16px;">Currently Assigned Bike</h3>
+    
+    <% if (user.assignedBike && user.assignedBike !== 'None') { %>
+      <div style="font-size: 48px; font-weight: bold; color: var(--accent); margin-bottom: 8px;">
+        <%= user.assignedBike %>
+      </div>
+      <div style="color: #10b981; font-size: 14px; margin-bottom: 32px; display: flex; align-items: center; gap: 6px;">
+        <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block;"></span> Active Rental
+      </div>
+    <% } else { %>
+      <div style="font-size: 32px; font-weight: bold; color: #9ca3af; margin-bottom: 8px;">
+        No Bike Assigned
+      </div>
+      <div style="color: #6b7280; font-size: 14px; margin-bottom: 32px;">
+        This user does not currently have an active rental.
+      </div>
+    <% } %>
+
+    <button onclick="document.getElementById('change-bike-modal').classList.add('show')" class="btn btn-gold glow" style="font-size: 15px; padding: 12px 24px; width: 100%; max-width: 250px;">
+      <%= user.assignedBike !== 'None' ? 'Change / Unassign Bike' : 'Assign New Bike' %>
+    </button>
   </div>
 
   <div class="chart-card">
@@ -190,13 +208,15 @@
         </tr>
       </thead>
       <tbody>
-        <% if (!orderHistory.length) { %>
-        <tr><td colspan="5" class="empty">No orders found</td></tr>
-        <% } %>
-        <% orderHistory.forEach((order) => { %>
+        <% if (orderHistory.length === 0) { %>
         <tr>
-          <td title="<%= order.id %>" style="cursor: help;">
-            <%= String(order.id).substring(0, 8) %>...<%= String(order.id).slice(-4) %>
+          <td colspan="5" style="text-align: center; color: #6b7280;">No past orders found.</td>
+        </tr>
+        <% } %>
+        <% orderHistory.forEach((order, index) => { %>
+        <tr>
+          <td title="<%= order.id %>" style="cursor: help; font-weight: 500; color: var(--accent);">
+            Order <%= orderHistory.length - index %>
           </td>
           <td><%= order.pickup_location %></td>
           <td><%= order.drop_location %></td>

@@ -25,6 +25,7 @@ router.post("/kyc-documents/:docId/status", requirePermission("manage_users"), a
 router.post("/users/add", requirePermission("manage_users"), adminController.addUser);
 router.post("/users/:userId/edit", requirePermission("manage_users"), adminController.editUser);
 router.post("/users/:userId/block", requirePermission("manage_users"), adminController.blockUser);
+router.post("/users/:userId/delete", requirePermission("manage_users"), adminController.deleteUser);
 
 // Subscriptions
 router.get("/subscriptions", requirePermission("manage_users"), adminController.subscriptionsPage);

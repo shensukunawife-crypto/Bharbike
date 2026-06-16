@@ -91,6 +91,10 @@
                 data-url="/admin/users/<%= user.id %>/block" data-method="POST">
                 <%= user.isBlocked ? 'Unblock' : 'Block' %>
               </button>
+              <button class="btn btn-sm btn-danger admin-action" style="background:white; color:#ef4444; border:1px solid #fca5a5;"
+                data-url="/admin/users/<%= user.id %>/delete" data-method="POST" data-confirm="Are you absolutely sure you want to PERMANENTLY delete this user and all their data? This cannot be undone.">
+                Delete
+              </button>
             </div>
           </td>
         </tr>
@@ -157,17 +161,30 @@
           <input type="datetime-local" name="sub_end" id="edit-user-sub-end" />
         </div>
         <div style="border-top: 1px solid var(--border); margin-top: 15px; padding-top: 15px; margin-bottom: 10px;">
-          <h4 style="margin: 0 0 10px 0; color: #ff8a3d; font-size: 14px; display: flex; align-items: center; gap: 6px;">💰 Add Money to Wallet</h4>
-          <div class="form-group" style="margin-bottom: 10px;">
-            <label>Amount (₹)</label>
-            <input type="number" name="wallet_credit_amount" placeholder="e.g. 500 (Leave blank for no credit)" min="0" />
+          <h4 style="margin: 0 0 10px 0; color: #ff8a3d; font-size: 14px; display: flex; align-items: center; gap: 6px;">💰 Manage Wallet Balance</h4>
+          <div class="form-row" style="display:flex; gap:16px;">
+            <div class="form-group" style="flex:1;">
+              <label>Action</label>
+              <select name="wallet_action">
+                <option value="none">-- Select --</option>
+                <option value="add">Credit (+)</option>
+                <option value="deduct">Deduct (-)</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Amount (₹)</label>
+              <input type="number" name="wallet_amount" placeholder="e.g. 500" min="1" />
+            </div>
           </div>
           <div class="form-group" style="margin-bottom: 10px;">
             <label>Reason / Title</label>
-            <input name="wallet_credit_desc" placeholder="e.g. Cash Deposit / Admin Recharge" />
+            <input type="text" name="wallet_desc" placeholder="e.g. Promotional Bonus or Penalty" />
           </div>
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Update User</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+          <button type="button" class="btn btn-danger admin-action" data-url="" id="edit-user-delete-btn" data-confirm="Are you sure you want to permanently delete this user?">Delete User</button>
+          <button type="submit" class="btn btn-primary">Update User</button>
+        </div>
       </form>
     </div>
   </div>

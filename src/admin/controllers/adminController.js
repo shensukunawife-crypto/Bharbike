@@ -2453,7 +2453,7 @@ export async function editUser(req, res) {
   try {
     const { userId } = req.params;
     const full_name = req.body.full_name ?? req.body.name;
-    const { phone, email, location, is_prepaid, sub_plan, sub_start, sub_end, wallet_credit_amount, wallet_credit_desc } = req.body;
+    const { phone, email, location, is_prepaid, sub_plan, sub_start, sub_end, wallet_action, wallet_amount, wallet_desc } = req.body;
     const updates = {
       ...(full_name !== undefined && { full_name }),
       ...(phone !== undefined && { phone }),
@@ -2495,18 +2495,29 @@ export async function editUser(req, res) {
       await supabase.from("user_subscriptions").delete().eq("user_id", userId);
     }
 
-    // 3. Handle Wallet manual credits
-    const creditAmount = Number(wallet_credit_amount);
-    if (!isNaN(creditAmount) && creditAmount > 0) {
+    // 3. Handle Wallet manual credits/debits
+    const amount = Number(wallet_amount);
+    if (!isNaN(amount) && amount > 0 && wallet_action && wallet_action !== "none") {
       try {
-        await walletService.addMoney(
-          userId,
-          creditAmount,
-          wallet_credit_desc || "Admin Manual Credit"
-        );
-      } catch (walletErr) {
-        console.error("❌ [admin.editUser] failed to credit wallet:", walletErr.message);
-        return res.status(500).json({ success: false, message: `Profile updated, but wallet credit failed: ${walletErr.message}` });
+        if (wallet_action === "add") {
+          await walletService.addMoney(
+            userId,
+            amount,
+            "Admin Credit",
+            null, // No Razorpay payment ID
+            `Admin note: ${wallet_desc || "Manual Adjustment"}`
+          );
+        } else if (wallet_action === "deduct") {
+          await walletService.deductMoney(
+            userId,
+            amount,
+            "Admin Debit",
+            wallet_desc || "Manual Adjustment"
+          );
+        }
+      } catch (err) {
+        console.error("❌ [admin.editUser] wallet adjustment failed:", err.message);
+        return res.status(500).json({ success: false, message: `Failed to adjust wallet: ${err.message}` });
       }
     }
 
@@ -3944,3 +3955,30 @@ export async function deletePayment(req, res) {
 
 
 
+
+// ==========================================
+// USER DELETION
+// ==========================================
+export async function deleteUser(req, res) {
+  try {
+    const { userId } = req.params;
+    
+    // Hard delete from users table (cascades via foreign keys)
+    const { error } = await supabase.from('users').delete().eq('id', userId);
+    if (error) throw error;
+    
+    // Attempt to delete from Auth as well
+    try {
+      if (supabase.auth && supabase.auth.admin) {
+        await supabase.auth.admin.deleteUser(userId);
+      }
+    } catch (authErr) {
+      console.warn("Auth deletion skipped:", authErr.message);
+    }
+    
+    res.json({ success: true, message: 'User permanently deleted.' });
+  } catch (error) {
+    console.error('[adminController.deleteUser] failed:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete user.' });
+  }
+}

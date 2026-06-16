@@ -963,6 +963,15 @@ export async function userProfile(req, res) {
       paymentMethod,
       walletBalance: walletRow ? Number(walletRow.balance || 0) : 0,
       selfie_url: userRow.selfie_url || null,
+      address: userRow.address || "N/A",
+      address_verified: userRow.address_verified || false,
+      emergency_contact_name: userRow.emergency_contact_name || "N/A",
+      emergency_contact_phone: userRow.emergency_contact_phone || "N/A",
+      aadhaar_front_url: userRow.aadhaar_front_url || null,
+      aadhaar_back_url: userRow.aadhaar_back_url || null,
+      pan_card_url: userRow.pan_card_url || null,
+      electricity_bill_url: userRow.electricity_bill_url || null,
+      driving_license_url: userRow.driving_license_url || null,
       assignedBike
     };
 

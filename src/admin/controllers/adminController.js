@@ -2520,12 +2520,15 @@ export async function editUser(req, res) {
   try {
     const { userId } = req.params;
     const full_name = req.body.full_name ?? req.body.name;
-    const { phone, email, location, is_prepaid, sub_plan, sub_start, sub_end, wallet_action, wallet_amount, wallet_desc } = req.body;
+    const { phone, email, location, address, emergency_contact_name, emergency_contact_phone, is_prepaid, sub_plan, sub_start, sub_end, wallet_action, wallet_amount, wallet_desc } = req.body;
     const updates = {
       ...(full_name !== undefined && { full_name }),
       ...(phone !== undefined && { phone }),
       ...(email !== undefined && { email }),
       ...(location !== undefined && { location }),
+      ...(address !== undefined && { address }),
+      ...(emergency_contact_name !== undefined && { emergency_contact_name }),
+      ...(emergency_contact_phone !== undefined && { emergency_contact_phone }),
       ...(is_prepaid !== undefined && { is_prepaid: is_prepaid === "true" || is_prepaid === true }),
     };
     
@@ -4077,5 +4080,42 @@ export async function uploadUserDocument(req, res) {
   } catch (error) {
     console.error("[admin.uploadUserDocument] error", error);
     return res.status(500).json({ success: false, message: error.message || "Failed to upload document" });
+  }
+}
+export async function assignBikeToUser(req, res) {
+  try {
+    const { userId } = req.params;
+    const { bike_code } = req.body;
+    
+    // First, end any existing ongoing rentals for this user
+    await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).eq("status", "ongoing");
+    
+    if (!bike_code || bike_code.trim() === "None" || bike_code.trim() === "") {
+       return res.json({ success: true, message: "Bike unassigned successfully" });
+    }
+    
+    // Find the bike
+    const { data: bike } = await supabase.from("bikes").select("id").eq("bike_code", bike_code).maybeSingle();
+    if (!bike) return res.status(404).json({ success: false, message: "Bike code not found" });
+    
+    // Start new rental
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
+    const { error: rentalError } = await supabase.from("rentals").insert([{
+      bike_id: bike.id,
+      user_id: userId,
+      duration: 24,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      status: "ongoing",
+      price: 0
+    }]);
+    if (rentalError) throw rentalError;
+    
+    await supabase.from("bikes").update({ status: "in_use" }).eq("id", bike.id);
+    return res.json({ success: true, message: "Bike assigned successfully!" });
+  } catch (err) {
+    console.error("[admin.assignBikeToUser]", err);
+    return res.status(500).json({ success: false, message: err.message || "Unable to assign bike" });
   }
 }

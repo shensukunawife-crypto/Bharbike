@@ -804,7 +804,7 @@ export async function users(req, res) {
             String(order.userName || "").toLowerCase() ===
               String(base.full_name || "").toLowerCase()
         );
-        const totalSpent = userOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+        const totalSpent = userOrders.reduce((sum, order) => ["assigned", "ongoing", "completed"].includes(order.status) ? sum + Number(order.amount || 0) : sum, 0);
         const joinedDate = row.created_at || row.createdAt || new Date().toISOString();
         const isBlocked = row.is_blocked === true || row.status === "blocked";
         const lastOrderAt = userOrders
@@ -941,7 +941,7 @@ export async function userProfile(req, res) {
           String(order.userName || "").toLowerCase() ===
             String(base.full_name || "").toLowerCase()
       );
-    const totalSpent = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+    const totalSpent = orders.reduce((sum, order) => ["assigned", "ongoing", "completed"].includes(order.status) ? sum + Number(order.amount || 0) : sum, 0);
     const paymentMethod = totalSpent > 0 ? "Online" : "Cash";
     const profile = {
       ...base,

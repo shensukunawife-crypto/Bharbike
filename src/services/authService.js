@@ -90,6 +90,10 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone, address = null
     email: authUser?.email || null,
     phone,
     location: null,
+  };
+
+  const usersPayload = {
+    ...payload,
     ...(address && { address }),
   };
 
@@ -98,7 +102,7 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone, address = null
     supabase.from("profiles").upsert(payload).select("*").single(),
     supabase
       .from("users")
-      .upsert(payload)
+      .upsert(usersPayload)
       .select("*")
       .single()
   ]);

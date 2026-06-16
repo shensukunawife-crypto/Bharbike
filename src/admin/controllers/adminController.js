@@ -2532,10 +2532,13 @@ export async function editUser(req, res) {
       ...(is_prepaid !== undefined && { is_prepaid: is_prepaid === "true" || is_prepaid === true }),
     };
     
+    const profileUpdates = { ...updates };
+    delete profileUpdates.address;
+
     // 1. Update basic profile info
     await Promise.all([
       supabase.from("users").update(updates).eq("id", userId),
-      supabase.from("profiles").update(updates).eq("id", userId),
+      supabase.from("profiles").update(profileUpdates).eq("id", userId),
     ]);
 
     // 2. Handle Subscription Override updates

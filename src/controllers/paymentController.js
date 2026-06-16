@@ -10,7 +10,7 @@ import supabase from "../utils/supabaseClient.js";
  */
 export const createOrder = async (req, res) => {
   try {
-    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null } = req.body;
+    const { amount, currency = "INR", receipt, amount_in_paise = false, user_id = null, plan_name = null, plan_id = null, payment_method = null } = req.body;
     const numericAmount = Number(amount);
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
@@ -46,6 +46,72 @@ export const createOrder = async (req, res) => {
       } catch (err) {
         console.warn("[createOrder] prepaid status check failed:", err.message);
       }
+    }
+
+    // Check if payment method is wallet
+    if (payment_method === "wallet") {
+      if (user_id) {
+        try {
+          const { data: walletBal } = await supabase
+            .from("wallet_balances")
+            .select("balance")
+            .eq("user_id", user_id)
+            .maybeSingle();
+
+          const balance = walletBal ? Number(walletBal.balance || 0) : 0;
+          if (balance < normalizedAmount) {
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient wallet balance. You have ₹${balance}, but need ₹${normalizedAmount}. Please recharge your wallet.`
+            });
+          }
+        } catch (err) {
+          console.warn("[createOrder] wallet balance check failed:", err.message);
+        }
+      }
+
+      // Create order in app database first (pending)
+      const { data: appOrder, error: appOrderError } = await supabase
+        .from("orders")
+        .insert([
+          {
+            user_id: user_id || null,
+            plan_name: plan_name || null,
+            amount: Math.round(normalizedAmount),
+            status: "pending",
+            order_code: `ORD-WLT-${Date.now()}`,
+          },
+        ])
+        .select("id")
+        .single();
+
+      let appOrderId = appOrder?.id ?? crypto.randomUUID();
+      const mockOrderId = `wallet_order_${Date.now()}`;
+
+      // Save to payments table
+      try {
+        await supabase.from("payments").insert([
+          {
+            order_id: appOrderId,
+            razorpay_order_id: mockOrderId,
+            status: "created",
+          },
+        ]);
+      } catch (paymentInsertError) {
+        console.warn("[createOrder] wallet payments insert skipped:", paymentInsertError?.message);
+      }
+
+      return res.status(200).json({
+        success: true,
+        id: mockOrderId,
+        order_id: mockOrderId,
+        key_id: "wallet",
+        amount: Math.round(normalizedAmount * 100),
+        currency: currency || "INR",
+        app_order_id: appOrderId,
+        payment_method: "wallet",
+        plan_id: plan_id || plan_name || null,
+      });
     }
 
     // Retrieve active Razorpay config (must be real keys)

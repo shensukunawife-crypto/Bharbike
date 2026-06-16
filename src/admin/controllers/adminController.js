@@ -1294,6 +1294,28 @@ export async function kycUpdateStatus(req, res) {
   }
 }
 
+export async function deleteBike(req, res) {
+  try {
+    const { bikeId } = req.params;
+    if (!bikeId) return res.status(400).json({ success: false, error: "Missing bike ID" });
+    
+    const { error } = await supabase.from("bikes").delete().eq("id", bikeId);
+    if (error) {
+      console.error("[admin.deleteBike] DB error:", error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[admin.deleteBike] unexpected error", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+// ==========================================
+// MAINTENANCE
+// ==========================================
+
 export async function verifyAddress(req, res) {
   try {
     const { userId } = req.params;

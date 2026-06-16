@@ -45,6 +45,7 @@ router.post("/bikes/add", requirePermission("manage_bikes"), adminController.add
 router.post("/bikes/:bikeId/assign", requirePermission("manage_bikes"), adminController.assignBike);
 router.post("/bikes/:bikeId/maintenance", requirePermission("manage_bikes"), adminController.sendBikeToMaintenance);
 router.post("/bikes/:bikeId/disable", requirePermission("manage_bikes"), adminController.disableBike);
+router.post("/bikes/:bikeId/delete", requirePermission("manage_bikes"), adminController.deleteBike);
 router.post("/bikes/:bikeId/lock", requirePermission("manage_bikes"), adminController.adminLockBike);
 router.post("/bikes/:bikeId/unlock", requirePermission("manage_bikes"), adminController.adminUnlockBike);
 router.post("/bikes/:bikeId/link-gps", requirePermission("manage_bikes"), adminController.linkGpsTracker);

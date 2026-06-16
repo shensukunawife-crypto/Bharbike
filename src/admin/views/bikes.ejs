@@ -79,6 +79,7 @@
           <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')">Assign Bike</button>
           <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST">Send to Maintenance</button>
           <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST">Disable Bike</button>
+          <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?">Delete</button>
         </td>
       </tr>
       <% }) %>

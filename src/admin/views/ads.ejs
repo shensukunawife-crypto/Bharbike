@@ -319,9 +319,9 @@
         <div class="value" id="stat-inactive"><%= _inactiveCount %></div>
       </div>
 
-      <!-- Social Links Editor Card -->
+      <!-- Social Links & Contacts Editor Card -->
       <section class="ads-card" style="margin-top: 0.5rem;" aria-labelledby="socials-heading">
-        <h2 id="socials-heading" class="ads-card-title" style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">🔗 Website Socials</h2>
+        <h2 id="socials-heading" class="ads-card-title" style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">🔗 Socials & Contacts</h2>
         <form id="socials-form" class="ads-form-stack" autocomplete="off">
           <div>
             <label class="ads-label" for="social-fb">Facebook</label>
@@ -343,8 +343,25 @@
             <label class="ads-label" for="social-yt">YouTube</label>
             <input id="social-yt" name="youtube" class="ads-input" type="url" placeholder="https://youtube.com/..." value="<%= settings.socialYoutube || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
           </div>
+          <hr style="border-top: 1px solid var(--border); margin: 0.75rem 0;" />
+          <div>
+            <label class="ads-label" for="contact-company">Company Name</label>
+            <input id="contact-company" name="companyName" class="ads-input" type="text" placeholder="BHAR BIKE" value="<%= settings.companyName || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label class="ads-label" for="contact-phone">Phone Number</label>
+            <input id="contact-phone" name="phone" class="ads-input" type="text" placeholder="+91 90000 00000" value="<%= settings.phone || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label class="ads-label" for="contact-email">Support Email</label>
+            <input id="contact-email" name="email" class="ads-input" type="email" placeholder="info@bharbike.com" value="<%= settings.supportEmail || '' %>" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+          </div>
+          <div>
+            <label class="ads-label" for="contact-address">Address</label>
+            <textarea id="contact-address" name="address" class="ads-input" rows="2" placeholder="Corporate Address..." style="padding: 0.5rem 0.75rem; font-size: 0.85rem; resize: vertical;"><%= settings.address || '' %></textarea>
+          </div>
           <button type="submit" class="ads-btn" id="socials-submit" style="padding: 0.65rem 1rem; font-size: 0.85rem; margin-top: 0.25rem;">
-            Save Social Links
+            Save Socials & Contacts
           </button>
         </form>
       </section>
@@ -561,23 +578,27 @@
         var twitter = document.getElementById("social-tw").value.trim();
         var linkedin = document.getElementById("social-li").value.trim();
         var youtube = document.getElementById("social-yt").value.trim();
+        var companyName = document.getElementById("contact-company").value.trim();
+        var phone = document.getElementById("contact-phone").value.trim();
+        var email = document.getElementById("contact-email").value.trim();
+        var address = document.getElementById("contact-address").value.trim();
 
         try {
           var res = await fetch("/admin/ads/save-socials", {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({ facebook, instagram, twitter, linkedin, youtube }),
+            body: JSON.stringify({ facebook, instagram, twitter, linkedin, youtube, companyName, phone, email, address }),
           });
           var data = await res.json();
           if (!res.ok) {
-            alert(data.message || "Failed to update social links");
+            alert(data.message || "Failed to update social links & contacts");
             return;
           }
 
           if (typeof showToast === "function") {
-            showToast("Social links updated successfully! 🔗");
+            showToast("Social links & contacts updated successfully! 🔗");
           } else {
-            alert("Social links updated successfully! 🔗");
+            alert("Social links & contacts updated successfully! 🔗");
           }
         } catch (err) {
           console.error("SOCIAL SAVE ERROR:", err);

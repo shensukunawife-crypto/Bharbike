@@ -3665,13 +3665,18 @@ export async function hubsPage(req, res) {
 export async function saveSocials(req, res) {
   try {
     await ensureSettingsInitialized();
-    const { facebook, instagram, twitter, linkedin, youtube } = req.body || {};
+    const { facebook, instagram, twitter, linkedin, youtube, companyName, phone, email, address } = req.body || {};
 
     dashboardSettings.socialFacebook = (facebook || "").trim();
     dashboardSettings.socialInstagram = (instagram || "").trim();
     dashboardSettings.socialTwitter = (twitter || "").trim();
     dashboardSettings.socialLinkedin = (linkedin || "").trim();
     dashboardSettings.socialYoutube = (youtube || "").trim();
+
+    if (companyName !== undefined) dashboardSettings.companyName = (companyName || "").trim();
+    if (phone !== undefined) dashboardSettings.phone = (phone || "").trim();
+    if (email !== undefined) dashboardSettings.supportEmail = (email || "").trim();
+    if (address !== undefined) dashboardSettings.address = (address || "").trim();
 
     const { error: saveErr } = await supabase
       .from("system_settings")
@@ -3680,10 +3685,10 @@ export async function saveSocials(req, res) {
 
     if (saveErr) throw saveErr;
 
-    return res.json({ success: true, message: "Social links updated successfully", settings: dashboardSettings });
+    return res.json({ success: true, message: "Social links & contacts updated successfully", settings: dashboardSettings });
   } catch (error) {
     console.error("[adminController.saveSocials] failed:", error);
-    return res.status(500).json({ success: false, message: error.message || "Failed to save social links" });
+    return res.status(500).json({ success: false, message: error.message || "Failed to save social links & contacts" });
   }
 }
 

@@ -95,8 +95,8 @@
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Last Order ID</span>
-        <strong style="text-align: right; word-break: break-all; max-width: 60%; cursor: help;" title="<%= user.lastOrder %>">
-          <%= user.lastOrder !== "N/A" ? String(user.lastOrder).substring(0, 8) + '...' + String(user.lastOrder).slice(-4) : "N/A" %>
+        <strong style="text-align: right; word-break: break-all; max-width: 60%; cursor: help; color: var(--accent);" title="<%= user.lastOrder %>">
+          <%= user.lastOrder !== "N/A" ? `Order ${orderHistory.length}` : "N/A" %>
         </strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">

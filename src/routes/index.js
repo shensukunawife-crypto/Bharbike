@@ -2221,7 +2221,11 @@ api.get("/social-links", async (req, res) => {
         instagram: "https://instagram.com",
         twitter: "https://twitter.com",
         linkedin: "https://linkedin.com",
-        youtube: "https://youtube.com"
+        youtube: "https://youtube.com",
+        companyName: "BHAR BIKE",
+        phone: "9167969692",
+        email: "info@bharbike.com",
+        address: "IRMRI Training & Extension Center, Arise Incubation, Plot no B88, Road no 24/U1, Wagle Industrial Estate, Thane 400604, MH."
       });
     }
 
@@ -2231,7 +2235,11 @@ api.get("/social-links", async (req, res) => {
       instagram: s.socialInstagram || "https://instagram.com",
       twitter: s.socialTwitter || "https://twitter.com",
       linkedin: s.socialLinkedin || "https://linkedin.com",
-      youtube: s.socialYoutube || "https://youtube.com"
+      youtube: s.socialYoutube || "https://youtube.com",
+      companyName: s.companyName || "BHAR BIKE",
+      phone: s.phone || "9167969692",
+      email: s.supportEmail || "info@bharbike.com",
+      address: s.address || "IRMRI Training & Extension Center, Arise Incubation, Plot no B88, Road no 24/U1, Wagle Industrial Estate, Thane 400604, MH."
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: "Failed to fetch social links" });

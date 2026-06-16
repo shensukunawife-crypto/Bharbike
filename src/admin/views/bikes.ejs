@@ -75,11 +75,13 @@
           </span>
         </td>
         <td class="actions">
-          <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>">View Details</a>
-          <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')">Assign Bike</button>
-          <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST">Send to Maintenance</button>
-          <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST">Disable Bike</button>
-          <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?">Delete</button>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; min-width: 260px;">
+            <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="display: flex; justify-content: center; padding: 6px 10px; font-size: 12px;">View Details</a>
+            <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')" style="padding: 6px 10px; font-size: 12px;">Assign Bike</button>
+            <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST" style="grid-column: span 2; padding: 6px 10px; font-size: 12px;">Send to Maintenance</button>
+            <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST" style="padding: 6px 10px; font-size: 12px;">Disable Bike</button>
+            <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?" style="padding: 6px 10px; font-size: 12px;">Delete</button>
+          </div>
         </td>
       </tr>
       <% }) %>

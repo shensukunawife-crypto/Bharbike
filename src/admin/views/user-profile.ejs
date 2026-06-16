@@ -21,7 +21,9 @@
     <div class="summary-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">User ID</span>
-        <strong style="text-align: right; word-break: break-all; max-width: 60%;"><%= user.id %></strong>
+        <strong style="text-align: right; word-break: break-all; max-width: 60%; cursor: help;" title="<%= user.id %>">
+          <%= String(user.id).substring(0, 8) %>...<%= String(user.id).slice(-4) %>
+        </strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Full Name</span>
@@ -69,7 +71,9 @@
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Last Order ID</span>
-        <strong style="text-align: right; word-break: break-all; max-width: 60%;"><%= user.lastOrder %></strong>
+        <strong style="text-align: right; word-break: break-all; max-width: 60%; cursor: help;" title="<%= user.lastOrder %>">
+          <%= user.lastOrder !== "N/A" ? String(user.lastOrder).substring(0, 8) + '...' + String(user.lastOrder).slice(-4) : "N/A" %>
+        </strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
         <span style="color: #6b7280; font-weight: 500;">Last Active</span>
@@ -160,7 +164,9 @@
         <% } %>
         <% orderHistory.forEach((order) => { %>
         <tr>
-          <td><%= order.id %></td>
+          <td title="<%= order.id %>" style="cursor: help;">
+            <%= String(order.id).substring(0, 8) %>...<%= String(order.id).slice(-4) %>
+          </td>
           <td><%= order.pickup_location %></td>
           <td><%= order.drop_location %></td>
           <td><span class="badge"><%= order.status %></span></td>

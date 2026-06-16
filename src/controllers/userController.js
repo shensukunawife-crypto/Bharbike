@@ -118,6 +118,27 @@ export const getUserById = async (req, res) => {
   res.json(shapePublicUser(data));
 };
 
+export const getAssignedBike = async (req, res) => {
+  const id = req.params.id;
+  if (!id || /^demo-/i.test(id)) {
+    return res.json({ success: true, data: null });
+  }
+
+  const { data: bikeData, error } = await supabase
+    .from("bikes")
+    .select("*")
+    .eq("assigned_to", id)
+    .in("status", ["assigned", "maintenance"])
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getAssignedBike] error:", error);
+    return res.status(500).json({ success: false, message: "Fetch failed", error });
+  }
+
+  return res.json({ success: true, data: bikeData || null });
+};
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

@@ -2571,9 +2571,8 @@ export async function addBike(req, res) {
         {
           bike_code,
           status: status || "available",
-          battery_percentage: Number(req.body.battery || 0),
+          battery: Number(req.body.battery || 0),
           location: req.body.location || "Main Hub",
-          last_service_date: req.body.lastServiceDate || new Date().toISOString().slice(0, 10),
         },
       ])
       .select();

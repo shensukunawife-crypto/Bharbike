@@ -81,8 +81,8 @@
             <% (paymentsList || []).forEach(function(p) { %>
             <% var st = String(p.status||'').toLowerCase(); var isOk = st === 'success'; var isFail = st === 'failed' || st === 'failure'; %>
             <tr>
-              <td><span class="code-badge"><%= p.id %></span></td>
-              <td><strong><%= p.order_code %></strong><br/><span class="muted-small"><%= p.order_id %></span></td>
+              <td><span class="code-badge" title="<%= p.id %>"><%= p.shortId || '#' + String(p.id).substring(0, 8) %></span></td>
+              <td><strong><%= p.order_code %></strong><br/><span class="muted-small" title="<%= p.order_id %>"><%= p.shortOrderId || '#' + String(p.order_id || '').substring(0, 8) %></span></td>
               <td style="font-weight:600;">₹<%= Number(p.amount||0).toFixed(2) %></td>
               <td>
                 <% if (isOk) { %>
@@ -538,13 +538,13 @@ document.addEventListener('DOMContentLoaded', () => {
             : "—";
           return (
             "<tr>" +
-            '<td><span class="code-badge">' +
-            escapeHtml(p.id) +
+            '<td><span class="code-badge" title="' + escapeHtml(p.id) + '">' +
+            escapeHtml(p.shortId || '#' + String(p.id).substring(0, 8)) +
             "</span></td>" +
             "<td><strong>" +
             escapeHtml(p.order_code) +
-            '</strong><br/><span class="muted-small">' +
-            escapeHtml(p.order_id) +
+            '</strong><br/><span class="muted-small" title="' + escapeHtml(p.order_id || '') + '">' +
+            escapeHtml(p.shortOrderId || '#' + String(p.order_id || '').substring(0, 8)) +
             "</span></td>" +
             '<td style="font-weight:600;">₹' +
             Number(p.amount || 0).toFixed(2) +

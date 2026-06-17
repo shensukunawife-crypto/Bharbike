@@ -301,6 +301,7 @@ function normalizeOrder(order) {
       : rawStatus === "rejected"
         ? "cancelled"
         : rawStatus;
+  const shortId = "#" + String(order.id).slice(0, 8);
   return {
     ...order,
     userName: order.userName || order.user_name || order.customer_name || "User",
@@ -312,6 +313,9 @@ function normalizeOrder(order) {
     amount: Number(order.earnings || order.amount || 0),
     status: mappedStatus,
     createdAt: order.createdAt || order.created_at || new Date().toISOString(),
+    orderId: order.order_code || shortId,
+    shortId: shortId,
+    shortUserId: order.user_id ? "#" + String(order.user_id).slice(0, 8) : "-",
   };
 }
 
@@ -356,6 +360,7 @@ async function loadAdminOrdersData(req) {
     const uid = order.user_id;
     const rid = order.assigned_user_id || order.delivery_partner_id;
     const riderLabel = rid ? (nameMap.get(rid) || String(rid).slice(0, 8) + "…") : "—";
+    const shortId = "#" + String(order.id).slice(0, 8);
     return {
       ...order,
       userName: (uid && nameMap.get(uid)) || order.customer_name || "—",
@@ -368,7 +373,9 @@ async function loadAdminOrdersData(req) {
       amount: Number(order.amount ?? order.price ?? 0),
       status: s,
       createdAt: order.created_at || order.createdAt,
-      displayOrderId: order.order_code || String(order.id).slice(0, 13),
+      displayOrderId: order.order_code || shortId,
+      shortId: shortId,
+      shortUserId: uid ? "#" + String(uid).slice(0, 8) : "—",
     };
   });
 
@@ -438,7 +445,9 @@ async function loadAdminPaymentsData(req) {
     const st = String(row.status || "created").toLowerCase();
     return {
       id: row.id,
+      shortId: "#" + String(row.id).slice(0, 8),
       order_id: row.order_id,
+      shortOrderId: row.order_id ? "#" + String(row.order_id).slice(0, 8) : "—",
       order_code: ord?.order_code || "—",
       amount: amt,
       status: st,

@@ -525,7 +525,7 @@
               <span class="ticket-date"><%= t.relativeCreatedAt || 'Just now' %></span>
             </div>
             <div class="ticket-meta">
-              <span>👤 <%= String(t.user_id || 'User').slice(0, 8) %></span>
+              <span>👤 #<%= String(t.user_id || 'User').slice(0, 8) %></span>
               <span class="ticket-issue"><%= t.issue_type %></span>
             </div>
             <div class="ticket-preview"><%= t.description || 'No description provided.' %></div>

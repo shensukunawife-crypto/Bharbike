@@ -25,7 +25,7 @@
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">User ID</span>
         <strong style="text-align: right; word-break: break-all; max-width: 60%; cursor: help;" title="<%= user.id %>">
-          <%= String(user.id).substring(0, 8) %>...<%= String(user.id).slice(-4) %>
+          <%= user.displayUserId %>
         </strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">

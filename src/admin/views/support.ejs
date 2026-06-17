@@ -513,6 +513,7 @@
                data-id="<%= t.id %>"
                data-number="<%= t.ticket_number %>"
                data-user-id="<%= t.user_id %>"
+               data-short-user-id="<%= t.shortUserId %>"
                data-bike="<%= t.bike_name || '' %>"
                data-issue="<%= t.issue_type || '' %>"
                data-desc="<%= t.description || '' %>"
@@ -525,7 +526,7 @@
               <span class="ticket-date"><%= t.relativeCreatedAt || 'Just now' %></span>
             </div>
             <div class="ticket-meta">
-              <span>👤 #<%= String(t.user_id || 'User').slice(0, 8) %></span>
+              <span title="<%= t.user_id %>">👤 <%= t.shortUserId || 'User' %></span>
               <span class="ticket-issue"><%= t.issue_type %></span>
             </div>
             <div class="ticket-preview"><%= t.description || 'No description provided.' %></div>
@@ -653,8 +654,9 @@
     document.getElementById('chat-active-el').style.display = 'flex';
 
     // Populate header
+    const shortUserId = el.dataset.shortUserId || userId.slice(0, 8);
     document.getElementById('active-chat-title').innerText = 'Ticket #' + number;
-    document.getElementById('active-chat-user-lbl').innerText = 'User: ' + userId.slice(0, 8);
+    document.getElementById('active-chat-user-lbl').innerText = 'User: ' + shortUserId;
     document.getElementById('active-chat-issue-lbl').innerText = 'Issue: ' + (issue === 'rsa' ? 'RSA (Road Side Support)' : issue);
     
     // Status badge styling

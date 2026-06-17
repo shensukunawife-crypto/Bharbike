@@ -24,15 +24,15 @@
         const badgeClass = status === 'active' ? 'success' : status === 'completed' ? 'info' : status === 'cancelled' ? 'danger' : 'warning';
       %>
       <tr>
-        <td><code style="font-size:11px" title="<%= booking.id %>">#<%= String(booking.id || '-').slice(0,8) %></code></td>
+        <td><code style="font-size:11px" title="<%= booking.id %>"><%= booking.shortId %></code></td>
         <td>
           <% if (booking.user_id) { %>
-            <a href="/admin/users/<%= booking.user_id %>" class="link-gold" style="font-size:12px" title="<%= booking.user_id %>">#<%= String(booking.user_id).slice(0,8) %></a>
+            <a href="/admin/users/<%= booking.user_id %>" class="link-gold" style="font-size:12px" title="<%= booking.user_id %>"><%= booking.shortUserId %></a>
           <% } else { %> - <% } %>
         </td>
         <td>
           <% if (booking.bike_id) { %>
-            <a href="/admin/bikes/<%= booking.bike_id %>" class="link-gold" style="font-size:12px" title="<%= booking.bike_id %>"><%= booking.bike_name || '#' + String(booking.bike_id).slice(0,8) %></a>
+            <a href="/admin/bikes/<%= booking.bike_id %>" class="link-gold" style="font-size:12px" title="<%= booking.bike_id %>"><%= booking.bike_name || booking.shortBikeId %></a>
           <% } else { %> - <% } %>
         </td>
         <td>

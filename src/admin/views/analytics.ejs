@@ -77,7 +77,7 @@
         <% } %>
         <% recentOrders.forEach((order) => { %>
         <tr>
-          <td><code style="font-size:11px"><%= String(order.id || '-').slice(0,8) %>...</code></td>
+          <td><code style="font-size:11px" title="<%= order.id %>"><%= order.shortId %></code></td>
           <td><%= order.plan_name || '-' %></td>
           <td><%= order.pickup || order.pickup_location || '-' %></td>
           <td><%= order.drop_location || '-' %></td>

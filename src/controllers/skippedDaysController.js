@@ -1,4 +1,5 @@
 import supabase from "../utils/supabaseClient.js";
+import { getIdMappings } from "../admin/controllers/adminController.js";
 
 export async function addSkippedDay(req, res) {
   try {
@@ -35,16 +36,30 @@ export async function addSkippedDay(req, res) {
 
 export async function getSkippedDays(req, res) {
   try {
-    const { data, error } = await supabase
-      .from("rider_skipped_days")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [
+      mappings,
+      { data, error }
+    ] = await Promise.all([
+      getIdMappings(),
+      supabase
+        .from("rider_skipped_days")
+        .select("*")
+        .order("created_at", { ascending: false })
+    ]);
 
     if (error) {
       return res.status(500).json(error);
     }
 
-    res.json(data ?? []);
+    const rows = (data ?? []).map(r => {
+      const bikeNum = r.bike_id ? (mappings.bikeMap.get(r.bike_id) || String(r.bike_id).slice(0, 8)) : null;
+      return {
+        ...r,
+        shortBikeId: bikeNum ? "#" + bikeNum : "—"
+      };
+    });
+
+    res.json(rows);
   } catch (err) {
     console.error("[getSkippedDays]", err);
     return res.status(500).json({ message: err?.message || "Fetch failed" });

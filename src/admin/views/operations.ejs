@@ -331,7 +331,7 @@
               <tbody>
                 <% activeOrders.forEach(o => { %>
                   <tr>
-                    <td style="font-weight: 700; color: var(--accent);">#<%= o.orderId || o.id.slice(0, 8) %></td>
+                    <td style="font-weight: 700; color: var(--accent);" title="<%= o.id %>"><%= o.orderId %></td>
                     <td><%= o.userName %></td>
                     <td style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><%= o.pickup_location || 'N/A' %></td>
                     <td style="max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><%= o.drop_location || 'N/A' %></td>

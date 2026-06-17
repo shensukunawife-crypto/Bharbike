@@ -442,7 +442,7 @@
               <% _rows.forEach(function(row) { %>
               <tr>
                 <td><%= row.rider_name || "—" %></td>
-                <td><%= row.bike_id != null ? '#' + String(row.bike_id).slice(0, 8) : "—" %></td>
+                <td title="<%= row.bike_id %>"><%= row.shortBikeId || "—" %></td>
                 <td><%= row.skipped_start_date ?? "—" %></td>
                 <td><%= row.skipped_end_date ?? "—" %></td>
                 <td><%= row.days_skipped ?? "—" %></td>
@@ -532,7 +532,7 @@
           "<td>" +
           escapeHtml(row.rider_name || "—") +
           "</td><td>" +
-          escapeHtml(row.bike_id != null ? '#' + String(row.bike_id).slice(0, 8) : "—") +
+          escapeHtml(row.shortBikeId || "—") +
           "</td><td>" +
           escapeHtml(row.skipped_start_date || "—") +
           "</td><td>" +

@@ -236,6 +236,48 @@ function safeData(data) {
   return Array.isArray(data) ? data : [];
 }
 
+export async function getIdMappings() {
+  const [
+    { data: dbUsers },
+    { data: dbOrders },
+    { data: dbPayments },
+    { data: dbBikes }
+  ] = await Promise.all([
+    supabase.from("users").select("id, created_at").order("created_at", { ascending: true }),
+    supabase.from("orders").select("id, created_at").order("created_at", { ascending: true }),
+    supabase.from("payments").select("id, created_at").order("created_at", { ascending: true }),
+    supabase.from("bikes").select("id, created_at").order("created_at", { ascending: true })
+  ]);
+
+  let dbRentals = [];
+  try {
+    const { data } = await supabase.from("rentals").select("id, created_at").order("created_at", { ascending: true });
+    dbRentals = data || [];
+  } catch (e) {
+    try {
+      const { data } = await supabase.from("bookings").select("id, created_at").order("created_at", { ascending: true });
+      dbRentals = data || [];
+    } catch (e2) {}
+  }
+
+  const userMap = new Map();
+  safeData(dbUsers).forEach((u, i) => userMap.set(u.id, i + 1));
+
+  const orderMap = new Map();
+  safeData(dbOrders).forEach((o, i) => orderMap.set(o.id, i + 1));
+
+  const paymentMap = new Map();
+  safeData(dbPayments).forEach((p, i) => paymentMap.set(p.id, i + 1));
+
+  const rentalMap = new Map();
+  safeData(dbRentals).forEach((r, i) => rentalMap.set(r.id, i + 1));
+
+  const bikeMap = new Map();
+  safeData(dbBikes).forEach((b, i) => bikeMap.set(b.id, i + 1));
+
+  return { userMap, orderMap, paymentMap, rentalMap, bikeMap };
+}
+
 function relativeTime(dateValue) {
   const ts = new Date(dateValue || Date.now()).getTime();
   const diffSec = Math.max(1, Math.floor((Date.now() - ts) / 1000));
@@ -293,7 +335,7 @@ function normalizeBike(bike, index) {
   };
 }
 
-function normalizeOrder(order) {
+function normalizeOrder(order, mappings) {
   const rawStatus = (order.status || "pending").toLowerCase();
   const mappedStatus =
     rawStatus === "accepted"
@@ -301,7 +343,11 @@ function normalizeOrder(order) {
       : rawStatus === "rejected"
         ? "cancelled"
         : rawStatus;
-  const shortId = "#" + String(order.id).slice(0, 8);
+
+  const orderNum = mappings?.orderMap?.get(order.id) || String(order.id).slice(0, 8);
+  const userNum = order.user_id ? (mappings?.userMap?.get(order.user_id) || String(order.user_id).slice(0, 8)) : null;
+
+  const shortId = "#" + orderNum;
   return {
     ...order,
     userName: order.userName || order.user_name || order.customer_name || "User",
@@ -313,9 +359,9 @@ function normalizeOrder(order) {
     amount: Number(order.earnings || order.amount || 0),
     status: mappedStatus,
     createdAt: order.createdAt || order.created_at || new Date().toISOString(),
-    orderId: order.order_code || shortId,
+    orderId: shortId,
     shortId: shortId,
-    shortUserId: order.user_id ? "#" + String(order.user_id).slice(0, 8) : "-",
+    shortUserId: userNum ? "#" + userNum : "-",
   };
 }
 
@@ -347,7 +393,10 @@ function matchesAdminOrderStatusFilter(statusRaw, filter) {
   return s === f;
 }
 
-async function loadAdminOrdersData(req) {
+async function loadAdminOrdersData(req, mappings) {
+  if (!mappings) {
+    mappings = await getIdMappings();
+  }
   const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
   if (error) console.error("[admin.orders] fetch failed", error);
   const rows = safeData(data);
@@ -360,7 +409,11 @@ async function loadAdminOrdersData(req) {
     const uid = order.user_id;
     const rid = order.assigned_user_id || order.delivery_partner_id;
     const riderLabel = rid ? (nameMap.get(rid) || String(rid).slice(0, 8) + "…") : "—";
-    const shortId = "#" + String(order.id).slice(0, 8);
+    
+    const orderNum = mappings.orderMap.get(order.id) || String(order.id).slice(0, 8);
+    const userNum = uid ? (mappings.userMap.get(uid) || String(uid).slice(0, 8)) : null;
+    const shortId = "#" + orderNum;
+    
     return {
       ...order,
       userName: (uid && nameMap.get(uid)) || order.customer_name || "—",
@@ -373,9 +426,9 @@ async function loadAdminOrdersData(req) {
       amount: Number(order.amount ?? order.price ?? 0),
       status: s,
       createdAt: order.created_at || order.createdAt,
-      displayOrderId: order.order_code || shortId,
+      displayOrderId: shortId,
       shortId: shortId,
-      shortUserId: uid ? "#" + String(uid).slice(0, 8) : "—",
+      shortUserId: userNum ? "#" + userNum : "—",
     };
   });
 
@@ -419,7 +472,10 @@ async function loadAdminOrdersData(req) {
   };
 }
 
-async function loadAdminPaymentsData(req) {
+async function loadAdminPaymentsData(req, mappings) {
+  if (!mappings) {
+    mappings = await getIdMappings();
+  }
   const payFilter = (req.query.pay_status || "all").toLowerCase();
 
   const { data: payData, error: payErr } = await supabase
@@ -443,12 +499,16 @@ async function loadAdminPaymentsData(req) {
     const ord = orderMap.get(row.order_id);
     const amt = Number(row.amount ?? ord?.amount ?? ord?.price ?? 0);
     const st = String(row.status || "created").toLowerCase();
+    
+    const payNum = mappings.paymentMap.get(row.id) || String(row.id).slice(0, 8);
+    const ordNum = row.order_id ? (mappings.orderMap.get(row.order_id) || String(row.order_id).slice(0, 8)) : "—";
+    
     return {
       id: row.id,
-      shortId: "#" + String(row.id).slice(0, 8),
+      shortId: "#" + payNum,
       order_id: row.order_id,
-      shortOrderId: row.order_id ? "#" + String(row.order_id).slice(0, 8) : "—",
-      order_code: ord?.order_code || "—",
+      shortOrderId: row.order_id ? "#" + ordNum : "—",
+      order_code: ordNum !== "—" ? "Order #" + ordNum : "—",
       amount: amt,
       status: st,
       razorpay_order_id: row.razorpay_order_id || "—",
@@ -500,6 +560,7 @@ export async function dashboard(req, res) {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [
+      mappings,
       { count: usersCount, error: usersError },
       { count: bikesCount, error: bikesError },
       { count: activeRentalsCount, error: rentalsError },
@@ -507,6 +568,7 @@ export async function dashboard(req, res) {
       { data: ordersData, error: ordersError },
       { data: earningsRows, error: earningsError },
     ] = await Promise.all([
+      getIdMappings(),
       supabase.from("users").select("*", { count: "exact", head: true }).neq("is_delivery_partner", true),
       supabase.from("bikes").select("*", { count: "exact", head: true }),
       supabase
@@ -525,7 +587,7 @@ export async function dashboard(req, res) {
       );
     }
     const bikes = safeData(bikesData).map(normalizeBike);
-    const orders = safeData(ordersData).map(normalizeOrder);
+    const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
     const earnings = safeData(earningsRows).map((item) => ({
       amount: Number(item.amount || 0),
       createdAt: new Date(item.created_at || item.createdAt || now),
@@ -616,8 +678,8 @@ export async function dashboard(req, res) {
       const uid = order.user_id;
       const userName = (uid && recentNameMap.get(uid)) || order.customer_name || "User";
       
-      const rawId = order.id || "";
-      const shortId = rawId.includes("-") ? `#${rawId.split("-")[0]}` : `#${rawId.slice(0, 8)}`;
+      const orderNum = mappings.orderMap.get(order.id) || String(order.id).slice(0, 8);
+      const shortId = `#${orderNum}`;
 
       let detailsStr = "";
       const pickup = order.pickup_location || order.pickup;
@@ -684,11 +746,13 @@ export async function operationsDashboard(req, res) {
     const safeArr = (arr) => Array.isArray(arr) ? arr : [];
 
     const [
+      mappings,
       { data: bikesData },
       { data: partnersData },
       { data: activeOrdersData },
       { data: skippedLogsData }
     ] = await Promise.all([
+      getIdMappings(),
       supabase.from("bikes").select("*"),
       supabase.from("delivery_partners").select("*"),
       supabase.from("orders").select("*").in("status", ["pending", "accepted", "ongoing"]),
@@ -697,7 +761,7 @@ export async function operationsDashboard(req, res) {
 
     const bikes = safeArr(bikesData).map(normalizeBike);
     const partners = safeArr(partnersData);
-    const activeOrders = safeArr(activeOrdersData).map(normalizeOrder);
+    const activeOrders = safeArr(activeOrdersData).map(o => normalizeOrder(o, mappings));
     const skippedLogs = safeArr(skippedLogsData);
 
     // Aggregate counts
@@ -774,12 +838,14 @@ export async function operationsDashboard(req, res) {
 export async function users(req, res) {
   try {
     const [
+      mappings,
       { data: usersData, error: usersError },
       { data: ordersData, error: ordersError },
       { data: subsData, error: subsError },
       { data: walletsData, error: walletsError },
       { data: plansData }
     ] = await Promise.all([
+      getIdMappings(),
       supabase.from("users").select("*"),
       supabase.from("orders").select("*"),
       supabase.from("user_subscriptions").select("*"),
@@ -796,7 +862,7 @@ export async function users(req, res) {
     const now = Date.now();
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const allOrders = safeData(ordersData).map(normalizeOrder);
+    const allOrders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
     const users = safeData(usersData)
       .filter((row) => row.is_delivery_partner !== true)
@@ -928,7 +994,8 @@ export async function users(req, res) {
 export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
-    const [{ data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRental }] = await Promise.all([
+    const [mappings, { data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRental }] = await Promise.all([
+      getIdMappings(),
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
       supabase.from("wallet_balances").select("*").eq("user_id", userId).maybeSingle(),
@@ -943,7 +1010,7 @@ export async function userProfile(req, res) {
     };
     const base = shapePublicUser(normalizedRow);
     const orders = safeData(ordersData)
-      .map(normalizeOrder)
+      .map(o => normalizeOrder(o, mappings))
       .filter(
         (order) =>
           String(order.userId || order.user_id || order.customer_id || "").toLowerCase() ===
@@ -960,6 +1027,7 @@ export async function userProfile(req, res) {
     }
     const profile = {
       ...base,
+      displayUserId: "#" + (mappings.userMap.get(userId) || String(userId).slice(0, 8)),
       email:
         base.email ||
         `${String(base.phone || "user").replace(/\s+/g, "")}@app.local`,
@@ -1039,7 +1107,10 @@ export async function bikes(req, res) {
 export async function bikeDetails(req, res) {
   try {
     const { bikeId } = req.params;
-    const { data: bikeRow } = await supabase.from("bikes").select("*").eq("id", bikeId).maybeSingle();
+    const [mappings, { data: bikeRow }] = await Promise.all([
+      getIdMappings(),
+      supabase.from("bikes").select("*").eq("id", bikeId).maybeSingle()
+    ]);
     if (!bikeRow) {
       return res.status(404).send("Bike not found");
     }
@@ -1091,13 +1162,18 @@ export async function bikeDetails(req, res) {
         date: item.reportedDate,
       }));
 
+    const usageHistory = safeData(rentals).map(r => ({
+      ...r,
+      shortId: "#" + (mappings.rentalMap.get(r.id) || String(r.id).slice(0, 8))
+    })).slice(0, 10);
+
     return renderPage(res, {
       title: "Bike Details",
       active: "bikes",
       bodyView: "bike-details",
       bike,
-      usageHistory: safeData(rentals).slice(0, 10),
-      ordersHistory: safeData(orders).map(normalizeOrder).slice(0, 10),
+      usageHistory,
+      ordersHistory: safeData(orders).map(o => normalizeOrder(o, mappings)).slice(0, 10),
       maintenanceLogs,
     });
   } catch (error) {
@@ -1152,10 +1228,19 @@ export async function apiJsonAdminPayments(req, res) {
 
 export async function bookingsPage(req, res) {
   try {
-    let { data, error } = await supabase
-      .from("rentals")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [
+      mappings,
+      rentalsResult
+    ] = await Promise.all([
+      getIdMappings(),
+      supabase
+        .from("rentals")
+        .select("*")
+        .order("created_at", { ascending: false })
+    ]);
+
+    let data = rentalsResult.data;
+    let error = rentalsResult.error;
 
     if (error?.message?.toLowerCase().includes("could not find the table 'public.rentals'")) {
       ({ data, error } = await supabase.from("bookings").select("*").order("created_at", { ascending: false }));
@@ -1168,7 +1253,19 @@ export async function bookingsPage(req, res) {
       console.error("[admin.bookingsPage] fetch failed", error);
     }
 
-    const bookings = error ? listInMemoryBookings() : safeData(data);
+    const rawBookings = error ? listInMemoryBookings() : safeData(data);
+    const bookings = rawBookings.map(b => {
+      const rentalNum = mappings.rentalMap.get(b.id) || String(b.id).slice(0, 8);
+      const userNum = b.user_id ? (mappings.userMap.get(b.user_id) || String(b.user_id).slice(0, 8)) : null;
+      const bikeNum = b.bike_id ? (mappings.bikeMap.get(b.bike_id) || String(b.bike_id).slice(0, 8)) : null;
+      return {
+        ...b,
+        shortId: "#" + rentalNum,
+        shortUserId: userNum ? "#" + userNum : "—",
+        shortBikeId: bikeNum ? "#" + bikeNum : "—",
+      };
+    });
+
     return renderPage(res, {
       title: "Bookings",
       active: "bookings",
@@ -1184,7 +1281,12 @@ export async function bookingsPage(req, res) {
 export async function kycDocumentsPage(req, res) {
   try {
     // Try kyc_documents table first (most accurate)
-    const [{ data: kycData, error: kycError }, { data: usersData, error: usersError }] = await Promise.all([
+    const [
+      mappings,
+      { data: kycData, error: kycError },
+      { data: usersData, error: usersError }
+    ] = await Promise.all([
+      getIdMappings(),
       supabase
         .from("kyc_documents")
         .select("id, user_id, type, file_url, status, created_at")
@@ -1224,8 +1326,11 @@ export async function kycDocumentsPage(req, res) {
         const selfieDoc = u.docs.find((d) => d.type === "selfie");
         const dlDoc = u.docs.find((d) => d.type === "driving_license");
 
+        const userNum = mappings.userMap.get(u.id) || String(u.id).slice(0, 8);
+
         return {
           ...u,
+          displayUserId: "#" + userNum,
           aadhaar: aadhaarDoc ? { id: aadhaarDoc.id, file_url: aadhaarDoc.file_url, status: aadhaarDoc.status, reason: aadhaarDoc.reason } : null,
           pan: panDoc ? { id: panDoc.id, file_url: panDoc.file_url, status: panDoc.status, reason: panDoc.reason } : null,
           electricity_bill: billDoc ? { id: billDoc.id, file_url: billDoc.file_url, status: billDoc.status, reason: billDoc.reason } : null,
@@ -1250,17 +1355,21 @@ export async function kycDocumentsPage(req, res) {
         .order("updated_at", { ascending: false });
       documents = safeData(usersKycData)
         .filter((item) => item?.aadhaar_front_url || item?.pan_card_url || item?.electricity_bill_url || item?.selfie_url || item?.driving_license_url)
-        .map((item) => ({
-          ...item,
-          user_name: item.full_name || userMap.get(String(item.id))?.full_name || "User",
-          address: item.address || "No Address Provided",
-          address_verified: !!item.address_verified,
-          aadhaar: item.aadhaar_front_url ? { file_url: item.aadhaar_front_url, status: "pending" } : null,
-          pan: item.pan_card_url ? { file_url: item.pan_card_url, status: "pending" } : null,
-          electricity_bill: item.electricity_bill_url ? { file_url: item.electricity_bill_url, status: "pending" } : null,
-          selfie: item.selfie_url ? { file_url: item.selfie_url, status: "pending" } : null,
-          driving_license: item.driving_license_url ? { file_url: item.driving_license_url, status: "pending" } : null,
-        }));
+        .map((item) => {
+          const userNum = mappings.userMap.get(item.id) || String(item.id).slice(0, 8);
+          return {
+            ...item,
+            displayUserId: "#" + userNum,
+            user_name: item.full_name || userMap.get(String(item.id))?.full_name || "User",
+            address: item.address || "No Address Provided",
+            address_verified: !!item.address_verified,
+            aadhaar: item.aadhaar_front_url ? { file_url: item.aadhaar_front_url, status: "pending" } : null,
+            pan: item.pan_card_url ? { file_url: item.pan_card_url, status: "pending" } : null,
+            electricity_bill: item.electricity_bill_url ? { file_url: item.electricity_bill_url, status: "pending" } : null,
+            selfie: item.selfie_url ? { file_url: item.selfie_url, status: "pending" } : null,
+            driving_license: item.driving_license_url ? { file_url: item.driving_license_url, status: "pending" } : null,
+          };
+        });
     }
 
     const stats = {
@@ -1364,14 +1473,17 @@ export async function verifyAddress(req, res) {
 export async function orderDetails(req, res) {
   try {
     const { orderId } = req.params;
-    const { data: orderRow, error } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
+    const [mappings, { data: orderRow, error }] = await Promise.all([
+      getIdMappings(),
+      supabase.from("orders").select("*").eq("id", orderId).maybeSingle()
+    ]);
     if (error) {
       console.error("[admin.orderDetails] fetch failed", error);
     }
     if (!orderRow) {
       return res.status(404).send("Order not found");
     }
-    const order = normalizeOrder(orderRow);
+    const order = normalizeOrder(orderRow, mappings);
     const timeline = [
       { label: "Order Created", done: true, time: String(order.createdAt).slice(0, 16).replace("T", " ") },
       { label: "Assigned", done: ["assigned", "ongoing", "completed"].includes(order.status), time: "-" },
@@ -1434,8 +1546,9 @@ export async function deliveryPartners(req, res) {
 export async function deliveryPartnerProfile(req, res) {
   try {
     const { partnerId } = req.params;
-    const [{ data: partnerData }, { data: orders }, { data: earnings }] = await Promise.all([
-      supabase.from("delivery_partners").select("*").eq("user_id", partnerId).maybeSingle(),
+    const [mappings, { data: partnerData }, { data: orders }, { data: earnings }] = await Promise.all([
+      getIdMappings(),
+      supabase.from("delivery_partners").select("*").eq("id", partnerId).maybeSingle(),
       supabase.from("orders").select("*").eq("assigned_user_id", partnerId),
       supabase.from("earnings").select("*").eq("user_id", partnerId),
     ]);
@@ -1454,7 +1567,7 @@ export async function deliveryPartnerProfile(req, res) {
       return res.status(404).send("Partner not found");
     }
 
-    const orderHistory = safeData(orders).map((order) => normalizeOrder(order));
+    const orderHistory = safeData(orders).map((order) => normalizeOrder(order, mappings));
     const earningsHistory = safeData(earnings).map((item, index) => ({
       id: `ER-${index + 1}`,
       type: item.type || "delivery",
@@ -1923,11 +2036,13 @@ export async function analytics(req, res) {
     const now = Date.now();
 
     const [
+      mappings,
       { data: earningRows, error: earningError },
       { data: orderRows, error: orderError },
       { data: bikeRows, error: bikesError },
       { data: rentalRows, error: rentalError },
     ] = await Promise.all([
+      getIdMappings(),
       supabase.from("earnings").select("*"),
       supabase.from("orders").select("*"),
       supabase.from("bikes").select("*"),
@@ -2040,7 +2155,7 @@ export async function analytics(req, res) {
           new Date(a.createdAt || a.created_at || now).getTime()
       )
       .slice(0, 5)
-      .map((order) => normalizeOrder(order));
+      .map((order) => normalizeOrder(order, mappings));
 
     return renderPage(res, {
       title: "Analytics",
@@ -2154,11 +2269,16 @@ export async function supportPage(req, res) {
       inProgress: tickets.filter((x) => x.status === "in_progress").length,
       resolved: tickets.filter((x) => x.status === "resolved").length,
     };
-    const displayTickets = tickets.map((t) => ({
-      ...t,
-      shortId: t.ticket_number != null ? String(t.ticket_number) : "—",
-      relativeCreatedAt: relativeTime(t.created_at),
-    }));
+    const mappings = await getIdMappings();
+    const displayTickets = tickets.map((t) => {
+      const userNum = t.user_id ? (mappings.userMap.get(t.user_id) || String(t.user_id).slice(0, 8)) : null;
+      return {
+        ...t,
+        shortId: t.ticket_number != null ? String(t.ticket_number) : "—",
+        shortUserId: userNum ? "#" + userNum : "—",
+        relativeCreatedAt: relativeTime(t.created_at),
+      };
+    });
 
     return renderPage(res, {
       title: "Support Tickets",
@@ -2469,18 +2589,31 @@ export async function paymentsPage(req, res) {
 export async function skippedDaysPage(req, res) {
   res.set("Cache-Control", "no-store, private, must-revalidate");
   try {
-    const { data, error } = await supabase
-      .from("rider_skipped_days")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [
+      mappings,
+      { data, error }
+    ] = await Promise.all([
+      getIdMappings(),
+      supabase
+        .from("rider_skipped_days")
+        .select("*")
+        .order("created_at", { ascending: false })
+    ]);
     if (error) {
       console.error("[admin.skippedDaysPage]", error);
     }
+    const skippedRows = safeData(data).map(r => {
+      const bikeNum = r.bike_id ? (mappings.bikeMap.get(r.bike_id) || String(r.bike_id).slice(0, 8)) : null;
+      return {
+        ...r,
+        shortBikeId: bikeNum ? "#" + bikeNum : "—"
+      };
+    });
     return renderPage(res, {
       title: "Rider Skipped Days",
       active: "skipped-days",
       bodyView: "skipped-days",
-      skippedRows: safeData(data),
+      skippedRows,
     });
   } catch (error) {
     console.error("[admin.skippedDaysPage] unexpected", error);
@@ -3797,22 +3930,27 @@ export async function saveSocials(req, res) {
 
 export async function subscriptionsPage(req, res) {
   try {
-    const { data: subs, error } = await supabase
-      .from("user_subscriptions")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [
+      mappings,
+      { data: subs, error: subsError },
+      { data: users, error: usersError },
+      { data: plans, error: plansError }
+    ] = await Promise.all([
+      getIdMappings(),
+      supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
+      supabase.from("users").select("id, full_name, email, phone"),
+      supabase.from("subscription_plans").select("*")
+    ]);
       
-    if (error) console.error("[adminController.subscriptionsPage] subs fetch error:", error);
-
-    const { data: users } = await supabase.from("users").select("id, full_name, email, phone");
-    const { data: plans } = await supabase.from("subscription_plans").select("*");
+    if (subsError) console.error("[adminController.subscriptionsPage] subs fetch error:", subsError);
 
     const mergedSubs = (subs || []).map(s => {
       const user = (users || []).find(u => u.id === s.user_id);
       const plan = (plans || []).find(p => p.id === s.plan_id || p.name === s.plan_id);
+      const userNum = s.user_id ? (mappings.userMap.get(s.user_id) || String(s.user_id).slice(0, 8)) : "—";
       return {
         ...s,
-        users: user || {},
+        users: user ? { ...user, displayUserId: "#" + userNum } : { displayUserId: "#" + userNum },
         plan_display: plan ? plan.display_name : s.plan_id
       };
     });

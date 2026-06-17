@@ -313,7 +313,7 @@
         <tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background=''" data-order-id="<%= order.id %>">
           <td style="padding:13px 16px;">
             <p class="order-id-main"><%= order.displayOrderId %></p>
-            <p class="order-id-sub"><%= order.shortId %></p>
+            <p class="order-id-sub" style="font-size: 10px; opacity: 0.6;"><%= order.plan_name || 'Bike Rental' %></p>
           </td>
           <td style="padding:13px 16px;font-size:13px;color:var(--text);"><%= order.userName || '—' %></td>
           <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);"><%= order.riderName || '—' %></td>
@@ -505,7 +505,7 @@
         const pc = payClass(order.paymentStatus);
         const created = order.createdAt ? String(order.createdAt).replace('T',' ').slice(0,16) : '—';
         return '<tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background=\'var(--border-light)\'" onmouseout="this.style.background=\'\'" data-order-id="' + escapeHtml(order.id) + '">' +
-          '<td style="padding:13px 16px;"><p class="order-id-main">' + escapeHtml(order.displayOrderId) + '</p><p class="order-id-sub">' + escapeHtml(order.shortId) + '</p></td>' +
+          '<td style="padding:13px 16px;"><p class="order-id-main">' + escapeHtml(order.displayOrderId) + '</p><p class="order-id-sub" style="font-size: 10px; opacity: 0.6;">' + escapeHtml(order.plan_name || 'Bike Rental') + '</p></td>' +
           '<td style="padding:13px 16px;font-size:13px;color:var(--text);">' + escapeHtml(order.userName||'—') + '</td>' +
           '<td style="padding:13px 16px;font-size:13px;color:var(--text-muted);">' + escapeHtml(order.riderName||'—') + '</td>' +
           '<td style="padding:13px 16px;font-size:13px;font-weight:600;color:#16a34a;">₹' + Number(order.amount||0).toFixed(2) + '</td>' +

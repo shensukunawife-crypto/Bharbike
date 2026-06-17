@@ -65,7 +65,7 @@
           <% if (!usageHistory.length) { %><tr><td colspan="4" class="empty">No usage history</td></tr><% } %>
           <% usageHistory.forEach((row) => { %>
           <tr>
-            <td>#<%= String(row.id).slice(0, 8) %></td>
+            <td><code style="font-size:11px" title="<%= row.id %>"><%= row.shortId %></code></td>
             <td><%= String(row.startTime || row.start_time || "-").replace("T", " ").slice(0, 16) %></td>
             <td><%= String(row.endTime || row.end_time || "-").replace("T", " ").slice(0, 16) %></td>
             <td><span class="badge"><%= row.status || "-" %></span></td>

@@ -6,10 +6,10 @@ import * as supportService from "../services/supportService.js";
  * POST /api/support/create
  */
 export const createTicket = asyncHandler(async (req, res) => {
-  const { user_id, bike_id, bike_name, issue_type, description, image_url } = req.body;
+  const { bike_id, bike_name, issue_type, description, image_url } = req.body;
 
   const ticket = await supportService.createTicket(
-    user_id || req.user.id,
+    req.user.id,
     bike_id || null,
     bike_name,
     issue_type,

@@ -66,7 +66,33 @@ export async function startRental(userId, plan) {
   const startTime = new Date();
   const endTime = addPlanDuration(startTime, plan);
 
-  // 3. Create Rental
+  // 3. Atomic Bike Claim (Race Condition Protection)
+  const { data: claimedBike, error: claimError } = await supabase
+    .from("bikes")
+    .update({ status: BikeStatus.in_use })
+    .eq("id", bike.id)
+    .eq("status", BikeStatus.available)
+    .select()
+    .maybeSingle();
+
+  if (claimError || !claimedBike) {
+    throw new AppError("Bike was just rented by someone else. Please try again.", 409);
+  }
+
+  // 4. IoT Unlock (Before creating rental)
+  try {
+    await iot.unlockBike(bike.id);
+  } catch (iotErr) {
+    console.log("[rentalService] IoT unlock failed/skipped, rolling back if not demo:", iotErr.message);
+    // In production, if IoT fails, we MUST rollback. In demo, we might want to continue.
+    // If it's a real failure (not just "missing env var"), we should abort.
+    if (iotErr.message !== "LOCONAV_API_URL not configured") {
+      await supabase.from("bikes").update({ status: BikeStatus.available }).eq("id", bike.id);
+      throw new AppError("Failed to unlock the physical bike. Please try another.", 500);
+    }
+  }
+
+  // 5. Create Rental Record
   const { data: rental, error: createError } = await supabase
     .from("rentals")
     .insert([
@@ -85,6 +111,9 @@ export async function startRental(userId, plan) {
 
   if (createError) {
     console.error("[rentalService.startRental] rental create failed", JSON.stringify(createError));
+    // Rollback bike if rental creation failed
+    await supabase.from("bikes").update({ status: BikeStatus.available }).eq("id", bike.id);
+    
     // Fallback for missing table in demo
     if (isRentalsTableMissing(createError)) {
       return {
@@ -99,27 +128,6 @@ export async function startRental(userId, plan) {
       };
     }
     throw new AppError(`Unable to start rental: ${createError.message}`, 500);
-  }
-
-  // 4. Update Bike Status
-  try {
-    const { error: bikeUpdateError } = await supabase
-      .from("bikes")
-      .update({ status: BikeStatus.in_use })
-      .eq("id", bike.id);
-    
-    if (bikeUpdateError) {
-      console.warn("[rentalService.startRental] bike status update failed:", bikeUpdateError.message);
-    }
-  } catch (err) {
-    console.warn("[rentalService.startRental] bike update exception:", err.message);
-  }
-
-  // Skip IoT unlock if not configured (demo mode)
-  try {
-    await iot.unlockBike(bike.id);
-  } catch (iotErr) {
-    console.log("[rentalService] IoT unlock skipped (not configured):", iotErr.message);
   }
 
   // Send Ride Started Notification (non-blocking)

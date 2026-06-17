@@ -243,9 +243,9 @@ export const updateUser = async (req, res) => {
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
   };
 
-  // 2. Patch for the 'users' table (strictly valid columns only, no avatar_url or image_url)
+  // 2. Patch for the 'users' table (users table uses 'name' not 'full_name', so write both)
   const usersPatch = {
-    ...(body.full_name !== undefined && { full_name: body.full_name }),
+    ...(body.full_name !== undefined && { full_name: body.full_name, name: body.full_name }),
     ...(body.email !== undefined && { email: body.email }),
     ...(body.phone !== undefined && { phone: body.phone }),
     ...(body.location !== undefined && { location: body.location }),

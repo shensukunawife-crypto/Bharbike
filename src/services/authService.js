@@ -93,7 +93,11 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone, address = null
   };
 
   const usersPayload = {
-    ...payload,
+    id: userId,
+    name: fullName,
+    full_name: fullName,
+    email: authUser?.email || null,
+    phone,
     ...(address && { address }),
   };
 
@@ -668,9 +672,28 @@ export async function verifyWithFirebaseToken({ idToken }) {
         options: { data: { full_name: decoded.name || "Rider", phone: normalizedPhone } },
       });
       authUser = signupRes?.data?.user || null;
-      if (!authUser) throw new AppError("Unable to create user profile", 500);
+      if (!authUser) {
+        // If signup failed because user already exists, try to recover profile
+        const errMsg = String(signupRes?.error?.message || "").toLowerCase();
+        if (errMsg.includes("already registered") || errMsg.includes("already exists")) {
+          // Try to find by phone alias email
+          const fallback = await findProfileByEmail(emailAlias);
+          if (fallback?.id) {
+            profile = fallback;
+          } else if (normalizedPhone) {
+            // Last resort: find by phone in profiles
+            const phoneProfile = await findProfileByPhone(normalizedPhone);
+            if (phoneProfile?.id) profile = phoneProfile;
+          }
+          if (!profile) throw new AppError("Unable to recover user profile", 500);
+        } else {
+          throw new AppError("Unable to create user profile", 500);
+        }
+      }
     }
-    profile = await upsertProfileFromAuthUser(authUser, normalizedPhone);
+    if (!profile) {
+      profile = await upsertProfileFromAuthUser(authUser, normalizedPhone);
+    }
   }
 
   // Send login notification (non-blocking)

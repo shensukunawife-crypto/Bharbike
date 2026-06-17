@@ -27,8 +27,8 @@
           <% (subs || []).forEach(function(s) { %>
           <tr>
             <td>
-              <strong><%= s.users ? s.users.full_name : s.user_id %></strong><br/>
-              <span class="muted-small"><%= s.users ? s.users.phone || s.users.email : '' %></span>
+              <strong><%= (s.users && s.users.full_name) ? s.users.full_name : '#' + String(s.user_id).slice(0, 8) %></strong><br/>
+              <span class="muted-small"><%= (s.users && s.users.phone) ? s.users.phone || s.users.email : '' %></span>
             </td>
             <td><span class="badge badge-soft" style="text-transform: capitalize;"><%= s.plan_display || s.plan_id %></span></td>
             <td>

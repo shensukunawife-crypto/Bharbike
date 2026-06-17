@@ -65,7 +65,7 @@
           <% if (!usageHistory.length) { %><tr><td colspan="4" class="empty">No usage history</td></tr><% } %>
           <% usageHistory.forEach((row) => { %>
           <tr>
-            <td><%= row.id %></td>
+            <td>#<%= String(row.id).slice(0, 8) %></td>
             <td><%= String(row.startTime || row.start_time || "-").replace("T", " ").slice(0, 16) %></td>
             <td><%= String(row.endTime || row.end_time || "-").replace("T", " ").slice(0, 16) %></td>
             <td><span class="badge"><%= row.status || "-" %></span></td>
@@ -85,7 +85,7 @@
           <% if (!ordersHistory.length) { %><tr><td colspan="4" class="empty">No orders history</td></tr><% } %>
           <% ordersHistory.forEach((row) => { %>
           <tr>
-            <td><%= row.id %></td>
+            <td><%= row.shortId %></td>
             <td><%= row.pickup_location %></td>
             <td><%= row.drop_location %></td>
             <td><span class="badge"><%= row.status %></span></td>

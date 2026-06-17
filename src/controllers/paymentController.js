@@ -92,6 +92,7 @@ export const createOrder = async (req, res) => {
       try {
         await supabase.from("payments").insert([
           {
+            user_id: user_id || null,
             order_id: appOrderId,
             razorpay_order_id: mockOrderId,
             status: "created",
@@ -138,10 +139,9 @@ export const createOrder = async (req, res) => {
       .single();
 
     let appOrderId = appOrder?.id ?? null;
-    if (appOrderError) {
+    if (appOrderError || !appOrderId) {
       console.error("[createOrder] database order insert failed:", appOrderError);
-      appOrderId = crypto.randomUUID();
-      console.warn("[createOrder] orders insert failed, using generated ID:", appOrderId, "|", appOrderError.message);
+      return res.status(500).json({ success: false, message: "Failed to create order. Please try again." });
     }
 
     // 2. Initialize Razorpay Client
@@ -162,6 +162,7 @@ export const createOrder = async (req, res) => {
     try {
       await supabase.from("payments").insert([
         {
+          user_id: user_id || null,
           order_id: appOrderId,
           razorpay_order_id: rzpOrder.id,
           status: "created",
@@ -303,23 +304,33 @@ export const verifyPayment = async (req, res) => {
       return res.json({ success: true, is_demo: false, wallet: walletSummary });
     }
 
-    // Wrap all DB operations in try/catch — don't fail on RLS or missing tables
-    try {
-      if (app_order_id) {
-        await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
-      }
-    } catch (e) { console.warn("[verifyPayment] orders update skipped:", e?.message); }
+    const markOrderAndPaymentAsPaid = async () => {
+      // Wrap all DB operations in try/catch — don't fail on RLS or missing tables
+      try {
+        if (app_order_id) {
+          await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
+        }
+      } catch (e) { console.warn("[verifyPayment] orders update skipped:", e?.message); }
+
+      let recordId = null;
+      try {
+        const { data: paymentRecord } = await supabase
+          .from("payments")
+          .update({ status: "success", razorpay_payment_id: resolvedPaymentId })
+          .eq("razorpay_order_id", razorpay_order_id)
+          .select("id")
+          .single();
+        recordId = paymentRecord?.id ?? null;
+      } catch (e) { console.warn("[verifyPayment] payments update skipped:", e?.message); }
+      
+      return recordId;
+    };
 
     let paymentRecordId = null;
-    try {
-      const { data: paymentRecord } = await supabase
-        .from("payments")
-        .update({ status: "success", razorpay_payment_id: resolvedPaymentId })
-        .eq("razorpay_order_id", razorpay_order_id)
-        .select("id")
-        .single();
-      paymentRecordId = paymentRecord?.id ?? null;
-    } catch (e) { console.warn("[verifyPayment] payments update skipped:", e?.message); }
+    if (payment_method !== "wallet") {
+      // For Razorpay, payment is already verified via HMAC. Mark as paid immediately.
+      paymentRecordId = await markOrderAndPaymentAsPaid();
+    }
 
     // Create subscription or add wallet money
     if (user_id && plan_id) {
@@ -360,6 +371,9 @@ export const verifyPayment = async (req, res) => {
         console.log(`[verifyPayment] Wallet payment detected. Deducting ₹${subAmount}`);
         await walletService.deductMoney(user_id, subAmount, `Subscription: ${planDisplayName}`);
         console.log("[verifyPayment] wallet deducted successfully");
+        
+        // NOW mark the wallet order as paid (since deduction succeeded atomically)
+        paymentRecordId = await markOrderAndPaymentAsPaid();
       }
 
       try {

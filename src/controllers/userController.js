@@ -231,6 +231,9 @@ export const updateUser = async (req, res) => {
   }
 
   const body = req.body ?? {};
+  
+  // Support both image_url and avatar_url from the frontend
+  const incomingAvatar = body.avatar_url !== undefined ? body.avatar_url : body.image_url;
 
   // 1. Patch for the 'profiles' table (uses image_url, full_name, email, phone, location, etc.)
   const profilesPatch = {
@@ -238,7 +241,8 @@ export const updateUser = async (req, res) => {
     ...(body.email !== undefined && { email: body.email }),
     ...(body.phone !== undefined && { phone: body.phone }),
     ...(body.location !== undefined && { location: body.location }),
-    ...(body.image_url !== undefined && { image_url: body.image_url }),
+    ...(body.address !== undefined && { location: body.address }), // map address to location
+    ...(incomingAvatar !== undefined && { image_url: incomingAvatar, avatar_url: incomingAvatar }),
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
   };
@@ -249,9 +253,15 @@ export const updateUser = async (req, res) => {
     ...(body.email !== undefined && { email: body.email }),
     ...(body.phone !== undefined && { phone: body.phone }),
     ...(body.location !== undefined && { location: body.location }),
+    ...(body.address !== undefined && { address: body.address }),
+    ...(incomingAvatar !== undefined && { image_url: incomingAvatar, avatar_url: incomingAvatar }),
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
   };
+
+  if (Object.keys(profilesPatch).length === 0) {
+    return res.status(400).json({ success: false, message: "No valid fields provided to update." });
+  }
 
   // Try updating profiles table
   const { data, error } = await supabase

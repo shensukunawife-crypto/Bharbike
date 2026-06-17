@@ -1,4 +1,4 @@
-import supabase from "../config/supabase.js";
+import supabase from "../utils/supabaseClient.js";
 import { AppError } from "../utils/AppError.js";
 import { createUserNotification } from "./notificationService.js";
 
@@ -240,9 +240,10 @@ export async function validatePromoCode(userId, code) {
   }
 
   // Calculate discount amount
-  const discountAmount = promo.discount_type === "percent"
-    ? Math.min(promo.discount_value, 500) // cap at ₹500
-    : promo.discount_value;
+  if (promo.discount_type === "percent") {
+    throw new AppError("Percent-based promo codes cannot be applied directly to the wallet.", 400);
+  }
+  const discountAmount = promo.discount_value;
 
   // Add discount to wallet
   await addMoney(userId, discountAmount, `Promo: ${upperCode} — ${promo.description || "Discount"}`, null, null);

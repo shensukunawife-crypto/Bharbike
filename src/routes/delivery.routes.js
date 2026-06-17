@@ -14,6 +14,7 @@ r.get("/status", deliveryController.status);
 
 r.post(
   "/online",
+  [
     body("is_online")
       .isBoolean({ strict: true })
       .withMessage("is_online must be true or false"),

@@ -24,9 +24,10 @@ export const getPlans = async (req, res) => {
  */
 export const getActiveSubscription = async (req, res) => {
   try {
-    const userId = req.user?.id || req.query.user_id;
+    // SECURITY FIX: Always use authenticated user ID, never trust query params
+    const userId = req.user?.id;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "User ID required" });
+      return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
     let subscription = null;
@@ -113,9 +114,10 @@ export const getActiveSubscription = async (req, res) => {
  */
 export const getSubscriptionHistory = async (req, res) => {
   try {
-    const userId = req.user?.id || req.query.user_id;
+    // SECURITY FIX: Always use authenticated user ID
+    const userId = req.user?.id;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "User ID required" });
+      return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
     const subscriptions = await subscriptionService.getUserSubscriptions(userId);
@@ -135,11 +137,12 @@ export const getSubscriptionHistory = async (req, res) => {
  */
 export const getBillingHistory = async (req, res) => {
   try {
-    const userId = req.user?.id || req.query.user_id;
+    // SECURITY FIX: Always use authenticated user ID
+    const userId = req.user?.id;
     const limit = parseInt(req.query.limit) || 10;
 
     if (!userId) {
-      return res.status(400).json({ success: false, message: "User ID required" });
+      return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
     const billingHistory = await subscriptionService.getUserBillingHistory(userId, limit);
@@ -155,21 +158,65 @@ export const getBillingHistory = async (req, res) => {
 
 /**
  * POST /api/subscription/create
- * Create a new subscription after successful payment
+ * Create a new subscription — REQUIRES a verified payment_id from a successful Razorpay payment
  */
 export const createSubscription = async (req, res) => {
   try {
-    const { user_id, plan_id, payment_id, amount } = req.body;
+    // SECURITY FIX: Use authenticated user ID, not body user_id
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
 
-    if (!user_id || !plan_id) {
+    const { plan_id, payment_id, amount } = req.body;
+
+    if (!plan_id) {
       return res.status(400).json({
         success: false,
-        message: "user_id and plan_id are required",
+        message: "plan_id is required",
+      });
+    }
+
+    // SECURITY FIX: Require a verified payment_id — verify it exists in payments table with status=success
+    if (!payment_id) {
+      return res.status(400).json({
+        success: false,
+        message: "payment_id is required. Please complete payment first.",
+      });
+    }
+
+    // Verify payment exists and belongs to this user with success status
+    const { data: paymentRecord, error: paymentError } = await supabase
+      .from("payments")
+      .select("id, status, user_id, amount")
+      .eq("razorpay_payment_id", payment_id)
+      .maybeSingle();
+
+    if (paymentError || !paymentRecord) {
+      console.warn("[createSubscription] payment_id not found:", payment_id);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment. Please complete a valid payment first.",
+      });
+    }
+
+    if (paymentRecord.status !== "success") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment has not been verified yet. Please try again.",
+      });
+    }
+
+    // Ensure payment belongs to THIS user
+    if (paymentRecord.user_id && paymentRecord.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Payment does not belong to this user.",
       });
     }
 
     // Check if user already has active subscription
-    const existingSubscription = await subscriptionService.getUserActiveSubscription(user_id);
+    const existingSubscription = await subscriptionService.getUserActiveSubscription(userId);
     if (existingSubscription) {
       return res.status(400).json({
         success: false,
@@ -179,10 +226,10 @@ export const createSubscription = async (req, res) => {
     }
 
     const subscription = await subscriptionService.createSubscription(
-      user_id,
+      userId,
       plan_id,
       payment_id,
-      amount
+      amount || paymentRecord.amount
     );
 
     return res.status(201).json({
@@ -205,17 +252,37 @@ export const createSubscription = async (req, res) => {
  */
 export const cancelSubscription = async (req, res) => {
   try {
-    const { user_id, subscription_id, reason } = req.body;
+    // SECURITY FIX: Use authenticated user ID, not body user_id
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
 
-    if (!user_id || !subscription_id) {
+    const { subscription_id, reason } = req.body;
+
+    if (!subscription_id) {
       return res.status(400).json({
         success: false,
-        message: "user_id and subscription_id are required",
+        message: "subscription_id is required",
+      });
+    }
+
+    // Verify this subscription belongs to the authenticated user
+    const { data: subRecord } = await supabase
+      .from("user_subscriptions")
+      .select("user_id")
+      .eq("id", subscription_id)
+      .maybeSingle();
+
+    if (!subRecord || subRecord.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Subscription not found or does not belong to this user.",
       });
     }
 
     const subscription = await subscriptionService.cancelSubscription(
-      user_id,
+      userId,
       subscription_id,
       reason
     );
@@ -236,21 +303,41 @@ export const cancelSubscription = async (req, res) => {
 
 /**
  * PATCH /api/subscription/auto-renew
- * Update auto-renew setting
+ * Update auto-renew setting — DOES NOT change subscription status
  */
 export const updateAutoRenew = async (req, res) => {
   try {
-    const { user_id, subscription_id, auto_renew } = req.body;
+    // SECURITY FIX: Use authenticated user ID, not body user_id
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
 
-    if (!user_id || !subscription_id || typeof auto_renew !== "boolean") {
+    const { subscription_id, auto_renew } = req.body;
+
+    if (!subscription_id || typeof auto_renew !== "boolean") {
       return res.status(400).json({
         success: false,
-        message: "user_id, subscription_id, and auto_renew (boolean) are required",
+        message: "subscription_id and auto_renew (boolean) are required",
+      });
+    }
+
+    // Verify this subscription belongs to the authenticated user
+    const { data: subRecord } = await supabase
+      .from("user_subscriptions")
+      .select("user_id")
+      .eq("id", subscription_id)
+      .maybeSingle();
+
+    if (!subRecord || subRecord.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Subscription not found or does not belong to this user.",
       });
     }
 
     const subscription = await subscriptionService.updateAutoRenew(
-      user_id,
+      userId,
       subscription_id,
       auto_renew
     );
@@ -275,9 +362,10 @@ export const updateAutoRenew = async (req, res) => {
  */
 export const checkSubscription = async (req, res) => {
   try {
-    const userId = req.user?.id || req.query.user_id;
+    // SECURITY FIX: Use authenticated user ID
+    const userId = req.user?.id;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "User ID required" });
+      return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
     const hasActive = await subscriptionService.hasActiveSubscription(userId);

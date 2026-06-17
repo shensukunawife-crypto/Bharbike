@@ -483,15 +483,9 @@ export async function hasActiveSubscription(userId) {
  */
 export async function updateAutoRenew(userId, subscriptionId, autoRenew) {
   try {
+    // BUGFIX: Only update auto_renew flag — NEVER change subscription status here.
+    // Turning off auto-renew does NOT cancel the subscription.
     const updateData = { auto_renew: autoRenew };
-    if (autoRenew) {
-      updateData.status = "active";
-      updateData.cancelled_at = null;
-      updateData.cancellation_reason = null;
-    } else {
-      updateData.status = "cancelled";
-      updateData.cancelled_at = new Date().toISOString();
-    }
 
     const { data, error } = await supabase
       .from("user_subscriptions")

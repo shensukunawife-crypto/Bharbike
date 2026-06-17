@@ -323,29 +323,40 @@ export const verifyPayment = async (req, res) => {
 
     // Create subscription or add wallet money
     if (user_id && plan_id) {
-      const subAmount = Number(amount) || 0;
-
-      // Resolve plan display name first
+      // Resolve plan display name and PRICE from DB — never trust client-supplied amount for security
       let planDisplayName = "Weekly Plan"; // Default fallback
+      let serverSidePrice = Number(amount) || 0; // Start with client amount, then override with DB price
       try {
         const { data: planRow } = await supabase
           .from("subscription_plans")
-          .select("display_name")
+          .select("display_name, price")
           .or(`id.eq.${plan_id},name.eq.${plan_id}`)
           .limit(1)
           .single();
         if (planRow?.display_name) {
           planDisplayName = planRow.display_name;
         }
+        // SECURITY FIX: Use server-side price from DB, not client-supplied amount
+        if (planRow?.price && Number(planRow.price) > 0) {
+          serverSidePrice = Number(planRow.price);
+          console.log(`[verifyPayment] Using server-side plan price: ₹${serverSidePrice} (client sent: ₹${amount})`);
+        }
       } catch (planErr) {
-        console.warn("[verifyPayment] plan display name lookup failed, using fallback:", planErr?.message);
+        console.warn("[verifyPayment] plan lookup failed, using client amount as fallback:", planErr?.message);
         if (plan_id?.toLowerCase().includes("weekly") || plan_id === "plan_weekly") {
           planDisplayName = "Weekly Plan";
+          serverSidePrice = serverSidePrice || 1950; // Known weekly price as last resort
         }
       }
 
-      // If paying via wallet, we MUST have enough balance
-      if (payment_method === "wallet" && subAmount > 0) {
+      const subAmount = serverSidePrice;
+
+      // If paying via wallet, we MUST deduct the server-verified plan price (not client amount)
+      if (payment_method === "wallet") {
+        if (subAmount <= 0) {
+          console.warn("[verifyPayment] Wallet payment blocked: plan price is 0 or could not be determined");
+          return res.status(400).json({ success: false, message: "Could not determine plan price. Please try again." });
+        }
         console.log(`[verifyPayment] Wallet payment detected. Deducting ₹${subAmount}`);
         await walletService.deductMoney(user_id, subAmount, `Subscription: ${planDisplayName}`);
         console.log("[verifyPayment] wallet deducted successfully");

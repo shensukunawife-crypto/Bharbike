@@ -180,12 +180,132 @@ api.use("/", bookingRoutes);
 api.post("/promo/apply", authMiddleware, walletController.applyPromo);
 api.get("/bookings", authMiddleware, rentalController.bookings);
 
-// Payment Routes
+// Payment Routes — all require authentication
 api.post("/payment/create-order", authMiddleware, asyncHandler(paymentController.createOrder));
 api.post("/payment/verify", authMiddleware, asyncHandler(paymentController.verifyPayment));
-api.post("/create-order", asyncHandler(paymentController.createOrder));
-api.post("/verify-payment", asyncHandler(paymentController.verifyPayment));
+// Backward-compat aliases — now auth-protected too
+api.post("/create-order", authMiddleware, asyncHandler(paymentController.createOrder));
+api.post("/verify-payment", authMiddleware, asyncHandler(paymentController.verifyPayment));
 // NOTE: /payment/checkout is already registered above (before paymentMethodRoutes)
+
+/**
+ * Razorpay Webhook Handler — NO auth (Razorpay calls this directly)
+ * Ensures subscriptions/wallet are activated even if app crashes after payment.
+ * Configure this URL in Razorpay Dashboard → Webhooks: https://yourdomain.com/api/payment/webhook
+ */
+api.post("/payment/webhook", async (req, res) => {
+  try {
+    const signature = req.headers["x-razorpay-signature"];
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    // Verify webhook signature if secret is configured
+    if (webhookSecret && signature) {
+      const crypto = await import("crypto");
+      const body = JSON.stringify(req.body);
+      const expectedSignature = crypto.default
+        .createHmac("sha256", webhookSecret)
+        .update(body)
+        .digest("hex");
+      if (signature !== expectedSignature) {
+        console.warn("[Razorpay Webhook] Invalid signature — rejecting");
+        return res.status(400).json({ success: false, message: "Invalid webhook signature" });
+      }
+    }
+
+    const event = req.body?.event;
+    const paymentEntity = req.body?.payload?.payment?.entity;
+    const orderEntity = req.body?.payload?.order?.entity;
+
+    console.log(`[Razorpay Webhook] Received event: ${event}`);
+
+    if (event === "payment.captured" && paymentEntity) {
+      const razorpayPaymentId = paymentEntity.id;
+      const razorpayOrderId = paymentEntity.order_id;
+      const amountPaise = paymentEntity.amount || 0;
+      const amountRupees = amountPaise / 100;
+
+      console.log(`[Razorpay Webhook] Payment captured: ${razorpayPaymentId} for order ${razorpayOrderId}`);
+
+      // Update payment record to success
+      const { data: paymentRecord } = await supabase
+        .from("payments")
+        .update({ status: "success", razorpay_payment_id: razorpayPaymentId })
+        .eq("razorpay_order_id", razorpayOrderId)
+        .select("id, user_id")
+        .maybeSingle();
+
+      if (!paymentRecord) {
+        console.warn("[Razorpay Webhook] No matching payment record found for order:", razorpayOrderId);
+        return res.json({ success: true, message: "Webhook received (no matching order)" });
+      }
+
+      const userId = paymentRecord?.user_id;
+      const paymentRecordId = paymentRecord?.id;
+
+      // Update order to paid
+      await supabase.from("orders").update({ status: "paid" }).eq("razorpay_order_id", razorpayOrderId);
+
+      if (userId) {
+        // Check if subscription already exists for this payment (idempotent)
+        const { data: existingSub } = await supabase
+          .from("user_subscriptions")
+          .select("id, status")
+          .eq("user_id", userId)
+          .in("status", ["active"])
+          .gt("end_date", new Date().toISOString())
+          .maybeSingle();
+
+        if (!existingSub) {
+          // Look up order details to find plan_id
+          const { data: orderRecord } = await supabase
+            .from("orders")
+            .select("plan_id, plan_name")
+            .eq("razorpay_order_id", razorpayOrderId)
+            .maybeSingle();
+
+          const planId = orderRecord?.plan_id || orderRecord?.plan_name;
+          if (planId) {
+            try {
+              const { createSubscription: createSubService } = await import("../services/subscriptionService.js");
+              await createSubService(userId, planId, paymentRecordId, amountRupees);
+              console.log(`[Razorpay Webhook] Subscription created for user ${userId} via webhook`);
+            } catch (subErr) {
+              console.warn("[Razorpay Webhook] Subscription creation failed:", subErr?.message);
+            }
+          } else {
+            // No plan_id means it's a wallet recharge — add money
+            try {
+              const { addMoney } = await import("../services/walletService.js");
+              await addMoney(userId, amountRupees, "Wallet Recharge (Webhook)", razorpayPaymentId, razorpayOrderId);
+              console.log(`[Razorpay Webhook] Wallet credited ₹${amountRupees} for user ${userId}`);
+            } catch (walletErr) {
+              console.warn("[Razorpay Webhook] Wallet credit failed:", walletErr?.message);
+            }
+          }
+        } else {
+          console.log(`[Razorpay Webhook] Subscription already active for user ${userId} — skipping duplicate`);
+        }
+      }
+    } else if (event === "payment.failed" && paymentEntity) {
+      const razorpayOrderId = paymentEntity.order_id;
+      // Mark payment as failed
+      await supabase
+        .from("payments")
+        .update({ status: "failed" })
+        .eq("razorpay_order_id", razorpayOrderId);
+      await supabase
+        .from("orders")
+        .update({ status: "failed" })
+        .eq("razorpay_order_id", razorpayOrderId);
+      console.log(`[Razorpay Webhook] Payment failed for order ${razorpayOrderId} — records updated`);
+    }
+
+    return res.json({ success: true, message: "Webhook processed" });
+  } catch (err) {
+    console.error("[Razorpay Webhook] Unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Webhook processing error" });
+  }
+});
 
 /** Workflow story page — unlock demo tied to latest verified payment + order status */
 api.post(

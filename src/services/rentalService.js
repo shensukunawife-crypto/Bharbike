@@ -10,6 +10,8 @@ import { pickFirstAvailableBike } from "./bikeService.js";
 import * as iot from "./iotService.js";
 import * as earningsService from "./earningsService.js";
 import { createUserNotification } from "./notificationService.js";
+import { getWalletBalance, deductMoney } from "./walletService.js";
+import { hasActiveSubscription } from "./subscriptionService.js";
 
 const PLAN_MS = {
   [RentalPlan.daily]: 24 * 60 * 60 * 1000,
@@ -40,6 +42,15 @@ function addPlanDuration(start, plan) {
 }
 
 export async function startRental(userId, plan) {
+  // 0. Wallet / Subscription Verification
+  const hasSub = await hasActiveSubscription(userId);
+  if (!hasSub) {
+    const wallet = await getWalletBalance(userId);
+    if (wallet.balance < 50) {
+      throw new AppError("Insufficient wallet balance. Please maintain a minimum balance of ₹50 or buy a subscription to ride.", 402);
+    }
+  }
+
   // 1. Strict Active Rental Check
   const { data: active, error: activeError } = await supabase
     .from("rentals")
@@ -158,17 +169,11 @@ async function finalizeRental(rentalId, status) {
     throw new AppError("Rental is not active", 409);
   }
 
-  try {
-    await supabase.from("rentals").update({ status }).eq("id", rentalId);
-  } catch (e) {
-    console.warn("[rentalService.finalizeRental] rental update RLS blocked (non-blocking):", e?.message);
-  }
+  const { error: rentUpdateErr } = await supabase.from("rentals").update({ status }).eq("id", rentalId);
+  if (rentUpdateErr) throw new AppError(`Failed to end rental: ${rentUpdateErr.message}`, 500);
 
-  try {
-    await supabase.from("bikes").update({ status: BikeStatus.available }).eq("id", rental.bike_id);
-  } catch (e) {
-    console.warn("[rentalService.finalizeRental] bike update RLS blocked (non-blocking):", e?.message);
-  }
+  const { error: bikeUpdateErr } = await supabase.from("bikes").update({ status: BikeStatus.available }).eq("id", rental.bike_id);
+  if (bikeUpdateErr) throw new AppError(`Failed to release bike: ${bikeUpdateErr.message}`, 500);
 
   // Skip IoT lock if not configured (demo mode)
   try {
@@ -177,10 +182,28 @@ async function finalizeRental(rentalId, status) {
     console.log("[rentalService] IoT lock skipped (not configured):", iotErr.message);
   }
 
-  // Record earning — non-blocking if it fails
+  // Deduct Wallet Balance (if no active subscription)
   const amount = rental.price || 0;
+  let chargeApplied = 0;
+  
+  if (status !== RentalStatus.expired) { // Don't charge for just expiring it if they already paid or it's forced
+    try {
+      const hasSub = await hasActiveSubscription(rental.user_id);
+      if (!hasSub && amount > 0) {
+        await deductMoney(rental.user_id, amount, "Ride completed", `Charge for bike #${rental.bike_id}`);
+        chargeApplied = amount;
+      }
+    } catch (err) {
+      console.warn("[rentalService.finalizeRental] wallet deduction failed:", err?.message);
+      // Even if wallet deduction fails (e.g. negative balance), we still end the ride to free the bike
+    }
+  }
+
+  // Record earning — non-blocking if it fails
   try {
-    await earningsService.recordEarning(rental.user_id, amount, EarningsType.rental);
+    if (chargeApplied > 0) {
+      await earningsService.recordEarning(rental.user_id, chargeApplied, EarningsType.rental);
+    }
   } catch (earnErr) {
     console.warn("[rentalService.finalizeRental] earning record skipped (non-blocking):", earnErr?.message);
   }

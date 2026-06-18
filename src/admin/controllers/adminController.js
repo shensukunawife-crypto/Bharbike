@@ -1152,7 +1152,7 @@ export async function bikeDetails(req, res) {
     }
 
     const { data: orders } = await supabase.from("orders").select("*").eq("bike_id", bikeId);
-    const { data: rentals } = await supabase.from("rentals").select("*").eq("bikeId", bikeId);
+    const { data: rentals } = await supabase.from("rentals").select("*").eq("bike_id", bikeId);
     const maintenanceLogs = maintenanceTickets
       .filter((item) => item.bikeId === bikeId || item.bikeCode === bike.bike_code)
       .map((item) => ({
@@ -2341,14 +2341,26 @@ export async function convertSupportToMaintenance(req, res) {
     if (error || !data) {
       return res.status(404).json({ success: false, message: "Support ticket not found" });
     }
+    
+    // Try to find the real bike_id if they provided a bike name
+    let actualBikeId = `bike-${maintenanceTickets.length + 1}`;
+    let actualBikeCode = data.bike_name || "BIKE-UNASSIGNED";
+    if (data.bike_name) {
+      const { data: bikeMatch } = await supabase.from("bikes").select("id, bike_code").ilike("bike_code", `%${data.bike_name}%`).maybeSingle();
+      if (bikeMatch) {
+        actualBikeId = bikeMatch.id;
+        actualBikeCode = bikeMatch.bike_code;
+      }
+    }
+
     const mappedIssue = String(data.issue_type || "other")
       .replace(/_/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
     const mtId = `MT-${1000 + maintenanceTickets.length + 1}`;
-    maintenanceTickets.unshift({
+    const ticket = {
       id: mtId,
-      bikeId: data.bike_name || `bike-${maintenanceTickets.length + 1}`,
-      bikeCode: data.bike_name || "BIKE-UNASSIGNED",
+      bikeId: actualBikeId,
+      bikeCode: actualBikeCode,
       issueType: mappedIssue,
       description: data.description || "Converted from support ticket",
       status: "in_progress",
@@ -2357,7 +2369,27 @@ export async function convertSupportToMaintenance(req, res) {
       reportedDate: new Date(data.created_at || Date.now()).toISOString().slice(0, 10),
       expectedFixDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       fixedDate: null,
-    });
+    };
+    maintenanceTickets.unshift(ticket);
+    
+    // Set bike status if we found a real bike
+    if (!actualBikeId.startsWith("bike-")) {
+      await supabase.from("bikes").update({ status: "maintenance" }).eq("id", actualBikeId);
+    }
+    
+    // Persist to DB
+    await supabase.from("maintenance").insert({
+      bike_id: ticket.bikeId,
+      bike_code: ticket.bikeCode,
+      issue_type: ticket.issueType,
+      description: ticket.description,
+      status: ticket.status,
+      technician_name: ticket.technicianName,
+      repair_cost: ticket.repairCost,
+      reported_date: ticket.reportedDate,
+      expected_fix_date: ticket.expectedFixDate,
+    }).then(({ error: mErr }) => { if (mErr) console.warn("[admin.convert] maintenance insert warning:", mErr.message); });
+
     await supabase.from("support_tickets").update({ status: "in_progress" }).eq("id", ticketId);
     return res.json({ success: true, message: "Converted to maintenance successfully" });
   } catch (error) {

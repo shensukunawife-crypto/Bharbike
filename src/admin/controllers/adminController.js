@@ -2199,6 +2199,29 @@ export async function maintenance(req, res) {
     }
     const bikes = safeData(data).map(normalizeBike);
     const supportTickets = safeData(supportRows);
+
+    // Sync: ensure any bike with status=maintenance in DB has a ticket in memory
+    // This covers bikes sent to maintenance before the fix, or after a server restart
+    const maintenanceBikesInDb = bikes.filter(b => b.status === "maintenance");
+    for (const bike of maintenanceBikesInDb) {
+      const hasTicket = maintenanceTickets.some(t => t.bikeId === bike.id);
+      if (!hasTicket) {
+        maintenanceTickets.unshift({
+          id: `MT-${1000 + maintenanceTickets.length + 1}`,
+          bikeId: bike.id,
+          bikeCode: bike.bike_code || bike.id,
+          issueType: "General Maintenance",
+          description: "Sent to maintenance from Admin Panel",
+          status: "under_repair",
+          technicianName: "Unassigned",
+          repairCost: 0,
+          reportedDate: new Date().toISOString().slice(0, 10),
+          expectedFixDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          fixedDate: null,
+        });
+      }
+    }
+
     const filter = req.query.filter || "all";
     const search = String(req.query.search || "").trim().toLowerCase();
     const filteredTickets = maintenanceTickets.filter((ticket) => {
@@ -2235,6 +2258,7 @@ export async function maintenance(req, res) {
     return res.status(500).send("Unable to load maintenance");
   }
 }
+
 
 export async function supportPage(req, res) {
   try {
@@ -2866,13 +2890,62 @@ export async function assignBike(req, res) {
 
 export async function sendBikeToMaintenance(req, res) {
   try {
-    await supabase.from("bikes").update({ status: "maintenance" }).eq("id", req.params.bikeId);
-    return res.json({ success: true, message: "Bike sent to maintenance" });
+    const bikeId = req.params.bikeId;
+
+    // 1. Fetch bike details so we can build a meaningful ticket
+    const { data: bike, error: bikeError } = await supabase
+      .from("bikes")
+      .select("*")
+      .eq("id", bikeId)
+      .maybeSingle();
+
+    if (bikeError) console.warn("[admin.sendBikeToMaintenance] bike fetch warning:", bikeError.message);
+
+    // 2. Update bike status to maintenance
+    await supabase.from("bikes").update({ status: "maintenance" }).eq("id", bikeId);
+
+    // 3. Create a maintenance ticket in the in-memory store so it shows on the Maintenance page
+    const ticketId = `MT-${1000 + maintenanceTickets.length + 1}`;
+    const ticket = {
+      id: ticketId,
+      bikeId: bikeId,
+      bikeCode: bike?.bike_code || bikeId,
+      issueType: "General Maintenance",
+      description: req.body?.description || "Sent to maintenance from Admin Panel",
+      status: "under_repair",
+      technicianName: req.body?.technicianName || "Unassigned",
+      repairCost: Number(req.body?.repairCost || 0),
+      reportedDate: new Date().toISOString().slice(0, 10),
+      expectedFixDate: req.body?.expectedFixDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      fixedDate: null,
+    };
+    maintenanceTickets.unshift(ticket);
+
+    // 4. Also persist to Supabase maintenance table if it exists (survives server restarts)
+    try {
+      await supabase.from("maintenance").insert({
+        bike_id: bikeId,
+        bike_code: ticket.bikeCode,
+        issue_type: ticket.issueType,
+        description: ticket.description,
+        status: "under_repair",
+        technician_name: ticket.technicianName,
+        repair_cost: ticket.repairCost,
+        reported_date: ticket.reportedDate,
+        expected_fix_date: ticket.expectedFixDate,
+      });
+    } catch (dbErr) {
+      // Table may not exist yet — in-memory ticket is still created above
+      console.log("[admin.sendBikeToMaintenance] maintenance table insert skipped:", dbErr?.message);
+    }
+
+    return res.json({ success: true, message: "Bike sent to maintenance and ticket created" });
   } catch (error) {
     console.error("[admin.sendBikeToMaintenance] failed", error);
     return res.status(500).json({ success: false, message: "Unable to send bike to maintenance" });
   }
 }
+
 
 export async function disableBike(req, res) {
   try {

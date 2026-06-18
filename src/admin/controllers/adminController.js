@@ -770,7 +770,7 @@ export async function operationsDashboard(req, res) {
       onlineRiders: partners.filter(p => p.is_online === true).length,
       availableBikes: bikes.filter(b => b.status === "available").length,
       skippedRidersCount: skippedLogs.length,
-      bikesInField: bikes.filter(b => b.status === "rented").length,
+      bikesInField: bikes.filter(b => b.status === "in_use").length,
       maintenanceBikes: bikes.filter(b => b.status === "maintenance").length
     };
 
@@ -1406,8 +1406,11 @@ export async function kycUpdateStatus(req, res) {
       return res.status(400).json({ success: false, error: "Invalid status value" });
     }
 
-    // Only update status — reason column may not exist yet in DB
+    // Include rejection reason if provided (column added gracefully if missing)
     const updatePayload = { status };
+    if (reason && reason.trim()) {
+      updatePayload.rejection_reason = reason.trim();
+    }
 
     const { data, error } = await supabase
       .from("kyc_documents")
@@ -1417,6 +1420,17 @@ export async function kycUpdateStatus(req, res) {
       .single();
 
     if (error) {
+      // If rejection_reason column doesn't exist, retry without it
+      if (error.message?.includes("rejection_reason")) {
+        const { data: data2, error: error2 } = await supabase
+          .from("kyc_documents")
+          .update({ status })
+          .eq("id", docId)
+          .select("id, user_id, type, status")
+          .single();
+        if (error2) return res.status(500).json({ success: false, error: error2.message });
+        return res.json({ success: true, doc: data2 });
+      }
       console.error("[admin.kycUpdateStatus] update failed", error);
       return res.status(500).json({ success: false, error: error.message });
     }
@@ -2497,11 +2511,17 @@ export async function settingsPage(req, res) {
 export async function completeBooking(req, res) {
   try {
     const { bookingId } = req.params;
+    // Fetch the rental first so we can free the bike
+    const { data: rental } = await supabase.from("rentals").select("bike_id").eq("id", bookingId).maybeSingle();
     const { error } = await supabase
       .from("rentals")
       .update({ status: "completed", end_time: new Date().toISOString() })
       .eq("id", bookingId);
     if (error) throw error;
+    // Free the bike so it becomes available again
+    if (rental?.bike_id) {
+      await supabase.from("bikes").update({ status: "available" }).eq("id", rental.bike_id);
+    }
     return res.json({ success: true, message: "Booking marked as completed" });
   } catch (err) {
     console.error("[admin.completeBooking]", err);
@@ -2512,11 +2532,17 @@ export async function completeBooking(req, res) {
 export async function cancelBooking(req, res) {
   try {
     const { bookingId } = req.params;
+    // Fetch the rental first so we can free the bike
+    const { data: rental } = await supabase.from("rentals").select("bike_id").eq("id", bookingId).maybeSingle();
     const { error } = await supabase
       .from("rentals")
       .update({ status: "cancelled" })
       .eq("id", bookingId);
     if (error) throw error;
+    // Free the bike so it becomes available again
+    if (rental?.bike_id) {
+      await supabase.from("bikes").update({ status: "available" }).eq("id", rental.bike_id);
+    }
     return res.json({ success: true, message: "Booking cancelled" });
   } catch (err) {
     console.error("[admin.cancelBooking]", err);
@@ -2655,30 +2681,28 @@ export async function addUser(req, res) {
     const full_name = req.body.full_name ?? req.body.name ?? null;
     const { phone, email, location } = req.body;
     const id = typeof req.body.id === "string" && req.body.id.length >= 32 ? req.body.id : randomUUID();
-    await Promise.all([
-      supabase.from("users").insert([
-        {
-          id,
-          full_name,
-          phone,
-          email: email ?? null,
-          location: location ?? null,
-        },
-      ]),
-      supabase.from("profiles").insert([
-        {
-          id,
-          full_name,
-          phone,
-          email: email ?? null,
-          location: location ?? null,
-        },
-      ]),
+    const [usersResult, profilesResult] = await Promise.all([
+      supabase.from("users").insert([{
+        id,
+        full_name,
+        phone,
+        email: email ?? null,
+        location: location ?? null,
+      }]),
+      supabase.from("profiles").insert([{
+        id,
+        full_name,
+        phone,
+        email: email ?? null,
+        location: location ?? null,
+      }]),
     ]);
+    if (usersResult.error) throw usersResult.error;
+    if (profilesResult.error) console.warn("[admin.addUser] profiles insert warning:", profilesResult.error.message);
     return res.json({ success: true, message: "User added" });
   } catch (error) {
     console.error("[admin.addUser] failed", error);
-    return res.status(500).json({ success: false, message: "Unable to add user" });
+    return res.status(500).json({ success: false, message: error.message || "Unable to add user" });
   }
 }
 
@@ -2868,6 +2892,8 @@ export async function assignBike(req, res) {
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + duration_hours * 60 * 60 * 1000);
 
+    const pricePerHour = Number(dashboardSettings.bikePricePerHour || 0);
+    const calculatedPrice = pricePerHour * Number(duration_hours);
     const { error: rentalError } = await supabase.from("rentals").insert([{
       bike_id: bikeId,
       user_id,
@@ -2875,7 +2901,7 @@ export async function assignBike(req, res) {
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       status: "ongoing",
-      price: 0
+      price: calculatedPrice
     }]);
 
     if (rentalError) throw rentalError;
@@ -2949,21 +2975,23 @@ export async function sendBikeToMaintenance(req, res) {
 
 export async function disableBike(req, res) {
   try {
-    await supabase.from("bikes").update({ status: "offline" }).eq("id", req.params.bikeId);
+    const { error } = await supabase.from("bikes").update({ status: "offline" }).eq("id", req.params.bikeId);
+    if (error) throw error;
     return res.json({ success: true, message: "Bike disabled" });
   } catch (error) {
     console.error("[admin.disableBike] failed", error);
-    return res.status(500).json({ success: false, message: "Unable to disable bike" });
+    return res.status(500).json({ success: false, message: error.message || "Unable to disable bike" });
   }
 }
 
 export async function acceptOrder(req, res) {
   try {
-    await supabase.from("orders").update({ status: "assigned" }).eq("id", req.params.orderId);
-    return res.json({ success: true, message: "Order assigned" });
+    const { error } = await supabase.from("orders").update({ status: "accepted" }).eq("id", req.params.orderId);
+    if (error) throw error;
+    return res.json({ success: true, message: "Order accepted" });
   } catch (error) {
     console.error("[admin.acceptOrder] failed", error);
-    return res.status(500).json({ success: false, message: "Unable to accept order" });
+    return res.status(500).json({ success: false, message: error.message || "Unable to accept order" });
   }
 }
 
@@ -3017,11 +3045,31 @@ export async function markOrderOngoing(req, res) {
 
 export async function markOrderCompleted(req, res) {
   try {
-    await supabase.from("orders").update({ status: "completed" }).eq("id", req.params.orderId);
+    const orderId = req.params.orderId;
+    // Fetch order before completing so we can record earnings
+    const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
+    const { error } = await supabase.from("orders").update({ status: "completed" }).eq("id", orderId);
+    if (error) throw error;
+    // Record in earnings table for dashboard/reports
+    if (order) {
+      const amount = Number(order.total_amount || order.price || order.amount || 0);
+      if (amount > 0) {
+        await supabase.from("earnings").insert([{
+          order_id: orderId,
+          user_id: order.user_id || order.assigned_user_id || null,
+          amount,
+          type: "delivery",
+          status: "paid",
+          created_at: new Date().toISOString(),
+        }]).then(({ error: eErr }) => {
+          if (eErr) console.warn("[admin.markOrderCompleted] earnings insert warning:", eErr.message);
+        });
+      }
+    }
     return res.json({ success: true, message: "Order marked completed" });
   } catch (error) {
     console.error("[admin.markOrderCompleted] failed", error);
-    return res.status(500).json({ success: false, message: "Unable to complete order" });
+    return res.status(500).json({ success: false, message: error.message || "Unable to complete order" });
   }
 }
 
@@ -3075,6 +3123,9 @@ export async function togglePartnerOnline(req, res) {
     const targetOnline = req.body.isOnline === true || req.body.isOnline === "true";
     partnerState[userId] = { ...(partnerState[userId] || {}), online: targetOnline, disabled: false };
     await supabase.from("users").update({ is_online: targetOnline }).eq("id", userId);
+    // Also sync delivery_partners table so the operations dashboard stays accurate
+    await supabase.from("delivery_partners").update({ is_online: targetOnline }).eq("user_id", userId)
+      .then(({ error }) => { if (error) console.warn("[admin.togglePartnerOnline] delivery_partners sync:", error.message); });
     return res.json({ success: true, message: `Partner is now ${targetOnline ? "online" : "offline"}` });
   } catch (error) {
     console.error("[admin.togglePartnerOnline] failed", error);
@@ -3114,6 +3165,9 @@ export async function disablePartner(req, res) {
       .from("users")
       .update({ is_online: false, is_delivery_partner: false })
       .eq("id", userId);
+    // Also update delivery_partners table status
+    await supabase.from("delivery_partners").update({ is_online: false, status: "disabled" }).eq("user_id", userId)
+      .then(({ error }) => { if (error) console.warn("[admin.disablePartner] delivery_partners sync:", error.message); });
     return res.json({ success: true, message: "Partner disabled" });
   } catch (error) {
     console.error("[admin.disablePartner] failed", error);
@@ -3124,16 +3178,22 @@ export async function disablePartner(req, res) {
 export async function markBikeFixed(req, res) {
   try {
     const { bikeId } = req.params;
-    await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
+    const fixedDate = new Date().toISOString().slice(0, 10);
+    const { error } = await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
+    if (error) throw error;
+    // Update in-memory ticket
     const ticket = maintenanceTickets.find((item) => item.bikeId === bikeId);
     if (ticket) {
       ticket.status = "completed";
-      ticket.fixedDate = new Date().toISOString().slice(0, 10);
+      ticket.fixedDate = fixedDate;
     }
+    // Also persist to maintenance DB table if it exists
+    await supabase.from("maintenance").update({ status: "completed", fixed_date: fixedDate }).eq("bike_id", bikeId)
+      .then(({ error: mErr }) => { if (mErr) console.warn("[admin.markBikeFixed] maintenance table update:", mErr.message); });
     return res.json({ success: true, message: "Bike marked as fixed" });
   } catch (error) {
     console.error("[admin.markBikeFixed] failed", error);
-    return res.status(500).json({ success: false, message: "Unable to update bike" });
+    return res.status(500).json({ success: false, message: error.message || "Unable to update bike" });
   }
 }
 
@@ -3157,6 +3217,18 @@ export async function addMaintenanceTicket(req, res) {
     if (bike?.id) {
       await supabase.from("bikes").update({ status: "maintenance" }).eq("id", bike.id);
     }
+    // Persist ticket to maintenance DB table for durability across server restarts
+    await supabase.from("maintenance").insert({
+      bike_id: ticket.bikeId,
+      bike_code: ticket.bikeCode,
+      issue_type: ticket.issueType,
+      description: ticket.description,
+      status: "under_repair",
+      technician_name: ticket.technicianName,
+      repair_cost: ticket.repairCost,
+      reported_date: ticket.reportedDate,
+      expected_fix_date: ticket.expectedFixDate,
+    }).then(({ error: mErr }) => { if (mErr) console.warn("[admin.addMaintenanceTicket] maintenance table insert:", mErr.message); });
     return res.json({ success: true, message: "Bike added to maintenance" });
   } catch (error) {
     console.error("[admin.addMaintenanceTicket] failed", error);
@@ -3178,6 +3250,15 @@ export async function updateMaintenanceStatus(req, res) {
       ticket.fixedDate = new Date().toISOString().slice(0, 10);
       await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
     }
+    // Persist update to maintenance DB table
+    await supabase.from("maintenance").update({
+      status: ticket.status,
+      technician_name: ticket.technicianName,
+      repair_cost: ticket.repairCost,
+      expected_fix_date: ticket.expectedFixDate,
+      ...(ticket.status === "completed" ? { fixed_date: ticket.fixedDate } : {}),
+    }).eq("bike_id", ticket.bikeId)
+      .then(({ error: mErr }) => { if (mErr) console.warn("[admin.updateMaintenanceStatus] maintenance table update:", mErr.message); });
     return res.json({ success: true, message: "Maintenance status updated" });
   } catch (error) {
     console.error("[admin.updateMaintenanceStatus] failed", error);
@@ -3195,6 +3276,9 @@ export async function removeMaintenanceTicket(req, res) {
     if (ticket.status !== "completed") {
       await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
     }
+    // Also delete from maintenance DB table
+    await supabase.from("maintenance").delete().eq("bike_id", ticket.bikeId)
+      .then(({ error: mErr }) => { if (mErr) console.warn("[admin.removeMaintenanceTicket] maintenance table delete:", mErr.message); });
     return res.json({ success: true, message: "Maintenance ticket removed" });
   } catch (error) {
     console.error("[admin.removeMaintenanceTicket] failed", error);
@@ -3315,7 +3399,7 @@ export async function saveSettings(req, res) {
         const hashedPassword = bcrypt.hashSync(payload.adminPasswordUi.trim(), 10);
         const { error: pwdErr } = await supabase
           .from("admin_users")
-          .update({ password: hashedPassword })
+          .update({ password_hash: hashedPassword })
           .eq("id", adminId);
         if (pwdErr) throw pwdErr;
         console.log(`🔐 [adminController.saveSettings] password updated for admin ${adminId}`);

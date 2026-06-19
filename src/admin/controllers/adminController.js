@@ -3802,6 +3802,11 @@ export async function adminUnlockBike(req, res) {
 
     // Call IoT service to send mobilizer request
     const iotResult = await iotService.unlockBike(bikeId);
+    console.log("[adminUnlockBike] IoT Result:", iotResult);
+
+    if (!iotResult.ok && iotResult.message !== "Device not linked") {
+      throw new Error(iotResult.message || "IoT device failed to respond to unlock command");
+    }
 
     // Update Supabase DB
     await supabase

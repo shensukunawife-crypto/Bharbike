@@ -62,7 +62,8 @@ export async function lockBike(bikeId) {
         headers: {
           'User-Authentication': LOCONAV_TOKEN,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 30000
       }
     );
 
@@ -94,7 +95,8 @@ export async function unlockBike(bikeId) {
         headers: {
           'User-Authentication': LOCONAV_TOKEN,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 30000
       }
     );
 

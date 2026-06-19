@@ -1627,10 +1627,11 @@ export async function deliveryPartnerProfile(req, res) {
 export async function earnings(req, res) {
   try {
     const filter = req.query.filter || "weekly";
-    const { data: earningsData, error } = await supabase.from("earnings").select("*");
+    const { data: orderData, error } = await supabase.from("orders").select("*");
     if (error) {
       console.error("[admin.earnings] fetch failed", error);
     }
+    const earningsData = (orderData || []).filter(item => ["success", "paid", "completed"].includes((item.status || "").toLowerCase()));
     const rows = safeData(earningsData);
     const now = Date.now();
     const days = filter === "today" ? 1 : filter === "monthly" ? 30 : 7;

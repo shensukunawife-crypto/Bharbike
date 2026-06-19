@@ -566,7 +566,6 @@ export async function dashboard(req, res) {
       { count: activeRentalsCount, error: rentalsError },
       { data: bikesData, error: bikesDataError },
       { data: ordersData, error: ordersError },
-      { data: earningsRows, error: earningsError },
     ] = await Promise.all([
       getIdMappings(),
       supabase.from("users").select("*", { count: "exact", head: true }).neq("is_delivery_partner", true),
@@ -574,24 +573,25 @@ export async function dashboard(req, res) {
       supabase
         .from("rentals")
         .select("*", { count: "exact", head: true })
-        .eq("status", "active"),
+        .in("status", ["active", "ongoing"]),
       supabase.from("bikes").select("*"),
-      supabase.from("orders").select("*"),
-      supabase.from("earnings").select("amount, created_at"),
+      supabase.from("orders").select("id, amount, status, created_at"),
     ]);
 
-    if (usersError || bikesError || rentalsError || earningsError || bikesDataError || ordersError) {
+    if (usersError || bikesError || rentalsError || bikesDataError || ordersError) {
       console.error(
         "[admin.dashboard] fetch failed",
-        usersError || bikesError || rentalsError || earningsError || bikesDataError || ordersError
+        usersError || bikesError || rentalsError || bikesDataError || ordersError
       );
     }
     const bikes = safeData(bikesData).map(normalizeBike);
     const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
-    const earnings = safeData(earningsRows).map((item) => ({
-      amount: Number(item.amount || 0),
-      createdAt: new Date(item.created_at || item.createdAt || now),
-    }));
+    const earnings = safeData(ordersData)
+      .filter(o => ["success", "paid", "completed"].includes((o.status || "").toLowerCase()))
+      .map((item) => ({
+        amount: Number(item.amount) || 0,
+        createdAt: new Date(item.created_at || item.createdAt || now),
+      }));
 
     const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0);
     const earningsBreakdown = earnings.reduce(
@@ -2087,9 +2087,10 @@ export async function analytics(req, res) {
       console.error("[admin.analytics] bike/rental fetch failed", bikesError || rentalError);
     }
 
-    const filteredEarnings = safeData(earningRows).filter((item) => {
+    const filteredEarnings = safeData(orderRows).filter((item) => {
       const created = new Date(item.createdAt || item.created_at || now).getTime();
-      return now - created <= days * 24 * 60 * 60 * 1000;
+      const validStatus = ["success", "paid", "completed"].includes((item.status || "").toLowerCase());
+      return validStatus && (now - created <= days * 24 * 60 * 60 * 1000);
     });
     const filteredOrders = safeData(orderRows).filter((item) => {
       const created = new Date(item.createdAt || item.created_at || now).getTime();

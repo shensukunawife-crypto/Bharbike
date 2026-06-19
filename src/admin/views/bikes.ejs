@@ -79,7 +79,7 @@
             <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="display: flex; justify-content: center; padding: 6px 10px; font-size: 12px;">View Details</a>
             <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')" style="padding: 6px 10px; font-size: 12px;">Assign Bike</button>
             <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST" style="grid-column: span 2; padding: 6px 10px; font-size: 12px;">Send to Maintenance</button>
-            <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST" style="padding: 6px 10px; font-size: 12px;">Disable Bike</button>
+            <button class="btn btn-<%= bike.status === 'offline' ? 'success' : 'danger' %> admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST" style="padding: 6px 10px; font-size: 12px;"><%= bike.status === 'offline' ? '✅ Enable Bike' : '🚫 Disable Bike' %></button>
             <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?" style="padding: 6px 10px; font-size: 12px;">Delete</button>
           </div>
         </td>
@@ -96,17 +96,39 @@
       <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('add-bike-modal').classList.remove('show')">&times;</button>
     </div>
     <form class="admin-form ajax-form" data-url="/admin/bikes/add">
-      <input name="bike_code" placeholder="Bike ID (e.g. BB001)" required />
-      <input name="device_uuid" placeholder="GPS Tracker ID / Device UUID (Optional)" style="margin-bottom: 12px;" />
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Bike ID / Code <span style="color:red">*</span></label>
+      <input name="bike_code" placeholder="e.g. BB001" required />
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Model Name</label>
+      <input name="model" placeholder="e.g. Hero Splendor, Honda Activa" />
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Color</label>
+      <input name="color" placeholder="e.g. Red, Black, Blue" />
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Year of Manufacture</label>
+      <input type="number" name="year" placeholder="e.g. 2022" min="2000" max="2030" />
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Registration Number</label>
+      <input name="registration_number" placeholder="e.g. MH04AB1234" />
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">GPS Tracker ID / Device UUID</label>
+      <input name="device_uuid" placeholder="Optional - link GPS tracker" style="margin-bottom: 12px;" />
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Status</label>
       <select name="status">
         <option value="available">Available</option>
         <option value="in_use">In Use</option>
         <option value="maintenance">Maintenance</option>
         <option value="offline">Offline</option>
       </select>
-      <input type="number" name="battery" min="0" max="100" placeholder="Battery %" />
-      <input name="location" placeholder="Location" />
-      <button type="submit" class="btn btn-gold glow">Create</button>
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Battery %</label>
+      <input type="number" name="battery" min="0" max="100" placeholder="Battery % (0-100)" />
+
+      <label style="font-size:13px;color:#6b7280;margin-bottom:4px;display:block;">Location / Hub</label>
+      <input name="location" placeholder="e.g. Main Hub, Thane West" />
+
+      <button type="submit" class="btn btn-gold glow" style="margin-top:8px;">Create Bike</button>
     </form>
   </div>
 </div>

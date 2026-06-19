@@ -1153,14 +1153,32 @@ export async function bikeDetails(req, res) {
 
     const { data: orders } = await supabase.from("orders").select("*").eq("bike_id", bikeId);
     const { data: rentals } = await supabase.from("rentals").select("*").eq("bike_id", bikeId);
-    const maintenanceLogs = maintenanceTickets
-      .filter((item) => item.bikeId === bikeId || item.bikeCode === bike.bike_code)
-      .map((item) => ({
-        issue: item.issueType,
+    // Fix: Read maintenance logs from Supabase DB, not memory (survives server restarts)
+    let maintenanceLogs = [];
+    try {
+      const { data: dbMaintenance } = await supabase
+        .from("maintenance")
+        .select("issue_type, status, repair_cost, reported_date")
+        .or(`bike_id.eq.${bikeId},bike_code.eq.${bike.bike_code}`)
+        .order("reported_date", { ascending: false });
+      maintenanceLogs = (dbMaintenance || []).map(item => ({
+        issue: item.issue_type,
         status: item.status,
-        cost: item.repairCost,
-        date: item.reportedDate,
+        cost: item.repair_cost,
+        date: item.reported_date,
       }));
+    } catch (mErr) {
+      console.warn("[admin.bikeDetails] maintenance DB fetch failed:", mErr.message);
+      // Fallback to memory if DB fetch fails
+      maintenanceLogs = maintenanceTickets
+        .filter((item) => item.bikeId === bikeId || item.bikeCode === bike.bike_code)
+        .map((item) => ({
+          issue: item.issueType,
+          status: item.status,
+          cost: item.repairCost,
+          date: item.reportedDate,
+        }));
+    }
 
     const usageHistory = safeData(rentals).map(r => ({
       ...r,
@@ -2853,8 +2871,12 @@ export async function blockUser(req, res) {
 
 export async function addBike(req, res) {
   try {
-    const { bike_code, status, device_uuid } = req.body;
+    const { bike_code, status, device_uuid, model, color, year, registration_number } = req.body;
     const trimmedUuid = device_uuid ? device_uuid.trim() : "";
+
+    if (!bike_code || !bike_code.trim()) {
+      return res.status(400).json({ success: false, message: "Bike ID / Code is required" });
+    }
 
     if (trimmedUuid) {
       // Validate that this GPS Tracker is not already mapped to another bike
@@ -2878,16 +2900,21 @@ export async function addBike(req, res) {
       }
     }
 
+    // Build insert payload — only include optional fields if provided
+    const insertPayload = {
+      bike_code: bike_code.trim(),
+      status: status || "available",
+      battery: Number(req.body.battery || 0),
+      location: req.body.location || "Main Hub",
+    };
+    if (model && model.trim()) insertPayload.model = model.trim();
+    if (color && color.trim()) insertPayload.color = color.trim();
+    if (year && Number(year) > 0) insertPayload.year = Number(year);
+    if (registration_number && registration_number.trim()) insertPayload.registration_number = registration_number.trim();
+
     const { data: newBikes, error: insertError } = await supabase
       .from("bikes")
-      .insert([
-        {
-          bike_code,
-          status: status || "available",
-          battery: Number(req.body.battery || 0),
-          location: req.body.location || "Main Hub",
-        },
-      ])
+      .insert([insertPayload])
       .select();
 
     if (insertError) throw insertError;
@@ -3007,12 +3034,17 @@ export async function sendBikeToMaintenance(req, res) {
 
 export async function disableBike(req, res) {
   try {
-    const { error } = await supabase.from("bikes").update({ status: "offline" }).eq("id", req.params.bikeId);
+    // Toggle: if bike is offline, re-enable it. Otherwise disable it.
+    const { data: bikeRow } = await supabase.from("bikes").select("status").eq("id", req.params.bikeId).maybeSingle();
+    const currentStatus = bikeRow?.status || "available";
+    const newStatus = currentStatus === "offline" ? "available" : "offline";
+    const { error } = await supabase.from("bikes").update({ status: newStatus }).eq("id", req.params.bikeId);
     if (error) throw error;
-    return res.json({ success: true, message: "Bike disabled" });
+    const msg = newStatus === "offline" ? "Bike disabled (set to Offline)" : "Bike re-enabled (set to Available)";
+    return res.json({ success: true, message: msg });
   } catch (error) {
     console.error("[admin.disableBike] failed", error);
-    return res.status(500).json({ success: false, message: error.message || "Unable to disable bike" });
+    return res.status(500).json({ success: false, message: error.message || "Unable to update bike status" });
   }
 }
 

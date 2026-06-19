@@ -1,5 +1,17 @@
 <div class="stats-grid">
   <div class="stat-card"><div class="stat-head"><span class="stat-icon">🚲</span><span class="stat-label">Bike ID</span></div><strong class="stat-value"><%= bike.bike_code %></strong></div>
+  <% if (bike.model) { %>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🏍️</span><span class="stat-label">Model</span></div><strong class="stat-value"><%= bike.model %></strong></div>
+  <% } %>
+  <% if (bike.color) { %>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🎨</span><span class="stat-label">Color</span></div><strong class="stat-value"><%= bike.color %></strong></div>
+  <% } %>
+  <% if (bike.year) { %>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">📅</span><span class="stat-label">Year</span></div><strong class="stat-value"><%= bike.year %></strong></div>
+  <% } %>
+  <% if (bike.registration_number) { %>
+  <div class="stat-card"><div class="stat-head"><span class="stat-icon">🪪</span><span class="stat-label">Reg. Number</span></div><strong class="stat-value"><%= bike.registration_number %></strong></div>
+  <% } %>
   <div class="stat-card">
     <div class="stat-head"><span class="stat-icon">🔋</span><span class="stat-label">Battery</span></div>
     <strong class="stat-value"><%= bike.battery %>%</strong>

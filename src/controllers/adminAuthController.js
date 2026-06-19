@@ -25,7 +25,7 @@ async function handleAdminApiLogin(req, res) {
       .from("admin_users")
       .select("*")
       .eq("email", username.trim())
-      .single();
+      .maybeSingle();
 
     if (!error && dbAdmin && dbAdmin.is_active) {
       const isMatch = await bcrypt.compare(password, dbAdmin.password_hash);

@@ -83,7 +83,7 @@ export const createOrder = async (req, res) => {
           },
         ])
         .select("id")
-        .single();
+        .maybeSingle();
 
       let appOrderId = appOrder?.id ?? crypto.randomUUID();
       const mockOrderId = `wallet_order_${Date.now()}`;
@@ -136,7 +136,7 @@ export const createOrder = async (req, res) => {
         },
       ])
       .select("id")
-      .single();
+      .maybeSingle();
 
     let appOrderId = appOrder?.id ?? null;
     if (appOrderError || !appOrderId) {
@@ -350,7 +350,7 @@ export const verifyPayment = async (req, res) => {
           .select("display_name, price")
           .or(`id.eq.${plan_id},name.eq.${plan_id}`)
           .limit(1)
-          .single();
+          .maybeSingle();
         if (planRow?.display_name) {
           planDisplayName = planRow.display_name;
         }
@@ -398,7 +398,7 @@ export const verifyPayment = async (req, res) => {
               .select("id, duration_days")
               .or(`name.eq.${plan_id},display_name.ilike.%${plan_id}%`)
               .limit(1)
-              .single();
+              .maybeSingle();
             if (planRow) {
               planUuid = planRow.id;
               durationDays = planRow.duration_days || 30;

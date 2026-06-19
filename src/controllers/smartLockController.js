@@ -44,7 +44,7 @@ export const getLockStatus = asyncHandler(async (req, res) => {
     .from("bikes")
     .select("id, name, license_plate, is_locked, battery_level, last_ping_at")
     .eq("id", bikeId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     // Return mock data if bikes table query fails
@@ -269,7 +269,7 @@ export const getBikeHealth = asyncHandler(async (req, res) => {
     .from("bikes")
     .select("name, license_plate, battery_level, is_locked")
     .eq("id", bikeId)
-    .single();
+    .maybeSingle();
 
   res.json({
     success: true,

@@ -74,7 +74,7 @@ export async function toggleSkippedDayStatus(req, res) {
       .from("rider_skipped_days")
       .select("status")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (getError || !current) {
       console.log("GET ERROR:", getError);

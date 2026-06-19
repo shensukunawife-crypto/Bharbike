@@ -35,7 +35,7 @@ export const createBooking = async (req, res) => {
       .from("bikes")
       .select("status")
       .eq("id", bike_id)
-      .single();
+      .maybeSingle();
 
     if (bike?.status !== "available" && !String(bike_id).includes("demo")) {
       return res.status(400).json({ message: "This bike is currently unavailable." });

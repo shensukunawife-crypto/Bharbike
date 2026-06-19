@@ -1435,7 +1435,7 @@ export async function kycUpdateStatus(req, res) {
       .update(updatePayload)
       .eq("id", docId)
       .select("id, user_id, type, status")
-      .single();
+      .maybeSingle();
 
     if (error) {
       // If rejection_reason column doesn't exist, retry without it
@@ -1445,7 +1445,7 @@ export async function kycUpdateStatus(req, res) {
           .update({ status })
           .eq("id", docId)
           .select("id, user_id, type, status")
-          .single();
+          .maybeSingle();
         if (error2) return res.status(500).json({ success: false, error: error2.message });
         return res.json({ success: true, doc: data2 });
       }
@@ -2070,7 +2070,7 @@ export async function analytics(req, res) {
 
     const [
       mappings,
-      { data: earningRows, error: earningError },
+      
       { data: orderRows, error: orderError },
       { data: bikeRows, error: bikesError },
       { data: rentalRows, error: rentalError },
@@ -2081,8 +2081,8 @@ export async function analytics(req, res) {
       supabase.from("bikes").select("*"),
       supabase.from("rentals").select("*"),
     ]);
-    if (earningError || orderError) {
-      console.error("[admin.analytics] fetch failed", earningError || orderError);
+    if (orderError) {
+      console.error("[admin.analytics] fetch failed", orderError);
     }
     if (bikesError || rentalError) {
       console.error("[admin.analytics] bike/rental fetch failed", bikesError || rentalError);
@@ -2460,7 +2460,7 @@ export async function sendSupportMessage(req, res) {
         }
       ])
       .select("*")
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error("[admin.sendSupportMessage] failed", error);
@@ -2618,7 +2618,7 @@ export async function addPromoCode(req, res) {
       description: description || null,
       is_active: true,
       uses_count: 0,
-    }]).select().single();
+    }]).select().maybeSingle();
     if (error) throw error;
     return res.json({ success: true, message: "Promo code created", data });
   } catch (err) {
@@ -3116,23 +3116,7 @@ export async function markOrderCompleted(req, res) {
     const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
     const { error } = await supabase.from("orders").update({ status: "completed" }).eq("id", orderId);
     if (error) throw error;
-    // Record in earnings table for dashboard/reports
-    if (order) {
-      const amount = Number(order.total_amount || order.price || order.amount || 0);
-      if (amount > 0) {
-        await supabase.from("earnings").insert([{
-          order_id: orderId,
-          user_id: order.user_id || order.assigned_user_id || null,
-          amount,
-          type: "delivery",
-          status: "paid",
-          created_at: new Date().toISOString(),
-        }]).then(({ error: eErr }) => {
-          if (eErr) console.warn("[admin.markOrderCompleted] earnings insert warning:", eErr.message);
-        });
-      }
-    }
-    return res.json({ success: true, message: "Order marked completed" });
+        return res.json({ success: true, message: "Order marked completed" });
   } catch (error) {
     console.error("[admin.markOrderCompleted] failed", error);
     return res.status(500).json({ success: false, message: error.message || "Unable to complete order" });
@@ -3567,7 +3551,7 @@ export async function editAdmin(req, res) {
 export async function toggleAdmin(req, res) {
   try {
     const { id } = req.params;
-    const { data: admin } = await supabase.from("admin_users").select("is_active").eq("id", id).single();
+    const { data: admin } = await supabase.from("admin_users").select("is_active").eq("id", id).maybeSingle();
     if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
 
     const { error } = await supabase.from("admin_users").update({ is_active: !admin.is_active }).eq("id", id);
@@ -4026,7 +4010,7 @@ export async function toggleAd(req, res) {
       .from("ads")
       .select("status")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (getError || !current) {
       return res.status(404).json({ success: false, message: "Ad banner not found" });

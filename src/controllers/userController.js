@@ -60,7 +60,7 @@ export const getUserById = async (req, res) => {
     .from("profiles")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     // If profile not found, try users table

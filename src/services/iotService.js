@@ -126,8 +126,7 @@ export async function getBikeHealth(bikeId) {
     const response = await axios.post(
       `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
       {
-        vehicleIds: [loconavUuid],
-        sensors: ["speed", "ignition", "currentLocationCoordinates"]
+        vehicleIds: [loconavUuid]
       },
       {
         headers: {

@@ -314,13 +314,20 @@ export const verifyPayment = async (req, res) => {
 
       let recordId = null;
       try {
-        const { data: paymentRecord } = await supabase
+        const query = supabase
           .from("payments")
-          .update({ status: "success", razorpay_payment_id: resolvedPaymentId })
-          .eq("razorpay_order_id", razorpay_order_id)
-          .select("id")
-          .single();
-        recordId = paymentRecord?.id ?? null;
+          .update({ status: "success", razorpay_payment_id: resolvedPaymentId });
+          
+        if (razorpay_order_id && razorpay_order_id !== "bypass_order_id") {
+          query.eq("razorpay_order_id", razorpay_order_id);
+        } else if (app_order_id) {
+          query.eq("order_id", app_order_id);
+        } else {
+          throw new Error("No valid identifier for payments update");
+        }
+        
+        const { data: paymentRecord } = await query.select("id");
+        recordId = paymentRecord?.[0]?.id ?? null;
       } catch (e) { console.warn("[verifyPayment] payments update skipped:", e?.message); }
       
       return recordId;

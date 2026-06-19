@@ -169,7 +169,10 @@ async function finalizeRental(rentalId, status) {
     throw new AppError("Rental is not active", 409);
   }
 
-  const { error: rentUpdateErr } = await supabase.from("rentals").update({ status }).eq("id", rentalId);
+  const { error: rentUpdateErr } = await supabase.from("rentals").update({ 
+    status,
+    end_time: new Date().toISOString()
+  }).eq("id", rentalId);
   if (rentUpdateErr) throw new AppError(`Failed to end rental: ${rentUpdateErr.message}`, 500);
 
   const { error: bikeUpdateErr } = await supabase.from("bikes").update({ status: BikeStatus.available }).eq("id", rental.bike_id);

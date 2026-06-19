@@ -105,8 +105,8 @@ export const lockBike = asyncHandler(async (req, res) => {
   let iotResult;
   try {
     iotResult = await iotService.lockBike(bikeId);
-  } catch {
-    iotResult = { ok: true };
+  } catch (err) {
+    iotResult = { ok: false, message: err.message || "IoT service error" };
   }
   
   if (!iotResult.ok && iotResult.message !== "Device not linked") {
@@ -183,8 +183,8 @@ export const unlockBike = asyncHandler(async (req, res) => {
   let iotResult;
   try {
     iotResult = await iotService.unlockBike(bikeId);
-  } catch {
-    iotResult = { ok: true };
+  } catch (err) {
+    iotResult = { ok: false, message: err.message || "IoT service error" };
   }
   
   if (!iotResult.ok && iotResult.message !== "Device not linked") {

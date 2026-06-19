@@ -96,7 +96,23 @@ export async function getTracking(req, res) {
     const profile = profileRes.data ?? null;
     const latestRental = rentalRes.data ?? null;
 
-    const coords = extractLatLng(latestRental) || extractLatLng(profile);
+    let coords = extractLatLng(latestRental) || extractLatLng(profile);
+    
+    // Attempt to fetch live LocoNav coordinates if they have an active rental
+    let liveSpeed = 0;
+    if (latestRental && latestRental.status !== 'completed' && latestRental.bike_id) {
+      try {
+        const { getBikeHealth } = await import("../services/iotService.js");
+        const health = await getBikeHealth(latestRental.bike_id);
+        if (health && health.lat && health.lng) {
+          coords = { lat: health.lat, lng: health.lng };
+          liveSpeed = health.speed || 0;
+        }
+      } catch (iotErr) {
+        console.warn("[getTracking] Failed to fetch live LocoNav location:", iotErr.message);
+      }
+    }
+
     if (!coords) {
       // Demo mode: return mock tracking data so the app doesn't error
       const mockPayload = {
@@ -121,15 +137,12 @@ export async function getTracking(req, res) {
     const payload = {
       lat: coords.lat,
       lng: coords.lng,
-      speed:
-        pickFirstNumber(latestRental, ["speed", "speed_kmh", "avg_speed", "avg_speed_kmh"]) ?? 0,
-      distance:
-        pickFirstNumber(latestRental, ["distance", "distance_km", "trip_distance", "km_covered"]) ?? 0,
+      speed: liveSpeed || pickFirstNumber(latestRental, ["speed", "speed_kmh", "avg_speed", "avg_speed_kmh"]) || 0,
+      distance: pickFirstNumber(latestRental, ["distance", "distance_km", "trip_distance", "km_covered"]) || 0,
       duration,
-      idleTime:
-        pickFirstNumber(latestRental, ["idle_time", "idle_time_min", "idle_min"]) ?? 0,
-      lastParkedLocation: profile?.location ?? null,
-      updatedAt: latestRental?.updated_at ?? latestRental?.created_at ?? null,
+      idleTime: pickFirstNumber(latestRental, ["idle_time", "idle_time_min", "idle_min"]) || 0,
+      lastParkedLocation: profile?.location || null,
+      updatedAt: latestRental?.updated_at || latestRental?.created_at || null,
     };
 
     return res.json(payload);

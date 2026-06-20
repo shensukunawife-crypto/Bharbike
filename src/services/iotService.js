@@ -147,7 +147,20 @@ export async function getBikeHealth(bikeId) {
     while (attempt <= maxRetries) {
       try {
         response = await makeRequest();
-        break; // Success, exit retry loop
+        
+        const vehicleData = response.data?.data?.values?.[0] || {};
+        const coords = vehicleData.gps?.currentLocationCoordinates || {};
+        const hasGps = coords.lat?.value && coords.long?.value;
+
+        if (!hasGps && attempt < maxRetries) {
+          attempt++;
+          console.warn(`[LocoNav Retry] Attempt ${attempt} succeeded but NO GPS DATA for bike ${bikeId}. Retrying in ${delay / 1000}s...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Double the delay (20s, then 40s)
+          continue;
+        }
+
+        break; // Success with GPS, or max retries reached
       } catch (error) {
         const isRateLimit = error.response?.status === 429;
         const isServerError = error.response?.status >= 500;

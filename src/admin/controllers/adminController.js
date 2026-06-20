@@ -4017,7 +4017,7 @@ export async function adsPage(req, res) {
     }
 
     return renderPage(res, {
-      title: "Ads Management",
+      title: "Socials & Contacts",
       active: "ads",
       bodyView: "ads",
       ads: data || [],
@@ -4026,7 +4026,7 @@ export async function adsPage(req, res) {
   } catch (error) {
     console.error("[adminController.adsPage] unexpected:", error);
     return renderPage(res, {
-      title: "Ads Management",
+      title: "Socials & Contacts",
       active: "ads",
       bodyView: "ads",
       ads: [],

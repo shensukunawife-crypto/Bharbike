@@ -1,5 +1,5 @@
 <style>
-  /* Premium Ad management view styling */
+  /* Premium view styling */
   main.main-content > section.panel:has(.promo-page) {
     outline: none !important;
     border: none !important;
@@ -14,11 +14,8 @@
     accent-color: #ca8a04;
   }
   .promo-page .promo-card--form,
-  .promo-page #promo-form,
+  .promo-page #socials-form,
   .promo-page section.promo-card {
-    outline: none !important;
-  }
-  .promo-page #promo-form:focus-within {
     outline: none !important;
   }
   @keyframes adsFade {
@@ -45,24 +42,6 @@
     margin: 0.35rem 0 0;
     font-size: 0.9rem;
     color: var(--muted);
-  }
-  .promo-stats-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  .promo-split {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: 1fr;
-    align-items: start;
-    margin-bottom: 1.5rem;
-  }
-  @media (min-width: 1024px) {
-    .promo-split {
-      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-    }
   }
   .promo-card {
     background: #ffffff;
@@ -147,188 +126,16 @@
   .promo-btn:active {
     transform: translateY(0);
   }
-  .promo-stats-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  .promo-stat-mini {
-    background: #ffffff;
-    padding: 1rem;
-    border-radius: 0.75rem;
-    border: 1px solid #f3f4f6;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
-    transition:
-      transform 0.25s ease,
-      border-color 0.25s ease,
-      box-shadow 0.25s ease;
-  }
-  .promo-stat-mini:hover {
-    transform: translateY(-2px);
-    border-color: rgba(234, 179, 8, 0.35);
-    box-shadow: 0 8px 15px -4px rgb(0 0 0 / 0.1);
-  }
-  .promo-stat-mini .label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #6b7280;
-    margin-bottom: 0.35rem;
-  }
-  .promo-stat-mini .value {
-    font-size: 1.65rem;
-    font-weight: 700;
-    color: #111827;
-    line-height: 1.2;
-  }
-  .promo-table-wrap {
-    margin-top: 1.5rem;
-    background: #ffffff;
-    border-radius: 1rem;
-    border: 1px solid #f3f4f6;
-    box-shadow:
-      0 10px 15px -3px rgb(0 0 0 / 0.08),
-      0 4px 6px -4px rgb(0 0 0 / 0.06);
-    padding: 1rem;
-  }
-  .promo-table-inner {
-    overflow-x: auto;
-  }
-  .promo-table-wrap .table {
-    margin: 0;
-  }
-  .promo-table-wrap .table th {
-    text-transform: uppercase;
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-    font-weight: 700;
-    color: #374151 !important;
-    padding-top: 0.85rem;
-    padding-bottom: 0.85rem;
-  }
-  .promo-table-wrap .table tbody tr:hover {
-    background: #fffbeb !important;
-  }
-  .promo-status {
-    display: inline-block;
-    padding: 0.25rem 0.65rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 600;
-  }
-  .promo-status--inactive {
-    background: #fee2e2;
-    color: #dc2626;
-  }
-  .promo-status--active {
-    background: #dcfce7;
-    color: #15803d;
-  }
-  .promo-empty {
-    text-align: center;
-    padding: 3rem 1.5rem;
-    color: #6b7280;
-  }
-  .promo-empty-icon {
-    font-size: 2.75rem;
-    line-height: 1;
-    margin-bottom: 0.75rem;
-    opacity: 0.85;
-  }
-  .promo-action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.375rem;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    color: #4b5563;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-  }
-  .promo-action-btn:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
-    transform: scale(1.05);
-  }
-  .promo-action-btn--delete:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #dc2626;
-  }
-  .promo-thumbnail {
-    width: 80px;
-    height: 45px;
-    object-fit: cover;
-    border-radius: 0.375rem;
-    border: 1px solid #e5e7eb;
-    background: #f3f4f6;
-  }
 </style>
-
-<% var _ads = ads || []; %>
-<% var _activeCount = _ads.filter(a => a.status === 'active').length; %>
-<% var _inactiveCount = _ads.filter(a => a.status === 'inactive').length; %>
 
 <div class="promo-page">
   <div class="promo-hero">
-    <h1>Advertisement &amp; Banner Campaigns</h1>
-    <p>Manage in-app promotional banners displayed on the rider home and discover pages.</p>
+    <h1>Socials &amp; Contacts</h1>
+    <p>Manage your company's social media profiles, support links, and contact information.</p>
   </div>
 
-  <!-- Stats Row (3 columns at top) -->
-  <div class="promo-stats-row">
-    <div class="promo-stat-mini">
-      <div class="label">Total Campaigns</div>
-      <div class="value" id="stat-total"><%= _ads.length %></div>
-    </div>
-    <div class="promo-stat-mini">
-      <div class="label">Active Live Banners</div>
-      <div class="value" id="stat-active"><%= _activeCount %></div>
-    </div>
-    <div class="promo-stat-mini">
-      <div class="label">Inactive Drafts</div>
-      <div class="value" id="stat-inactive"><%= _inactiveCount %></div>
-    </div>
-  </div>
-
-  <!-- 2-Column Split: Campaign Form | Socials & Contacts Form -->
-  <div class="promo-split">
-    <!-- Left: Add Campaign Banner Form -->
-    <section class="promo-card promo-card--form" aria-labelledby="promo-form-heading">
-      <h2 id="promo-form-heading" class="promo-card-title">📢 Add Campaign Banner</h2>
-      <form id="promo-form" class="promo-form-stack" autocomplete="off">
-        <div>
-          <label class="promo-label" for="ad-title">Campaign Title</label>
-          <input id="ad-title" name="title" class="promo-input" type="text" placeholder="e.g. Monsoon Rider Discount 20%" required />
-        </div>
-        <div>
-          <label class="promo-label" for="ad-image">Banner Image URL</label>
-          <input id="ad-image" name="image_url" class="promo-input" type="url" placeholder="https://example.com/banner.jpg" required />
-        </div>
-        <div>
-          <label class="promo-label" for="ad-link">Target Link URL (Optional)</label>
-          <input id="ad-link" name="link_url" class="promo-input" type="url" placeholder="https://example.com/promo-details" />
-        </div>
-        <div>
-          <label class="promo-label" for="ad-status">Initial Status</label>
-          <select id="ad-status" name="status" class="promo-input">
-            <option value="active" selected>Active (Live immediately)</option>
-            <option value="inactive">Inactive (Draft)</option>
-          </select>
-        </div>
-        <button type="submit" class="promo-btn" id="ad-submit">
-          <span>📢</span>
-          Launch Banner Campaign
-        </button>
-      </form>
-    </section>
-
-    <!-- Right: Socials & Contacts Form -->
+  <div style="max-width: 800px; margin: 0 auto;">
+    <!-- Socials & Contacts Form -->
     <section class="promo-card" aria-labelledby="socials-heading">
       <h2 id="socials-heading" class="promo-card-title" style="display: flex; align-items: center; gap: 6px;">🔗 Socials &amp; Contacts</h2>
       <p style="font-size:0.8rem; color: var(--muted); margin: -0.5rem 0 1rem;">Update your website's social links and contact info.</p>
@@ -380,208 +187,10 @@
       </form>
     </section>
   </div>
-
-  <!-- Table List Panel -->
-  <div class="promo-table-wrap">
-    <h2 class="promo-card-title" style="margin: 0 0 0.75rem">Campaign Registry</h2>
-    <div id="promo-table-container">
-      <% if (!_ads.length) { %>
-      <div id="promo-empty" class="promo-empty">
-        <div class="promo-empty-icon">📢</div>
-        <h3>No advertising campaigns found</h3>
-        <p>Use the form above to add and schedule your first promotional banner.</p>
-      </div>
-      <div id="promo-table-inner" class="promo-table-inner" style="display: none;"></div>
-      <% } else { %>
-      <div id="promo-empty" class="promo-empty" style="display: none"></div>
-      <div id="promo-table-inner" class="promo-table-inner">
-        <div class="table-wrap">
-          <table class="table" id="promo-table">
-            <thead>
-              <tr>
-                <th>Banner Preview</th>
-                <th>Campaign Title</th>
-                <th>Target Action URL</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="promo-tbody">
-              <% _ads.forEach(function(ad) { %>
-              <tr>
-                <td>
-                  <img src="<%= ad.image_url %>" class="promo-thumbnail" alt="Banner Preview" onerror="this.src='/admin/static/images/logo.png'" />
-                </td>
-                <td style="font-weight: 600; color: #111;"><%= ad.title %></td>
-                <td><a href="<%= ad.link_url || '#' %>" target="_blank" style="color: #ca8a04; text-decoration: underline;"><%= ad.link_url || '—' %></a></td>
-                <td>
-                  <span class="promo-status <%= ad.status === 'active' ? 'promo-status--active' : 'promo-status--inactive' %>">
-                    <%= ad.status === 'active' ? 'Active' : 'Inactive' %>
-                  </span>
-                </td>
-                <td>
-                  <div style="display: flex; gap: 0.35rem;">
-                    <button type="button" class="promo-action-btn" onclick="toggleAdStatus('<%= ad.id %>')" title="Toggle Live State">🔄</button>
-                    <button type="button" class="promo-action-btn promo-action-btn--delete" onclick="deleteAdRecord('<%= ad.id %>')" title="Delete Campaign">🗑️</button>
-                  </div>
-                </td>
-              </tr>
-              <% }); %>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <% } %>
-    </div>
-  </div>
 </div>
 
 <script>
   (function () {
-    var form = document.getElementById("promo-form");
-    var emptyEl = document.getElementById("promo-empty");
-    var tableInner = document.getElementById("promo-table-inner");
-
-    function escapeHtml(s) {
-      var d = document.createElement("div");
-      d.textContent = s;
-      return d.innerHTML;
-    }
-
-    function renderRows(rows) {
-      if (!tableInner || !emptyEl) return;
-      
-      document.getElementById("stat-total").textContent = String(rows.length);
-      document.getElementById("stat-active").textContent = String(rows.filter(a => a.status === 'active').length);
-      document.getElementById("stat-inactive").textContent = String(rows.filter(a => a.status === 'inactive').length);
-
-      if (!rows || !rows.length) {
-        emptyEl.style.display = "block";
-        tableInner.style.display = "none";
-        tableInner.innerHTML = "";
-        return;
-      }
-
-      emptyEl.style.display = "none";
-      tableInner.style.display = "block";
-
-      var html = '<div class="table-wrap"><table class="table" id="promo-table"><thead><tr>' +
-        '<th>Banner Preview</th><th>Campaign Title</th><th>Target Action URL</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
-
-      rows.forEach(function (ad) {
-        var statusClass = ad.status === 'active' ? 'promo-status--active' : 'promo-status--inactive';
-        var statusLabel = ad.status === 'active' ? 'Active' : 'Inactive';
-        var targetLink = ad.link_url ? '<a href="' + escapeHtml(ad.link_url) + '" target="_blank" style="color: #ca8a04; text-decoration: underline;">' + escapeHtml(ad.link_url) + '</a>' : '—';
-
-        html += '<tr>' +
-          '<td><img src="' + escapeHtml(ad.image_url) + '" class="promo-thumbnail" alt="Banner Preview" onerror="this.src=\'/admin/static/images/logo.png\'" /></td>' +
-          '<td style="font-weight: 600; color: #111;">' + escapeHtml(ad.title) + '</td>' +
-          '<td>' + targetLink + '</td>' +
-          '<td><span class="promo-status ' + statusClass + '">' + statusLabel + '</span></td>' +
-          '<td><div style="display: flex; gap: 0.35rem;">' +
-          '<button type="button" class="promo-action-btn" onclick="toggleAdStatus(\'' + escapeHtml(ad.id) + '\')" title="Toggle Live State">🔄</button>' +
-          '<button type="button" class="promo-action-btn promo-action-btn--delete" onclick="deleteAdRecord(\'' + escapeHtml(ad.id) + '\')" title="Delete Campaign">🗑️</button>' +
-          '</div></td></tr>';
-      });
-
-      html += '</tbody></table></div>';
-      tableInner.innerHTML = html;
-    }
-
-    async function refreshAdsTable() {
-      try {
-        var res = await fetch("/admin/ads", { headers: { Accept: "application/json" } });
-        // Handled by client-side router or direct EJS API fetch fallback:
-        var text = await res.text();
-        if (text.trim().startsWith("[")) {
-          var rows = JSON.parse(text);
-          renderRows(rows);
-        } else {
-          // If HTML returned, reload page to refresh EJS state smoothly
-          window.location.reload();
-        }
-      } catch (e) {
-        console.error("REFRESH ERROR:", e);
-      }
-    }
-
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      var title = document.getElementById("ad-title").value.trim();
-      var image_url = document.getElementById("ad-image").value.trim();
-      var link_url = document.getElementById("ad-link").value.trim();
-      var status = document.getElementById("ad-status").value;
-
-      try {
-        var res = await fetch("/admin/ads/add", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ title, image_url, link_url, status }),
-        });
-        var data = await res.json();
-        if (!res.ok) {
-          alert(data.message || "Failed to launch campaign banner");
-          return;
-        }
-
-        if (typeof showToast === "function") {
-          showToast("Campaign banner launched successfully! 🚀");
-        } else {
-          alert("Campaign banner launched successfully! 🚀");
-        }
-        form.reset();
-        refreshAdsTable();
-      } catch (err) {
-        console.error("LAUNCH ERROR:", err);
-        alert("Launch Failed ❌");
-      }
-    });
-
-    window.toggleAdStatus = async function (id) {
-      if (!id) return;
-      try {
-        var res = await fetch("/admin/ads/" + id + "/toggle", {
-          method: "POST",
-          headers: { Accept: "application/json" }
-        });
-        var data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Toggle failed");
-
-        if (typeof showToast === "function") {
-          showToast("Campaign status updated to " + data.nextStatus);
-        } else {
-          alert("Campaign status updated to " + data.nextStatus + " ✅");
-        }
-        refreshAdsTable();
-      } catch (err) {
-        console.error("TOGGLE ERROR:", err);
-        alert("Failed to toggle status: " + err.message);
-      }
-    };
-
-    window.deleteAdRecord = async function (id) {
-      if (!id) return;
-      if (!confirm("Are you sure you want to delete this advertising campaign? This action is permanent!")) return;
-      try {
-        var res = await fetch("/admin/ads/" + id + "/delete", {
-          method: "POST",
-          headers: { Accept: "application/json" }
-        });
-        var data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Delete failed");
-
-        if (typeof showToast === "function") {
-          showToast("Campaign deleted successfully");
-        } else {
-          alert("Campaign deleted successfully ✅");
-        }
-        refreshAdsTable();
-      } catch (err) {
-        console.error("DELETE ERROR:", err);
-        alert("Failed to delete campaign: " + err.message);
-      }
-    };
-
     var socialsForm = document.getElementById("socials-form");
     if (socialsForm) {
       socialsForm.addEventListener("submit", async function (ev) {

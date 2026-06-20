@@ -316,7 +316,7 @@ function normalizeBike(bike, index) {
     ? rawLocation
     : (bike.last_lat && bike.last_lng)
       ? `${Number(bike.last_lat).toFixed(5)}, ${Number(bike.last_lng).toFixed(5)}`
-      : "No location data";
+      : rawLocation || "No location data";
   const lastServiceDate = bike.last_service_date || bike.lastServiceDate || "2026-04-01";
 
   return {

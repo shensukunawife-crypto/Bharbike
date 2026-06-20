@@ -1,83 +1,568 @@
-<div class="settings-grid">
-  <div class="settings-card">
-    <h3>🎯 Audience & Content</h3>
-    <form class="admin-form ajax-form notification-form" data-url="/admin/notifications/send" data-loading-text="Sending...">
-      <input name="title" placeholder="Notification title" required />
-      <textarea name="message" placeholder="Write your message..." rows="4" required></textarea>
-      <select name="audience" required>
-        <option value="All Users">All Users</option>
-        <option value="Delivery Partners">Delivery Partners</option>
-        <option value="Active Users">Active Users</option>
-        <option value="Inactive Users">Inactive Users</option>
-      </select>
+<style>
+/* ── Notifications Page Layout ─────────────────────────────── */
+.notif-page { display: flex; flex-direction: column; gap: 2rem; padding-bottom: 2rem; }
 
-      <div class="inline-options">
-        <label class="switch-row">Push <input type="checkbox" name="push" checked /><span class="switch"></span></label>
-        <label class="switch-row">SMS <input type="checkbox" name="sms" /><span class="switch"></span></label>
-        <label class="switch-row">Email <input type="checkbox" name="email" checked /><span class="switch"></span></label>
-      </div>
+.notif-top-row {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 2rem;
+  align-items: start;
+}
+@media (max-width: 900px) { .notif-top-row { grid-template-columns: 1fr; } }
 
-      <select name="priority" required>
-        <option value="Normal">Normal</option>
-        <option value="Important">Important</option>
-        <option value="Urgent">Urgent</option>
-      </select>
+/* ── Compose Card ────────────────────────────────────────────── */
+.notif-compose-card {
+  background: var(--card-bg, #1a1f2e);
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+}
+.notif-compose-card h3 {
+  font-size: 1.1rem; font-weight: 700;
+  margin: 0 0 1.75rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text-primary, #fff);
+}
 
-      <label class="switch-row">
-        Schedule Later
-        <input type="checkbox" id="schedule-toggle" name="scheduleLater" />
-        <span class="switch"></span>
-      </label>
+/* ── Two-column form grid ─────────────────────────────────── */
+.notif-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 2rem;
+}
+.notif-form-grid .full { grid-column: 1 / -1; }
+@media (max-width: 700px) {
+  .notif-form-grid { grid-template-columns: 1fr; }
+  .notif-form-grid .full { grid-column: 1; }
+}
 
-      <div id="schedule-fields" class="hidden">
-        <input type="date" name="scheduledDate" />
-        <input type="time" name="scheduledTime" />
-      </div>
+/* ── Field wrapper ───────────────────────────────────────── */
+.nf {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.nf > label.field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8899aa);
+}
+.nf input[type=text],
+.nf input[type=url],
+.nf input[type=date],
+.nf input[type=time],
+.nf select,
+.nf textarea {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: var(--text-primary, #fff);
+  font-size: 0.92rem;
+  padding: 0.7rem 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.nf input:focus,
+.nf select:focus,
+.nf textarea:focus {
+  border-color: var(--accent, #f0b429);
+  background: rgba(255,255,255,0.07);
+}
+.nf textarea { resize: vertical; min-height: 120px; }
+.nf select option { background: #1e2330; }
 
-      <input type="file" name="mediaImage" />
-      <input type="url" name="ctaLink" placeholder="CTA link (optional)" />
+/* ── Single-user picker box ─────────────────────────────── */
+.user-picker-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.user-picker-box .field-label {
+  font-size: 0.75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted, #8899aa);
+}
+#notif-user-search {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: var(--text-primary, #fff);
+  font-size: 0.92rem;
+  padding: 0.7rem 1rem;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+#notif-user-search:focus { border-color: var(--accent, #f0b429); }
 
-      <button type="submit" class="btn btn-gold glow" id="send-notification-btn">Send Notification</button>
-    </form>
+#notif-user-list {
+  max-height: 250px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.nu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nu-item:hover { background: rgba(240,180,41,0.08); border-color: rgba(240,180,41,0.2); }
+.nu-item.active { background: rgba(240,180,41,0.15); border-color: var(--accent, #f0b429); }
+.nu-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #f0b429, #e07b20);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.82rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.nu-info { flex: 1; min-width: 0; }
+.nu-name { font-size: 0.87rem; font-weight: 600; color: var(--text-primary, #fff); }
+.nu-meta { font-size: 0.75rem; color: var(--text-muted, #8899aa); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nu-check { color: var(--accent, #f0b429); display: none; font-size: 1rem; }
+.nu-item.active .nu-check { display: block; }
+
+.nu-selected-badge {
+  display: flex; align-items: center; gap: 0.6rem;
+  background: rgba(240,180,41,0.12);
+  border: 1px solid rgba(240,180,41,0.3);
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.87rem;
+  color: var(--text-primary, #fff);
+}
+.nu-selected-badge .nu-clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted, #8899aa); font-size: 1rem;
+  margin-left: auto; line-height: 1; padding: 0;
+}
+.nu-selected-badge .nu-clear:hover { color: #e55; }
+.nu-empty { text-align: center; color: var(--text-muted, #8899aa); font-size: 0.85rem; padding: 1rem 0; display: none; }
+
+/* ── Toggles (channels) ──────────────────────────────────── */
+.notif-channels { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; }
+.sw-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  cursor: pointer; user-select: none;
+  font-size: 0.9rem; color: var(--text-primary, #fff);
+}
+.sw-row input[type=checkbox] { display: none; }
+.sw {
+  width: 40px; height: 22px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 22px; position: relative;
+  transition: background 0.2s; flex-shrink: 0;
+}
+.sw::after {
+  content: ''; position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; transition: transform 0.2s;
+}
+.sw-row input:checked + .sw { background: var(--accent, #f0b429); }
+.sw-row input:checked + .sw::after { transform: translateX(18px); }
+
+/* ── Schedule fields ─────────────────────────────────────── */
+.sched-row { display: flex; gap: 1rem; }
+.sched-row > * { flex: 1; }
+
+/* ── Submit ──────────────────────────────────────────────── */
+.notif-submit-row { display: flex; justify-content: flex-end; padding-top: 0.5rem; }
+.btn-notif-send {
+  background: linear-gradient(135deg, #f0b429, #e07b20);
+  color: #fff; font-weight: 700; font-size: 0.95rem;
+  border: none; border-radius: 10px;
+  padding: 0.8rem 2.2rem; cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  letter-spacing: 0.02em;
+}
+.btn-notif-send:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-notif-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── Summary sidebar ─────────────────────────────────────── */
+.notif-summary-card {
+  background: var(--card-bg, #1a1f2e);
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+}
+.notif-summary-card h3 {
+  font-size: 1rem; font-weight: 700;
+  margin: 0 0 1.25rem;
+  display: flex; align-items: center; gap: 0.45rem;
+  color: var(--text-primary, #fff);
+}
+.ns-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.87rem;
+}
+.ns-row:last-child { border-bottom: none; }
+.ns-row span { color: var(--text-muted, #8899aa); }
+.ns-row strong { color: var(--text-primary, #fff); }
+
+/* ── History card ────────────────────────────────────────── */
+.notif-history-card {
+  background: var(--card-bg, #1a1f2e);
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+}
+.notif-history-card h3 {
+  font-size: 1.1rem; font-weight: 700;
+  margin: 0 0 1.5rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text-primary, #fff);
+}
+.notif-history-card .table-wrap { overflow-x: auto; border-radius: 10px; }
+.notif-history-card .table { width: 100%; border-collapse: collapse; }
+.notif-history-card .table th {
+  background: rgba(255,255,255,0.04);
+  padding: 0.8rem 1rem; text-align: left;
+  font-size: 0.75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted, #8899aa);
+}
+.notif-history-card .table td {
+  padding: 0.9rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.87rem;
+  color: var(--text-primary, #fff);
+  vertical-align: middle;
+}
+.notif-history-card .table tr:hover td { background: rgba(255,255,255,0.02); }
+.notif-empty-row td { text-align: center; padding: 2.5rem !important; color: var(--text-muted, #8899aa) !important; }
+
+.hidden { display: none !important; }
+</style>
+
+<div class="notif-page">
+
+  <!-- ── Top: Compose + Summary ────────────────────────── -->
+  <div class="notif-top-row">
+
+    <!-- Compose -->
+    <div class="notif-compose-card">
+      <h3>🎯 Compose Notification</h3>
+      <form id="notif-form">
+        <div class="notif-form-grid">
+
+          <!-- Title -->
+          <div class="nf full">
+            <label class="field-label">Notification Title *</label>
+            <input type="text" name="title" placeholder="e.g. Special Offer — 20% Off This Weekend!" required />
+          </div>
+
+          <!-- Message -->
+          <div class="nf full">
+            <label class="field-label">Message *</label>
+            <textarea name="message" rows="4" placeholder="Write your notification message here..." required></textarea>
+          </div>
+
+          <!-- Audience -->
+          <div class="nf">
+            <label class="field-label">Audience</label>
+            <select name="audience" id="notif-audience" required>
+              <option value="All Users">All Users</option>
+              <option value="Delivery Partners">Delivery Partners</option>
+              <option value="Active Users">Active Users</option>
+              <option value="Inactive Users">Inactive Users</option>
+              <option value="Single User">📍 Single User</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div class="nf">
+            <label class="field-label">Priority</label>
+            <select name="priority" required>
+              <option value="Normal">Normal</option>
+              <option value="Important">⚡ Important</option>
+              <option value="Urgent">🔴 Urgent</option>
+            </select>
+          </div>
+
+          <!-- Single-user picker (shown when Single User is selected) -->
+          <div class="nf full hidden" id="single-user-section">
+            <div class="user-picker-box">
+              <span class="field-label">Search and Select User</span>
+              <input type="hidden" name="userId" id="notif-user-id" />
+              <input type="text" id="notif-user-search" placeholder="Type name, phone or email to search..." autocomplete="off" />
+
+              <!-- Selected badge (shown after selection) -->
+              <div class="hidden" id="nu-badge-wrap">
+                <div class="nu-selected-badge">
+                  <span id="nu-badge-label">—</span>
+                  <button type="button" class="nu-clear" id="nu-clear-btn" title="Clear">✕</button>
+                </div>
+              </div>
+
+              <!-- Results list -->
+              <div id="notif-user-list"></div>
+              <div class="nu-empty" id="nu-empty">No users found</div>
+            </div>
+          </div>
+
+          <!-- Channels -->
+          <div class="nf full">
+            <label class="field-label">Delivery Channels</label>
+            <div class="notif-channels">
+              <label class="sw-row">Push <input type="checkbox" name="push" checked /><span class="sw"></span></label>
+              <label class="sw-row">SMS <input type="checkbox" name="sms" /><span class="sw"></span></label>
+              <label class="sw-row">Email <input type="checkbox" name="email" checked /><span class="sw"></span></label>
+            </div>
+          </div>
+
+          <!-- Schedule toggle -->
+          <div class="nf full">
+            <label class="sw-row">
+              <span style="font-size:.9rem">Schedule for Later</span>
+              <input type="checkbox" name="scheduleLater" id="sched-toggle" />
+              <span class="sw"></span>
+            </label>
+          </div>
+
+          <!-- Schedule date/time (hidden by default) -->
+          <div class="nf full hidden" id="sched-fields">
+            <label class="field-label">Date and Time</label>
+            <div class="sched-row">
+              <input type="date" name="scheduledDate" />
+              <input type="time" name="scheduledTime" />
+            </div>
+          </div>
+
+          <!-- CTA Link -->
+          <div class="nf full">
+            <label class="field-label">CTA Link (optional)</label>
+            <input type="url" name="ctaLink" placeholder="https://..." />
+          </div>
+
+          <!-- Submit -->
+          <div class="nf full">
+            <div class="notif-submit-row">
+              <button type="submit" class="btn-notif-send" id="send-notification-btn">🚀 Send Notification</button>
+            </div>
+          </div>
+
+        </div>
+      </form>
+    </div>
+
+    <!-- Summary Sidebar -->
+    <div class="notif-summary-card">
+      <h3>📨 Delivery Info</h3>
+      <div class="ns-row"><span>Default Mode</span><strong>Send Now</strong></div>
+      <div class="ns-row"><span>System</span><strong>Marketing + Transactional</strong></div>
+      <div class="ns-row"><span>Provider</span><strong>Firebase / OneSignal</strong></div>
+      <div class="ns-row"><span>Status Toast</span><strong>Enabled ✅</strong></div>
+      <div class="ns-row"><span>Single User</span><strong>Supported ✅</strong></div>
+    </div>
+
   </div>
 
-  <div class="settings-card">
-    <h3>📨 Delivery Summary</h3>
-    <div class="summary-list">
-      <div><span>Default Mode</span><strong>Send Now</strong></div>
-      <div><span>System</span><strong>Marketing + Transactional</strong></div>
-      <div><span>Provider Style</span><strong>Firebase / OneSignal UI</strong></div>
-      <div><span>Status Toast</span><strong>Enabled</strong></div>
+  <!-- ── History ─────────────────────────────────────────── -->
+  <div class="notif-history-card">
+    <h3>📜 Notification History</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Audience</th>
+            <th>Channels</th>
+            <th>Status</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (history && history.length > 0) { %>
+            <% history.forEach(function(item) { %>
+            <tr>
+              <td><strong><%= item.title %></strong></td>
+              <td><%= item.audience %></td>
+              <td><%= item.type %></td>
+              <td>
+                <span class="badge <%= item.status === 'Sent' ? 'success' : item.status === 'Scheduled' ? 'warning' : '' %>">
+                  <%= item.status %>
+                </span>
+              </td>
+              <td style="white-space:nowrap"><%= item.time %></td>
+            </tr>
+            <% }) %>
+          <% } else { %>
+          <tr class="notif-empty-row">
+            <td colspan="5">No notifications sent yet</td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
     </div>
   </div>
+
 </div>
 
-<div class="chart-card">
-  <h3>📜 Notification History</h3>
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Audience</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% history.forEach((item) => { %>
-        <tr>
-          <td><%= item.title %></td>
-          <td><%= item.audience %></td>
-          <td><%= item.type %></td>
-          <td>
-            <span class="badge <%= item.status === 'Sent' ? 'success' : '' %>"><%= item.status %></span>
-          </td>
-          <td><%= item.time %></td>
-        </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-</div>
+<script>
+(function () {
+  /* ── Schedule toggle ─────────────────────────── */
+  var schedToggle = document.getElementById('sched-toggle');
+  var schedFields = document.getElementById('sched-fields');
+  if (schedToggle) {
+    schedToggle.addEventListener('change', function () {
+      schedFields.classList.toggle('hidden', !this.checked);
+    });
+  }
+
+  /* ── Audience → show/hide user picker ──────────── */
+  var audienceSel = document.getElementById('notif-audience');
+  var singleSection = document.getElementById('single-user-section');
+  if (audienceSel) {
+    audienceSel.addEventListener('change', function () {
+      var single = this.value === 'Single User';
+      singleSection.classList.toggle('hidden', !single);
+      if (!single) clearUser();
+    });
+  }
+
+  /* ── User picker logic ──────────────────────────── */
+  var allUsers = <%- JSON.stringify(users || []) %>;
+  var selectedId = null;
+
+  var searchInput   = document.getElementById('notif-user-search');
+  var userList      = document.getElementById('notif-user-list');
+  var emptyMsg      = document.getElementById('nu-empty');
+  var hiddenId      = document.getElementById('notif-user-id');
+  var badgeWrap     = document.getElementById('nu-badge-wrap');
+  var badgeLabel    = document.getElementById('nu-badge-label');
+  var clearBtn      = document.getElementById('nu-clear-btn');
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderList(arr) {
+    userList.innerHTML = '';
+    if (!arr || arr.length === 0) { emptyMsg.style.display = 'block'; return; }
+    emptyMsg.style.display = 'none';
+    arr.forEach(function (u) {
+      var initials = (u.name || '?').split(' ').map(function (w) { return w[0] || ''; }).slice(0, 2).join('').toUpperCase();
+      var div = document.createElement('div');
+      div.className = 'nu-item' + (u.id === selectedId ? ' active' : '');
+      div.innerHTML =
+        '<div class="nu-avatar">' + initials + '</div>' +
+        '<div class="nu-info"><div class="nu-name">' + escHtml(u.name) + '</div>' +
+        '<div class="nu-meta">' + escHtml(u.phone || u.email || '') + '</div></div>' +
+        '<span class="nu-check">&#10003;</span>';
+      div.addEventListener('click', function () { selectUser(u); });
+      userList.appendChild(div);
+    });
+  }
+
+  function selectUser(u) {
+    selectedId = u.id;
+    hiddenId.value = u.id;
+    badgeLabel.textContent = u.label;
+    badgeWrap.classList.remove('hidden');
+    searchInput.value = '';
+    userList.innerHTML = '';
+    emptyMsg.style.display = 'none';
+  }
+
+  function clearUser() {
+    selectedId = null;
+    hiddenId.value = '';
+    badgeLabel.textContent = '—';
+    badgeWrap.classList.add('hidden');
+    userList.innerHTML = '';
+    emptyMsg.style.display = 'none';
+    if (searchInput) searchInput.value = '';
+  }
+
+  if (clearBtn) clearBtn.addEventListener('click', clearUser);
+
+  var timer;
+  if (searchInput) {
+    searchInput.addEventListener('focus', function () {
+      if (!this.value.trim()) renderList(allUsers.slice(0, 25));
+    });
+    searchInput.addEventListener('input', function () {
+      clearTimeout(timer);
+      var q = this.value.trim().toLowerCase();
+      timer = setTimeout(function () {
+        if (!q) { renderList(allUsers.slice(0, 25)); return; }
+        var res = allUsers.filter(function (u) {
+          return (u.name || '').toLowerCase().indexOf(q) > -1 ||
+                 (u.phone || '').indexOf(q) > -1 ||
+                 (u.email || '').toLowerCase().indexOf(q) > -1;
+        });
+        renderList(res.slice(0, 30));
+      }, 200);
+    });
+  }
+
+  /* ── Form submit via JSON fetch ─────────────────── */
+  var form    = document.getElementById('notif-form');
+  var sendBtn = document.getElementById('send-notification-btn');
+
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var audience = document.getElementById('notif-audience').value;
+      if (audience === 'Single User' && !hiddenId.value) {
+        alert('Please search and select a user first.');
+        return;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+
+      var body = {};
+      new FormData(form).forEach(function (v, k) { body[k] = v; });
+
+      // Handle checkboxes manually (FormData omits unchecked boxes)
+      ['push', 'sms', 'email', 'scheduleLater'].forEach(function (name) {
+        var el = form.querySelector('[name="' + name + '"]');
+        body[name] = !!(el && el.checked);
+      });
+
+      fetch('/admin/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+          if (json.success) {
+            sendBtn.textContent = '✅ Sent!';
+            setTimeout(function () { location.reload(); }, 1200);
+          } else {
+            sendBtn.disabled = false;
+            sendBtn.textContent = '🚀 Send Notification';
+            alert('Error: ' + (json.message || 'Unknown error'));
+          }
+        })
+        .catch(function (err) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = '🚀 Send Notification';
+          alert('Network error: ' + err.message);
+        });
+    });
+  }
+})();
+</script>

@@ -2540,6 +2540,7 @@ export async function sendSupportMessage(req, res) {
 
 export async function notificationsPage(req, res) {
   let history = [];
+  let users = [];
   try {
     // Fetch real notification history from DB (admin-sent notifications)
     const { data: notifRows } = await supabase
@@ -2563,12 +2564,69 @@ export async function notificationsPage(req, res) {
     // Table may not exist yet — show empty history gracefully
   }
 
+  try {
+    // Fetch users for single-user picker (name + phone)
+    const { data: userRows } = await supabase
+      .from("profiles")
+      .select("id, full_name, phone, email")
+      .order("full_name", { ascending: true })
+      .limit(300);
+    if (Array.isArray(userRows)) {
+      users = userRows
+        .filter((u) => u.full_name && u.full_name !== "Rider" && u.full_name !== "BharBike Rider" && u.full_name !== "Demo Rider")
+        .map((u) => ({
+          id: u.id,
+          name: u.full_name || "Unknown",
+          phone: u.phone || "",
+          email: u.email || "",
+          label: `${u.full_name}${u.phone ? " · " + u.phone : ""}`,
+        }));
+    }
+  } catch (_) {
+    // users stays empty
+  }
+
   return renderPage(res, {
     title: "Notifications",
     active: "notifications",
     bodyView: "notifications",
     history,
+    users,
   });
+}
+
+export async function getNotificationUsers(req, res) {
+  try {
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const { data: userRows } = await supabase
+      .from("profiles")
+      .select("id, full_name, phone, email")
+      .order("full_name", { ascending: true })
+      .limit(200);
+    let filtered = (userRows || []).filter(
+      (u) => u.full_name && u.full_name !== "Rider" && u.full_name !== "BharBike Rider" && u.full_name !== "Demo Rider"
+    );
+    if (q) {
+      filtered = filtered.filter(
+        (u) =>
+          (u.full_name || "").toLowerCase().includes(q) ||
+          (u.phone || "").includes(q) ||
+          (u.email || "").toLowerCase().includes(q)
+      );
+    }
+    return res.json({
+      success: true,
+      users: filtered.slice(0, 50).map((u) => ({
+        id: u.id,
+        name: u.full_name || "Unknown",
+        phone: u.phone || "",
+        email: u.email || "",
+        label: `${u.full_name}${u.phone ? " · " + u.phone : ""}`,
+      })),
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 }
 
 
@@ -3396,10 +3454,12 @@ export async function removeMaintenanceTicket(req, res) {
 
 export async function sendNotification(req, res) {
   try {
-    const { title, message, audience, push, sms, email, priority, scheduleLater, scheduledDate, scheduledTime, ctaLink } = req.body || {};
+    const { title, message, audience, userId, push, sms, email, priority, scheduleLater, scheduledDate, scheduledTime, ctaLink } = req.body || {};
     if (!title || !message) {
       return res.status(400).json({ success: false, message: "title and message are required" });
     }
+
+    const effectiveAudience = audience === "Single User" && userId ? `Single User: ${userId}` : (audience || "All Users");
 
     const scheduledAt = scheduleLater && scheduledDate
       ? new Date(`${scheduledDate}T${scheduledTime || "09:00"}`).toISOString()
@@ -3410,7 +3470,7 @@ export async function sendNotification(req, res) {
       await supabase.from("admin_notifications").insert([{
         title,
         message,
-        audience: audience || "All Users",
+        audience: effectiveAudience,
         push: push === true || push === "on" || push === "true",
         sms: sms === true || sms === "on" || sms === "true",
         email: email === true || email === "on" || email === "true",
@@ -3426,18 +3486,27 @@ export async function sendNotification(req, res) {
 
     // Fan out to target users' notifications table
     try {
-      let userQuery = supabase.from("users").select("id");
-      if (audience === "Users") {
-        userQuery = userQuery.neq("is_delivery_partner", true);
-      } else if (audience === "Delivery Partners") {
-        const { data: partners } = await supabase.from("delivery_partners").select("user_id").eq("status", "approved");
-        const ids = (partners || []).map((p) => p.user_id).filter(Boolean);
-        if (ids.length) userQuery = userQuery.in("id", ids);
-        else userQuery = null;
+      let targetUserIds = [];
+
+      if (audience === "Single User" && userId) {
+        // Send to exactly one user
+        targetUserIds = [userId];
+      } else {
+        let userQuery = supabase.from("users").select("id");
+        if (audience === "Users") {
+          userQuery = userQuery.neq("is_delivery_partner", true);
+        } else if (audience === "Delivery Partners") {
+          const { data: partners } = await supabase.from("delivery_partners").select("user_id").eq("status", "approved");
+          const ids = (partners || []).map((p) => p.user_id).filter(Boolean);
+          if (ids.length) userQuery = userQuery.in("id", ids);
+          else userQuery = null;
+        }
+        const { data: users } = userQuery ? await userQuery.limit(500) : { data: [] };
+        targetUserIds = (users || []).map((u) => u.id).filter(Boolean);
       }
-      const { data: users } = userQuery ? await userQuery.limit(500) : { data: [] };
-      const rows = (users || []).map((u) => ({
-        user_id: u.id,
+
+      const rows = targetUserIds.map((uid) => ({
+        user_id: uid,
         title,
         body: message,
         type: "admin_broadcast",
@@ -3451,7 +3520,7 @@ export async function sendNotification(req, res) {
       console.warn("[admin.sendNotification] fan-out to notifications table failed (non-blocking):", fanErr?.message);
     }
 
-    console.log("[admin.notification] sent", { title, audience, push, sms, email });
+    console.log("[admin.notification] sent", { title, audience: effectiveAudience, push, sms, email });
     return res.json({ success: true, message: scheduledAt ? "Notification scheduled" : "Notification sent" });
   } catch (error) {
     console.error("[admin.sendNotification] failed", error);

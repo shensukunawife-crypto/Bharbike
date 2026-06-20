@@ -101,6 +101,7 @@ router.post("/promo/:promoId/delete", requirePermission("manage_finance"), admin
 // Engagement & Support
 router.get("/support", requirePermission("manage_support"), adminController.supportPage);
 router.get("/notifications", requirePermission("manage_support"), adminController.notificationsPage);
+router.get("/notifications/users", requirePermission("manage_support"), adminController.getNotificationUsers);
 router.post("/notifications/send", requirePermission("manage_support"), adminController.sendNotification);
 router.post("/support/:ticketId/convert", requirePermission("manage_support"), adminController.convertSupportToMaintenance);
 router.get("/support/ticket/:ticketId/messages", requirePermission("manage_support"), adminController.getSupportMessages);

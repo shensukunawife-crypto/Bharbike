@@ -68,8 +68,8 @@
               <th>Order</th>
               <th>Amount</th>
               <th>Status</th>
-              <th>Razorpay payment_id</th>
-              <th>Razorpay order_id</th>
+              <th>Gateway payment_id</th>
+              <th>Gateway order_id</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
@@ -136,7 +136,7 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Reference / Razorpay ID (Optional)</label>
+            <label>Reference / Gateway ID (Optional)</label>
             <input name="razorpay_payment_id" placeholder="e.g. manual_cash" />
           </div>
           <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Save Payment</button>
@@ -174,16 +174,23 @@
       <div class="col-60">
         <div class="premium-card">
           <div class="card-header">
-            <h2 class="card-title">Razorpay Configuration</h2>
+            <h2 class="card-title">Gateway Configuration</h2>
             <p class="card-subtitle">Manage API keys securely.</p>
           </div>
           <form id="compact-form">
             <div class="form-group">
-              <label class="form-label">Key ID</label>
+              <label class="form-label">Provider</label>
+              <select id="provider" class="form-control-custom" style="padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; width: 100%;">
+                <option value="razorpay">Razorpay</option>
+                <option value="phonepe">PhonePe</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="label-key-id">Key ID</label>
               <input type="text" id="key_id" class="form-control-custom" placeholder="rzp_test_..." required />
             </div>
             <div class="form-group">
-              <label class="form-label">Key Secret</label>
+              <label class="form-label" id="label-key-secret">Key Secret</label>
               <div class="input-with-icon">
                 <input type="password" id="key_secret" class="form-control-custom" placeholder="••••••••••••••••" required />
                 <button type="button" class="toggle-eye" id="toggle-secret">👁</button>
@@ -394,16 +401,33 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const compactForm = document.getElementById('compact-form');
+  const providerSelect = document.getElementById('provider');
+  const labelKeyId = document.getElementById('label-key-id');
+  const labelKeySecret = document.getElementById('label-key-secret');
+  
+  if (providerSelect) {
+    providerSelect.addEventListener('change', (e) => {
+      if (e.target.value === 'phonepe') {
+        labelKeyId.innerText = 'Merchant ID';
+        labelKeySecret.innerText = 'Salt Key & Index (e.g. key_uuid:1)';
+      } else {
+        labelKeyId.innerText = 'Key ID';
+        labelKeySecret.innerText = 'Key Secret';
+      }
+    });
+  }
+
   if (compactForm) {
   compactForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('save-btn');
     btn.disabled = true;
     try {
-      const res = await fetch('/api/admin/payment/configs', {
+      const res = await fetch('/api/admin/payment-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
         body: JSON.stringify({
+          provider: document.getElementById('provider').value,
           key_id: document.getElementById('key_id').value,
           key_secret: keySecret.value,
           mode: selectedMode

@@ -188,6 +188,70 @@ api.post("/create-order", authMiddleware, asyncHandler(paymentController.createO
 api.post("/verify-payment", authMiddleware, asyncHandler(paymentController.verifyPayment));
 // NOTE: /payment/checkout is already registered above (before paymentMethodRoutes)
 
+// PhonePe Callback / Webhook Handler
+api.post("/payment/phonepe/callback", async (req, res) => {
+  try {
+    const { response } = req.body;
+    const receivedChecksum = req.headers['x-verify'];
+
+    if (!response || !receivedChecksum) {
+      return res.status(400).send("Missing payload or checksum");
+    }
+
+    const { getActivePaymentConfig } = await import('../services/paymentConfigService.js');
+    const { verifyPhonePeSignature } = await import('../services/phonepeService.js');
+    
+    const config = await getActivePaymentConfig();
+    
+    if (!verifyPhonePeSignature(config, response, receivedChecksum)) {
+      console.warn("[PhonePe Webhook] Signature mismatch!");
+      return res.status(400).send("Invalid Signature");
+    }
+
+    const decodedResponse = JSON.parse(Buffer.from(response, 'base64').toString('utf8'));
+    console.log("[PhonePe Webhook] Valid callback received:", decodedResponse.data.merchantTransactionId);
+
+    const providerOrderId = decodedResponse.data.merchantTransactionId;
+    const transactionId = decodedResponse.data.transactionId; // phonepe payment id
+    const amountRupees = decodedResponse.data.amount / 100;
+    const isSuccess = decodedResponse.code === 'PAYMENT_SUCCESS';
+
+    if (isSuccess) {
+      const { data: paymentRecord } = await supabase
+        .from("payments")
+        .update({ status: "success", razorpay_payment_id: transactionId })
+        .eq("razorpay_order_id", providerOrderId)
+        .select("id, user_id, order_id")
+        .maybeSingle();
+
+      if (paymentRecord) {
+        const userId = paymentRecord.user_id;
+        const appOrderId = paymentRecord.order_id;
+        
+        await supabase.from("orders").update({ status: "paid" }).eq("id", appOrderId);
+        
+        const { data: orderData } = await supabase.from("orders").select("plan_name").eq("id", appOrderId).maybeSingle();
+        const planId = orderData?.plan_name;
+
+        if (userId && planId && !planId.includes("ORD-WLT")) {
+           const { createSubscription } = await import('../services/subscriptionService.js');
+           await createSubscription(userId, planId, paymentRecord.id, amountRupees).catch(e => console.warn("Sub error", e));
+        } else if (userId && String(planId).includes("ORD-WLT")) {
+           const { addMoney } = await import('../services/walletService.js');
+           await addMoney(userId, amountRupees, "Wallet Recharge (PhonePe)", transactionId, providerOrderId).catch(e => console.warn("Wallet error", e));
+        }
+      }
+    } else {
+       await supabase.from("payments").update({ status: "failed" }).eq("razorpay_order_id", providerOrderId);
+    }
+    
+    res.status(200).send("OK");
+  } catch(e) {
+    console.error("[PhonePe Webhook] Error:", e);
+    res.status(500).send("Internal Error");
+  }
+});
+
 /**
  * Razorpay Webhook Handler — NO auth (Razorpay calls this directly)
  * Ensures subscriptions/wallet are activated even if app crashes after payment.

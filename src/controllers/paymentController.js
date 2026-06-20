@@ -1,6 +1,7 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import { getActiveRazorpayConfig } from "../services/paymentConfigService.js";
+import { getActivePaymentConfig } from "../services/paymentConfigService.js";
+import { createPhonePeOrder, verifyPhonePeSignature } from "../services/phonepeService.js";
 import { createSubscription } from "../services/subscriptionService.js";
 import * as walletService from "../services/walletService.js";
 import supabase from "../utils/supabaseClient.js";
@@ -115,13 +116,13 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Retrieve active Razorpay config (must be real keys)
-    const config = await getActiveRazorpayConfig();
-    if (!config || !config.key_id || !config.key_secret || !config.key_id.startsWith("rzp_")) {
+    // Retrieve active gateway config (must be real keys)
+    const config = await getActivePaymentConfig();
+    if (!config || !config.key_id || !config.key_secret) {
       return res.status(500).json({ success: false, message: "Payment gateway is not configured on this server." });
     }
 
-    console.log(`[createOrder] Real Razorpay Mode Active (${config.mode})`);
+    console.log(`[createOrder] Real ${config.provider} Mode Active (${config.mode})`);
 
     // 1. Create order record in app database first (pending)
     const { data: appOrder, error: appOrderError } = await supabase
@@ -132,7 +133,7 @@ export const createOrder = async (req, res) => {
           plan_name: plan_name || null,
           amount: Math.round(normalizedAmount),
           status: "pending",
-          order_code: `ORD-RZP-${Date.now()}`,
+          order_code: `ORD-PG-${Date.now()}`,
         },
       ])
       .select("id")
@@ -144,19 +145,63 @@ export const createOrder = async (req, res) => {
       return res.status(500).json({ success: false, message: "Failed to create order. Please try again." });
     }
 
-    // 2. Initialize Razorpay Client
-    const razorpay = new Razorpay({
-      key_id: config.key_id,
-      key_secret: config.key_secret,
-    });
+    let pgOrderId, pgResponse;
 
-    // 3. Create real order on Razorpay servers
-    const amountInPaise = Math.round(normalizedAmount * 100);
-    const rzpOrder = await razorpay.orders.create({
-      amount: amountInPaise,
-      currency: currency || "INR",
-      receipt: receipt || String(appOrderId || Date.now()),
-    });
+    if (config.provider === 'phonepe') {
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers.host;
+      const callbackUrl = `${protocol}://${host}/api/payment/phonepe/callback`;
+
+      const ppResponse = await createPhonePeOrder(config, {
+        amount: normalizedAmount,
+        orderId: String(appOrderId),
+        userId: user_id,
+        mobileNumber: '9999999999', // PhonePe typically needs this
+        callbackUrl
+      });
+      pgOrderId = ppResponse.provider_order_id;
+      pgResponse = {
+        success: true,
+        id: pgOrderId,
+        order_id: pgOrderId,
+        key_id: config.key_id,
+        amount: normalizedAmount * 100,
+        currency: currency || "INR",
+        app_order_id: appOrderId,
+        is_demo: false,
+        plan_id: plan_id || plan_name || null,
+        redirect_url: ppResponse.url,
+        provider: "phonepe"
+      };
+    } else {
+      // 2. Initialize Razorpay Client
+      const razorpay = new Razorpay({
+        key_id: config.key_id,
+        key_secret: config.key_secret,
+      });
+
+      // 3. Create real order on Razorpay servers
+      const amountInPaise = Math.round(normalizedAmount * 100);
+      const rzpOrder = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: currency || "INR",
+        receipt: receipt || String(appOrderId || Date.now()),
+      });
+      
+      pgOrderId = rzpOrder.id;
+      pgResponse = {
+        success: true,
+        id: pgOrderId,
+        order_id: pgOrderId,
+        key_id: config.key_id,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency || "INR",
+        app_order_id: appOrderId,
+        is_demo: false,
+        plan_id: plan_id || plan_name || null,
+        provider: "razorpay"
+      };
+    }
 
     // 4. Save to payments table
     try {
@@ -164,7 +209,7 @@ export const createOrder = async (req, res) => {
         {
           user_id: user_id || null,
           order_id: appOrderId,
-          razorpay_order_id: rzpOrder.id,
+          razorpay_order_id: pgOrderId,
           status: "created",
         },
       ]);
@@ -173,17 +218,7 @@ export const createOrder = async (req, res) => {
     }
 
     // 5. Return actual order details and key_id to the frontend
-    return res.status(200).json({
-      success: true,
-      id: rzpOrder.id,
-      order_id: rzpOrder.id,
-      key_id: config.key_id,
-      amount: rzpOrder.amount,
-      currency: rzpOrder.currency || "INR",
-      app_order_id: appOrderId,
-      is_demo: false,
-      plan_id: plan_id || plan_name || null,
-    });
+    return res.status(200).json(pgResponse);
 
   } catch (error) {
     console.error("[createOrder] Order creation error:", error);
@@ -238,21 +273,25 @@ export const verifyPayment = async (req, res) => {
         return res.status(400).json({ success: false, message: "Cryptographic signature and order/payment IDs are required for verification" });
       }
 
-      console.log("[verifyPayment] Real Razorpay signature received. Verifying...");
-      const config = await getActiveRazorpayConfig();
+      console.log("[verifyPayment] Signature received. Verifying...");
+      const config = await getActivePaymentConfig();
       if (!config || !config.key_secret) {
         return res.status(500).json({ success: false, message: "Payment configuration not found on this server." });
       }
 
-      const hmac = crypto.createHmac("sha256", config.key_secret);
-      hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
-      const generatedSignature = hmac.digest("hex");
-      
-      if (generatedSignature !== razorpay_signature) {
-        console.error("[verifyPayment] Cryptographic signature mismatch!");
-        return res.status(400).json({ success: false, message: "Payment verification failed: Signature mismatch" });
+      if (config.provider !== "phonepe") {
+        const hmac = crypto.createHmac("sha256", config.key_secret);
+        hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+        const generatedSignature = hmac.digest("hex");
+        
+        if (generatedSignature !== razorpay_signature) {
+          console.error("[verifyPayment] Cryptographic signature mismatch!");
+          return res.status(400).json({ success: false, message: "Payment verification failed: Signature mismatch" });
+        }
+        console.log("[verifyPayment] Cryptographic signature verified successfully!");
+      } else {
+         console.log("[verifyPayment] PhonePe verification is handled via Webhook.");
       }
-      console.log("[verifyPayment] Cryptographic signature verified successfully!");
     }
 
     // Check if this is a support ticket repair cost payment

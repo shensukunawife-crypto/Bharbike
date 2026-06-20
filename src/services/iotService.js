@@ -125,7 +125,7 @@ export async function getBikeHealth(bikeId) {
   }
 
   try {
-    const response = await axios.post(
+    const makeRequest = () => axios.post(
       `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
       {
         vehicleIds: [loconavUuid]
@@ -139,7 +139,33 @@ export async function getBikeHealth(bikeId) {
       }
     );
 
-    if (response.status === 200 && response.data?.data?.values?.length > 0) {
+    let response;
+    let attempt = 0;
+    let delay = 10000; // Start with 10s
+    const maxRetries = 3; // Total 4 attempts (10s, 20s, 40s backoff)
+
+    while (attempt <= maxRetries) {
+      try {
+        response = await makeRequest();
+        break; // Success, exit retry loop
+      } catch (error) {
+        const isRateLimit = error.response?.status === 429;
+        const isServerError = error.response?.status >= 500;
+        const isNetworkError = !error.response; // Timeout or connection drop
+        const shouldRetry = isRateLimit || isServerError || isNetworkError;
+
+        if (attempt < maxRetries && shouldRetry) {
+          attempt++;
+          console.warn(`[LocoNav Retry] Attempt ${attempt} failed for bike ${bikeId} (status: ${error.response?.status || 'network'}). Retrying in ${delay / 1000}s...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Double the delay (20s, then 40s)
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (response && response.status === 200 && response.data?.data?.values?.length > 0) {
       const vehicleData = response.data.data.values[0];
       const gps = vehicleData.gps || {};
       const coords = gps.currentLocationCoordinates || {};

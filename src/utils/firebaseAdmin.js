@@ -72,6 +72,87 @@ export async function verifyFirebaseIdToken(idToken) {
   return decoded;
 }
 
+/**
+ * Send a push notification to a single FCM device token.
+ * Returns true if delivered, false if token is invalid/expired.
+ */
+export async function sendFcmPush(fcmToken, title, body, data = {}) {
+  if (!fcmToken) return false;
+  try {
+    const app = getFirebaseAdmin();
+    const message = {
+      token: fcmToken,
+      notification: { title: String(title), body: String(body) },
+      android: {
+        priority: "high",
+        notification: { sound: "default", channelId: "bharbike_default" },
+      },
+      apns: {
+        payload: { aps: { sound: "default", badge: 1 } },
+      },
+      data: Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k, String(v)])
+      ),
+    };
+    await admin.messaging(app).send(message);
+    return true;
+  } catch (err) {
+    // Token no longer valid — caller should remove it from DB
+    if (
+      err.code === "messaging/registration-token-not-registered" ||
+      err.code === "messaging/invalid-registration-token"
+    ) {
+      console.warn("[FCM] Stale token, should be removed:", fcmToken.slice(0, 20) + "...");
+      return "stale";
+    }
+    console.error("[FCM] sendFcmPush error:", err.message);
+    return false;
+  }
+}
+
+/**
+ * Send FCM push to multiple tokens in a single multicast call (max 500).
+ * Returns { successCount, failureCount, staleTokens }
+ */
+export async function sendFcmPushToTokens(fcmTokens, title, body, data = {}) {
+  if (!fcmTokens || fcmTokens.length === 0) return { successCount: 0, failureCount: 0, staleTokens: [] };
+  try {
+    const app = getFirebaseAdmin();
+    const message = {
+      tokens: fcmTokens,
+      notification: { title: String(title), body: String(body) },
+      android: {
+        priority: "high",
+        notification: { sound: "default", channelId: "bharbike_default" },
+      },
+      apns: {
+        payload: { aps: { sound: "default", badge: 1 } },
+      },
+      data: Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k, String(v)])
+      ),
+    };
+    const response = await admin.messaging(app).sendEachForMulticast(message);
+    const staleTokens = [];
+    response.responses.forEach((r, i) => {
+      if (!r.success) {
+        const code = r.error && r.error.code;
+        if (
+          code === "messaging/registration-token-not-registered" ||
+          code === "messaging/invalid-registration-token"
+        ) {
+          staleTokens.push(fcmTokens[i]);
+        }
+      }
+    });
+    console.log(`[FCM] Multicast: ${response.successCount} delivered, ${response.failureCount} failed`);
+    return { successCount: response.successCount, failureCount: response.failureCount, staleTokens };
+  } catch (err) {
+    console.error("[FCM] sendFcmPushToTokens error:", err.message);
+    return { successCount: 0, failureCount: fcmTokens.length, staleTokens: [] };
+  }
+}
+
 // Initialize on import
 try {
   getFirebaseAdmin();

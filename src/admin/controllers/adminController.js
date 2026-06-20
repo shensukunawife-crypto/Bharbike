@@ -9,6 +9,7 @@ import * as paymentConfigService from "../../services/paymentConfigService.js";
 import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../config/branding.js";
 import XLSX from "xlsx";
 import { createUserNotification } from "../../services/notificationService.js";
+import { sendFcmPushToTokens, sendFcmPush } from "../../utils/firebaseAdmin.js";
 import * as walletService from "../../services/walletService.js";
 
 
@@ -3518,6 +3519,58 @@ export async function sendNotification(req, res) {
       }
     } catch (fanErr) {
       console.warn("[admin.sendNotification] fan-out to notifications table failed (non-blocking):", fanErr?.message);
+    }
+
+    // ── Fire real FCM push notifications (non-blocking) ──────────────────
+    if (push === true || push === "on" || push === "true") {
+      try {
+        let tokenQuery = supabase
+          .from("profiles")
+          .select("id, fcm_token")
+          .not("fcm_token", "is", null)
+          .neq("fcm_token", "");
+
+        if (audience === "Single User" && userId) {
+          tokenQuery = tokenQuery.eq("id", userId);
+        } else if (audience === "Delivery Partners") {
+          const { data: partners } = await supabase
+            .from("delivery_partners")
+            .select("user_id")
+            .eq("status", "approved");
+          const ids = (partners || []).map((p) => p.user_id).filter(Boolean);
+          if (ids.length) tokenQuery = tokenQuery.in("id", ids);
+          else tokenQuery = null;
+        }
+
+        if (tokenQuery) {
+          const { data: profileRows } = await tokenQuery.limit(500);
+          const tokens = (profileRows || []).map((p) => p.fcm_token).filter(Boolean);
+
+          if (tokens.length > 0) {
+            const { successCount, staleTokens } = await sendFcmPushToTokens(
+              tokens,
+              title,
+              message,
+              { type: "admin_broadcast", priority: priority || "Normal" }
+            );
+            console.log(`[FCM] Admin broadcast: ${successCount}/${tokens.length} delivered`);
+
+            // Clean up stale tokens so we don't waste FCM quota next time
+            if (staleTokens.length > 0) {
+              supabase
+                .from("profiles")
+                .update({ fcm_token: null })
+                .in("fcm_token", staleTokens)
+                .then(() => console.log(`[FCM] Removed ${staleTokens.length} stale tokens`))
+                .catch(() => {});
+            }
+          } else {
+            console.log("[FCM] No FCM tokens found for target audience — push skipped");
+          }
+        }
+      } catch (fcmErr) {
+        console.warn("[admin.sendNotification] FCM push failed (non-blocking):", fcmErr?.message);
+      }
     }
 
     console.log("[admin.notification] sent", { title, audience: effectiveAudience, push, sms, email });

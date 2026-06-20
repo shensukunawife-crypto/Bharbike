@@ -64,20 +64,35 @@
         🔗 Link / Update GPS
       </button>
     </form>
+    </form>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">📊</span><span class="stat-label">Total Trips</span></div>
+    <strong class="stat-value"><%= totalTrips %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">💰</span><span class="stat-label">Revenue</span></div>
+    <strong class="stat-value">₹<%= Number(totalRevenue).toLocaleString('en-IN') %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">👤</span><span class="stat-label">Current Renter</span></div>
+    <strong class="stat-value" style="font-size: 14px; word-break: break-all;">
+      <%= currentRenter || "Available" %>
+    </strong>
   </div>
 </div>
-
 <div class="analytics-grid">
   <div class="chart-card">
     <h3>Usage History</h3>
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Rental ID</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+        <thead><tr><th>Rental ID</th><th>User</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
         <tbody>
-          <% if (!usageHistory.length) { %><tr><td colspan="4" class="empty">No usage history</td></tr><% } %>
+          <% if (!usageHistory.length) { %><tr><td colspan="5" class="empty">No usage history</td></tr><% } %>
           <% usageHistory.forEach((row) => { %>
           <tr>
             <td><code style="font-size:11px" title="<%= row.id %>"><%= row.shortId %></code></td>
+            <td><%= row.userName %></td>
             <td><%= String(row.startTime || row.start_time || "-").replace("T", " ").slice(0, 16) %></td>
             <td><%= String(row.endTime || row.end_time || "-").replace("T", " ").slice(0, 16) %></td>
             <td><span class="badge"><%= row.status || "-" %></span></td>
@@ -89,17 +104,17 @@
   </div>
 
   <div class="chart-card">
-    <h3>Orders History</h3>
+    <h3>Related Payments</h3>
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Order ID</th><th>Pickup</th><th>Drop</th><th>Status</th></tr></thead>
+        <thead><tr><th>Order ID</th><th>User</th><th>Amount</th><th>Status</th></tr></thead>
         <tbody>
-          <% if (!ordersHistory.length) { %><tr><td colspan="4" class="empty">No orders history</td></tr><% } %>
+          <% if (!ordersHistory.length) { %><tr><td colspan="4" class="empty">No related payments</td></tr><% } %>
           <% ordersHistory.forEach((row) => { %>
           <tr>
             <td><%= row.shortId %></td>
-            <td><%= row.pickup_location %></td>
-            <td><%= row.drop_location %></td>
+            <td><%= row.userName %></td>
+            <td>₹<%= Number(row.amount || 0).toFixed(2) %></td>
             <td><span class="badge"><%= row.status %></span></td>
           </tr>
           <% }) %>
@@ -176,4 +191,24 @@ function closeMapModal() {
   document.getElementById("map-modal").classList.remove("show");
 }
 </script>
+</script>
 
+<script>
+  // Real-time GPS Polling
+  function pollLiveGPS() {
+    fetch('/api/admin/bikes/<%= bike.id %>/live-gps')
+      .then(res => res.json())
+      .then(data => {
+        if(data && data.success) {
+           // If map is open and new coords received, update marker
+           if(bikeMap && bikeMarker && data.isLive) {
+              bikeMap.setView([data.lat, data.lng], 15);
+              bikeMarker.setLatLng([data.lat, data.lng]);
+           }
+        }
+      })
+      .catch(console.error);
+  }
+  // Poll every 10 seconds
+  setInterval(pollLiveGPS, 10000);
+</script>

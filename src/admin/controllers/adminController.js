@@ -1180,23 +1180,77 @@ export async function bikeDetails(req, res) {
         }));
     }
 
-    const usageHistory = safeData(rentals).map(r => ({
-      ...r,
-      shortId: "#" + (mappings.rentalMap.get(r.id) || String(r.id).slice(0, 8))
-    })).slice(0, 10);
+    const allRentals = safeData(rentals);
+    const allOrders = safeData(orders);
+
+    const totalTrips = allRentals.length;
+    let totalRevenue = 0;
+    allRentals.forEach(r => totalRevenue += (Number(r.price) || 0));
+    allOrders.forEach(o => {
+      if (['paid', 'success', 'completed'].includes(String(o.status).toLowerCase())) {
+        totalRevenue += (Number(o.amount) || 0);
+      }
+    });
+
+    // Map user IDs to names for usage history
+    const userIds = [...new Set([...allRentals.map(r => r.user_id), ...allOrders.map(o => o.user_id)].filter(Boolean))];
+    const nameMap = await fetchNameMapForIds(userIds);
+
+    let currentRenter = null;
+    const ongoingRental = allRentals.find(r => ['ongoing', 'active'].includes(String(r.status).toLowerCase()));
+    if (ongoingRental && ongoingRental.user_id) {
+      currentRenter = nameMap.get(ongoingRental.user_id) || "Unknown User";
+    }
+
+    const usageHistory = allRentals
+      .sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+      .map(r => ({
+        ...r,
+        shortId: "#" + (mappings.rentalMap.get(r.id) || String(r.id).slice(0, 8)),
+        userName: nameMap.get(r.user_id) || "Unknown User"
+      })).slice(0, 10);
+      
+    const ordersHistory = allOrders
+      .sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+      .map(o => {
+         const ord = normalizeOrder(o, mappings);
+         ord.userName = nameMap.get(o.user_id) || "Unknown User";
+         return ord;
+      }).slice(0, 10);
 
     return renderPage(res, {
       title: "Bike Details",
       active: "bikes",
       bodyView: "bike-details",
       bike,
+      totalTrips,
+      totalRevenue,
+      currentRenter,
       usageHistory,
-      ordersHistory: safeData(orders).map(o => normalizeOrder(o, mappings)).slice(0, 10),
+      ordersHistory,
       maintenanceLogs,
     });
   } catch (error) {
     console.error("[admin.bikeDetails] failed", error);
     return res.status(500).send("Unable to load bike details");
+  }
+}
+
+export async function liveGpsPoller(req, res) {
+  try {
+    const { bikeId } = req.params;
+    const { getBikeHealth } = await import("../../services/iotService.js");
+    const health = await getBikeHealth(bikeId);
+    return res.json({
+      success: true,
+      lat: health.lat,
+      lng: health.lng,
+      isLive: !!(health.lat && health.lng),
+      battery: health.batteryPct,
+      lastPingAt: health.lastPingAt
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: "Failed to poll GPS" });
   }
 }
 

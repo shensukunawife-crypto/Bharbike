@@ -48,6 +48,7 @@ router.get("/hubs", requirePermission("manage_bikes"), adminController.hubsPage)
 router.get("/bikes/export/excel", requirePermission("manage_bikes"), adminController.exportBikesExcel);
 router.get("/bikes/export/pdf", requirePermission("manage_bikes"), adminController.exportBikesPDF);
 router.get("/bikes/:bikeId", requirePermission("manage_bikes"), adminController.bikeDetails);
+router.get("/bikes/:bikeId/live-gps", requirePermission("manage_bikes"), adminController.liveGpsPoller);
 router.get("/maintenance", requirePermission("manage_bikes"), adminController.maintenance);
 router.post("/bikes/add", requirePermission("manage_bikes"), adminController.addBike);
 router.post("/bikes/:bikeId/assign", requirePermission("manage_bikes"), adminController.assignBike);

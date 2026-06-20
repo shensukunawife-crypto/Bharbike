@@ -246,6 +246,7 @@ export const updateUser = async (req, res) => {
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
     ...(body.fcm_token !== undefined && { fcm_token: body.fcm_token }),
+    ...(body.password !== undefined && { password: body.password }),
   };
 
   // 2. Patch for the 'users' table (users table uses 'name' not 'full_name', so write both)
@@ -258,6 +259,7 @@ export const updateUser = async (req, res) => {
     ...(incomingAvatar !== undefined && { image_url: incomingAvatar, avatar_url: incomingAvatar }),
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
+    ...(body.password !== undefined && { password: body.password }),
   };
 
   if (Object.keys(profilesPatch).length === 0) {

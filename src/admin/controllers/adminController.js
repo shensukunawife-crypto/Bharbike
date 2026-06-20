@@ -4496,8 +4496,15 @@ export async function uploadUserDocument(req, res) {
     };
     const columnName = columnMap[docType];
     if (!columnName) throw new Error("Invalid document type");
-    const { error: updateError } = await supabase.from("users").update({ [columnName]: publicUrl }).eq("id", userId);
-    if (updateError) throw updateError;
+
+    // profile picture lives in the profiles table, all other docs in users
+    if (docType === "profile") {
+      const { error: updateError } = await supabase.from("profiles").update({ image_url: publicUrl }).eq("id", userId);
+      if (updateError) throw updateError;
+    } else {
+      const { error: updateError } = await supabase.from("users").update({ [columnName]: publicUrl }).eq("id", userId);
+      if (updateError) throw updateError;
+    }
     return res.json({ success: true, message: "Document uploaded successfully", url: publicUrl });
   } catch (error) {
     console.error("[admin.uploadUserDocument] error", error);

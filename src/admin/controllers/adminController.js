@@ -4513,6 +4513,40 @@ export async function uploadUserDocument(req, res) {
     return res.status(500).json({ success: false, message: error.message || "Failed to upload document" });
   }
 }
+export async function removeUserDocument(req, res) {
+  try {
+    const { userId } = req.params;
+    const { docType } = req.body;
+    if (!userId || !docType) {
+      return res.status(400).json({ success: false, message: "Missing userId or docType" });
+    }
+    const columnMap = {
+      selfie: "selfie_url",
+      profile: "image_url",
+      aadhaar_front: "aadhaar_front_url",
+      aadhaar_back: "aadhaar_back_url",
+      pan_card: "pan_card_url",
+      driving_license: "driving_license_url",
+      electricity_bill: "electricity_bill_url"
+    };
+    const columnName = columnMap[docType];
+    if (!columnName) return res.status(400).json({ success: false, message: "Invalid document type" });
+
+    if (docType === "profile") {
+      const { error } = await supabase.from("profiles").update({ image_url: null }).eq("id", userId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("users").update({ [columnName]: null }).eq("id", userId);
+      if (error) throw error;
+    }
+    return res.json({ success: true, message: "Document removed successfully" });
+  } catch (error) {
+    console.error("[admin.removeUserDocument] error", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to remove document" });
+  }
+}
+
+
 export async function assignBikeToUser(req, res) {
   try {
     const { userId } = req.params;

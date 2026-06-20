@@ -125,6 +125,9 @@
         <input type="file" accept="image/*" required style="font-size: 13px;">
         <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
+      <% if (user.image_url) { %>
+        <button class="remove-doc-btn" data-type="profile" style="margin-top: 6px; padding: 6px 12px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; width: 100%;">🗑 Remove</button>
+      <% } %>
     </div>
 
     <!-- Selfie -->
@@ -141,6 +144,9 @@
         <input type="file" accept="image/*" required style="font-size: 13px;">
         <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
+      <% if (user.selfie_url) { %>
+        <button class="remove-doc-btn" data-type="selfie" style="margin-top: 6px; padding: 6px 12px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; width: 100%;">🗑 Remove</button>
+      <% } %>
     </div>
     
     <!-- Aadhaar Front -->
@@ -157,6 +163,9 @@
         <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
         <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
+      <% if (user.aadhaar_front_url) { %>
+        <button class="remove-doc-btn" data-type="aadhaar_front" style="margin-top: 6px; padding: 6px 12px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; width: 100%;">🗑 Remove</button>
+      <% } %>
     </div>
 
     <!-- Aadhaar Back -->
@@ -173,6 +182,9 @@
         <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
         <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
+      <% if (user.aadhaar_back_url) { %>
+        <button class="remove-doc-btn" data-type="aadhaar_back" style="margin-top: 6px; padding: 6px 12px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; width: 100%;">🗑 Remove</button>
+      <% } %>
     </div>
 
     <!-- Driving License -->
@@ -189,6 +201,9 @@
         <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
         <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
+      <% if (user.driving_license_url) { %>
+        <button class="remove-doc-btn" data-type="driving_license" style="margin-top: 6px; padding: 6px 12px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; width: 100%;">🗑 Remove</button>
+      <% } %>
     </div>
 
     <!-- PAN Card -->
@@ -205,6 +220,9 @@
         <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
         <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
+      <% if (user.pan_card_url) { %>
+        <button class="remove-doc-btn" data-type="pan_card" style="margin-top: 6px; padding: 6px 12px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; width: 100%;">🗑 Remove</button>
+      <% } %>
     </div>
 
     <!-- Electricity Bill -->
@@ -221,6 +239,9 @@
         <input type="file" accept="image/*,application/pdf" required style="font-size: 13px;">
         <button type="submit" class="btn btn-gold" style="padding: 6px 12px; font-size: 13px;">Upload / Replace</button>
       </form>
+      <% if (user.electricity_bill_url) { %>
+        <button class="remove-doc-btn" data-type="electricity_bill" style="margin-top: 6px; padding: 6px 12px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; width: 100%;">🗑 Remove</button>
+      <% } %>
     </div>
 
   </div>
@@ -315,6 +336,35 @@
   </div>
 </div>
 <script>
+  // Remove document handler
+  document.querySelectorAll('.remove-doc-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const docType = btn.getAttribute('data-type');
+      if (!confirm(`Are you sure you want to remove this ${docType.replace(/_/g, ' ')}?`)) return;
+      btn.innerText = 'Removing...';
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/admin/users/<%= user.id %>/remove-doc`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ docType })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert(data.message || 'Remove failed');
+          btn.innerText = '🗑 Remove';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Remove failed: ' + err.message);
+        btn.innerText = '🗑 Remove';
+        btn.disabled = false;
+      }
+    });
+  });
+
   document.querySelectorAll('.upload-doc-form').forEach(form => {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();

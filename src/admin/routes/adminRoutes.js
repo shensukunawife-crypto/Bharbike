@@ -34,6 +34,7 @@ router.post("/users/:userId/edit", requirePermission("manage_users"), adminContr
 router.post("/users/:userId/block", requirePermission("manage_users"), adminController.blockUser);
 router.post("/users/:userId/delete", requirePermission("manage_users"), adminController.deleteUser);
 router.post("/users/:userId/upload-doc", requirePermission("manage_users"), upload.single("file"), adminController.uploadUserDocument);
+router.post("/users/:userId/remove-doc", requirePermission("manage_users"), adminController.removeUserDocument);
 router.post("/users/:userId/assign-bike", requirePermission("manage_users"), adminController.assignBikeToUser);
 
 // Subscriptions

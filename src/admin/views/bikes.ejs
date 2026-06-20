@@ -38,7 +38,6 @@
         <th>Usage</th>
         <th>Battery %</th>
         <th>Location</th>
-        <th>Health</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -69,11 +68,6 @@
           </div>
         </td>
         <td><%= bike.location %></td>
-        <td>
-          <span class="badge <%= bike.healthStatus === 'Good' ? 'success' : bike.healthStatus === 'Average' ? 'warning' : 'danger' %>">
-            <%= bike.healthStatus %>
-          </span>
-        </td>
         <td class="actions">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; min-width: 260px;">
             <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="display: flex; justify-content: center; padding: 6px 10px; font-size: 12px;">View Details</a>

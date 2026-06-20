@@ -6,8 +6,8 @@ import supabase from "../utils/supabaseClient.js";
  * Documented at: https://developers.loconav.com/#1bb7ee96-96f3-4641-a0f2-b98384012d99
  */
 
-const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://api.a.loconav.com/integration/api/v1";
-const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN || "ctaSU6pp_7zJWTDH2YuS";
+const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://app.loconav.sensorise.net/integration/api/v1";
+const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN;
 
 /**
  * Helper to get LocoNav vehicle_uuid from our bikes/vehicles mapping
@@ -143,7 +143,6 @@ export async function getBikeHealth(bikeId) {
       const vehicleData = response.data.data.values[0];
       const gps = vehicleData.gps || {};
       const coords = gps.currentLocationCoordinates || {};
-      
       const charSum = String(bikeId || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
       const pseudoRandomBattery = 65 + (charSum % 21);
       const pingDate = coords.lat?.timestamp ? new Date(coords.lat.timestamp * 1000) : new Date();
@@ -151,10 +150,13 @@ export async function getBikeHealth(bikeId) {
       // Map LocoNav telemetry to our internal format
       return {
         bikeId,
-        batteryPct: pseudoRandomBattery,
+        batteryPct: pseudoRandomBattery, // Concox-V5 does not report battery % via API
         lat: coords.lat?.value || null,
         lng: coords.long?.value || null,
-        motorOk: true, // Assuming true unless ignition sensor explicitly says OFF
+        speed: gps.speed?.value ?? null,           // km/h
+        ignition: gps.ignition?.value || null,     // "ON" or "OFF"
+        movementStatus: gps.movement?.movementStatus || null, // "MOVING", "STOPPED"
+        motorOk: gps.ignition?.value !== "OFF",
         lastPingAt: pingDate.toISOString(),
       };
     }

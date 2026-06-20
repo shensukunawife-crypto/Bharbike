@@ -310,12 +310,13 @@ function normalizeBike(bike, index) {
   const healthStatus = status === "maintenance" ? "Needs Service" : "Good";
   const usage = status === "in_use" ? "In Service" : status === "maintenance" ? "Repair Queue" : "Standby";
   const rawLocation = bike.location || bike.last_location;
-  // If we have GPS coords stored, show them nicely instead of "Unknown Yard"
-  const location = rawLocation && rawLocation !== "Unknown Yard"
+  // Only trust location string if it looks like real GPS coords (contains comma + digits), not plain text like "Thane"
+  const isRealGpsString = rawLocation && /\d+\.\d+/.test(rawLocation);
+  const location = isRealGpsString
     ? rawLocation
     : (bike.last_lat && bike.last_lng)
       ? `${Number(bike.last_lat).toFixed(5)}, ${Number(bike.last_lng).toFixed(5)}`
-      : "Unknown Yard";
+      : "No location data";
   const lastServiceDate = bike.last_service_date || bike.lastServiceDate || "2026-04-01";
 
   return {

@@ -999,12 +999,13 @@ export async function users(req, res) {
 export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
-    const [mappings, { data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRental }] = await Promise.all([
+    const [mappings, { data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRental }, { data: profileRow }] = await Promise.all([
       getIdMappings(),
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
       supabase.from("wallet_balances").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("rentals").select("*").eq("user_id", userId).eq("status", "ongoing").maybeSingle(),
+      supabase.from("profiles").select("image_url").eq("id", userId).maybeSingle(),
     ]);
     if (!userRow) {
       return res.status(404).send("User not found");
@@ -1045,6 +1046,7 @@ export async function userProfile(req, res) {
       paymentMethod,
       walletBalance: walletRow ? Number(walletRow.balance || 0) : 0,
       selfie_url: userRow.selfie_url || null,
+      image_url: profileRow?.image_url || null,
       address: userRow.address || "N/A",
       address_verified: userRow.address_verified || false,
       emergency_contact_name: userRow.emergency_contact_name || "N/A",

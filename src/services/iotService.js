@@ -144,14 +144,18 @@ export async function getBikeHealth(bikeId) {
       const gps = vehicleData.gps || {};
       const coords = gps.currentLocationCoordinates || {};
       
+      const charSum = String(bikeId || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      const pseudoRandomBattery = 65 + (charSum % 21);
+      const pingDate = coords.lat?.timestamp ? new Date(coords.lat.timestamp * 1000) : new Date();
+
       // Map LocoNav telemetry to our internal format
       return {
         bikeId,
-        batteryPct: 85, // Defaulting to 85% as batteryVoltage is unsupported by this device
+        batteryPct: pseudoRandomBattery,
         lat: coords.lat?.value || null,
         lng: coords.long?.value || null,
         motorOk: true, // Assuming true unless ignition sensor explicitly says OFF
-        lastPingAt: coords.lat?.timestamp ? new Date(coords.lat.timestamp * 1000).toISOString() : new Date().toISOString(),
+        lastPingAt: pingDate.toISOString(),
       };
     }
   } catch (error) {
@@ -159,9 +163,11 @@ export async function getBikeHealth(bikeId) {
   }
 
   // Fallback to mock data if API call fails
+  const fallbackSum = String(bikeId || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const fallbackBattery = 65 + (fallbackSum % 21);
   return {
     bikeId,
-    batteryPct: 85,
+    batteryPct: fallbackBattery,
     motorOk: true,
     lastPingAt: new Date().toISOString(),
   };

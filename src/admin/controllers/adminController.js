@@ -4485,7 +4485,15 @@ export async function uploadUserDocument(req, res) {
     const { data: publicData } = supabase.storage.from("kyc-documents").getPublicUrl(filePath);
     const publicUrl = publicData?.publicUrl || null;
     if (!publicUrl) throw new Error("Could not generate public URL");
-    const columnMap = { aadhaar_front: "aadhaar_front_url", aadhaar_back: "aadhaar_back_url", pan_card: "pan_card_url", driving_license: "driving_license_url", electricity_bill: "electricity_bill_url" };
+    const columnMap = {
+      selfie: "selfie_url",
+      profile: "image_url",
+      aadhaar_front: "aadhaar_front_url",
+      aadhaar_back: "aadhaar_back_url",
+      pan_card: "pan_card_url",
+      driving_license: "driving_license_url",
+      electricity_bill: "electricity_bill_url"
+    };
     const columnName = columnMap[docType];
     if (!columnName) throw new Error("Invalid document type");
     const { error: updateError } = await supabase.from("users").update({ [columnName]: publicUrl }).eq("id", userId);

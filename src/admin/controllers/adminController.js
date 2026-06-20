@@ -1640,11 +1640,9 @@ export async function earnings(req, res) {
       return now - created <= days * 24 * 60 * 60 * 1000;
     });
 
-    const rental = filtered
-      .filter((item) => item.type === "rental")
+    const rental = filtered.filter((item) => !item.pickup_location)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const delivery = filtered
-      .filter((item) => item.type === "delivery")
+    const delivery = filtered.filter((item) => !!item.pickup_location)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     const todayStart = new Date();
@@ -1668,8 +1666,8 @@ export async function earnings(req, res) {
 
     const transactions = filtered.slice(0, 20).map((item, index) => ({
       id: `TX-${2000 + index}`,
-      user: profileMap[item.userid] || "BHAR BIKE Rider",
-      type: item.type === "delivery" ? "Delivery" : "Bike Rental",
+      user: profileMap[item.user_id] || "BHAR BIKE Rider",
+      type: item.pickup_location ? "Delivery" : "Bike Rental",
       amount: Number(item.amount || 0),
       status: Number(item.amount || 0) > 0 ? "Success" : "Pending",
       date: (item.createdAt || item.created_at || new Date().toISOString()).slice(0, 10),
@@ -1754,11 +1752,9 @@ export async function exportEarningsExcel(req, res) {
       return now - created <= days * 24 * 60 * 60 * 1000;
     });
 
-    const rental = filtered
-      .filter((item) => item.type === "rental")
+    const rental = filtered.filter((item) => !item.pickup_location)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const delivery = filtered
-      .filter((item) => item.type === "delivery")
+    const delivery = filtered.filter((item) => !!item.pickup_location)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     const pendingPayout = payoutQueue
@@ -1792,8 +1788,8 @@ export async function exportEarningsExcel(req, res) {
     const ledgerHeaders = [["Transaction ID", "User/Rider Name", "Service Category", "Amount (INR)", "Status", "Timestamp"]];
     const ledgerRows = filtered.map((item, index) => [
       `TX-${2000 + index}`,
-      profileMap[item.userid] || "BHAR BIKE Rider",
-      item.type === "delivery" ? "Delivery Ops" : "Bike Rental",
+      profileMap[item.user_id] || "BHAR BIKE Rider",
+      item.pickup_location ? "Delivery Ops" : "Bike Rental",
       Number(item.amount || 0),
       Number(item.amount || 0) > 0 ? "Success" : "Pending",
       (item.createdAt || item.created_at || new Date().toISOString()).slice(0, 19).replace('T', ' ')
@@ -1847,11 +1843,9 @@ export async function exportEarningsPDF(req, res) {
       return now - created <= days * 24 * 60 * 60 * 1000;
     });
 
-    const rental = filtered
-      .filter((item) => item.type === "rental")
+    const rental = filtered.filter((item) => !item.pickup_location)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const delivery = filtered
-      .filter((item) => item.type === "delivery")
+    const delivery = filtered.filter((item) => !!item.pickup_location)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     const pendingPayout = payoutQueue
@@ -1869,8 +1863,8 @@ export async function exportEarningsPDF(req, res) {
 
     const transactions = filtered.map((item, index) => ({
       id: `TX-${2000 + index}`,
-      user: profileMap[item.userid] || "BHAR BIKE Rider",
-      type: item.type === "delivery" ? "Delivery" : "Bike Rental",
+      user: profileMap[item.user_id] || "BHAR BIKE Rider",
+      type: item.pickup_location ? "Delivery" : "Bike Rental",
       amount: Number(item.amount || 0),
       status: Number(item.amount || 0) > 0 ? "Success" : "Pending",
       date: (item.createdAt || item.created_at || new Date().toISOString()).slice(0, 10),
@@ -2068,18 +2062,17 @@ export async function analytics(req, res) {
     const days = filter === "today" ? 1 : filter === "30d" ? 30 : 7;
     const now = Date.now();
 
+    const filterDate = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
     const [
       mappings,
-      
       { data: orderRows, error: orderError },
       { data: bikeRows, error: bikesError },
       { data: rentalRows, error: rentalError },
     ] = await Promise.all([
       getIdMappings(),
-      supabase.from("earnings").select("*"),
-      supabase.from("orders").select("*"),
+      supabase.from("orders").select("*").gte("created_at", filterDate),
       supabase.from("bikes").select("*"),
-      supabase.from("rentals").select("*"),
+      supabase.from("rentals").select("*").gte("created_at", filterDate),
     ]);
     if (orderError) {
       console.error("[admin.analytics] fetch failed", orderError);

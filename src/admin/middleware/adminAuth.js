@@ -10,7 +10,7 @@ function readCookie(cookieHeader, name) {
   return decodeURIComponent(match.slice(name.length + 1));
 }
 
-export function requireAdminAuth(req, res, next) {
+export async function requireAdminAuth(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
   const cookieToken = readCookie(req.headers.cookie || "", "admin_token");
@@ -37,10 +37,24 @@ export function requireAdminAuth(req, res, next) {
       }
       return res.status(403).json({ success: false, message: "Forbidden: Admin privileges required" });
     }
+
+    // Security check: Verify the admin is still active
+    if (payload.admin_id && payload.role !== "master_admin" && payload.role !== "admin") {
+      const { data: dbAdmin } = await import("../../config/supabase.js").then(m => m.default)
+        .from("admin_users")
+        .select("is_active")
+        .eq("id", payload.admin_id)
+        .maybeSingle();
+
+      if (!dbAdmin || !dbAdmin.is_active) {
+        throw new Error("Admin account deactivated");
+      }
+    }
+
     req.admin = payload;
     res.locals.admin = payload;
     return next();
-  } catch {
+  } catch (error) {
     if (onAdminSite && req.method === "GET") {
       return res.redirect(302, "/admin/login");
     }

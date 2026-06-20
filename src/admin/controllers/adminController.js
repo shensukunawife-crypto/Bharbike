@@ -761,7 +761,7 @@ export async function operationsDashboard(req, res) {
       getIdMappings(),
       supabase.from("bikes").select("*"),
       supabase.from("delivery_partners").select("*"),
-      supabase.from("orders").select("*").in("status", ["pending", "accepted", "ongoing"]),
+      supabase.from("orders").select("*").in("status", ["accepted", "ongoing", "completed", "paid", "success"]),
       supabase.from("rider_skipped_days").select("*").gte("created_at", todayStr)
     ]);
 
@@ -769,16 +769,6 @@ export async function operationsDashboard(req, res) {
     const partners = safeArr(partnersData);
     const activeOrders = safeArr(activeOrdersData).map(o => normalizeOrder(o, mappings));
     const skippedLogs = safeArr(skippedLogsData);
-
-    // Aggregate counts
-    const stats = {
-      activeDeliveries: activeOrders.length,
-      onlineRiders: partners.filter(p => p.is_online === true).length,
-      availableBikes: bikes.filter(b => b.status === "available").length,
-      skippedRidersCount: skippedLogs.length,
-      bikesInField: bikes.filter(b => b.status === "in_use").length,
-      maintenanceBikes: bikes.filter(b => b.status === "maintenance").length
-    };
 
     // Online riders list details (with name fallback resolution)
     const { data: dbUsers } = await supabase.from("users").select("id, full_name, name, phone");
@@ -789,6 +779,27 @@ export async function operationsDashboard(req, res) {
         phone: u.phone || "No Phone"
       };
     });
+
+    // Populate active orders with user name lookups & filter out "User" fallback
+    const enrichedOrders = activeOrders
+      .map(o => {
+        const u = userMap[o.user_id] || { name: o.userName || "Customer", phone: "" };
+        return {
+          ...o,
+          userName: u.name
+        };
+      })
+      .filter(o => o.userName && !["user", "customer", "—", "-"].includes(o.userName.trim().toLowerCase()));
+
+    // Aggregate counts
+    const stats = {
+      activeDeliveries: enrichedOrders.length,
+      onlineRiders: partners.filter(p => p.is_online === true).length,
+      availableBikes: bikes.filter(b => b.status === "available").length,
+      skippedRidersCount: skippedLogs.length,
+      bikesInField: bikes.filter(b => b.status === "in_use").length,
+      maintenanceBikes: bikes.filter(b => b.status === "maintenance").length
+    };
 
     const onlineRidersList = partners
       .filter(p => p.is_online === true)
@@ -814,15 +825,6 @@ export async function operationsDashboard(req, res) {
         date: log.skipped_date || todayStr,
         reason: log.reason || "Not specified",
         created_at: new Date(log.created_at || now).toLocaleString("en-IN")
-      };
-    });
-
-    // Populate active orders with user name lookups
-    const enrichedOrders = activeOrders.map(o => {
-      const u = userMap[o.user_id] || { name: o.userName || "Customer", phone: "" };
-      return {
-        ...o,
-        userName: u.name
       };
     });
 

@@ -12,8 +12,8 @@
 
 /* ── Compose Card ────────────────────────────────────────────── */
 .notif-compose-card {
-  background: var(--card-bg, #1a1f2e);
-  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: var(--surface);
+  border: 1px solid var(--border, var(--border));
   border-radius: 16px;
   padding: 2rem 2.5rem;
 }
@@ -21,7 +21,7 @@
   font-size: 1.1rem; font-weight: 700;
   margin: 0 0 1.75rem;
   display: flex; align-items: center; gap: 0.5rem;
-  color: var(--text-primary, #fff);
+  color: var(--text);
 }
 
 /* ── Two-column form grid ─────────────────────────────────── */
@@ -47,7 +47,7 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-muted, #8899aa);
+  color: var(--text-muted);
 }
 .nf input[type=text],
 .nf input[type=url],
@@ -55,10 +55,10 @@
 .nf input[type=time],
 .nf select,
 .nf textarea {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  color: var(--text-primary, #fff);
+  color: var(--text);
   font-size: 0.92rem;
   padding: 0.7rem 1rem;
   outline: none;
@@ -71,15 +71,15 @@
 .nf select:focus,
 .nf textarea:focus {
   border-color: var(--accent, #f0b429);
-  background: rgba(255,255,255,0.07);
+  background: var(--border-light);
 }
 .nf textarea { resize: vertical; min-height: 120px; }
-.nf select option { background: #1e2330; }
+.nf select option { background: var(--surface); }
 
 /* ── Single-user picker box ─────────────────────────────── */
 .user-picker-box {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem 1.25rem 1.25rem;
   display: flex;
@@ -89,13 +89,13 @@
 .user-picker-box .field-label {
   font-size: 0.75rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--text-muted, #8899aa);
+  color: var(--text-muted);
 }
 #notif-user-search {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  color: var(--text-primary, #fff);
+  color: var(--text);
   font-size: 0.92rem;
   padding: 0.7rem 1rem;
   outline: none;
@@ -132,8 +132,8 @@
   font-size: 0.82rem; font-weight: 700; color: #fff; flex-shrink: 0;
 }
 .nu-info { flex: 1; min-width: 0; }
-.nu-name { font-size: 0.87rem; font-weight: 600; color: var(--text-primary, #fff); }
-.nu-meta { font-size: 0.75rem; color: var(--text-muted, #8899aa); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nu-name { font-size: 0.87rem; font-weight: 600; color: var(--text); }
+.nu-meta { font-size: 0.75rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nu-check { color: var(--accent, #f0b429); display: none; font-size: 1rem; }
 .nu-item.active .nu-check { display: block; }
 
@@ -144,27 +144,27 @@
   border-radius: 8px;
   padding: 0.5rem 0.9rem;
   font-size: 0.87rem;
-  color: var(--text-primary, #fff);
+  color: var(--text);
 }
 .nu-selected-badge .nu-clear {
   background: none; border: none; cursor: pointer;
-  color: var(--text-muted, #8899aa); font-size: 1rem;
+  color: var(--text-muted); font-size: 1rem;
   margin-left: auto; line-height: 1; padding: 0;
 }
 .nu-selected-badge .nu-clear:hover { color: #e55; }
-.nu-empty { text-align: center; color: var(--text-muted, #8899aa); font-size: 0.85rem; padding: 1rem 0; display: none; }
+.nu-empty { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0; display: none; }
 
 /* ── Toggles (channels) ──────────────────────────────────── */
 .notif-channels { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; }
 .sw-row {
   display: flex; align-items: center; gap: 0.5rem;
   cursor: pointer; user-select: none;
-  font-size: 0.9rem; color: var(--text-primary, #fff);
+  font-size: 0.9rem; color: var(--text);
 }
 .sw-row input[type=checkbox] { display: none; }
 .sw {
   width: 40px; height: 22px;
-  background: rgba(255,255,255,0.15);
+  background: var(--border);
   border-radius: 22px; position: relative;
   transition: background 0.2s; flex-shrink: 0;
 }
@@ -172,7 +172,7 @@
   content: ''; position: absolute;
   top: 3px; left: 3px;
   width: 16px; height: 16px; border-radius: 50%;
-  background: #fff; transition: transform 0.2s;
+  background: var(--text); transition: transform 0.2s;
 }
 .sw-row input:checked + .sw { background: var(--accent, #f0b429); }
 .sw-row input:checked + .sw::after { transform: translateX(18px); }
@@ -196,8 +196,8 @@
 
 /* ── Summary sidebar ─────────────────────────────────────── */
 .notif-summary-card {
-  background: var(--card-bg, #1a1f2e);
-  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: var(--surface);
+  border: 1px solid var(--border, var(--border));
   border-radius: 16px;
   padding: 1.75rem 2rem;
 }
@@ -205,22 +205,22 @@
   font-size: 1rem; font-weight: 700;
   margin: 0 0 1.25rem;
   display: flex; align-items: center; gap: 0.45rem;
-  color: var(--text-primary, #fff);
+  color: var(--text);
 }
 .ns-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 0.65rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border-light);
   font-size: 0.87rem;
 }
 .ns-row:last-child { border-bottom: none; }
-.ns-row span { color: var(--text-muted, #8899aa); }
-.ns-row strong { color: var(--text-primary, #fff); }
+.ns-row span { color: var(--text-muted); }
+.ns-row strong { color: var(--text); }
 
 /* ── History card ────────────────────────────────────────── */
 .notif-history-card {
-  background: var(--card-bg, #1a1f2e);
-  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: var(--surface);
+  border: 1px solid var(--border, var(--border));
   border-radius: 16px;
   padding: 2rem 2.5rem;
 }
@@ -228,26 +228,26 @@
   font-size: 1.1rem; font-weight: 700;
   margin: 0 0 1.5rem;
   display: flex; align-items: center; gap: 0.5rem;
-  color: var(--text-primary, #fff);
+  color: var(--text);
 }
 .notif-history-card .table-wrap { overflow-x: auto; border-radius: 10px; }
 .notif-history-card .table { width: 100%; border-collapse: collapse; }
 .notif-history-card .table th {
-  background: rgba(255,255,255,0.04);
+  background: var(--bg);
   padding: 0.8rem 1rem; text-align: left;
   font-size: 0.75rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--text-muted, #8899aa);
+  color: var(--text-muted);
 }
 .notif-history-card .table td {
   padding: 0.9rem 1rem;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--bg);
   font-size: 0.87rem;
-  color: var(--text-primary, #fff);
+  color: var(--text);
   vertical-align: middle;
 }
-.notif-history-card .table tr:hover td { background: rgba(255,255,255,0.02); }
-.notif-empty-row td { text-align: center; padding: 2.5rem !important; color: var(--text-muted, #8899aa) !important; }
+.notif-history-card .table tr:hover td { background: var(--border-light); }
+.notif-empty-row td { text-align: center; padding: 2.5rem !important; color: var(--text-muted) !important; }
 
 .hidden { display: none !important; }
 </style>

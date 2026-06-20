@@ -668,6 +668,7 @@ export async function dashboard(req, res) {
     }
 
     const sortedRecent = orders
+      .filter(o => ["paid", "success", "completed"].includes((o.status || "").toLowerCase()))
       .slice()
       .sort(
         (a, b) =>
@@ -2236,6 +2237,7 @@ export async function analytics(req, res) {
     ).length;
     const avgTime = totalDeliveries ? Math.round((totalDeliveries * 28) / totalDeliveries) : 0;
     const recentOrders = filteredOrders
+      .filter(o => ["paid", "success", "completed"].includes((o.status || "").toLowerCase()))
       .slice()
       .sort(
         (a, b) =>

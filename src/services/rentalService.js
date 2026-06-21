@@ -51,12 +51,12 @@ export async function startRental(userId, plan) {
     }
   }
 
-  // 1. Strict Active Rental Check
+  // 1. Strict Active Rental Check — check both 'active' and 'ongoing' statuses
   const { data: active, error: activeError } = await supabase
     .from("rentals")
     .select("id")
     .eq("user_id", userId)
-    .eq("status", RentalStatus.active)
+    .in("status", [RentalStatus.active, RentalStatus.ongoing])
     .maybeSingle();
 
   if (activeError && !isRentalsTableMissing(activeError)) {
@@ -104,6 +104,7 @@ export async function startRental(userId, plan) {
   }
 
   // 5. Create Rental Record
+  const rentalPrice = PLAN_PRICE[plan] || 0;
   const { data: rental, error: createError } = await supabase
     .from("rentals")
     .insert([
@@ -111,10 +112,10 @@ export async function startRental(userId, plan) {
         user_id: userId,
         bike_id: bike.id,
         duration: PLAN_HOURS[plan],
-        price: PLAN_PRICE[plan],
+        price: rentalPrice,           // ← always set the price
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
-        status: RentalStatus.active,
+        status: RentalStatus.ongoing, // ← use 'ongoing' to match mobile app
       },
     ])
     .select("*")
@@ -165,7 +166,9 @@ async function finalizeRental(rentalId, status) {
   if (!rental) {
     throw new AppError("Rental not found", 404);
   }
-  if (rental.status !== RentalStatus.active) {
+  // Accept both 'active' and 'ongoing' — mobile app uses 'ongoing'
+  const isActiveRental = ['active', 'ongoing'].includes(rental.status);
+  if (!isActiveRental) {
     throw new AppError("Rental is not active", 409);
   }
 
@@ -248,10 +251,11 @@ export async function endRental(userId, rentalId) {
 
 export async function expireRentalsPastEnd() {
   const now = new Date();
+  // Query for both 'active' and 'ongoing' — mobile app uses 'ongoing'
   const { data: due, error } = await supabase
     .from("rentals")
     .select("*")
-    .eq("status", RentalStatus.active)
+    .in("status", [RentalStatus.active, RentalStatus.ongoing])
     .lt("end_time", now.toISOString());
   if (error) {
     if (isRentalsTableMissing(error)) {

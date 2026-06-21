@@ -12,9 +12,12 @@ export const RentalPlan = {
 
 export const RentalStatus = {
   active: "active",
+  ongoing: "ongoing",   // used by mobile app
   ended: "ended",
+  completed: "completed", // alias for ended
   expired: "expired",
 };
+
 
 export const DeliveryRequestStatus = {
   pending: "pending",

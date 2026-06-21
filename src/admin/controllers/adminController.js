@@ -1195,15 +1195,15 @@ export async function bikeDetails(req, res) {
     const allRentals = safeData(rentals);
     const allOrders = safeData(orders);
 
-    // totalTrips = all rentals + all completed/paid orders (trips can be tracked in either table)
-    const completedOrderStatuses = ['paid', 'success', 'completed', 'done', 'delivered'];
+    // totalTrips = ALL rentals (ongoing/ended/expired are all real trips)
+    // + completed orders if no rentals exist (fallback)
+    const completedOrderStatuses = ['paid', 'success', 'completed', 'done', 'delivered', 'ended', 'expired'];
     const completedOrders = allOrders.filter(o =>
       completedOrderStatuses.includes(String(o.status || '').toLowerCase())
     );
-    // Avoid double-counting: if rentals table is empty/unused, use orders as trip source
     const totalTrips = allRentals.length > 0
-      ? allRentals.length
-      : completedOrders.length;
+      ? allRentals.length   // rentals ARE the trips
+      : completedOrders.length; // fallback to orders if rentals table unused
 
     // Helper to extract amount from a record regardless of column name
     const extractAmount = (record) =>
@@ -1211,21 +1211,16 @@ export async function bikeDetails(req, res) {
              record.total_amount || record.total || 0);
 
     let totalRevenue = 0;
-    // Sum from rentals - try multiple field names
+    // ALL rentals count for revenue (price was set at booking time)
     allRentals.forEach(r => {
       const amt = extractAmount(r);
       if (amt > 0) totalRevenue += amt;
     });
-    // Sum from completed orders - try multiple field names
+    // Also count completed orders revenue
     completedOrders.forEach(o => {
       const amt = extractAmount(o);
       if (amt > 0) totalRevenue += amt;
     });
-    // If rentals had amounts too (avoid double count if orders was already counted)
-    // Only add rentals revenue if rentals table is being used
-    if (allRentals.length === 0) {
-      // already counted via completedOrders above
-    }
 
     // Map user IDs to names for usage history
     const userIds = [...new Set([...allRentals.map(r => r.user_id), ...allOrders.map(o => o.user_id)].filter(Boolean))];

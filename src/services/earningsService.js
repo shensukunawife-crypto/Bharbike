@@ -5,7 +5,7 @@ import { EarningsType } from "../constants/dbEnums.js";
 export async function recordEarning(userId, amount, type) {
   const { data, error } = await supabase
     .from("earnings")
-    .insert([{ userId, amount, type }])
+    .insert([{ user_id: userId, amount, type }])  // fixed: user_id not userId
     .select("*")
     .single();
   if (error) {
@@ -19,8 +19,8 @@ export async function listEarnings(userId) {
   const { data, error } = await supabase
     .from("earnings")
     .select("*")
-    .eq("userId", userId)
-    .order("createdAt", { ascending: false });
+    .eq("user_id", userId)  // fixed: user_id not userId
+    .order("created_at", { ascending: false });  // fixed: created_at not createdAt
   if (error) {
     console.error("[earningsService.listEarnings] failed", error);
     throw new AppError("Unable to fetch earnings", 500);

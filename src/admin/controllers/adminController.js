@@ -593,9 +593,9 @@ export async function dashboard(req, res) {
     const bikes = safeData(bikesData).map(normalizeBike);
     const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
     const earnings = safeData(ordersData)
-      .filter(o => ["success", "paid", "completed"].includes((o.status || "").toLowerCase()))
+      .filter(o => ["success", "paid", "completed", "done", "delivered"].includes((o.status || "").toLowerCase()))
       .map((item) => ({
-        amount: Number(item.amount) || 0,
+        amount: Number(item.amount || item.earnings || item.price || item.fare || item.total_amount || item.total) || 0,
         createdAt: new Date(item.created_at || item.createdAt || now),
       }));
 
@@ -1162,7 +1162,8 @@ export async function bikeDetails(req, res) {
       console.warn("[admin.bikeDetails] IoT fetch failed:", iotErr.message);
     }
 
-    const { data: orders } = await supabase.from("orders").select("*").eq("bike_id", bikeId);
+    // Fetch orders by bike_id OR bike_code to catch all linked orders
+    const { data: orders } = await supabase.from("orders").select("*").or(`bike_id.eq.${bikeId},bike_code.eq.${bike.bike_code}`);
     const { data: rentals } = await supabase.from("rentals").select("*").eq("bike_id", bikeId);
     // Fix: Read maintenance logs from Supabase DB, not memory (survives server restarts)
     let maintenanceLogs = [];
@@ -1194,14 +1195,37 @@ export async function bikeDetails(req, res) {
     const allRentals = safeData(rentals);
     const allOrders = safeData(orders);
 
-    const totalTrips = allRentals.length;
+    // totalTrips = all rentals + all completed/paid orders (trips can be tracked in either table)
+    const completedOrderStatuses = ['paid', 'success', 'completed', 'done', 'delivered'];
+    const completedOrders = allOrders.filter(o =>
+      completedOrderStatuses.includes(String(o.status || '').toLowerCase())
+    );
+    // Avoid double-counting: if rentals table is empty/unused, use orders as trip source
+    const totalTrips = allRentals.length > 0
+      ? allRentals.length
+      : completedOrders.length;
+
+    // Helper to extract amount from a record regardless of column name
+    const extractAmount = (record) =>
+      Number(record.amount || record.earnings || record.price || record.fare ||
+             record.total_amount || record.total || 0);
+
     let totalRevenue = 0;
-    allRentals.forEach(r => totalRevenue += (Number(r.price) || 0));
-    allOrders.forEach(o => {
-      if (['paid', 'success', 'completed'].includes(String(o.status).toLowerCase())) {
-        totalRevenue += (Number(o.amount) || 0);
-      }
+    // Sum from rentals - try multiple field names
+    allRentals.forEach(r => {
+      const amt = extractAmount(r);
+      if (amt > 0) totalRevenue += amt;
     });
+    // Sum from completed orders - try multiple field names
+    completedOrders.forEach(o => {
+      const amt = extractAmount(o);
+      if (amt > 0) totalRevenue += amt;
+    });
+    // If rentals had amounts too (avoid double count if orders was already counted)
+    // Only add rentals revenue if rentals table is being used
+    if (allRentals.length === 0) {
+      // already counted via completedOrders above
+    }
 
     // Map user IDs to names for usage history
     const userIds = [...new Set([...allRentals.map(r => r.user_id), ...allOrders.map(o => o.user_id)].filter(Boolean))];

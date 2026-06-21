@@ -58,33 +58,6 @@
   </a>
 </div>
 
-<!-- OPERATIONS -->
-<% if (_can('manage_orders')) { %>
-<div class="nav-section">
-  <p class="nav-label">Operations</p>
-  <div class="nav-group <%= gOperations ? 'is-open' : '' %>" data-group-id="operations">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-operations">
-      <span class="nav-icon"><%- icons.rental %></span>
-      <span>Rental Ops</span>
-      <span class="nav-chevron"><%- icons.chevron %></span>
-    </button>
-    <div class="nav-group-panel">
-      <a class="nav-link nav-link-sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders">
-        <span class="nav-icon"><%- icons.orders %></span><span>Orders</span>
-      </a>
-      <a class="nav-link nav-link-sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
-        <span class="nav-icon"><%- icons.bookings %></span><span>Bookings</span>
-      </a>
-      <a class="nav-link nav-link-sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners">
-        <span class="nav-icon"><%- icons.delivery %></span><span>Delivery</span>
-      </a>
-      <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days">
-        <span class="nav-icon"><%- icons.skipped %></span><span>Skipped Days</span>
-      </a>
-    </div>
-  </div>
-</div>
-<% } %>
 
 <!-- FLEET -->
 <% if (_can('manage_bikes')) { %>
@@ -157,6 +130,36 @@
   </div>
 </div>
 <% } %>
+
+<!-- OPERATIONS -->
+<% if (_can('manage_orders')) { %>
+<div class="nav-section">
+  <p class="nav-label">Operations</p>
+  <div class="nav-group <%= gOperations ? 'is-open' : '' %>" data-group-id="operations">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-operations">
+      <span class="nav-icon"><%- icons.rental %></span>
+      <span>Rental Ops</span>
+      <span class="nav-chevron"><%- icons.chevron %></span>
+    </button>
+    <div class="nav-group-panel">
+      <a class="nav-link nav-link-sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders">
+        <span class="nav-icon"><%- icons.orders %></span><span>Orders</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
+        <span class="nav-icon"><%- icons.bookings %></span><span>Bookings</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners">
+        <span class="nav-icon"><%- icons.delivery %></span><span>Delivery</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days">
+        <span class="nav-icon"><%- icons.skipped %></span><span>Skipped Days</span>
+      </a>
+    </div>
+  </div>
+</div>
+<% } %>
+
+
 
 <!-- INFRASTRUCTURE -->
 <div class="nav-section">

@@ -201,6 +201,7 @@
   function paginate(tbodyId, pgId, infoId, btnsId, countId) {
     const PAGE = 10;
     let cur = 1;
+    const pgFuncName = tbodyId.replace(/-/g, '_') + '_pg';
     function go(p) {
       const rows = Array.from(document.querySelectorAll('#' + tbodyId + ' tr[data-' + (tbodyId === 'users-tbody' ? 'user' : 'order') + '-id]'));
       const total = rows.length;
@@ -214,14 +215,14 @@
       pg.style.display = 'flex';
       document.getElementById(infoId).textContent = 'Showing '+(s+1)+'–'+e+' of '+total;
       if (countId) document.getElementById(countId).textContent = total + ' users';
-      let h = '<button class="pg-btn" onclick="'+tbodyId+'_pg('+(cur-1)+')" '+(cur===1?'disabled':'')+'>‹</button>';
+      let h = '<button class="pg-btn" onclick="'+pgFuncName+'('+(cur-1)+')" '+(cur===1?'disabled':'')+'>‹</button>';
       for (let i=1;i<=pages;i++) {
-        h += '<button class="pg-btn '+(i===cur?'active':'')+'" onclick="'+tbodyId+'_pg('+i+')">'+i+'</button>';
+        h += '<button class="pg-btn '+(i===cur?'active':'')+'" onclick="'+pgFuncName+'('+i+')">'+i+'</button>';
       }
-      h += '<button class="pg-btn" onclick="'+tbodyId+'_pg('+(cur+1)+')" '+(cur===pages?'disabled':'')+'>›</button>';
+      h += '<button class="pg-btn" onclick="'+pgFuncName+'('+(cur+1)+')" '+(cur===pages?'disabled':'')+'>›</button>';
       document.getElementById(btnsId).innerHTML = h;
     }
-    window[tbodyId + '_pg'] = go;
+    window[pgFuncName] = go;
     go(1);
   }
   paginate('users-tbody','users-pagination','users-pg-info','users-pg-btns','users-count-info');

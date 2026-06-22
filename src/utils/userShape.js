@@ -10,6 +10,7 @@ export function shapePublicUser(row) {
     email: row.email ?? null,
     phone: row.phone ?? null,
     location: row.location ?? null,
+    address: row.address ?? null,
     image_url: (row.image_url || row.avatar_url) ?? null,
     emergency_contact_name: row.emergency_contact_name ?? null,
     emergency_contact_phone: row.emergency_contact_phone ?? null,

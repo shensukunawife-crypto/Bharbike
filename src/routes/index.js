@@ -1521,53 +1521,57 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       return res.status(400).json({ success: false, message: "Only jpg, png, pdf allowed" });
     }
 
-    if (type === "pan") {
-      const verification = await detectPanCard(file.buffer, file.originalname);
-      if (!verification.isValid) {
-        return res.status(400).json({
-          success: false,
-          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-        });
-      }
-    }
+    const isPdf = file.mimetype === "application/pdf" || file.originalname?.toLowerCase().endsWith(".pdf");
 
-    if (type === "aadhaar_front" || type === "aadhaar_back") {
-      const verification = await detectAadhaarCard(file.buffer, file.originalname);
-      if (!verification.isValid) {
-        return res.status(400).json({
-          success: false,
-          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-        });
+    if (!isPdf) {
+      if (type === "pan") {
+        const verification = await detectPanCard(file.buffer, file.originalname);
+        if (!verification.isValid) {
+          return res.status(400).json({
+            success: false,
+            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
+          });
+        }
       }
-    }
 
-    if (type === "driving_license") {
-      const verification = await detectDrivingLicense(file.buffer, file.originalname);
-      if (!verification.isValid) {
-        return res.status(400).json({
-          success: false,
-          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-        });
+      if (type === "aadhaar_front" || type === "aadhaar_back") {
+        const verification = await detectAadhaarCard(file.buffer, file.originalname);
+        if (!verification.isValid) {
+          return res.status(400).json({
+            success: false,
+            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
+          });
+        }
       }
-    }
 
-    if (type === "bill") {
-      const verification = await detectElectricityBill(file.buffer, file.originalname);
-      if (!verification.isValid) {
-        return res.status(400).json({
-          success: false,
-          message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-        });
+      if (type === "driving_license") {
+        const verification = await detectDrivingLicense(file.buffer, file.originalname);
+        if (!verification.isValid) {
+          return res.status(400).json({
+            success: false,
+            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
+          });
+        }
       }
-    }
 
-    if (type === "selfie") {
-      const verification = await detectSelfie(file.buffer, file.originalname);
-      if (!verification.isValid) {
-        return res.status(400).json({
-          success: false,
-          message: "The selfie photo is not valid. Please try a clear and valid selfie.\n\nTip: Make sure your face is well-lit, looking directly at the camera, and not covered by a mask or sunglasses."
-        });
+      if (type === "bill") {
+        const verification = await detectElectricityBill(file.buffer, file.originalname);
+        if (!verification.isValid) {
+          return res.status(400).json({
+            success: false,
+            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
+          });
+        }
+      }
+
+      if (type === "selfie") {
+        const verification = await detectSelfie(file.buffer, file.originalname);
+        if (!verification.isValid) {
+          return res.status(400).json({
+            success: false,
+            message: "The selfie photo is not valid. Please try a clear and valid selfie.\n\nTip: Make sure your face is well-lit, looking directly at the camera, and not covered by a mask or sunglasses."
+          });
+        }
       }
     }
 
@@ -1584,19 +1588,25 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       const mockUrl = `https://kyc.bharbike.local/${filePath}`;
       const column = DOC_TYPE_TO_COLUMN[type];
       try {
-        await supabase.from("users").update({ [column]: mockUrl }).eq("id", userId);
+        if (type === "profile") {
+          await supabase.from("profiles").update({ image_url: mockUrl }).eq("id", userId);
+        } else {
+          await supabase.from("users").update({ [column]: mockUrl }).eq("id", userId);
+        }
       } catch (dbErr) {
-        console.warn("[POST /api/upload-document] users column missing (non-blocking):", dbErr?.message);
+        console.warn(`[POST /api/upload-document] fallback DB update failed for ${type} (non-blocking):`, dbErr?.message);
       }
       // Also insert into kyc_documents table so /kyc/summary can find it
       try {
-        const kycType = type === "bill" ? "electricity_bill" : type === "aadhaar_front" || type === "aadhaar_back" ? "aadhaar" : type;
-        await supabase.from("kyc_documents").upsert({
-          user_id: userId,
-          type: kycType,
-          file_url: mockUrl,
-          status: "pending",
-        }, { onConflict: "user_id,type" });
+        if (type !== "profile") {
+          const kycType = type === "bill" ? "electricity_bill" : type === "aadhaar_front" || type === "aadhaar_back" ? "aadhaar" : type;
+          await supabase.from("kyc_documents").upsert({
+            user_id: userId,
+            type: kycType,
+            file_url: mockUrl,
+            status: "pending",
+          }, { onConflict: "user_id,type" });
+        }
       } catch (kycErr) {
         console.warn("[POST /api/upload-document] kyc_documents insert skipped (non-blocking):", kycErr?.message);
       }
@@ -1610,20 +1620,26 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
     }
     const column = DOC_TYPE_TO_COLUMN[type];
     try {
-      await supabase.from("users").update({ [column]: publicUrl }).eq("id", userId);
+      if (type === "profile") {
+        await supabase.from("profiles").update({ image_url: publicUrl }).eq("id", userId);
+      } else {
+        await supabase.from("users").update({ [column]: publicUrl }).eq("id", userId);
+      }
     } catch (dbErr) {
-      console.warn("[POST /api/upload-document] users column missing (non-blocking):", dbErr?.message);
+      console.warn(`[POST /api/upload-document] DB update failed for ${type} (non-blocking):`, dbErr?.message);
     }
 
     // Also insert into kyc_documents table so /kyc/summary can find it
     try {
-      const kycType = type === "bill" ? "electricity_bill" : type === "aadhaar_front" || type === "aadhaar_back" ? "aadhaar" : type;
-      await supabase.from("kyc_documents").upsert({
-        user_id: userId,
-        type: kycType,
-        file_url: publicUrl,
-        status: "pending",
-      }, { onConflict: "user_id,type" });
+      if (type !== "profile") {
+        const kycType = type === "bill" ? "electricity_bill" : type === "aadhaar_front" || type === "aadhaar_back" ? "aadhaar" : type;
+        await supabase.from("kyc_documents").upsert({
+          user_id: userId,
+          type: kycType,
+          file_url: publicUrl,
+          status: "pending",
+        }, { onConflict: "user_id,type" });
+      }
     } catch (kycErr) {
       console.warn("[POST /api/upload-document] kyc_documents insert skipped (non-blocking):", kycErr?.message);
     }

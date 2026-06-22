@@ -242,7 +242,7 @@ export const updateUser = async (req, res) => {
     ...(body.phone !== undefined && { phone: body.phone }),
     ...(body.location !== undefined && { location: body.location }),
     ...(body.address !== undefined && { location: body.address }), // map address to location
-    ...(incomingAvatar !== undefined && { image_url: incomingAvatar, avatar_url: incomingAvatar }),
+    ...(incomingAvatar !== undefined && { image_url: incomingAvatar }),
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
     ...(body.fcm_token !== undefined && { fcm_token: body.fcm_token }),
@@ -254,9 +254,8 @@ export const updateUser = async (req, res) => {
     ...(body.full_name !== undefined && { full_name: body.full_name, name: body.full_name }),
     ...(body.email !== undefined && { email: body.email }),
     ...(body.phone !== undefined && { phone: body.phone }),
-    ...(body.location !== undefined && { location: body.location }),
-    ...(body.address !== undefined && { address: body.address }),
-    ...(incomingAvatar !== undefined && { image_url: incomingAvatar, avatar_url: incomingAvatar }),
+    ...(body.location !== undefined && { location: body.location, address: body.location }),
+    ...(body.address !== undefined && { address: body.address, location: body.address }),
     ...(body.emergency_contact_name !== undefined && { emergency_contact_name: body.emergency_contact_name }),
     ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
     ...(body.password !== undefined && { password: body.password }),
@@ -349,34 +348,47 @@ export const getUserStats = asyncHandler(async (req, res) => {
     console.error("[getUserStats] rides error:", ridesError);
   }
 
-  // Get rentals with cost data (distance column may not exist in all schemas)
+  // Get rentals with time and cost data
   const { data: rentals, error: rentalsError } = await supabase
     .from("rentals")
-    .select("total_cost")
+    .select("total_cost, start_time, end_time")
     .eq("user_id", userId);
 
   if (rentalsError) {
     console.error("[getUserStats] rentals error:", rentalsError);
   }
 
-  // Calculate total savings (distance not available in all schemas)
-  let totalDistance = 0;
+  // Calculate total hours and savings
+  let totalHours = 0;
   let totalSavings = 0;
 
   if (rentals && Array.isArray(rentals)) {
     rentals.forEach((rental) => {
-      // Calculate savings: assume taxi costs 2x more than bike rental
+      // Calculate savings
       if (rental.total_cost) {
         totalSavings += parseFloat(rental.total_cost) || 0;
       }
+      // Calculate total rental hours
+      if (rental.start_time && rental.end_time) {
+        const start = new Date(rental.start_time);
+        const end = new Date(rental.end_time);
+        const diffHrs = (end - start) / (1000 * 60 * 60);
+        if (diffHrs > 0) {
+          totalHours += diffHrs;
+        }
+      }
     });
   }
+
+  // Estimate CO2 Saved: ~15km/hr * 0.14 kg CO2/km = ~2.1 kg CO2 per hour
+  const co2Saved = totalHours * 2.1;
 
   res.json({
     success: true,
     data: {
       total_rides: totalRides || 0,
-      total_distance: Math.round(totalDistance),
+      total_hours: parseFloat(totalHours.toFixed(1)),
+      co2_saved: parseFloat(co2Saved.toFixed(1)),
       total_savings: Math.round(totalSavings),
     },
   });

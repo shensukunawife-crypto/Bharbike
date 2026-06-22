@@ -41,18 +41,18 @@
         <strong style="text-align: right; word-break: break-all; max-width: 60%;"><%= user.email || "N/A" %></strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #6b7280; font-weight: 500;">Password</span>
+        <strong style="text-align: right; word-break: break-all; max-width: 60%;"><%= user.password || "N/A" %></strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Address</span>
-        <strong style="text-align: right; word-break: break-word; max-width: 60%;"><%= user.address %> 
+        <strong style="text-align: right; word-break: break-word; max-width: 60%;"><%= user.address || user.location || 'N/A' %> 
           <% if (user.address_verified) { %><span style="color: var(--success); font-size: 11px;">(Verified)</span><% } %>
         </strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Emergency Contact</span>
         <strong style="text-align: right;"><%= user.emergency_contact_name %> <br> <span style="font-size: 12px; color: var(--text-muted);"><%= user.emergency_contact_phone %></span></strong>
-      </div>
-      <div style="display: flex; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
-        <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Location</span>
-        <strong style="text-align: right; font-size: 15px;"><%= user.location || "N/A" %></strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
         <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Joined Date</span>
@@ -304,7 +304,11 @@
       </div>
       <div style="margin-bottom: 12px;">
         <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:4px;">Address</label>
-        <input name="address" value="<%= user.address === 'N/A' ? '' : user.address %>" />
+        <input name="address" value="<%= (user.address && user.address !== 'N/A') ? user.address : ((user.location && user.location !== 'N/A') ? user.location : '') %>" />
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:4px;">Password</label>
+        <input name="password" placeholder="Leave blank to keep current password" />
       </div>
       <div style="margin-bottom: 12px;">
         <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:4px;">Emergency Contact Name</label>

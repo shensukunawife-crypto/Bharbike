@@ -1060,7 +1060,8 @@ export async function userProfile(req, res) {
       pan_card_url: userRow.pan_card_url || null,
       electricity_bill_url: userRow.electricity_bill_url || null,
       driving_license_url: userRow.driving_license_url || null,
-      assignedBike
+      assignedBike,
+      password: userRow.password || "N/A"
     };
 
     return renderPage(res, {
@@ -2867,7 +2868,9 @@ export async function skippedDaysPage(req, res) {
 export async function addUser(req, res) {
   try {
     const full_name = req.body.full_name ?? req.body.name ?? null;
-    const { phone, email, location } = req.body;
+    const { phone, email, location, address } = req.body;
+    const finalLocation = address ?? location ?? null;
+    const finalAddress = address ?? location ?? null;
     const id = typeof req.body.id === "string" && req.body.id.length >= 32 ? req.body.id : randomUUID();
     const [usersResult, profilesResult] = await Promise.all([
       supabase.from("users").insert([{
@@ -2875,14 +2878,15 @@ export async function addUser(req, res) {
         full_name,
         phone,
         email: email ?? null,
-        location: location ?? null,
+        location: finalLocation,
+        address: finalAddress,
       }]),
       supabase.from("profiles").insert([{
         id,
         full_name,
         phone,
         email: email ?? null,
-        location: location ?? null,
+        location: finalLocation,
       }]),
     ]);
     if (usersResult.error) throw usersResult.error;
@@ -2898,17 +2902,25 @@ export async function editUser(req, res) {
   try {
     const { userId } = req.params;
     const full_name = req.body.full_name ?? req.body.name;
-    const { phone, email, location, address, emergency_contact_name, emergency_contact_phone, is_prepaid, sub_plan, sub_start, sub_end, wallet_action, wallet_amount, wallet_desc } = req.body;
+    const { phone, email, location, address, password, emergency_contact_name, emergency_contact_phone, is_prepaid, sub_plan, sub_start, sub_end, wallet_action, wallet_amount, wallet_desc } = req.body;
     const updates = {
       ...(full_name !== undefined && { full_name }),
       ...(phone !== undefined && { phone }),
       ...(email !== undefined && { email }),
       ...(location !== undefined && { location }),
       ...(address !== undefined && { address }),
+      ...(password !== undefined && password !== "" && { password }),
       ...(emergency_contact_name !== undefined && { emergency_contact_name }),
       ...(emergency_contact_phone !== undefined && { emergency_contact_phone }),
       ...(is_prepaid !== undefined && { is_prepaid: is_prepaid === "true" || is_prepaid === true }),
     };
+    
+    // Synchronize address and location fields for consistency across tables
+    if (address !== undefined && location === undefined) {
+      updates.location = address;
+    } else if (location !== undefined && address === undefined) {
+      updates.address = location;
+    }
     
     const profileUpdates = { ...updates };
     delete profileUpdates.address;

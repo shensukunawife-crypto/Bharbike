@@ -24,7 +24,7 @@ async function handleAdminApiLogin(req, res) {
     const { data: dbAdmin, error } = await supabase
       .from("admin_users")
       .select("*")
-      .eq("email", username.trim())
+      .eq("email", username.trim().toLowerCase())
       .maybeSingle();
 
     if (!error && dbAdmin && dbAdmin.is_active) {

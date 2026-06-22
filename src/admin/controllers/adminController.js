@@ -3711,7 +3711,7 @@ export async function addAdmin(req, res) {
     const password_hash = await bcrypt.hash(password, 10);
     
     const { error } = await supabase.from("admin_users").insert([{
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       full_name: full_name.trim(),
       password_hash,
       role: role || "sub_admin",

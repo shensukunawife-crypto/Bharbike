@@ -69,6 +69,17 @@ r.post(
 );
 
 r.post(
+  "/register",
+  [
+    body("email").trim().isEmail().withMessage("Valid email required"),
+    body("password").trim().isLength({ min: 6 }).withMessage("Password must be at least 6 chars"),
+    body("full_name").optional().trim().isLength({ min: 1 }),
+  ],
+  validateRequest,
+  authController.signup
+);
+
+r.post(
   "/email-login",
   [
     body("email").trim().isEmail().withMessage("Valid email required"),

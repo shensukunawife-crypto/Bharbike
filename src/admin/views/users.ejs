@@ -161,6 +161,7 @@
           <label>Subscription Expiry Date</label>
           <input type="datetime-local" name="sub_end" id="edit-user-sub-end" />
         </div>
+        <% if (locals.admin && locals.admin.role === 'master_admin') { %>
         <div style="border-top: 1px solid var(--border); margin-top: 15px; padding-top: 15px; margin-bottom: 10px;">
           <h4 style="margin: 0 0 10px 0; color: #ff8a3d; font-size: 14px; display: flex; align-items: center; gap: 6px;">💰 Manage Wallet Balance</h4>
           <div class="form-row" style="display:flex; gap:16px;">
@@ -186,6 +187,7 @@
             <input type="password" name="admin_passcode" id="admin_passcode" placeholder="Enter Admin Passcode" />
           </div>
         </div>
+        <% } %>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
           <button type="button" class="btn btn-danger admin-action" data-url="" id="edit-user-delete-btn" data-confirm="Are you sure you want to permanently delete this user?">Delete User</button>
           <button type="submit" class="btn btn-primary">Update User</button>

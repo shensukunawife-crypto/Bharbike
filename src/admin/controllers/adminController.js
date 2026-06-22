@@ -2961,6 +2961,9 @@ export async function editUser(req, res) {
     // 3. Handle Wallet manual credits/debits
     const amount = Number(wallet_amount);
     if (!isNaN(amount) && amount > 0 && wallet_action && wallet_action !== "none") {
+      if (req.admin && req.admin.role !== "master_admin") {
+        return res.status(403).json({ success: false, message: "Only master admins can modify wallet balances." });
+      }
       const expectedPasscode = process.env.ADMIN_PASSCODE || "4812";
       if (req.body.admin_passcode !== expectedPasscode) {
         return res.status(401).json({ success: false, message: "Invalid Admin Passcode for wallet changes." });

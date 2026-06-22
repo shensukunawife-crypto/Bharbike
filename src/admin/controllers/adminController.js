@@ -1003,12 +1003,12 @@ export async function users(req, res) {
 export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
-    const [mappings, { data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRental }, { data: profileRow }] = await Promise.all([
+    const [mappings, { data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRentalRows }, { data: profileRow }] = await Promise.all([
       getIdMappings(),
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
       supabase.from("wallet_balances").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("rentals").select("*").eq("user_id", userId).eq("status", "ongoing").maybeSingle(),
+      supabase.from("rentals").select("*").eq("user_id", userId).eq("status", "ongoing").order("created_at", { ascending: false }).limit(1),
       supabase.from("profiles").select("image_url").eq("id", userId).maybeSingle(),
     ]);
     if (!userRow) {
@@ -1030,6 +1030,7 @@ export async function userProfile(req, res) {
       );
     const totalSpent = orders.reduce((sum, order) => ["assigned", "ongoing", "completed", "paid", "success"].includes(order.status) ? sum + Number(order.amount || 0) : sum, 0);
     const paymentMethod = totalSpent > 0 ? "Online" : "Cash";
+    const activeRental = activeRentalRows && activeRentalRows.length > 0 ? activeRentalRows[0] : null;
     let assignedBike = "None";
     if (activeRental && activeRental.bike_id) {
       const { data: bikeRow } = await supabase.from("bikes").select("bike_code").eq("id", activeRental.bike_id).maybeSingle();

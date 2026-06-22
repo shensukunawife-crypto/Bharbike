@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env.js";
 import { BRAND_NAME, BRAND_PRODUCT_NAME, formatBrand } from "../../config/branding.js";
+import supabase from "../../config/supabase.js";
 
 function readCookie(cookieHeader, name) {
   if (!cookieHeader) return "";
@@ -40,7 +41,7 @@ export async function requireAdminAuth(req, res, next) {
 
     // Security check: Verify the admin is still active
     if (payload.admin_id && payload.role !== "master_admin" && payload.role !== "admin") {
-      const { data: dbAdmin } = await import("../../config/supabase.js").then(m => m.default)
+      const { data: dbAdmin } = await supabase
         .from("admin_users")
         .select("is_active")
         .eq("id", payload.admin_id)
@@ -57,10 +58,10 @@ export async function requireAdminAuth(req, res, next) {
   } catch (error) {
     console.error("[adminAuth] Error verifying token:", error.message, error);
     if (onAdminSite && req.method === "GET") {
-      const errCode = error.message === "db_inactive" ? "db_inactive" : "jwt_fail";
-      return res.redirect(302, `/admin/login?err=${errCode}`);
+      const errMsg = encodeURIComponent(error.message);
+      return res.redirect(302, `/admin/login?err=${errMsg}`);
     }
-    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    return res.status(401).json({ success: false, message: "Invalid or expired token", error: error.message });
   }
 }
 

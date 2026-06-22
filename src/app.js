@@ -55,14 +55,6 @@ app.options("*", cors());
 
 // Railway / load balancers: probes AFTER CORS
 app.get("/health", (req, res) => res.status(200).send("OK"));
-app.get("/api/check-config-debug", (req, res) => {
-  res.json({
-    hasUrl: !!process.env.SUPABASE_URL,
-    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    hasKey: !!process.env.SUPABASE_KEY,
-    isServiceRole: supabase.isServiceRole,
-  });
-});
 app.head("/health", (req, res) => res.status(200).end());
 
 const __filename = fileURLToPath(import.meta.url);

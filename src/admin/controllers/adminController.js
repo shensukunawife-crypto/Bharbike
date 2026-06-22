@@ -317,7 +317,7 @@ function normalizeBike(bike, index) {
     ? rawLocation
     : (bike.last_lat && bike.last_lng)
       ? `${Number(bike.last_lat).toFixed(5)}, ${Number(bike.last_lng).toFixed(5)}`
-      : rawLocation || "No location data";
+      : "No location data";
   const lastServiceDate = bike.last_service_date || bike.lastServiceDate || "2026-04-01";
 
   return {
@@ -3055,7 +3055,7 @@ export async function addBike(req, res) {
       bike_code: bike_code.trim(),
       status: status || "available",
       battery: Number(req.body.battery || 0),
-      location: req.body.location || "Main Hub",
+      location: req.body.location && req.body.location.trim() ? req.body.location.trim() : null,
     };
     if (model && model.trim()) insertPayload.model = model.trim();
     if (color && color.trim()) insertPayload.color = color.trim();

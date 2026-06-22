@@ -1003,12 +1003,12 @@ export async function users(req, res) {
 export async function userProfile(req, res) {
   try {
     const { userId } = req.params;
-    const [mappings, { data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRentalRows }, { data: profileRow }] = await Promise.all([
+    const [mappings, { data: userRow }, { data: ordersData }, { data: walletRow }, { data: activeRental }, { data: profileRow }] = await Promise.all([
       getIdMappings(),
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
       supabase.from("wallet_balances").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("rentals").select("*").eq("user_id", userId).eq("status", "ongoing").order("created_at", { ascending: false }).limit(1),
+      supabase.from("rentals").select("*").eq("user_id", userId).eq("status", "ongoing").maybeSingle(),
       supabase.from("profiles").select("image_url").eq("id", userId).maybeSingle(),
     ]);
     if (!userRow) {
@@ -1030,7 +1030,6 @@ export async function userProfile(req, res) {
       );
     const totalSpent = orders.reduce((sum, order) => ["assigned", "ongoing", "completed", "paid", "success"].includes(order.status) ? sum + Number(order.amount || 0) : sum, 0);
     const paymentMethod = totalSpent > 0 ? "Online" : "Cash";
-    const activeRental = activeRentalRows && activeRentalRows.length > 0 ? activeRentalRows[0] : null;
     let assignedBike = "None";
     if (activeRental && activeRental.bike_id) {
       const { data: bikeRow } = await supabase.from("bikes").select("bike_code").eq("id", activeRental.bike_id).maybeSingle();
@@ -3093,21 +3092,37 @@ export async function addBike(req, res) {
 export async function assignBike(req, res) {
   try {
     const { bikeId } = req.params;
-    const { user_id, duration_hours = 24 } = req.body;
+    const { user_id, duration_hours, duration_value, duration_unit = "hours" } = req.body;
 
     if (!user_id) {
       return res.status(400).json({ success: false, message: "User ID is required" });
     }
 
     const startTime = new Date();
-    const endTime = new Date(startTime.getTime() + duration_hours * 60 * 60 * 1000);
+    let endTime;
+    let durationHours;
+
+    if (duration_unit === "days") {
+      const days = Number(duration_value || 1);
+      durationHours = days * 24;
+      
+      const now = new Date();
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istTime = new Date(now.getTime() + istOffset);
+      istTime.setDate(istTime.getDate() + days);
+      istTime.setUTCHours(9, 0, 0, 0);
+      endTime = new Date(istTime.getTime() - istOffset);
+    } else {
+      durationHours = Number(duration_value || duration_hours || 24);
+      endTime = new Date(startTime.getTime() + durationHours * 60 * 60 * 1000);
+    }
 
     const pricePerHour = Number(dashboardSettings.bikePricePerHour || 0);
-    const calculatedPrice = pricePerHour * Number(duration_hours);
+    const calculatedPrice = pricePerHour * Number(durationHours);
     const { error: rentalError } = await supabase.from("rentals").insert([{
       bike_id: bikeId,
       user_id,
-      duration: duration_hours,
+      duration: durationHours,
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       status: "ongoing",

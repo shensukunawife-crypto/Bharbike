@@ -140,8 +140,19 @@
           <option value="<%= user.id %>"><%= user.full_name || user.name || "Unknown User" %> - <%= user.phone || user.email || "No Contact" %></option>
         <% }) %>
       </select>
-      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: #4b5563; font-weight: 500;">Rental Duration (Hours)</label>
-      <input type="number" name="duration_hours" value="24" min="1" required />
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <div style="flex: 2;">
+          <label style="display: block; margin-bottom: 6px; font-size: 13px; color: #4b5563; font-weight: 500;">Rental Duration</label>
+          <input type="number" name="duration_value" value="24" min="1" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #d1d5db; box-sizing: border-box; background: #f8fafc; font-size: 14px;" />
+        </div>
+        <div style="flex: 1;">
+          <label style="display: block; margin-bottom: 6px; font-size: 13px; color: #4b5563; font-weight: 500;">Unit</label>
+          <select name="duration_unit" id="duration-unit-select" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #f8fafc; font-size: 14px; box-sizing: border-box; height: 45px;">
+            <option value="hours" selected>Hours</option>
+            <option value="days">Days</option>
+          </select>
+        </div>
+      </div>
       <button type="submit" class="btn btn-gold glow">Assign to User</button>
     </form>
   </div>
@@ -158,4 +169,13 @@ function openAssignModal(bikeId, bikeCode) {
 function closeAssignModal() {
   document.getElementById('assign-bike-modal').classList.remove('show');
 }
+
+document.getElementById('duration-unit-select').addEventListener('change', function() {
+  const durationInput = document.querySelector('input[name="duration_value"]');
+  if (this.value === 'days') {
+    durationInput.value = '1';
+  } else {
+    durationInput.value = '24';
+  }
+});
 </script>

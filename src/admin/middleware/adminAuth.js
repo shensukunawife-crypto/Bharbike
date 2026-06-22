@@ -24,7 +24,7 @@ export async function requireAdminAuth(req, res, next) {
 
   if (!token) {
     if (onAdminSite && req.method === "GET") {
-      return res.redirect(302, "/admin/login");
+      return res.redirect(302, "/admin/login?err=no_token");
     }
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
@@ -33,7 +33,7 @@ export async function requireAdminAuth(req, res, next) {
     const payload = jwt.verify(token, env.jwtSecret);
     if (!payload.role) {
       if (onAdminSite && req.method === "GET") {
-        return res.redirect(302, "/admin/login");
+        return res.redirect(302, "/admin/login?err=no_role");
       }
       return res.status(403).json({ success: false, message: "Forbidden: Admin privileges required" });
     }
@@ -47,7 +47,7 @@ export async function requireAdminAuth(req, res, next) {
         .maybeSingle();
 
       if (!dbAdmin || !dbAdmin.is_active) {
-        throw new Error("Admin account deactivated");
+        throw new Error("db_inactive");
       }
     }
 
@@ -55,8 +55,10 @@ export async function requireAdminAuth(req, res, next) {
     res.locals.admin = payload;
     return next();
   } catch (error) {
+    console.error("[adminAuth] Error verifying token:", error.message, error);
     if (onAdminSite && req.method === "GET") {
-      return res.redirect(302, "/admin/login");
+      const errCode = error.message === "db_inactive" ? "db_inactive" : "jwt_fail";
+      return res.redirect(302, `/admin/login?err=${errCode}`);
     }
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }

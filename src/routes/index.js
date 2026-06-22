@@ -1521,59 +1521,7 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
       return res.status(400).json({ success: false, message: "Only jpg, png, pdf allowed" });
     }
 
-    const isPdf = file.mimetype === "application/pdf" || file.originalname?.toLowerCase().endsWith(".pdf");
 
-    if (!isPdf) {
-      if (type === "pan") {
-        const verification = await detectPanCard(file.buffer, file.originalname);
-        if (!verification.isValid) {
-          return res.status(400).json({
-            success: false,
-            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-          });
-        }
-      }
-
-      if (type === "aadhaar_front" || type === "aadhaar_back") {
-        const verification = await detectAadhaarCard(file.buffer, file.originalname);
-        if (!verification.isValid) {
-          return res.status(400).json({
-            success: false,
-            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-          });
-        }
-      }
-
-      if (type === "driving_license") {
-        const verification = await detectDrivingLicense(file.buffer, file.originalname);
-        if (!verification.isValid) {
-          return res.status(400).json({
-            success: false,
-            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-          });
-        }
-      }
-
-      if (type === "bill") {
-        const verification = await detectElectricityBill(file.buffer, file.originalname);
-        if (!verification.isValid) {
-          return res.status(400).json({
-            success: false,
-            message: "The document is not valid. Please try a clear and valid document.\n\nTip: Make sure the document is well-lit, not blurry, and all 4 corners are visible."
-          });
-        }
-      }
-
-      if (type === "selfie") {
-        const verification = await detectSelfie(file.buffer, file.originalname);
-        if (!verification.isValid) {
-          return res.status(400).json({
-            success: false,
-            message: "The selfie photo is not valid. Please try a clear and valid selfie.\n\nTip: Make sure your face is well-lit, looking directly at the camera, and not covered by a mask or sunglasses."
-          });
-        }
-      }
-    }
 
     const safeMimeExtension =
       file.mimetype === "application/pdf" ? "pdf" : file.mimetype === "image/png" ? "png" : "jpg";

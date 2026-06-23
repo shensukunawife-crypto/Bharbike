@@ -570,9 +570,14 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overflow-y: auto;
 }
 
 .modal.show { display: flex; }
+
+.modal-card {
+  margin: auto;
+}
 
 .modal-content {
   background: var(--surface);

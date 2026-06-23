@@ -178,7 +178,10 @@ async function finalizeRental(rentalId, status) {
   }).eq("id", rentalId);
   if (rentUpdateErr) throw new AppError(`Failed to end rental: ${rentUpdateErr.message}`, 500);
 
-  const { error: bikeUpdateErr } = await supabase.from("bikes").update({ status: BikeStatus.available }).eq("id", rental.bike_id);
+  const { error: bikeUpdateErr } = await supabase.from("bikes").update({ 
+    status: BikeStatus.available,
+    is_locked: true 
+  }).eq("id", rental.bike_id);
   if (bikeUpdateErr) throw new AppError(`Failed to release bike: ${bikeUpdateErr.message}`, 500);
 
   // Skip IoT lock if not configured (demo mode)
@@ -287,7 +290,7 @@ export async function getActiveRentalForUser(userId) {
     .from("rentals")
     .select("*, bikes(*)")
     .eq("user_id", userId)
-    .eq("status", RentalStatus.active)
+    .in("status", [RentalStatus.active, RentalStatus.ongoing])
     .maybeSingle();
   if (error) {
     console.error("[rentalService.getActiveRentalForUser] failed", error);

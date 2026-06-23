@@ -23,7 +23,7 @@ export const createBooking = async (req, res) => {
       .from("rentals")
       .select("id")
       .eq("user_id", user_id)
-      .eq("status", "active")
+      .in("status", ["active", "ongoing"])
       .maybeSingle();
 
     if (activeBooking) {

@@ -212,6 +212,7 @@ export const updateUser = async (req, res) => {
       ...(body.emergency_contact_phone !== undefined && { emergency_contact_phone: body.emergency_contact_phone }),
     };
     demoProfiles.set(id, updated);
+    const isCoreUpdate = body.full_name !== undefined || body.email !== undefined || body.location !== undefined || body.address !== undefined;
     if (body.emergency_contact_name || body.emergency_contact_phone) {
       createUserNotification(
         id,
@@ -219,7 +220,7 @@ export const updateUser = async (req, res) => {
         `Your emergency contact (${body.emergency_contact_name || "Emergency Contact"}) has been successfully linked/updated for your safety.`,
         "success"
       ).catch((err) => console.warn("[userController.updateUser] demo emergency notification failed:", err?.message));
-    } else {
+    } else if (isCoreUpdate) {
       createUserNotification(
         id,
         "Profile Configured Successfully! ⚙️",
@@ -307,6 +308,7 @@ export const updateUser = async (req, res) => {
 
   const updated = data?.[0] ?? data ?? null;
   if (updated && updated.id) {
+    const isCoreUpdate = body.full_name !== undefined || body.email !== undefined || body.location !== undefined || body.address !== undefined || incomingAvatar !== undefined;
     if (body.emergency_contact_name || body.emergency_contact_phone) {
       createUserNotification(
         updated.id,
@@ -314,7 +316,7 @@ export const updateUser = async (req, res) => {
         `Your emergency contact (${body.emergency_contact_name || "Emergency Contact"}) has been successfully linked/updated for your safety.`,
         "success"
       ).catch((err) => console.warn("[userController.updateUser] emergency notification failed:", err?.message));
-    } else {
+    } else if (isCoreUpdate) {
       createUserNotification(
         updated.id,
         "Profile Configured Successfully! ⚙️",

@@ -167,10 +167,41 @@ document.querySelectorAll(".open-maintenance-status").forEach((btn) => {
     const techEl = document.getElementById("maintenance-tech");
     const costEl = document.getElementById("maintenance-cost");
     const expectedEl = document.getElementById("maintenance-expected");
+    const workDetailsEl = document.getElementById("maintenance-work-details");
+    const fixedEl = document.getElementById("maintenance-fixed-date");
+    
     if (statusEl) statusEl.value = btn.dataset.status || "under_repair";
     if (techEl) techEl.value = btn.dataset.tech || "";
     if (costEl) costEl.value = btn.dataset.cost || "";
     if (expectedEl) expectedEl.value = btn.dataset.expected || "";
+    if (workDetailsEl) workDetailsEl.value = btn.dataset.workDetails || "";
+    
+    if (fixedEl) {
+      let fDate = btn.dataset.fixedDate || "";
+      // Convert "2026-06-23 22:30" to datetime-local format "2026-06-23T22:30"
+      if (fDate && fDate.includes(" ")) {
+        fDate = fDate.replace(" ", "T");
+      }
+      fixedEl.value = fDate;
+    }
+
+    const expectedGroup = document.getElementById("expected-date-group");
+    const fixedGroup = document.getElementById("fixed-datetime-group");
+    const toggleGroups = () => {
+      if (statusEl && statusEl.value === "completed") {
+        if (expectedGroup) expectedGroup.style.display = "none";
+        if (fixedGroup) fixedGroup.style.display = "block";
+      } else {
+        if (expectedGroup) expectedGroup.style.display = "block";
+        if (fixedGroup) fixedGroup.style.display = "none";
+      }
+    };
+    if (statusEl) {
+      statusEl.removeEventListener("change", toggleGroups);
+      statusEl.addEventListener("change", toggleGroups);
+    }
+    toggleGroups();
+    
     modal.classList.add("show");
   });
 });

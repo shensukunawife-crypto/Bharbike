@@ -175,10 +175,11 @@ export const maintenanceTickets = [
     bikeCode: "BIKE-101",
     issueType: "Brake Issue",
     description: "Rear brake response is weak",
+    workDetails: "Adjusted rear caliper tension; preparing to replace worn brake pads.",
     status: "under_repair",
     technicianName: "Ravi Kumar",
     repairCost: 450,
-    reportedDate: "2026-04-15",
+    reportedDate: "2026-04-15 14:30",
     expectedFixDate: "2026-04-19",
     fixedDate: null,
   },
@@ -188,10 +189,11 @@ export const maintenanceTickets = [
     bikeCode: "BIKE-203",
     issueType: "Battery Drop",
     description: "Battery drains quickly after 20km",
+    workDetails: "Testing individual cell voltages and checking battery management system (BMS).",
     status: "in_progress",
     technicianName: "Neha Singh",
     repairCost: 700,
-    reportedDate: "2026-04-16",
+    reportedDate: "2026-04-16 09:15",
     expectedFixDate: "2026-04-20",
     fixedDate: null,
   },
@@ -201,12 +203,13 @@ export const maintenanceTickets = [
     bikeCode: "BIKE-309",
     issueType: "Tyre Replacement",
     description: "Front tyre puncture and wear",
+    workDetails: "Replaced front tyre with brand new MRF nylon tyre and aligned front wheel.",
     status: "completed",
     technicianName: "Aman Verma",
     repairCost: 320,
-    reportedDate: "2026-04-10",
+    reportedDate: "2026-04-10 11:00",
     expectedFixDate: "2026-04-12",
-    fixedDate: "2026-04-12",
+    fixedDate: "2026-04-12 16:45",
   },
 ];
 
@@ -3427,7 +3430,7 @@ export async function disablePartner(req, res) {
 export async function markBikeFixed(req, res) {
   try {
     const { bikeId } = req.params;
-    const fixedDate = new Date().toISOString().slice(0, 10);
+    const fixedDate = new Date().toISOString().slice(0, 16).replace("T", " ");
     const { error } = await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
     if (error) throw error;
     // Update in-memory ticket
@@ -3435,6 +3438,7 @@ export async function markBikeFixed(req, res) {
     if (ticket) {
       ticket.status = "completed";
       ticket.fixedDate = fixedDate;
+      ticket.workDetails = ticket.workDetails || "General repairs completed.";
     }
     // Also persist to maintenance DB table if it exists
     await supabase.from("maintenance").update({ status: "completed", fixed_date: fixedDate }).eq("bike_id", bikeId)
@@ -3455,10 +3459,11 @@ export async function addMaintenanceTicket(req, res) {
       bikeCode: bike?.bike_code || "BIKE-NEW",
       issueType: req.body.issueType || "General Check",
       description: req.body.description || "No details",
+      workDetails: req.body.workDetails || "-",
       status: "under_repair",
       technicianName: req.body.technicianName || "Unassigned",
       repairCost: Number(req.body.repairCost || 0),
-      reportedDate: req.body.reportedDate || new Date().toISOString().slice(0, 10),
+      reportedDate: req.body.reportedDate ? req.body.reportedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " "),
       expectedFixDate: req.body.expectedFixDate || new Date().toISOString().slice(0, 10),
       fixedDate: null,
     };
@@ -3495,8 +3500,9 @@ export async function updateMaintenanceStatus(req, res) {
     ticket.technicianName = req.body.technicianName || ticket.technicianName;
     ticket.repairCost = Number(req.body.repairCost || ticket.repairCost);
     ticket.expectedFixDate = req.body.expectedFixDate || ticket.expectedFixDate;
+    ticket.workDetails = req.body.workDetails || ticket.workDetails;
     if (ticket.status === "completed") {
-      ticket.fixedDate = new Date().toISOString().slice(0, 10);
+      ticket.fixedDate = req.body.fixedDate ? req.body.fixedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " ");
       await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
     }
     // Persist update to maintenance DB table

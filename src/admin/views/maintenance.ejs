@@ -36,23 +36,25 @@
         <th>Bike ID</th>
         <th>Issue Type</th>
         <th>Description</th>
+        <th>Particulars of Work</th>
         <th>Status</th>
         <th>Technician</th>
         <th>Repair Cost</th>
-        <th>Reported Date</th>
+        <th>Time In</th>
         <th>Expected Fix Date</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       <% if (!tickets.length) { %>
-      <tr><td colspan="9" class="empty">No maintenance tickets found</td></tr>
+      <tr><td colspan="10" class="empty">No maintenance tickets found</td></tr>
       <% } %>
       <% tickets.forEach((ticket, idx) => { %>
       <tr class="<%= idx % 2 ? 'zebra' : '' %>">
         <td>🛵 <%= ticket.bikeCode %></td>
         <td><span class="badge badge-soft"><%= ticket.issueType %></span></td>
         <td><%= ticket.description %></td>
+        <td><%= ticket.workDetails || '-' %></td>
         <td>
           <span class="badge <%= ticket.status === 'under_repair' ? 'danger' : ticket.status === 'in_progress' ? 'warning' : 'success' %>">
             <%= ticket.status === 'under_repair' ? 'Under Repair' : ticket.status === 'in_progress' ? 'In Progress' : 'Completed' %>
@@ -71,6 +73,8 @@
             data-tech="<%= ticket.technicianName %>"
             data-cost="<%= ticket.repairCost %>"
             data-expected="<%= ticket.expectedFixDate %>"
+            data-work-details="<%= ticket.workDetails || '' %>"
+            data-fixed-date="<%= ticket.fixedDate || '' %>"
           >
             ✏️ Update
           </button>
@@ -90,19 +94,23 @@
         <tr>
           <th>Bike ID</th>
           <th>Issue</th>
+          <th>Particulars of Work</th>
           <th>Cost</th>
-          <th>Fixed Date</th>
+          <th>Time In</th>
+          <th>Time Out</th>
         </tr>
       </thead>
       <tbody>
         <% if (!history.length) { %>
-        <tr><td colspan="4" class="empty">No maintenance history found</td></tr>
+        <tr><td colspan="6" class="empty">No maintenance history found</td></tr>
         <% } %>
         <% history.forEach((item) => { %>
         <tr>
-          <td><%= item.bikeCode %></td>
-          <td><%= item.issueType %></td>
+          <td>🛵 <%= item.bikeCode %></td>
+          <td><span class="badge badge-soft"><%= item.issueType %></span></td>
+          <td><%= item.workDetails || '-' %></td>
           <td>₹<%= item.repairCost %></td>
+          <td><%= item.reportedDate || '-' %></td>
           <td><%= item.fixedDate || '-' %></td>
         </tr>
         <% }) %>
@@ -156,11 +164,21 @@
         <% }) %>
       </select>
       <input name="issueType" placeholder="Issue Type" required />
-      <textarea name="description" rows="3" placeholder="Description" required></textarea>
+      <textarea name="description" rows="3" placeholder="Issue Description / Symptoms" required></textarea>
+      <textarea name="workDetails" rows="2" placeholder="Particulars of Work / Details of Work Done (Optional)"></textarea>
       <input type="text" name="technicianName" placeholder="Technician Name" />
       <input type="number" name="repairCost" placeholder="Repair Cost" />
-      <input type="date" name="reportedDate" required />
-      <input type="date" name="expectedFixDate" required />
+      
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time In (Date & Time)</label>
+        <input type="datetime-local" name="reportedDate" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Expected Fix Date</label>
+        <input type="date" name="expectedFixDate" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+      
       <button type="submit" class="btn btn-gold glow">Add Maintenance</button>
     </form>
   </div>
@@ -170,14 +188,25 @@
   <div class="modal-card">
     <h3>Update Maintenance Status</h3>
     <form class="admin-form ajax-form" id="update-maintenance-form" data-url="">
-      <select name="status" id="maintenance-status">
+      <select name="status" id="maintenance-status" style="margin-bottom:12px;">
         <option value="under_repair">Under Repair</option>
         <option value="in_progress">In Progress</option>
         <option value="completed">Completed</option>
       </select>
-      <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" />
-      <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" />
-      <input type="date" name="expectedFixDate" id="maintenance-expected" />
+      <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" style="margin-bottom:12px;" />
+      <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" style="margin-bottom:12px;" />
+      <textarea name="workDetails" id="maintenance-work-details" rows="3" placeholder="Particulars of Work Done (e.g., replaced tyres, oil change)" style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
+      
+      <div id="expected-date-group" style="margin-bottom: 15px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Expected Fix Date</label>
+        <input type="date" name="expectedFixDate" id="maintenance-expected" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+      
+      <div id="fixed-datetime-group" style="margin-bottom: 15px; display:none;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time Out (Completion Date & Time)</label>
+        <input type="datetime-local" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+      
       <button type="submit" class="btn btn-gold glow">Update</button>
     </form>
   </div>

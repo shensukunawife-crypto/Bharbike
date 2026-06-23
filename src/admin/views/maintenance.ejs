@@ -69,14 +69,18 @@
           <button
             class="btn btn-outline open-maintenance-status"
             data-id="<%= ticket.id %>"
+            data-bike-code="<%= ticket.bikeCode %>"
+            data-issue-type="<%= ticket.issueType %>"
+            data-description="<%= ticket.description %>"
             data-status="<%= ticket.status %>"
             data-tech="<%= ticket.technicianName %>"
             data-cost="<%= ticket.repairCost %>"
-            data-expected="<%= ticket.expectedFixDate %>"
             data-work-details="<%= ticket.workDetails || '' %>"
+            data-reported-date="<%= ticket.reportedDate || '' %>"
+            data-expected="<%= ticket.expectedFixDate || '' %>"
             data-fixed-date="<%= ticket.fixedDate || '' %>"
           >
-            ✏️ Update
+            🔍 Details
           </button>
           <button class="btn btn-danger-ghost admin-action" data-url="/admin/maintenance/<%= ticket.id %>/remove" data-method="POST">🗑️ Delete</button>
         </td>
@@ -98,11 +102,12 @@
           <th>Cost</th>
           <th>Time In</th>
           <th>Time Out</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <% if (!history.length) { %>
-        <tr><td colspan="6" class="empty">No maintenance history found</td></tr>
+        <tr><td colspan="7" class="empty">No maintenance history found</td></tr>
         <% } %>
         <% history.forEach((item) => { %>
         <tr>
@@ -112,6 +117,24 @@
           <td>₹<%= item.repairCost %></td>
           <td><%= item.reportedDate || '-' %></td>
           <td><%= item.fixedDate || '-' %></td>
+          <td class="actions">
+            <button
+              class="btn btn-outline open-maintenance-status"
+              data-id="<%= item.id %>"
+              data-bike-code="<%= item.bikeCode %>"
+              data-issue-type="<%= item.issueType %>"
+              data-description="<%= item.description %>"
+              data-status="<%= item.status %>"
+              data-tech="<%= item.technicianName %>"
+              data-cost="<%= item.repairCost %>"
+              data-work-details="<%= item.workDetails || '' %>"
+              data-reported-date="<%= item.reportedDate || '' %>"
+              data-expected="<%= item.expectedFixDate || '' %>"
+              data-fixed-date="<%= item.fixedDate || '' %>"
+            >
+              🔍 Details
+            </button>
+          </td>
         </tr>
         <% }) %>
       </tbody>
@@ -185,18 +208,54 @@
 </div>
 
 <div class="modal" id="update-maintenance-modal">
-  <div class="modal-card">
-    <h3>Update Maintenance Status</h3>
+  <div class="modal-card" style="max-width: 500px; width: 90%;">
+    <h3>🛠️ Maintenance Ticket Details</h3>
     <form class="admin-form ajax-form" id="update-maintenance-form" data-url="">
-      <select name="status" id="maintenance-status" style="margin-bottom:12px;">
-        <option value="under_repair">Under Repair</option>
-        <option value="in_progress">In Progress</option>
-        <option value="completed">Completed</option>
-      </select>
-      <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" style="margin-bottom:12px;" />
-      <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" style="margin-bottom:12px;" />
-      <textarea name="workDetails" id="maintenance-work-details" rows="3" placeholder="Particulars of Work Done (e.g., replaced tyres, oil change)" style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
       
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Bike Code</label>
+        <input type="text" id="maintenance-bike-code" readonly style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:not-allowed;" />
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Issue Type</label>
+        <input type="text" name="issueType" id="maintenance-issue-type" placeholder="Issue Type" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Description</label>
+        <textarea name="description" id="maintenance-description" rows="2" placeholder="Description" required style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Particulars of Work Done</label>
+        <textarea name="workDetails" id="maintenance-work-details" rows="2" placeholder="Particulars of Work Done (e.g., replaced tyres, oil change)" style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Status</label>
+        <select name="status" id="maintenance-status" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+          <option value="under_repair">Under Repair</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Technician Name</label>
+        <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Repair Cost (₹)</label>
+        <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time In (Date & Time)</label>
+        <input type="datetime-local" name="reportedDate" id="maintenance-reported-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      </div>
+
       <div id="expected-date-group" style="margin-bottom: 15px;">
         <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Expected Fix Date</label>
         <input type="date" name="expectedFixDate" id="maintenance-expected" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
@@ -207,7 +266,7 @@
         <input type="datetime-local" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
       </div>
       
-      <button type="submit" class="btn btn-gold glow">Update</button>
+      <button type="submit" class="btn btn-gold glow" style="width:100%; padding:10px; font-weight:600;">Save Changes</button>
     </form>
   </div>
 </div>

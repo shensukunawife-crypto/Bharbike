@@ -1263,7 +1263,7 @@ api.post("/admin/maintenance/add", requireAdminAuth, requirePermission("manage_b
 api.put("/admin/maintenance/:ticketId", requireAdminAuth, requirePermission("manage_bikes"), async (req, res) => {
   try {
     const { ticketId } = req.params;
-    const { status, technicianName, repairCost, expectedFixDate } = req.body;
+    const { status, technicianName, repairCost, expectedFixDate, workDetails, issueType, description, reportedDate, fixedDate } = req.body;
 
     const ticket = maintenanceTickets.find((item) => item.id === ticketId);
     if (!ticket) {
@@ -1274,13 +1274,34 @@ api.put("/admin/maintenance/:ticketId", requireAdminAuth, requirePermission("man
     if (technicianName !== undefined) ticket.technicianName = technicianName;
     if (repairCost !== undefined) ticket.repairCost = Number(repairCost) || 0;
     if (expectedFixDate !== undefined) ticket.expectedFixDate = expectedFixDate;
+    if (workDetails !== undefined) ticket.workDetails = workDetails;
+    if (issueType !== undefined) ticket.issueType = issueType;
+    if (description !== undefined) ticket.description = description;
+    if (reportedDate !== undefined) ticket.reportedDate = reportedDate.replace("T", " ");
 
     if (ticket.status === "completed") {
-      ticket.fixedDate = new Date().toISOString().slice(0, 10);
+      ticket.fixedDate = fixedDate ? fixedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " ");
       await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
+    } else {
+      ticket.fixedDate = null;
+      await supabase.from("bikes").update({ status: "maintenance" }).eq("id", ticket.bikeId);
     }
 
-    return res.json({ success: true, data: ticket, message: "Maintenance ticket updated" });
+    // Persist update to maintenance DB table
+    await supabase.from("maintenance").update({
+      status: ticket.status,
+      technician_name: ticket.technicianName,
+      repair_cost: ticket.repairCost,
+      expected_fix_date: ticket.expectedFixDate,
+      issue_type: ticket.issueType,
+      description: ticket.description,
+      reported_date: ticket.reportedDate,
+      work_details: ticket.workDetails,
+      ...(ticket.status === "completed" ? { fixed_date: ticket.fixedDate } : { fixed_date: null }),
+    }).eq("bike_id", ticket.bikeId)
+      .then(({ error: mErr }) => { if (mErr) console.warn("[PUT /admin/maintenance] maintenance table update:", mErr.message); });
+
+    return res.json({ success: true, data: ticket, message: "Maintenance ticket updated successfully" });
   } catch (err) {
     console.error("[PUT /api/admin/maintenance/:ticketId] failed:", err);
     return res.status(500).json({ success: false, message: "Server error" });

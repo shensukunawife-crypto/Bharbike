@@ -3497,13 +3497,20 @@ export async function updateMaintenanceStatus(req, res) {
       return res.status(404).json({ success: false, message: "Ticket not found" });
     }
     ticket.status = req.body.status || ticket.status;
-    ticket.technicianName = req.body.technicianName || ticket.technicianName;
-    ticket.repairCost = Number(req.body.repairCost || ticket.repairCost);
+    ticket.technicianName = req.body.technicianName !== undefined ? req.body.technicianName : ticket.technicianName;
+    ticket.repairCost = req.body.repairCost !== undefined ? Number(req.body.repairCost) || 0 : ticket.repairCost;
     ticket.expectedFixDate = req.body.expectedFixDate || ticket.expectedFixDate;
-    ticket.workDetails = req.body.workDetails || ticket.workDetails;
+    ticket.workDetails = req.body.workDetails !== undefined ? req.body.workDetails : ticket.workDetails;
+    ticket.issueType = req.body.issueType || ticket.issueType;
+    ticket.description = req.body.description || ticket.description;
+    ticket.reportedDate = req.body.reportedDate ? req.body.reportedDate.replace("T", " ") : ticket.reportedDate;
+    
     if (ticket.status === "completed") {
       ticket.fixedDate = req.body.fixedDate ? req.body.fixedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " ");
       await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
+    } else {
+      ticket.fixedDate = null;
+      await supabase.from("bikes").update({ status: "maintenance" }).eq("id", ticket.bikeId);
     }
     // Persist update to maintenance DB table
     await supabase.from("maintenance").update({
@@ -3511,13 +3518,17 @@ export async function updateMaintenanceStatus(req, res) {
       technician_name: ticket.technicianName,
       repair_cost: ticket.repairCost,
       expected_fix_date: ticket.expectedFixDate,
-      ...(ticket.status === "completed" ? { fixed_date: ticket.fixedDate } : {}),
+      issue_type: ticket.issueType,
+      description: ticket.description,
+      reported_date: ticket.reportedDate,
+      work_details: ticket.workDetails,
+      ...(ticket.status === "completed" ? { fixed_date: ticket.fixedDate } : { fixed_date: null }),
     }).eq("bike_id", ticket.bikeId)
       .then(({ error: mErr }) => { if (mErr) console.warn("[admin.updateMaintenanceStatus] maintenance table update:", mErr.message); });
-    return res.json({ success: true, message: "Maintenance status updated" });
+    return res.json({ success: true, message: "Maintenance ticket updated successfully" });
   } catch (error) {
     console.error("[admin.updateMaintenanceStatus] failed", error);
-    return res.status(500).json({ success: false, message: "Unable to update maintenance status" });
+    return res.status(500).json({ success: false, message: "Unable to update maintenance ticket" });
   }
 }
 

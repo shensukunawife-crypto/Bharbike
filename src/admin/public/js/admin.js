@@ -163,18 +163,34 @@ document.querySelectorAll(".open-maintenance-status").forEach((btn) => {
     const form = document.getElementById("update-maintenance-form");
     if (!modal || !form) return;
     form.dataset.url = `/admin/maintenance/${btn.dataset.id}/status`;
+    const bikeCodeEl = document.getElementById("maintenance-bike-code");
+    const issueTypeEl = document.getElementById("maintenance-issue-type");
+    const descriptionEl = document.getElementById("maintenance-description");
     const statusEl = document.getElementById("maintenance-status");
     const techEl = document.getElementById("maintenance-tech");
     const costEl = document.getElementById("maintenance-cost");
     const expectedEl = document.getElementById("maintenance-expected");
     const workDetailsEl = document.getElementById("maintenance-work-details");
+    const reportedEl = document.getElementById("maintenance-reported-date");
     const fixedEl = document.getElementById("maintenance-fixed-date");
     
+    if (bikeCodeEl) bikeCodeEl.value = btn.dataset.bikeCode || "";
+    if (issueTypeEl) issueTypeEl.value = btn.dataset.issueType || "";
+    if (descriptionEl) descriptionEl.value = btn.dataset.description || "";
     if (statusEl) statusEl.value = btn.dataset.status || "under_repair";
     if (techEl) techEl.value = btn.dataset.tech || "";
     if (costEl) costEl.value = btn.dataset.cost || "";
     if (expectedEl) expectedEl.value = btn.dataset.expected || "";
     if (workDetailsEl) workDetailsEl.value = btn.dataset.workDetails || "";
+    
+    if (reportedEl) {
+      let rDate = btn.dataset.reportedDate || "";
+      // Convert "2026-06-23 22:30" to datetime-local format "2026-06-23T22:30"
+      if (rDate && rDate.includes(" ")) {
+        rDate = rDate.replace(" ", "T");
+      }
+      reportedEl.value = rDate;
+    }
     
     if (fixedEl) {
       let fDate = btn.dataset.fixedDate || "";

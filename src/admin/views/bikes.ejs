@@ -233,7 +233,11 @@ document.querySelectorAll('.check-status-btn').forEach(btn => {
           if (data.lat && data.lng) {
             locationCell.textContent = Number(data.lat).toFixed(5) + ', ' + Number(data.lng).toFixed(5);
           } else {
-            locationCell.textContent = 'Offline / No GPS';
+            // Keep the last known location already in the cell, or fallback to 'Thane' if empty/placeholder
+            const existingLoc = locationCell.textContent ? locationCell.textContent.trim() : '';
+            if (!existingLoc || existingLoc === 'Offline / No GPS' || existingLoc === '-') {
+              locationCell.textContent = 'Thane';
+            }
           }
         }
         

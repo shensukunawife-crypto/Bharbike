@@ -3709,14 +3709,14 @@ export async function adminsPage(req, res) {
   try {
     const { data: admins, error } = await supabase.from("admin_users").select("*").order("created_at", { ascending: false });
     return renderPage(res, {
-      title: "Sub-Admins",
+      title: "Roles & Permissions",
       active: "admins",
       bodyView: "admins",
       admins: safeData(admins),
     });
   } catch (error) {
     console.error("[admin.adminsPage] failed", error);
-    return renderPage(res, { title: "Sub-Admins", active: "settings", bodyView: "admins", admins: [] });
+    return renderPage(res, { title: "Roles & Permissions", active: "settings", bodyView: "admins", admins: [] });
   }
 }
 

@@ -76,6 +76,34 @@ export function requirePermission(permission) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     
+    // Strict restriction: Sub-admins cannot access financial status or payments
+    if (req.admin.role === "sub_admin") {
+      const isFinanceRequest = 
+        permission === "manage_finance" || 
+        req.originalUrl.includes("earnings") || 
+        req.originalUrl.includes("analytics") || 
+        req.originalUrl.includes("payments");
+        
+      if (isFinanceRequest) {
+        if (req.method === "GET") {
+          return res.status(403).render("layout", {
+            BRAND_NAME,
+            BRAND_PRODUCT_NAME,
+            formatBrand,
+            title: "Access Denied",
+            active: "dashboard",
+            bodyView: "forbidden",
+            message: "Access Denied: Sub-admins are completely restricted from viewing financial status or configuring payments.",
+            locals: { admin: req.admin }
+          });
+        }
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: Sub-admins are not allowed to view financial status or manage payments."
+        });
+      }
+    }
+    
     // Master admin gets everything (both old 'admin' and new 'master_admin' tokens)
     if (req.admin.role === "master_admin" || req.admin.role === "admin" || (req.admin.permissions && req.admin.permissions.includes("*"))) {
       return next();

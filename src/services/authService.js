@@ -89,7 +89,7 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone, address = null
     full_name: fullName,
     email: authUser?.email || null,
     phone,
-    location: null,
+    location: address || null,
   };
 
   const usersPayload = {

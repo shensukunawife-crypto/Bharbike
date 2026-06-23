@@ -10,7 +10,10 @@
   const _admin    = locals.admin || {};
   const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*'));
   const _perms    = Array.isArray(_admin.permissions) ? _admin.permissions : [];
-  const _can      = (p) => _isMaster || _perms.includes(p);
+  const _can      = (p) => {
+    if (_admin.role === 'sub_admin' && p === 'manage_finance') return false;
+    return _isMaster || _perms.includes(p);
+  };
 
   // SVG icon helper — using clean Feather-style icons
   const icons = {
@@ -238,9 +241,9 @@
         <span class="nav-icon"><%- icons.config %></span><span>Subscription Plans</span>
       </a>
       <% } %>
-      <% if (_isMaster) { %>
+      <% if (_can('manage_admins')) { %>
       <a class="nav-link nav-link-sub <%= active === 'admins' ? 'active' : '' %>" href="/admin/admins">
-        <span class="nav-icon"><%- icons.admins %></span><span>Sub-Admins</span>
+        <span class="nav-icon"><%- icons.admins %></span><span>Roles & Permissions</span>
       </a>
       <% } %>
     </div>

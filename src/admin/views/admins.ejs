@@ -1,5 +1,5 @@
 <div class="toolbar">
-  <button class="btn btn-gold" data-modal-target="add-admin-modal">+ Add Sub-Admin</button>
+  <button class="btn btn-gold" data-modal-target="add-admin-modal">+ Add Admin User</button>
 </div>
 
 <div class="table-wrap">
@@ -16,7 +16,7 @@
     </thead>
     <tbody>
       <% if (!admins.length) { %>
-      <tr><td colspan="6" class="empty">No sub-admins found</td></tr>
+      <tr><td colspan="6" class="empty">No admin users found</td></tr>
       <% } %>
       <% admins.forEach((admin) => { %>
       <tr>
@@ -51,7 +51,7 @@
 
 <div class="modal" id="add-admin-modal">
   <div class="modal-card">
-    <h3>Add Sub-Admin</h3>
+    <h3>Add Admin User</h3>
     <form class="admin-form ajax-form" data-url="/admin/admins/add">
       <input name="email" type="email" placeholder="Email Address" required />
       <input name="full_name" placeholder="Full Name" required />
@@ -70,6 +70,8 @@
           <label><input type="checkbox" name="permissions[]" value="manage_orders"> Manage Orders</label>
           <label><input type="checkbox" name="permissions[]" value="manage_finance"> Finance & Payouts</label>
           <label><input type="checkbox" name="permissions[]" value="manage_support"> Support Tickets</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_settings"> System Settings</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_admins"> Admins & Roles</label>
         </div>
       </div>
 
@@ -80,7 +82,7 @@
 
 <div class="modal" id="edit-admin-modal">
   <div class="modal-card">
-    <h3>Edit Sub-Admin</h3>
+    <h3>Edit Admin & Role</h3>
     <form class="admin-form ajax-form" id="edit-admin-form" data-url="">
       <input name="email" id="edit-admin-email" type="email" placeholder="Email Address" required readonly />
       <input name="full_name" id="edit-admin-full-name" placeholder="Full Name" required />
@@ -99,6 +101,8 @@
           <label><input type="checkbox" name="permissions[]" value="manage_orders" class="edit-perm"> Manage Orders</label>
           <label><input type="checkbox" name="permissions[]" value="manage_finance" class="edit-perm"> Finance & Payouts</label>
           <label><input type="checkbox" name="permissions[]" value="manage_support" class="edit-perm"> Support Tickets</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_settings" class="edit-perm"> System Settings</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_admins" class="edit-perm"> Admins & Roles</label>
         </div>
       </div>
 

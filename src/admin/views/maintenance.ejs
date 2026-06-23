@@ -208,65 +208,78 @@
 </div>
 
 <div class="modal" id="update-maintenance-modal">
-  <div class="modal-card" style="max-width: 500px; width: 90%;">
-    <h3>🛠️ Maintenance Ticket Details</h3>
-    <form class="admin-form ajax-form" id="update-maintenance-form" data-url="">
-      
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Bike Code</label>
-        <input type="text" id="maintenance-bike-code" readonly style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:not-allowed;" />
+  <div class="modal-content" style="max-width: 520px; width: 90%; height: 80vh;">
+    <!-- Modal Header (Fixed at top) -->
+    <div class="modal-header">
+      <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">🛠️ Maintenance Ticket Details</h3>
+      <button type="button" class="close-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 0 4px;">&times;</button>
+    </div>
+    
+    <form class="ajax-form" id="update-maintenance-form" data-url="" style="display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0;">
+      <!-- Modal Body (Scrollable in middle) -->
+      <div class="modal-body admin-form" style="overflow-y: auto; flex: 1; padding: 20px;">
+        
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Bike Code</label>
+          <input type="text" id="maintenance-bike-code" readonly style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-muted); cursor:not-allowed;" />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Issue Type</label>
+          <input type="text" name="issueType" id="maintenance-issue-type" placeholder="Issue Type" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Description</label>
+          <textarea name="description" id="maintenance-description" rows="2" placeholder="Description" required style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Particulars of Work Done</label>
+          <textarea name="workDetails" id="maintenance-work-details" rows="2" placeholder="Particulars of Work Done (e.g., replaced tyres, oil change)" style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Status</label>
+          <select name="status" id="maintenance-status" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+            <option value="under_repair">Under Repair</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Technician Name</label>
+          <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Repair Cost (₹)</label>
+          <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time In (Date & Time)</label>
+          <input type="datetime-local" name="reportedDate" id="maintenance-reported-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+        </div>
+
+        <div id="expected-date-group" style="margin-bottom: 15px;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Expected Fix Date</label>
+          <input type="date" name="expectedFixDate" id="maintenance-expected" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+        </div>
+        
+        <div id="fixed-datetime-group" style="margin-bottom: 15px; display:none;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time Out (Completion Date & Time)</label>
+          <input type="datetime-local" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+        </div>
+
       </div>
 
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Issue Type</label>
-        <input type="text" name="issueType" id="maintenance-issue-type" placeholder="Issue Type" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      <!-- Modal Footer (Fixed at bottom) -->
+      <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 12px; background: var(--border-light);">
+        <button type="button" class="btn btn-outline close-modal" style="padding: 8px 16px;">Cancel</button>
+        <button type="submit" class="btn btn-gold glow" style="padding: 8px 20px; font-weight: 600;">Save Changes</button>
       </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Description</label>
-        <textarea name="description" id="maintenance-description" rows="2" placeholder="Description" required style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Particulars of Work Done</label>
-        <textarea name="workDetails" id="maintenance-work-details" rows="2" placeholder="Particulars of Work Done (e.g., replaced tyres, oil change)" style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Status</label>
-        <select name="status" id="maintenance-status" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          <option value="under_repair">Under Repair</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-        </select>
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Technician Name</label>
-        <input type="text" name="technicianName" id="maintenance-tech" placeholder="Technician Name" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Repair Cost (₹)</label>
-        <input type="number" name="repairCost" id="maintenance-cost" placeholder="Repair Cost" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
-      </div>
-
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time In (Date & Time)</label>
-        <input type="datetime-local" name="reportedDate" id="maintenance-reported-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
-      </div>
-
-      <div id="expected-date-group" style="margin-bottom: 15px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Expected Fix Date</label>
-        <input type="date" name="expectedFixDate" id="maintenance-expected" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
-      </div>
-      
-      <div id="fixed-datetime-group" style="margin-bottom: 15px; display:none;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time Out (Completion Date & Time)</label>
-        <input type="datetime-local" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
-      </div>
-      
-      <button type="submit" class="btn btn-gold glow" style="width:100%; padding:10px; font-weight:600;">Save Changes</button>
     </form>
   </div>
 </div>

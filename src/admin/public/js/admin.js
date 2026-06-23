@@ -62,6 +62,15 @@ document.querySelectorAll(".modal").forEach((modal) => {
   });
 });
 
+// Global Close Modal Buttons Handler
+document.addEventListener("click", (e) => {
+  const closeBtn = e.target.closest(".close-modal");
+  if (closeBtn) {
+    const modal = closeBtn.closest(".modal");
+    if (modal) modal.classList.remove("show");
+  }
+});
+
 document.querySelectorAll(".ajax-form").forEach((form) => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

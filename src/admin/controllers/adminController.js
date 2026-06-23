@@ -852,17 +852,21 @@ export async function users(req, res) {
       { data: ordersData, error: ordersError },
       { data: subsData, error: subsError },
       { data: walletsData, error: walletsError },
-      { data: plansData }
+      { data: plansData },
+      { data: rentalsData, error: rentalsError },
+      { data: bikesData, error: bikesError }
     ] = await Promise.all([
       getIdMappings(),
       supabase.from("users").select("*"),
       supabase.from("orders").select("*"),
       supabase.from("user_subscriptions").select("*"),
       supabase.from("wallet_balances").select("*"),
-      supabase.from("subscription_plans").select("*")
+      supabase.from("subscription_plans").select("*"),
+      supabase.from("rentals").select("*").eq("status", "ongoing"),
+      supabase.from("bikes").select("*")
     ]);
-    if (usersError || ordersError || subsError || walletsError) {
-      console.error("[admin.users] fetch failed", usersError || ordersError || subsError || walletsError);
+    if (usersError || ordersError || subsError || walletsError || rentalsError || bikesError) {
+      console.error("[admin.users] fetch failed", usersError || ordersError || subsError || walletsError || rentalsError || bikesError);
     }
 
     const search = (req.query.search || "").trim().toLowerCase();
@@ -900,6 +904,15 @@ export async function users(req, res) {
           )[0]?.createdAt;
         const userSub = (subsData || []).find(s => String(s.user_id).toLowerCase() === String(base.id).toLowerCase());
         const userWallet = (walletsData || []).find(w => String(w.user_id).toLowerCase() === String(base.id).toLowerCase());
+        
+        // Find assigned bike for this user
+        const activeRental = (rentalsData || []).find(r => String(r.user_id).toLowerCase() === String(base.id).toLowerCase());
+        let assignedBikeCode = "-";
+        if (activeRental) {
+          const bike = (bikesData || []).find(b => b.id === activeRental.bike_id);
+          assignedBikeCode = bike ? (bike.bike_code || "Bike") : "Bike";
+        }
+
         const formatDateTimeLocal = (dateStr) => {
           if (!dateStr) return "";
           const d = new Date(dateStr);
@@ -937,6 +950,7 @@ export async function users(req, res) {
           lastActive: row.is_online ? "Online now" : "Recently",
           walletBalance: userWallet ? Number(userWallet.balance || 0) : 0,
           subscriptionText: subText,
+          assignedBikeCode,
           subscription: userSub ? {
             id: userSub.id,
             plan_id: userSub.plan_id,
@@ -1079,15 +1093,33 @@ export async function userProfile(req, res) {
 
 export async function bikes(req, res) {
   try {
-    const [{ data: bikesData, error: bikesError }, { data: usersData, error: usersError }] = await Promise.all([
+    const [
+      { data: bikesData, error: bikesError },
+      { data: usersData, error: usersError },
+      { data: rentalsData, error: rentalsError }
+    ] = await Promise.all([
       supabase.from("bikes").select("*"),
-      supabase.from("users").select("id, full_name, phone, email").order("created_at", { ascending: false })
+      supabase.from("users").select("id, full_name, phone, email").order("created_at", { ascending: false }),
+      supabase.from("rentals").select("*").eq("status", "ongoing")
     ]);
     
     if (bikesError) console.error("[admin.bikes] bikes fetch failed", bikesError);
     if (usersError) console.error("[admin.bikes] users fetch failed", usersError);
+    if (rentalsError) console.error("[admin.bikes] rentals fetch failed", rentalsError);
 
-    const allBikes = safeData(bikesData).map(normalizeBike);
+    const allBikes = safeData(bikesData).map((b) => {
+      const bike = normalizeBike(b);
+      const activeRental = safeData(rentalsData).find(r => r.bike_id === bike.id);
+      if (activeRental) {
+        const rider = safeData(usersData).find(u => u.id === activeRental.user_id);
+        bike.riderName = rider ? (rider.full_name || rider.name || "Unknown") : "Unknown";
+        bike.riderPhone = rider ? (rider.phone || "") : "";
+      } else {
+        bike.riderName = "-";
+        bike.riderPhone = "";
+      }
+      return bike;
+    });
     const search = (req.query.search || "").trim().toLowerCase();
     const statusFilter = (req.query.status || "all").toLowerCase();
     const lowBatteryOnly = req.query.lowBattery === "true";

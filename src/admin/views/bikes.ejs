@@ -28,6 +28,7 @@
     </a>
   </div>
 </div>
+
 <div class="table-wrap">
   <table class="table">
     <thead>
@@ -35,6 +36,7 @@
         <th>Bike ID</th>
         <th>Status</th>
         <th>Lock Status</th>
+        <th>Present Rider</th>
         <th>Usage</th>
         <th>Battery %</th>
         <th>Location</th>
@@ -58,8 +60,18 @@
             <%= bike.is_locked !== false ? "Locked 🔒" : "Unlocked 🔓" %>
           </span>
         </td>
-        <td><%= bike.usage %></td>
         <td>
+          <% if (bike.riderName && bike.riderName !== '-') { %>
+            <strong style="color: var(--accent);"><%= bike.riderName %></strong>
+            <% if (bike.riderPhone) { %>
+              <div style="font-size: 11px; color: var(--text-muted);"><%= bike.riderPhone %></div>
+            <% } %>
+          <% } else { %>
+            <span class="text-muted-foreground">-</span>
+          <% } %>
+        </td>
+        <td><%= bike.usage %></td>
+        <td class="battery-cell">
           <div class="battery-wrap">
             <div class="battery-bar">
               <span class="battery-fill <%= bike.battery > 60 ? 'good' : bike.battery > 30 ? 'mid' : 'low' %>" style="width: <%= bike.battery %>%"></span>
@@ -67,11 +79,12 @@
             <small><%= bike.battery %>%</small>
           </div>
         </td>
-        <td><%= bike.location %></td>
+        <td class="location-cell"><%= bike.location %></td>
         <td class="actions">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; min-width: 260px;">
             <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="display: flex; justify-content: center; padding: 6px 10px; font-size: 12px;">View Details</a>
             <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')" style="padding: 6px 10px; font-size: 12px;">Assign Bike</button>
+            <button class="btn btn-ghost check-status-btn" data-id="<%= bike.id %>" style="grid-column: span 2; padding: 6px 10px; font-size: 12px; border: 1px solid var(--accent); color: var(--accent); font-weight: 700; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">🔍 Status Check</button>
             <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST" style="grid-column: span 2; padding: 6px 10px; font-size: 12px;">Send to Maintenance</button>
             <button class="btn btn-<%= bike.status === 'offline' ? 'success' : 'danger' %> admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST" style="padding: 6px 10px; font-size: 12px;"><%= bike.status === 'offline' ? '✅ Enable Bike' : '🚫 Disable Bike' %></button>
             <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?" style="padding: 6px 10px; font-size: 12px;">Delete</button>
@@ -177,5 +190,76 @@ document.getElementById('duration-unit-select').addEventListener('change', funct
   } else {
     durationInput.value = '24';
   }
+});
+
+// AJAX live status checking
+document.querySelectorAll('.check-status-btn').forEach(btn => {
+  btn.addEventListener('click', async function(e) {
+    e.preventDefault();
+    const bikeId = this.getAttribute('data-id');
+    const row = this.closest('tr');
+    
+    // UI Feedback: disable button and show checking status
+    const originalText = this.innerHTML;
+    this.innerHTML = '⚡ Checking...';
+    this.disabled = true;
+    
+    try {
+      const response = await fetch('/admin/bikes/' + bikeId + '/live-gps');
+      const data = await response.json();
+      
+      if (data.success) {
+        // 1. Update Battery Cell
+        const batteryCell = row.querySelector('.battery-cell');
+        if (batteryCell && typeof data.battery === 'number') {
+          const fill = batteryCell.querySelector('.battery-fill');
+          const smallText = batteryCell.querySelector('small');
+          if (fill) {
+            fill.style.width = data.battery + '%';
+            // Update color class
+            fill.classList.remove('good', 'mid', 'low');
+            if (data.battery > 60) fill.classList.add('good');
+            else if (data.battery > 30) fill.classList.add('mid');
+            else fill.classList.add('low');
+          }
+          if (smallText) {
+            smallText.textContent = data.battery + '%';
+          }
+        }
+        
+        // 2. Update Location Cell
+        const locationCell = row.querySelector('.location-cell');
+        if (locationCell) {
+          if (data.lat && data.lng) {
+            locationCell.textContent = Number(data.lat).toFixed(5) + ', ' + Number(data.lng).toFixed(5);
+          } else {
+            locationCell.textContent = 'Offline / No GPS';
+          }
+        }
+        
+        // Success Feedback
+        this.innerHTML = '✅ Updated';
+        this.style.borderColor = '#10b981';
+        this.style.color = '#10b981';
+      } else {
+        this.innerHTML = '❌ Failed';
+        this.style.borderColor = '#ef4444';
+        this.style.color = '#ef4444';
+      }
+    } catch (err) {
+      console.error('Status check failed:', err);
+      this.innerHTML = '❌ Error';
+      this.style.borderColor = '#ef4444';
+      this.style.color = '#ef4444';
+    }
+    
+    // Restore button after 2 seconds
+    setTimeout(() => {
+      this.innerHTML = originalText;
+      this.style.borderColor = 'var(--accent)';
+      this.style.color = 'var(--accent)';
+      this.disabled = false;
+    }, 2000);
+  });
 });
 </script>

@@ -146,10 +146,10 @@ export async function ensureSettingsInitialized() {
 
           INSERT INTO hubs (name, latitude, longitude, address, status)
           VALUES
-            ('Andheri East Hub', 19.11580000, 72.88760000, 'Near Metro Station, Andheri East, Mumbai', 'active'),
-            ('Bandra Station Hub', 19.06180000, 72.83980000, 'Bandra Station Road West, Mumbai', 'active'),
-            ('Juhu Beach Hub', 19.09880000, 72.82640000, 'Main Entrance, Juhu Beach, Mumbai', 'active'),
-            ('BKC Hub', 19.06640000, 72.86790000, 'G Block, Bandra Kurla Complex, Mumbai', 'active')
+            ('Andheri East Battery Swapping Station', 19.11580000, 72.88760000, 'Near Metro Station, Andheri East, Mumbai', 'active'),
+            ('Bandra Station Battery Swapping Station', 19.06180000, 72.83980000, 'Bandra Station Road West, Mumbai', 'active'),
+            ('Juhu Beach Battery Swapping Station', 19.09880000, 72.82640000, 'Main Entrance, Juhu Beach, Mumbai', 'active'),
+            ('BKC Battery Swapping Station', 19.06640000, 72.86790000, 'G Block, Bandra Kurla Complex, Mumbai', 'active')
           ON CONFLICT (name) DO UPDATE 
           SET 
             latitude = EXCLUDED.latitude, 
@@ -575,6 +575,7 @@ export async function dashboard(req, res) {
       { count: activeRentalsCount, error: rentalsError },
       { data: bikesData, error: bikesDataError },
       { data: ordersData, error: ordersError },
+      pendingKycResult
     ] = await Promise.all([
       getIdMappings(),
       supabase.from("users").select("*", { count: "exact", head: true }).neq("is_delivery_partner", true),
@@ -585,7 +586,10 @@ export async function dashboard(req, res) {
         .in("status", ["active", "ongoing"]),
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("id, amount, status, created_at"),
+      supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").catch(() => ({ count: 0 }))
     ]);
+
+    const pendingKycCount = pendingKycResult ? (pendingKycResult.count || 0) : 0;
 
     if (usersError || bikesError || rentalsError || bikesDataError || ordersError) {
       console.error(
@@ -724,6 +728,7 @@ export async function dashboard(req, res) {
         bikesCount: bikesCount ?? 0,
         activeRentalsCount: activeRentalsCount ?? 0,
         totalEarnings,
+        pendingKycCount: pendingKycCount ?? 0,
       },
       earningsBreakdown,
       alerts,
@@ -4369,7 +4374,7 @@ export async function hubsPage(req, res) {
     };
 
     return renderPage(res, {
-      title: "Hubs Management",
+      title: "Battery Swapping Stations",
       active: "hubs",
       bodyView: "hubs",
       hubs,
@@ -4642,9 +4647,77 @@ export async function editPayment(req, res) {
     
     if (!status) return res.status(400).json({ success: false, message: "Status is required" });
     
+    // Retrieve the existing payment record first to check if we are transitioning from pending -> success
+    const { data: oldPayment, error: fetchError } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("id", paymentId)
+      .maybeSingle();
+
+    if (fetchError || !oldPayment) {
+      return res.status(404).json({ success: false, message: "Payment not found" });
+    }
+
     const { error } = await supabase.from("payments").update({ status }).eq("id", paymentId);
     if (error) throw error;
     
+    // Transitioning from pending to success!
+    if (oldPayment.status === "pending" && status === "success") {
+      const { user_id, amount, razorpay_order_id, razorpay_payment_id, order_id } = oldPayment;
+      
+      if (user_id) {
+        const { createUserNotification } = await import("../../services/notificationService.js");
+        
+        if (razorpay_order_id === "wallet") {
+          // 1. Credit to wallet
+          const { addMoney } = await import("../../services/walletService.js");
+          await addMoney(user_id, Number(amount), "Manual QR Recharge", razorpay_payment_id, order_id);
+          
+          if (order_id) {
+            await supabase.from("orders").update({ status: "paid" }).eq("id", order_id);
+          }
+        } else if (String(razorpay_order_id).startsWith("ticket_")) {
+          // 2. Resolve support ticket
+          const ticketId = razorpay_order_id.replace("ticket_", "");
+          await supabase.from("support_tickets").update({ 
+            payment_status: "paid",
+            status: "resolved"
+          }).eq("id", ticketId);
+          
+          if (order_id) {
+            await supabase.from("orders").update({ status: "paid" }).eq("id", order_id);
+          }
+          
+          createUserNotification(
+            user_id,
+            "Repair Cost Approved ✅",
+            `Your payment of ₹${amount} for ticket #${ticketId} has been successfully verified.`,
+            "success"
+          ).catch(() => {});
+        } else {
+          // 3. Activate subscription
+          const { createSubscription } = await import("../../services/subscriptionService.js");
+          await createSubscription(user_id, razorpay_order_id, paymentId, Number(amount));
+          
+          if (order_id) {
+            await supabase.from("orders").update({ status: "paid" }).eq("id", order_id);
+          }
+        }
+      }
+    } else if (oldPayment.status === "pending" && status === "failed") {
+      // Transitioning from pending to failed (Rejected by admin)
+      const { user_id, razorpay_payment_id } = oldPayment;
+      if (user_id) {
+        const { createUserNotification } = await import("../../services/notificationService.js");
+        createUserNotification(
+          user_id,
+          "Payment Verification Failed ❌",
+          `Your payment request with Ref ID: ${razorpay_payment_id} was rejected by the administrator. Please contact support.`,
+          "warning"
+        ).catch(() => {});
+      }
+    }
+
     res.json({ success: true, message: "Payment updated successfully" });
   } catch (error) {
     console.error("[adminController.editPayment] failed", error);

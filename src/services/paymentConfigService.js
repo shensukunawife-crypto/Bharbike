@@ -36,6 +36,9 @@ export async function getActivePaymentConfig() {
     } else if (data.key_id.startsWith("RAZORPAY::")) {
       provider = "razorpay";
       cleanKeyId = data.key_id.replace("RAZORPAY::", "");
+    } else if (data.key_id.startsWith("MANUAL_QR::")) {
+      provider = "manual_qr";
+      cleanKeyId = data.key_id.replace("MANUAL_QR::", "");
     }
 
     return { ...data, provider, key_id: cleanKeyId, source: "database" };
@@ -67,6 +70,9 @@ export async function listPaymentConfigs() {
       } else if (row.key_id.startsWith("RAZORPAY::")) {
         provider = "razorpay";
         cleanKeyId = row.key_id.replace("RAZORPAY::", "");
+      } else if (row.key_id.startsWith("MANUAL_QR::")) {
+        provider = "manual_qr";
+        cleanKeyId = row.key_id.replace("MANUAL_QR::", "");
       }
       return { ...row, provider, key_id: cleanKeyId };
     });

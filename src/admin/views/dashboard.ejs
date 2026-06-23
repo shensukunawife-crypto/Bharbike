@@ -373,11 +373,19 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
     <p class="db-stat-value"><%= stats.activeRentalsCount || 0 %></p>
     <p class="db-stat-sub">Currently ongoing</p>
   </div>
+  <% if (locals.admin && locals.admin.role === 'sub_admin') { %>
+  <div class="db-stat db-stat-accent">
+    <p class="db-stat-label">Pending KYC Docs</p>
+    <p class="db-stat-value" style="font-size:22px;"><%= stats.pendingKycCount || 0 %></p>
+    <p class="db-stat-sub">Awaiting verification</p>
+  </div>
+  <% } else { %>
   <div class="db-stat">
     <p class="db-stat-label">Total Earnings</p>
     <p class="db-stat-value" style="font-size:22px;">₹<%= Number(stats.totalEarnings || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></p>
     <p class="db-stat-sub">Lifetime revenue</p>
   </div>
+  <% } %>
 </div>
 
 
@@ -440,6 +448,17 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
 <!-- Bottom: Two Charts -->
 <div class="db-bottom">
 
+  <% if (locals.admin && locals.admin.role === 'sub_admin') { %>
+  <!-- Orders Bar Chart (Full Width for Sub-Admins) -->
+  <div class="db-chart-card" style="grid-column: span 2;">
+    <div class="db-chart-head">
+      <p class="db-chart-title">Orders by Status</p>
+    </div>
+    <div style="height: 220px; position:relative;">
+      <canvas id="ordersChart"></canvas>
+    </div>
+  </div>
+  <% } else { %>
   <!-- Revenue Line Chart -->
   <div class="db-chart-card">
     <div class="db-chart-head">
@@ -462,6 +481,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
       <canvas id="ordersChart"></canvas>
     </div>
   </div>
+  <% } %>
 
 </div>
 

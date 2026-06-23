@@ -1,5 +1,5 @@
 <style>
-  /* Premium Hubs management view styling matching dashboard aesthetics */
+  /* Premium Swapping Stations management view styling matching dashboard aesthetics */
   .hubs-page {
     animation: hubsFadeIn 0.35s ease-out;
     accent-color: #d4af37; /* Amber Gold */
@@ -245,7 +245,7 @@
     <div>
       <button class="btn btn-gold glow" data-modal-target="add-hub-modal" style="padding: 10px 20px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Register New Hub
+        Register New Battery Swapping Station
       </button>
     </div>
   </div>
@@ -255,14 +255,14 @@
     <div class="hubs-stat-card">
       <div class="hubs-stat-icon">📍</div>
       <div class="hubs-stat-info">
-        <div class="hubs-stat-label">Total Hubs</div>
+        <div class="hubs-stat-label">Total Stations</div>
         <div class="hubs-stat-value" id="stats-total-hubs"><%= stats.total %></div>
       </div>
     </div>
     <div class="hubs-stat-card">
       <div class="hubs-stat-icon" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">🟢</div>
       <div class="hubs-stat-info">
-        <div class="hubs-stat-label">Active Hubs</div>
+        <div class="hubs-stat-label">Active Stations</div>
         <div class="hubs-stat-value" id="stats-active-hubs"><%= stats.active %></div>
       </div>
     </div>
@@ -276,7 +276,7 @@
     <div class="hubs-stat-card">
       <div class="hubs-stat-icon" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">🚲</div>
       <div class="hubs-stat-info">
-        <div class="hubs-stat-label">Bikes inside Hubs</div>
+        <div class="hubs-stat-label">Bikes inside Stations</div>
         <div class="hubs-stat-value" id="stats-managed-bikes"><%= stats.managedBikesCount %> / <%= stats.totalBikes %></div>
       </div>
     </div>
@@ -304,7 +304,7 @@
       <table class="table hubs-table" id="hubs-main-table">
         <thead>
           <tr>
-            <th>Hub Name & Location</th>
+            <th>Station Name & Location</th>
             <th>Address</th>
             <th>Coordinates</th>
             <th>Active Fleet</th>
@@ -363,12 +363,12 @@
 <div class="modal" id="add-hub-modal">
   <div class="modal-card" style="max-width: 500px; width: 90%;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-      <h3 style="margin:0; font-size: 1.25rem; font-weight: 700; color: var(--text);">Register New Hub</h3>
+      <h3 style="margin:0; font-size: 1.25rem; font-weight: 700; color: var(--text);">Register New Battery Swapping Station</h3>
       <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);" onclick="document.getElementById('add-hub-modal').classList.remove('show')">&times;</button>
     </div>
     <form class="admin-form" id="add-hub-form" autocomplete="off" onsubmit="submitAddHub(event)">
       <div style="margin-bottom: 1rem;">
-        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Hub Name (Unique ID)</label>
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Station Name (Unique ID)</label>
         <input name="name" id="add-name" placeholder="e.g. Bandra West Yard" required style="width: 100%; padding: 10px; border-radius: 6px;" />
       </div>
       <div style="margin-bottom: 1rem;">
@@ -401,13 +401,13 @@
 <div class="modal" id="edit-hub-modal">
   <div class="modal-card" style="max-width: 500px; width: 90%;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-      <h3 style="margin:0; font-size: 1.25rem; font-weight: 700; color: var(--text);">Modify Hub Location</h3>
+      <h3 style="margin:0; font-size: 1.25rem; font-weight: 700; color: var(--text);">Modify Swapping Station Location</h3>
       <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);" onclick="document.getElementById('edit-hub-modal').classList.remove('show')">&times;</button>
     </div>
     <form class="admin-form" id="edit-hub-form" autocomplete="off" onsubmit="submitEditHub(event)">
       <input type="hidden" id="edit-hub-id" />
       <div style="margin-bottom: 1rem;">
-        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Hub Name (Changing cascades matching bike locations)</label>
+        <label style="display:block; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.35rem; color: var(--text-muted);">Station Name (Changing cascades matching bike locations)</label>
         <input name="name" id="edit-name" placeholder="e.g. Bandra West Yard" required style="width: 100%; padding: 10px; border-radius: 6px;" />
       </div>
       <div style="margin-bottom: 1rem;">
@@ -513,7 +513,7 @@
 
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.textContent;
-    btn.textContent = "Adding Hub...";
+    btn.textContent = "Adding Station...";
     btn.disabled = true;
 
     try {
@@ -575,9 +575,9 @@
       }
 
       if (typeof showToast === 'function') {
-        showToast("Hub Coordinates Saved Successfully! 💾");
+        showToast("Battery Swapping Station Coordinates Saved Successfully! 💾");
       } else {
-        alert("Hub Coordinates Saved Successfully! 💾");
+        alert("Battery Swapping Station Coordinates Saved Successfully! 💾");
       }
 
       document.getElementById('edit-hub-modal').classList.remove('show');
@@ -615,7 +615,7 @@
       }
 
       if (typeof showToast === 'function') {
-        showToast("Hub Location Permanently Deleted.");
+        showToast("Battery Swapping Station Permanently Deleted.");
       } else {
         alert("Hub Location Permanently Deleted. ✅");
       }

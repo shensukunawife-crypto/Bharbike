@@ -5,6 +5,7 @@ import { createPhonePeOrder, verifyPhonePeSignature } from "../services/phonepeS
 import { createSubscription } from "../services/subscriptionService.js";
 import * as walletService from "../services/walletService.js";
 import supabase from "../utils/supabaseClient.js";
+import { createUserNotification } from "../services/notificationService.js";
 
 /**
  * Creates a new Razorpay order using active keys from Supabase or ENV.
@@ -145,6 +146,37 @@ export const createOrder = async (req, res) => {
       return res.status(500).json({ success: false, message: "Failed to create order. Please try again." });
     }
 
+    if (config.provider === 'manual_qr') {
+      const mockOrderId = `ORD-QR-${Date.now()}`;
+      try {
+        await supabase.from("payments").insert([
+          {
+            user_id: user_id || null,
+            order_id: appOrderId,
+            razorpay_order_id: mockOrderId,
+            amount: Number(normalizedAmount),
+            status: "pending",
+          },
+        ]);
+      } catch (paymentInsertError) {
+        console.warn("[createOrder] manual_qr payments insert skipped:", paymentInsertError?.message);
+      }
+
+      return res.status(200).json({
+        success: true,
+        id: mockOrderId,
+        order_id: mockOrderId,
+        key_id: config.key_id || "enviroluxbiodiesel@sbi",
+        key_secret: config.key_secret || "ENVIROLUX BIODIESEL PRIVATE L",
+        amount: Math.round(normalizedAmount * 100),
+        currency: currency || "INR",
+        app_order_id: appOrderId,
+        payment_method: "manual_qr",
+        provider: "manual_qr",
+        plan_id: plan_id || plan_name || null,
+      });
+    }
+
     let pgOrderId, pgResponse;
 
     if (config.provider === 'phonepe') {
@@ -237,6 +269,100 @@ export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, app_order_id, user_id, plan_id, ticket_id, payment_method, amount } = req.body;
     
+    if (payment_method === "manual_qr") {
+      if (!razorpay_payment_id) {
+        return res.status(400).json({ success: false, message: "Reference ID (UTR) is required for verification." });
+      }
+
+      // 1. Double check duplicate UTR
+      const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("razorpay_payment_id", razorpay_payment_id)
+        .maybeSingle();
+
+      if (existingPayment) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "This Reference Number (UTR) has already been submitted for verification." 
+        });
+      }
+
+      // 2. Try to update pending payment record or insert a new one
+      let updateSuccess = false;
+      if (razorpay_order_id) {
+        const { data: updatedRows } = await supabase
+          .from("payments")
+          .update({
+            razorpay_payment_id: razorpay_payment_id,
+            status: "pending"
+          })
+          .eq("razorpay_order_id", razorpay_order_id)
+          .select();
+        if (updatedRows && updatedRows.length > 0) updateSuccess = true;
+      }
+
+      if (!updateSuccess && app_order_id) {
+        const { data: updatedRows } = await supabase
+          .from("payments")
+          .update({
+            razorpay_payment_id: razorpay_payment_id,
+            status: "pending"
+          })
+          .eq("order_id", app_order_id)
+          .select();
+        if (updatedRows && updatedRows.length > 0) updateSuccess = true;
+      }
+
+      if (!updateSuccess) {
+        const { error: insertError } = await supabase.from("payments").insert([
+          {
+            user_id: user_id || null,
+            order_id: app_order_id || null,
+            razorpay_order_id: razorpay_order_id || `ORD-QR-${Date.now()}`,
+            razorpay_payment_id: razorpay_payment_id,
+            amount: Number(amount),
+            status: "pending",
+          },
+        ]);
+
+        if (insertError) {
+          console.error("[verifyPayment] failed to insert manual_qr payment:", insertError.message);
+          throw insertError;
+        }
+      }
+
+      // If support ticket, mark ticket as pending_verification
+      if (ticket_id) {
+        await supabase
+          .from("payments")
+          .update({ razorpay_order_id: `ticket_${ticket_id}` })
+          .eq("razorpay_payment_id", razorpay_payment_id)
+          .catch(() => {});
+          
+        await supabase
+          .from("support_tickets")
+          .update({ payment_status: "pending_verification" })
+          .eq("id", ticket_id)
+          .catch(() => {});
+      }
+
+      if (user_id) {
+        createUserNotification(
+          user_id,
+          "Payment Verification Pending ⏳",
+          `We have received your payment request with Ref ID: ${razorpay_payment_id}. Your transaction will be verified shortly.`,
+          "info"
+        ).catch(() => {});
+      }
+
+      return res.json({ 
+        success: true, 
+        status: "pending", 
+        message: "Payment details submitted successfully. Verification is pending." 
+      });
+    }
+
     let resolvedPaymentId = razorpay_payment_id;
 
     if (razorpay_signature === "bypass_signature" && razorpay_payment_id === "bypass_payment_id") {

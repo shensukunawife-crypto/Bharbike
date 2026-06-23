@@ -12,7 +12,7 @@ export const NOTIFICATION_TEMPLATES = {
   },
   WEEKEND_RIDE_PROMO: {
     title: "Weekend is here! ☀️",
-    message: "Plan a weekend getaway. Check out the nearest hub for available bikes.",
+    message: "Plan a weekend getaway. Check out the nearest battery swapping station for available bikes.",
     type: "promo"
   },
   MORNING_COMMUTE: {
@@ -85,7 +85,7 @@ export const NOTIFICATION_TEMPLATES = {
   // 5. Rentals & Bookings
   BOOKING_CONFIRMED: {
     title: "Booking Confirmed! 🎫",
-    message: "Bike {bikeName} is reserved for you. Head to the pickup hub to start your ride.",
+    message: "Bike {bikeName} is reserved for you. Head to the pickup swapping station to start your ride.",
     type: "order"
   },
   RIDE_STARTED: {
@@ -107,7 +107,7 @@ export const NOTIFICATION_TEMPLATES = {
   // 6. Bike Safety & Remote Controls
   BIKE_LOW_BATTERY: {
     title: "Low Battery Warning 🔋",
-    message: "Your ride's battery level is at {battery}%. Please head to the nearest hub to swap bikes.",
+    message: "Your ride's battery level is at {battery}%. Please head to the nearest battery swapping station to swap bikes.",
     type: "warning"
   },
   BIKE_LOCKED_REMOTE: {
@@ -122,14 +122,14 @@ export const NOTIFICATION_TEMPLATES = {
   },
   GEOFENCE_BREACH: {
     title: "Out of Bounds Warning 🚨",
-    message: "You have crossed the designated hub boundary. Please return to avoid extra penalties.",
+    message: "You have crossed the designated station boundary. Please return to avoid extra penalties.",
     type: "warning"
   },
 
   // 7. Marketing & Promotional
   NEW_HUB_OPENED: {
-    title: "New Hub Opened Near You! 📍",
-    message: "We just opened a new hub at {locationName}. Getting a bike is now even easier!",
+    title: "New Battery Swapping Station Opened Near You! 📍",
+    message: "We just opened a new battery swapping station at {locationName}. Getting a bike is now even easier!",
     type: "promo"
   },
   PROMO_COUPON: {

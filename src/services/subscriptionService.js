@@ -216,7 +216,28 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
     // Calculate end date
     const startDate = new Date();
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() + plan.duration_days);
+    if (plan.duration_days === 7) {
+      // Weekly Plan: 7 days + 12 hours, then snap to 9:00 AM IST (3:30 AM UTC) of that day or the next day
+      const baseMs = startDate.getTime() + (7 * 24 + 12) * 60 * 60 * 1000;
+      const baseDate = new Date(baseMs);
+      
+      // 9:00 AM IST is 3:30 AM UTC
+      const cutoffHours = 3;
+      const cutoffMinutes = 30;
+      
+      // Compare the UTC time of baseDate with 03:30 UTC
+      const baseUTCMinutesOfDay = baseDate.getUTCHours() * 60 + baseDate.getUTCMinutes();
+      const cutoffUTCMinutesOfDay = cutoffHours * 60 + cutoffMinutes;
+      
+      if (baseUTCMinutesOfDay > cutoffUTCMinutesOfDay) {
+        // If past 3:30 AM UTC, expire on the next day at 3:30 AM UTC (9:00 AM IST)
+        baseDate.setUTCDate(baseDate.getUTCDate() + 1);
+      }
+      baseDate.setUTCHours(cutoffHours, cutoffMinutes, 0, 0);
+      endDate.setTime(baseDate.getTime());
+    } else {
+      endDate.setDate(endDate.getDate() + plan.duration_days);
+    }
 
     // Create subscription
     const { data, error } = await supabase

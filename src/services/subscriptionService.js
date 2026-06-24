@@ -239,19 +239,18 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       endDate.setDate(endDate.getDate() + plan.duration_days);
     }
 
-    // Create subscription
+    // Create or update subscription (upsert on user_id)
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .insert([
-        {
-          user_id: userId,
-          plan_id: plan.id,
-          status: "active",
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          auto_renew: false,
-        },
-      ])
+      .upsert({
+        user_id: userId,
+        plan_id: plan.id,
+        status: "active",
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        auto_renew: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "user_id" })
       .select("*")
       .single();
 
@@ -464,8 +463,8 @@ export async function createBillingRecord(
         .single();
 
       if (payment) {
-        billingData.razorpay_order_id = payment.razorpay_order_id;
-        billingData.razorpay_payment_id = payment.razorpay_payment_id;
+        billingData.razorpay_order_id = payment.razorpay_order_id ? String(payment.razorpay_order_id).substring(0, 100) : null;
+        billingData.razorpay_payment_id = payment.razorpay_payment_id ? String(payment.razorpay_payment_id).substring(0, 100) : null;
       }
     }
 

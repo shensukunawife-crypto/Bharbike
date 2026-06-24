@@ -4811,8 +4811,15 @@ export async function editPayment(req, res) {
           ).catch(() => {});
         } else {
           // 3. Activate subscription
+          let targetPlan = razorpay_order_id;
+          if (order_id) {
+            const { data: ord } = await supabase.from("orders").select("plan_name").eq("id", order_id).maybeSingle();
+            if (ord && ord.plan_name) {
+              targetPlan = ord.plan_name;
+            }
+          }
           const { createSubscription } = await import("../../services/subscriptionService.js");
-          await createSubscription(user_id, razorpay_order_id, paymentId, Number(amount));
+          await createSubscription(user_id, targetPlan, paymentId, Number(amount));
           
           if (order_id) {
             await supabase.from("orders").update({ status: "paid" }).eq("id", order_id);

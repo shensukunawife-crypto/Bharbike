@@ -337,6 +337,47 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   .db-header { flex-wrap: wrap; }
   .db-search { max-width: 100%; }
 }
+
+/* KYC Pagination & Enhanced UI */
+.kyc-row {
+  transition: background-color 0.2s ease;
+}
+.kyc-row-animate {
+  animation: kycFadeIn 0.3s ease-out forwards;
+}
+@keyframes kycFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.kyc-prev-btn, .kyc-next-btn {
+  transition: all 0.2s ease !important;
+}
+.kyc-prev-btn:hover:not(:disabled), .kyc-next-btn:hover:not(:disabled) {
+  border-color: #3b82f6 !important;
+  color: #2563eb !important;
+  background: #eff6ff !important;
+  transform: translateY(-0.5px);
+}
+.kyc-prev-btn:disabled, .kyc-next-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.kyc-approve-btn:hover {
+  background: #059669 !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(16,185,129,0.2);
+}
+.kyc-reject-btn:hover {
+  background: #dc2626 !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(239,68,68,0.2);
+}
+.view-link-badge:hover {
+  background: #dbeafe !important;
+  border-color: #3b82f6 !important;
+  color: #1d4ed8 !important;
+  transform: translateY(-0.5px);
+}
 </style>
 
 <!-- Header -->
@@ -417,22 +458,35 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
             <% if (!pendingKycList || !pendingKycList.length) { %>
             <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No pending KYC approvals</td></tr>
             <% } else { %>
-              <% pendingKycList.forEach(function(doc) { %>
-              <tr>
+              <% pendingKycList.forEach(function(doc, index) { %>
+              <tr class="kyc-row" data-index="<%= index %>">
                 <td><strong><%= doc.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= doc.userPhone %></span></td>
                 <td>
                   <span class="code-badge" style="background:#e0f2fe; color:#0369a1; font-weight:bold; font-size:11px;"><%= doc.type.toUpperCase().replace('_', ' ') %></span>
-                  <a href="<%= doc.fileUrl %>" target="_blank" style="margin-left:6px; font-size:12px; text-decoration:underline; color:var(--accent); font-weight:600;">View</a>
+                  <a href="<%= doc.fileUrl %>" target="_blank" class="view-link-badge" style="margin-left:8px; font-size:11px; padding: 2px 8px; background:#eff6ff; color:#2563eb; border: 1px solid #bfdbfe; border-radius: 6px; text-decoration:none; font-weight:600; display:inline-block; transition: all 0.2s;">
+                    👁 View
+                  </a>
                 </td>
                 <td style="display:flex; gap:6px;">
-                  <button class="btn btn-sm btn-primary kyc-approve-btn" data-id="<%= doc.id %>" style="padding:2px 8px; font-size:11px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold;">Approve</button>
-                  <button class="btn btn-sm btn-danger kyc-reject-btn" data-id="<%= doc.id %>" style="padding:2px 8px; font-size:11px; background:#ef4444; border:none; color:white; border-radius:6px; font-weight:bold;">Reject</button>
+                  <button class="btn btn-sm btn-primary kyc-approve-btn" data-id="<%= doc.id %>" style="padding:4px 10px; font-size:11.5px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Approve</button>
+                  <button class="btn btn-sm btn-danger kyc-reject-btn" data-id="<%= doc.id %>" style="padding:4px 10px; font-size:11.5px; background:#ef4444; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Reject</button>
                 </td>
               </tr>
               <% }) %>
             <% } %>
           </tbody>
         </table>
+        <% if (pendingKycList && pendingKycList.length > 5) { %>
+        <div class="db-pagination" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid var(--border-light); background:rgba(0,0,0,0.01);">
+          <button type="button" class="kyc-prev-btn" style="padding: 6px 14px; font-size:12px; font-weight:600; border-radius:6px; border:1px solid var(--border); background:#fff; color:#334155; cursor:pointer; display:flex; align-items:center; gap:4px; transition: all 0.2s;" disabled>
+            ← Prev
+          </button>
+          <span class="kyc-page-info" style="font-size:12.5px; color:#475569; font-weight:600;">Page 1 of <%= Math.ceil(pendingKycList.length / 5) %></span>
+          <button type="button" class="kyc-next-btn" style="padding: 6px 14px; font-size:12px; font-weight:600; border-radius:6px; border:1px solid var(--border); background:#fff; color:#334155; cursor:pointer; display:flex; align-items:center; gap:4px; transition: all 0.2s;">
+            Next →
+          </button>
+        </div>
+        <% } %>
       </div>
 
       <!-- Expiring Subscriptions (<= 2 Days Left) -->
@@ -930,5 +984,51 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
       }
     });
   });
+
+  // Client-side KYC approvals pagination
+  (function () {
+    let currentPage = 1;
+    const itemsPerPage = 5;
+    const rows = document.querySelectorAll('.kyc-row');
+    const totalPages = Math.ceil(rows.length / itemsPerPage);
+    
+    function showPage(page) {
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      const start = (page - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      
+      rows.forEach((row, idx) => {
+        if (idx >= start && idx < end) {
+          row.style.display = '';
+          row.classList.add('kyc-row-animate');
+        } else {
+          row.style.display = 'none';
+          row.classList.remove('kyc-row-animate');
+        }
+      });
+      
+      const prevBtn = document.querySelector('.kyc-prev-btn');
+      const nextBtn = document.querySelector('.kyc-next-btn');
+      const pageInfo = document.querySelector('.kyc-page-info');
+      
+      if (prevBtn) prevBtn.disabled = (currentPage === 1);
+      if (nextBtn) nextBtn.disabled = (currentPage === totalPages || totalPages === 0);
+      if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    }
+    
+    if (rows.length > 0) {
+      showPage(1);
+    }
+    
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('kyc-prev-btn')) {
+        if (currentPage > 1) showPage(currentPage - 1);
+      }
+      if (e.target.classList.contains('kyc-next-btn')) {
+        if (currentPage < totalPages) showPage(currentPage + 1);
+      }
+    });
+  })();
 })();
 </script>

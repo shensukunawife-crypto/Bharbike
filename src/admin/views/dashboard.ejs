@@ -610,50 +610,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
         </table>
       </div>
 
-      <!-- Low Battery Alerts -->
-      <div class="db-main" style="margin-bottom: 0;">
-        <div class="db-main-head" style="padding: 20px 24px;">
-          <div>
-            <p class="db-main-title" style="font-size: 16px;">🔋 Low Battery Warnings (&lt;25%)</p>
-            <p class="db-main-sub">Bikes needing battery swapping/recharges</p>
-          </div>
-          <span class="pay-badge pay-badge-failed" style="font-size: 12px; font-weight: bold; background: #fffbeb; color: #d97706; padding: 4px 10px; border-radius: 9999px;"><%= (lowBatteryBikes || []).length %> Low</span>
-        </div>
-        <table class="db-table">
-          <thead>
-            <tr>
-              <th>Bike</th>
-              <th>Battery %</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if (!lowBatteryBikes || !lowBatteryBikes.length) { %>
-            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No low battery alerts</td></tr>
-            <% } else { %>
-              <% lowBatteryBikes.forEach(function(b) { %>
-              <tr id="bike-row-<%= b.id %>">
-                <td>
-                  <span class="code-badge" style="background:#fffbeb; color:#b45309; font-weight:bold; font-size:11px;"><%= b.bike_code || b.id %></span><br/>
-                  <span class="muted-small bike-loc-text" style="font-size:11px; color:var(--text-muted);"><%= b.location || 'Unknown' %></span>
-                </td>
-                <td>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="flex:1; width:50px; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
-                      <div class="battery-fill-bar" style="width:<%= b.battery || 0 %>%; height:100%; background:#ef4444;"></div>
-                    </div>
-                    <span class="battery-pct-text" style="font-size:12px; font-weight:bold; color:#ef4444;"><%= b.battery || 0 %>%</span>
-                  </div>
-                </td>
-                <td>
-                  <button class="btn btn-sm btn-outline status-check-btn" data-bike-id="<%= b.id %>" style="padding:4px 8px; font-size:11px; border-color:#cbd5e1; border-radius:6px; font-weight:bold; cursor:pointer;">🔍 Status Check</button>
-                </td>
-              </tr>
-              <% }) %>
-            <% } %>
-          </tbody>
-        </table>
-      </div>
+      <!-- Low Battery Alerts Removed -->
 
     </div>
 
@@ -745,61 +702,59 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
 <script>
 (() => {
   const ctx = document.getElementById("revenueChart");
-  if (!window.Chart || !ctx) return;
-
-  const labels = <%- JSON.stringify(revenueChart?.labels || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) %>;
-  const data   = <%- JSON.stringify(revenueChart?.data   || [0,0,0,0,0,0,0]) %>;
-
   const isDark = document.body.classList.contains("dark-mode");
   const gridColor = isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6";
   const tickColor = isDark ? "#525252" : "#9ca3af";
 
-  new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "Revenue (₹)",
-        data,
-        borderColor: "#f26d21",
-        backgroundColor: "rgba(242,109,33,0.08)",
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointRadius: 3,
-        pointBackgroundColor: "#f26d21",
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: isDark ? "#1a1a1a" : "#fff",
-          titleColor: isDark ? "#f5f5f5" : "#111827",
-          bodyColor: isDark ? "#a3a3a3" : "#6b7280",
-          borderColor: isDark ? "#262626" : "#e5e7eb",
-          borderWidth: 1,
-          padding: 10,
-          callbacks: {
-            label: ctx => `₹${Number(ctx.raw).toLocaleString('en-IN')}`
+  if (window.Chart && ctx) {
+    const labels = <%- JSON.stringify(revenueChart?.labels || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) %>;
+    const data   = <%- JSON.stringify(revenueChart?.data   || [0,0,0,0,0,0,0]) %>;
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "Revenue (₹)",
+          data,
+          borderColor: "#f26d21",
+          backgroundColor: "rgba(242,109,33,0.08)",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointBackgroundColor: "#f26d21",
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? "#1a1a1a" : "#fff",
+            titleColor: isDark ? "#f5f5f5" : "#111827",
+            bodyColor: isDark ? "#a3a3a3" : "#6b7280",
+            borderColor: isDark ? "#262626" : "#e5e7eb",
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: ctx => `₹${Number(ctx.raw).toLocaleString('en-IN')}`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            ticks: { color: tickColor, font: { size: 11 }, callback: v => `₹${v}` },
+            grid: { color: gridColor }
           }
         }
-      },
-      scales: {
-        x: {
-          ticks: { color: tickColor, font: { size: 11 } },
-          grid: { color: gridColor }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { color: tickColor, font: { size: 11 }, callback: v => `₹${v}` },
-          grid: { color: gridColor }
-        }
       }
-    }
-  });
+    });
+  }
+
   // Orders Bar Chart
   const ordersCtx = document.getElementById("ordersChart");
   if (window.Chart && ordersCtx) {

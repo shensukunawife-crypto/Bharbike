@@ -679,6 +679,7 @@ export async function dashboard(req, res) {
     let assignedBikes = [];
     let activeMaintenance = [];
     let pendingKycList = [];
+    let pendingPayments = [];
 
     if (req.admin && req.admin.role === "sub_admin") {
       try {
@@ -687,13 +688,15 @@ export async function dashboard(req, res) {
           { data: allSubsData },
           { data: allPlansData },
           { data: activeRentalsData },
-          { data: pendingKycDocsData }
+          { data: pendingKycDocsData },
+          { data: pendingPaymentsDocsData }
         ] = await Promise.all([
           supabase.from("users").select("id, full_name, phone"),
           supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
           supabase.from("subscription_plans").select("id, name"),
           supabase.from("rentals").select("*").in("status", ["active", "ongoing"]),
-          supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending")
+          supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending"),
+          supabase.from("payments").select("*").eq("status", "pending").order("created_at", { ascending: false })
         ]);
 
         const allUsers = allUsersData || [];
@@ -701,6 +704,7 @@ export async function dashboard(req, res) {
         const allPlans = allPlansData || [];
         const activeRentals = activeRentalsData || [];
         const pendingKycDocs = pendingKycDocsData || [];
+        const pendingPaymentsDocs = pendingPaymentsDocsData || [];
 
         // Expiring Subscriptions (<= 2 Days left)
         const nowMs = now.getTime();
@@ -773,6 +777,20 @@ export async function dashboard(req, res) {
             createdAt: doc.created_at ? new Date(doc.created_at).toLocaleString("en-IN") : "—"
           };
         });
+
+        // Pending Payment Verifications mapping
+        pendingPayments = pendingPaymentsDocs.map(p => {
+          const u = allUsers.find(user => user.id === p.user_id);
+          return {
+            id: p.id,
+            userName: u ? u.full_name : "Unknown User",
+            userPhone: u ? u.phone : "—",
+            amount: p.amount,
+            utr: p.razorpay_payment_id || "—",
+            screenshotUrl: (p.razorpay_order_id && p.razorpay_order_id.startsWith("http")) ? p.razorpay_order_id : null,
+            createdAt: p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—"
+          };
+        });
       } catch (subAdminErr) {
         console.error("[adminController.dashboard] failed to load sub-admin data", subAdminErr);
       }
@@ -786,6 +804,7 @@ export async function dashboard(req, res) {
       assignedBikes,
       activeMaintenance,
       pendingKycList,
+      pendingPayments,
       lowBatteryBikes,
       stats: {
         usersCount: usersCount ?? 0,

@@ -78,6 +78,11 @@ export function requirePermission(permission) {
     
     // Strict restriction: Sub-admins cannot access financial status or payments
     if (req.admin.role === "sub_admin") {
+      const isEditPayment = req.originalUrl.includes("payments") && req.originalUrl.includes("/edit") && req.method === "POST";
+      if (isEditPayment) {
+        return next();
+      }
+
       const isFinanceRequest = 
         permission === "manage_finance" || 
         req.originalUrl.includes("earnings") || 

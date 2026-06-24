@@ -610,6 +610,50 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
         </table>
       </div>
 
+      <!-- Pending Payment Verifications -->
+      <div class="db-main" style="margin-bottom: 0;">
+        <div class="db-main-head" style="padding: 20px 24px;">
+          <div>
+            <p class="db-main-title" style="font-size: 16px;">💳 Pending Payment Verifications</p>
+            <p class="db-main-sub">Verify manual/UPI payments with UTR/receipts</p>
+          </div>
+          <span class="pay-badge pay-badge-pending" style="font-size: 12px; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 9999px;"><%= (pendingPayments || []).length %> Pending</span>
+        </div>
+        <table class="db-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Details</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!pendingPayments || !pendingPayments.length) { %>
+            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No pending payment verifications</td></tr>
+            <% } else { %>
+              <% pendingPayments.forEach(function(pay) { %>
+              <tr>
+                <td><strong><%= pay.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= pay.userPhone %></span></td>
+                <td>
+                  <strong>₹<%= pay.amount %></strong><br/>
+                  <span style="font-size:11px; color:var(--text-muted);">UTR: <%= pay.utr %></span>
+                  <% if (pay.screenshotUrl) { %>
+                  <a href="<%= pay.screenshotUrl %>" target="_blank" class="view-link-badge" style="margin-left:8px; font-size:11px; padding: 2px 8px; background:#eff6ff; color:#2563eb; border: 1px solid #bfdbfe; border-radius: 6px; text-decoration:none; font-weight:600; display:inline-block; transition: all 0.2s;">
+                    📸 View Receipt
+                  </a>
+                  <% } %>
+                </td>
+                <td style="display:flex; gap:6px;">
+                  <button class="btn btn-sm btn-primary payment-approve-btn" data-id="<%= pay.id %>" style="padding:4px 10px; font-size:11.5px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Approve</button>
+                  <button class="btn btn-sm btn-danger payment-reject-btn" data-id="<%= pay.id %>" style="padding:4px 10px; font-size:11.5px; background:#ef4444; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Reject</button>
+                </td>
+              </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
     </div>
 
   </div>
@@ -828,6 +872,24 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
         return;
       }
       handleAction(`/admin/kyc-documents/${docId}/status`, "POST", { status: "rejected", reason: reason.trim() });
+    });
+  });
+
+  document.querySelectorAll(".payment-approve-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const paymentId = btn.getAttribute("data-id");
+      if (confirm("Are you sure you want to APPROVE this payment?")) {
+        handleAction(`/admin/payments/${paymentId}/edit`, "POST", { status: "success" });
+      }
+    });
+  });
+
+  document.querySelectorAll(".payment-reject-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const paymentId = btn.getAttribute("data-id");
+      if (confirm("Are you sure you want to REJECT this payment?")) {
+        handleAction(`/admin/payments/${paymentId}/edit`, "POST", { status: "failed" });
+      }
     });
   });
 

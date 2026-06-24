@@ -4668,7 +4668,15 @@ export async function editPayment(req, res) {
       if (user_id) {
         const { createUserNotification } = await import("../../services/notificationService.js");
         
-        if (razorpay_order_id === "wallet") {
+        let isWallet = (razorpay_order_id === "wallet");
+        if (!isWallet && order_id) {
+          const { data: ord } = await supabase.from("orders").select("plan_name").eq("id", order_id).maybeSingle();
+          if (ord && (ord.plan_name === "Wallet Recharge" || ord.plan_name === "wallet")) {
+            isWallet = true;
+          }
+        }
+
+        if (isWallet) {
           // 1. Credit to wallet
           const { addMoney } = await import("../../services/walletService.js");
           await addMoney(user_id, Number(amount), "Manual QR Recharge", razorpay_payment_id, order_id);

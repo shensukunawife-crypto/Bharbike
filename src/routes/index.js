@@ -186,6 +186,16 @@ api.post("/payment/verify", authMiddleware, asyncHandler(paymentController.verif
 // Backward-compat aliases — now auth-protected too
 api.post("/create-order", authMiddleware, asyncHandler(paymentController.createOrder));
 api.post("/verify-payment", authMiddleware, asyncHandler(paymentController.verifyPayment));
+api.get("/payment/active-provider", authMiddleware, asyncHandler(async (req, res) => {
+  const { getActivePaymentConfig } = await import('../services/paymentConfigService.js');
+  const config = await getActivePaymentConfig();
+  return res.json({
+    success: true,
+    provider: config?.provider || "manual_qr",
+    merchant_upi: config?.key_id || "enviroluxbiodiesel@sbi",
+    merchant_name: config?.key_secret || "ENVIROLUX BIODIESEL PRIVATE L"
+  });
+}));
 // NOTE: /payment/checkout is already registered above (before paymentMethodRoutes)
 
 // PhonePe Callback / Webhook Handler

@@ -718,11 +718,93 @@ export async function dashboard(req, res) {
       };
     });
 
+    let expiringSubs = [];
+    let assignedBikes = [];
+    let activeMaintenance = [];
+
+    if (req.admin && req.admin.role === "sub_admin") {
+      try {
+        const [
+          { data: allUsersData },
+          { data: allSubsData },
+          { data: allPlansData },
+          { data: activeRentalsData }
+        ] = await Promise.all([
+          supabase.from("users").select("id, full_name, phone"),
+          supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
+          supabase.from("subscription_plans").select("id, name"),
+          supabase.from("rentals").select("*").in("status", ["active", "ongoing"])
+        ]);
+
+        const allUsers = allUsersData || [];
+        const allSubs = allSubsData || [];
+        const allPlans = allPlansData || [];
+        const activeRentals = activeRentalsData || [];
+
+        // Expiring Subscriptions (<= 2 Days left)
+        const nowMs = now.getTime();
+        const twoDaysMs = nowMs + 48 * 60 * 60 * 1000;
+        expiringSubs = allSubs
+          .filter(s => {
+            const endMs = new Date(s.end_date).getTime();
+            return endMs > nowMs && endMs <= twoDaysMs;
+          })
+          .map(s => {
+            const u = allUsers.find(user => user.id === s.user_id);
+            const p = allPlans.find(plan => plan.id === s.plan_id);
+            const hoursLeft = Math.max(0, Math.ceil((new Date(s.end_date).getTime() - nowMs) / (1000 * 60 * 60)));
+            let timeLeftStr = `${hoursLeft} hours left`;
+            if (hoursLeft > 24) {
+              const daysLeft = Math.floor(hoursLeft / 24);
+              const remHours = hoursLeft % 24;
+              timeLeftStr = `${daysLeft}d ${remHours}h left`;
+            }
+            return {
+              userName: u ? u.full_name : "Unknown User",
+              userPhone: u ? u.phone : "—",
+              planName: p ? p.name : "Subscription",
+              endDate: new Date(s.end_date).toLocaleString("en-IN"),
+              timeLeftStr,
+            };
+          });
+
+        // Assigned Bikes to Who and all details
+        assignedBikes = activeRentals.map(r => {
+          const u = allUsers.find(user => user.id === r.user_id);
+          const b = bikes.find(bike => bike.id === r.bike_id);
+          return {
+            userName: u ? u.full_name : "Unknown User",
+            userPhone: u ? u.phone : "—",
+            bikeCode: b ? b.bike_code : (r.bike_id || "—"),
+            status: r.status,
+            startTime: r.start_time ? new Date(r.start_time).toLocaleString("en-IN") : new Date(r.created_at || now).toLocaleString("en-IN")
+          };
+        });
+
+        // Maintenance Bikes Given Details
+        activeMaintenance = maintenanceTickets
+          .filter(t => t.status === "under_repair" || t.status === "in_progress")
+          .map(t => {
+            return {
+              bikeCode: t.bikeCode,
+              issueType: t.issueType,
+              reportedDate: t.reportedDate,
+              workDetails: t.workDetails || "—",
+              technicianName: t.technicianName || "Unassigned"
+            };
+          });
+      } catch (subAdminErr) {
+        console.error("[adminController.dashboard] failed to load sub-admin data", subAdminErr);
+      }
+    }
 
     return renderPage(res, {
       title: "Dashboard",
       active: "dashboard",
       bodyView: "dashboard",
+      expiringSubs,
+      assignedBikes,
+      activeMaintenance,
       stats: {
         usersCount: usersCount ?? 0,
         bikesCount: bikesCount ?? 0,

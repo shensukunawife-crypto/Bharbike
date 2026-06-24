@@ -307,7 +307,8 @@ export const verifyPayment = async (req, res) => {
           .from("payments")
           .update({
             razorpay_payment_id: razorpay_payment_id,
-            status: "pending"
+            status: "pending",
+            razorpay_order_id: razorpay_order_id
           })
           .eq("order_id", app_order_id)
           .select();

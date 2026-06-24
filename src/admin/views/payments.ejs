@@ -587,9 +587,11 @@ document.addEventListener('DOMContentLoaded', () => {
             '<td><span class="code-badge">' +
             escapeHtml(p.razorpay_payment_id) +
             "</span></td>" +
-            '<td><span class="code-badge">' +
-            escapeHtml(p.razorpay_order_id) +
-            "</span></td>" +
+            '<td>' +
+            (String(p.razorpay_order_id || '').startsWith('http')
+              ? '<a href="' + escapeHtml(p.razorpay_order_id) + '" target="_blank" class="btn btn-sm btn-gold" style="padding: 4px 8px; font-size: 11px; background: #eab308; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">🖼 View Screenshot</a>'
+              : '<span class="code-badge">' + escapeHtml(p.razorpay_order_id || '') + '</span>') +
+            '</td>' +
             "<td>" +
             escapeHtml(created) +
             "</td>" +

@@ -721,6 +721,7 @@ export async function dashboard(req, res) {
     let expiringSubs = [];
     let assignedBikes = [];
     let activeMaintenance = [];
+    let pendingKycList = [];
 
     if (req.admin && req.admin.role === "sub_admin") {
       try {
@@ -728,18 +729,21 @@ export async function dashboard(req, res) {
           { data: allUsersData },
           { data: allSubsData },
           { data: allPlansData },
-          { data: activeRentalsData }
+          { data: activeRentalsData },
+          { data: pendingKycDocsData }
         ] = await Promise.all([
           supabase.from("users").select("id, full_name, phone"),
           supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
           supabase.from("subscription_plans").select("id, name"),
-          supabase.from("rentals").select("*").in("status", ["active", "ongoing"])
+          supabase.from("rentals").select("*").in("status", ["active", "ongoing"]),
+          supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending")
         ]);
 
         const allUsers = allUsersData || [];
         const allSubs = allSubsData || [];
         const allPlans = allPlansData || [];
         const activeRentals = activeRentalsData || [];
+        const pendingKycDocs = pendingKycDocsData || [];
 
         // Expiring Subscriptions (<= 2 Days left)
         const nowMs = now.getTime();
@@ -768,11 +772,13 @@ export async function dashboard(req, res) {
             };
           });
 
-        // Assigned Bikes to Who and all details
+        // Assigned Bikes to Who and all details (with IDs for IoT/cancel actions)
         assignedBikes = activeRentals.map(r => {
           const u = allUsers.find(user => user.id === r.user_id);
           const b = bikes.find(bike => bike.id === r.bike_id);
           return {
+            id: r.id,
+            bikeId: r.bike_id,
             userName: u ? u.full_name : "Unknown User",
             userPhone: u ? u.phone : "—",
             bikeCode: b ? b.bike_code : (r.bike_id || "—"),
@@ -781,11 +787,13 @@ export async function dashboard(req, res) {
           };
         });
 
-        // Maintenance Bikes Given Details
+        // Maintenance Bikes Given Details (with IDs for marking fixed)
         activeMaintenance = maintenanceTickets
           .filter(t => t.status === "under_repair" || t.status === "in_progress")
           .map(t => {
             return {
+              id: t.id,
+              bikeId: t.bikeId,
               bikeCode: t.bikeCode,
               issueType: t.issueType,
               reportedDate: t.reportedDate,
@@ -793,6 +801,21 @@ export async function dashboard(req, res) {
               technicianName: t.technicianName || "Unassigned"
             };
           });
+
+        // Pending KYC list mapping
+        pendingKycList = pendingKycDocs.map(doc => {
+          const u = allUsers.find(user => user.id === doc.user_id);
+          return {
+            id: doc.id,
+            userId: doc.user_id,
+            userName: u ? u.full_name : "Unknown User",
+            userPhone: u ? u.phone : "—",
+            type: doc.type,
+            fileUrl: doc.file_url,
+            status: doc.status,
+            createdAt: doc.created_at ? new Date(doc.created_at).toLocaleString("en-IN") : "—"
+          };
+        });
       } catch (subAdminErr) {
         console.error("[adminController.dashboard] failed to load sub-admin data", subAdminErr);
       }
@@ -805,6 +828,8 @@ export async function dashboard(req, res) {
       expiringSubs,
       assignedBikes,
       activeMaintenance,
+      pendingKycList,
+      lowBatteryBikes,
       stats: {
         usersCount: usersCount ?? 0,
         bikesCount: bikesCount ?? 0,

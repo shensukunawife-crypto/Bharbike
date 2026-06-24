@@ -390,12 +390,51 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
 
 
 <% if (locals.admin && locals.admin.role === 'sub_admin') { %>
-  <!-- Sub-Admin Operations Dashboard -->
+  <!-- Sub-Admin Operations Control Center Dashboard -->
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; align-items: start;">
     
-    <!-- Left Column: Expiring Subscriptions & Maintenance Bikes -->
+    <!-- Left Column: KYC Approvals, Expiring Subscriptions & Maintenance Bikes -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
       
+      <!-- KYC Document Approvals -->
+      <div class="db-main" style="margin-bottom: 0;">
+        <div class="db-main-head" style="padding: 20px 24px;">
+          <div>
+            <p class="db-main-title" style="font-size: 16px;">📋 KYC Document Approvals</p>
+            <p class="db-main-sub">Review uploaded rider documents</p>
+          </div>
+          <span class="pay-badge pay-badge-pending" style="font-size: 12px; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 9999px;"><%= (pendingKycList || []).length %> Pending</span>
+        </div>
+        <table class="db-table">
+          <thead>
+            <tr>
+              <th>Rider</th>
+              <th>Document</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!pendingKycList || !pendingKycList.length) { %>
+            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No pending KYC approvals</td></tr>
+            <% } else { %>
+              <% pendingKycList.forEach(function(doc) { %>
+              <tr>
+                <td><strong><%= doc.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= doc.userPhone %></span></td>
+                <td>
+                  <span class="code-badge" style="background:#e0f2fe; color:#0369a1; font-weight:bold; font-size:11px;"><%= doc.type.toUpperCase().replace('_', ' ') %></span>
+                  <a href="<%= doc.fileUrl %>" target="_blank" style="margin-left:6px; font-size:12px; text-decoration:underline; color:var(--accent); font-weight:600;">View</a>
+                </td>
+                <td style="display:flex; gap:6px;">
+                  <button class="btn btn-sm btn-primary kyc-approve-btn" data-id="<%= doc.id %>" style="padding:2px 8px; font-size:11px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold;">Approve</button>
+                  <button class="btn btn-sm btn-danger kyc-reject-btn" data-id="<%= doc.id %>" style="padding:2px 8px; font-size:11px; background:#ef4444; border:none; color:white; border-radius:6px; font-weight:bold;">Reject</button>
+                </td>
+              </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
       <!-- Expiring Subscriptions (<= 2 Days Left) -->
       <div class="db-main" style="margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
@@ -443,7 +482,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
             <tr>
               <th>Bike</th>
               <th>Issue / Work Details</th>
-              <th>Technician</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -455,9 +494,11 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
                 <td><span class="code-badge" style="background:#f1f5f9; color:#0f172a; font-weight:bold; font-size:11px;"><%= m.bikeCode %></span></td>
                 <td>
                   <strong><%= m.issueType %></strong><br/>
-                  <span style="font-size:11px; color:var(--text-muted); display:inline-block; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= m.workDetails %>"><%= m.workDetails %></span>
+                  <span style="font-size:11px; color:var(--text-muted); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= m.workDetails %>"><%= m.workDetails %></span>
                 </td>
-                <td><span style="font-size:12px; color:var(--text-muted); font-weight:500;"><%= m.technicianName %></span></td>
+                <td>
+                  <button class="btn btn-sm btn-primary bike-fixed-btn" data-bike-id="<%= m.bikeId %>" style="padding:4px 8px; font-size:11px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold;">✅ Fixed</button>
+                </td>
               </tr>
               <% }) %>
             <% } %>
@@ -467,13 +508,15 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
 
     </div>
 
-    <!-- Right Column: Assigned Bikes (Rider-Bike Mappings) -->
-    <div>
+    <!-- Right Column: Assigned Bikes (Rider-Bike Mappings) & Low Battery Warnings -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      
+      <!-- Assigned Bikes (Active Rentals) -->
       <div class="db-main" style="margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
           <div>
             <p class="db-main-title" style="font-size: 16px;">🚲 Assigned Bikes (Active Rentals)</p>
-            <p class="db-main-sub">Current active riders and their assigned vehicles</p>
+            <p class="db-main-sub">Current active riders and assignments</p>
           </div>
           <span class="pay-badge pay-badge-success" style="font-size: 12px; font-weight: bold; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 9999px;"><%= (assignedBikes || []).length %> Active</span>
         </div>
@@ -482,7 +525,7 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
             <tr>
               <th>Rider Details</th>
               <th>Assigned Bike</th>
-              <th>Started At</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -491,15 +534,73 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
             <% } else { %>
               <% assignedBikes.forEach(function(item) { %>
               <tr>
-                <td><strong><%= item.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= item.userPhone %></span></td>
+                <td>
+                  <strong><%= item.userName %></strong><br/>
+                  <span style="font-size:11px; color:var(--text-muted);"><%= item.userPhone %></span><br/>
+                  <span style="font-size:10px; color:var(--text-muted);">Started: <%= item.startTime %></span>
+                </td>
                 <td><span class="code-badge" style="background:#e8f5e9; color:#2e7d32; font-weight:bold; font-size:11px; border:1px solid #c8e6c9;"><%= item.bikeCode %></span></td>
-                <td style="font-size: 12.5px; color: var(--text-muted);"><%= item.startTime %></td>
+                <td>
+                  <div style="display:flex; flex-direction:column; gap:4px;">
+                    <div style="display:flex; gap:4px;">
+                      <button class="btn btn-sm btn-outline bike-lock-btn" data-bike-id="<%= item.bikeId %>" style="padding:4px 8px; font-size:10.5px; border-color:#cbd5e1; font-weight:bold; border-radius:6px; cursor:pointer;">⚡ Lock</button>
+                      <button class="btn btn-sm btn-outline bike-unlock-btn" data-bike-id="<%= item.bikeId %>" style="padding:4px 8px; font-size:10.5px; border-color:#cbd5e1; font-weight:bold; border-radius:6px; cursor:pointer;">🔓 Unlock</button>
+                    </div>
+                    <button class="btn btn-sm btn-danger booking-complete-btn" data-booking-id="<%= item.id %>" style="padding:4px 6px; font-size:10.5px; background:#ef4444; color:white; border:none; width:100%; font-weight:bold; border-radius:6px; cursor:pointer;">🛑 End Ride</button>
+                  </div>
+                </td>
               </tr>
               <% }) %>
             <% } %>
           </tbody>
         </table>
       </div>
+
+      <!-- Low Battery Alerts -->
+      <div class="db-main" style="margin-bottom: 0;">
+        <div class="db-main-head" style="padding: 20px 24px;">
+          <div>
+            <p class="db-main-title" style="font-size: 16px;">🔋 Low Battery Warnings (&lt;25%)</p>
+            <p class="db-main-sub">Bikes needing battery swapping/recharges</p>
+          </div>
+          <span class="pay-badge pay-badge-failed" style="font-size: 12px; font-weight: bold; background: #fffbeb; color: #d97706; padding: 4px 10px; border-radius: 9999px;"><%= (lowBatteryBikes || []).length %> Low</span>
+        </div>
+        <table class="db-table">
+          <thead>
+            <tr>
+              <th>Bike</th>
+              <th>Battery %</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!lowBatteryBikes || !lowBatteryBikes.length) { %>
+            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No low battery alerts</td></tr>
+            <% } else { %>
+              <% lowBatteryBikes.forEach(function(b) { %>
+              <tr id="bike-row-<%= b.id %>">
+                <td>
+                  <span class="code-badge" style="background:#fffbeb; color:#b45309; font-weight:bold; font-size:11px;"><%= b.bike_code || b.id %></span><br/>
+                  <span class="muted-small bike-loc-text" style="font-size:11px; color:var(--text-muted);"><%= b.location || 'Unknown' %></span>
+                </td>
+                <td>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="flex:1; width:50px; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                      <div class="battery-fill-bar" style="width:<%= b.battery || 0 %>%; height:100%; background:#ef4444;"></div>
+                    </div>
+                    <span class="battery-pct-text" style="font-size:12px; font-weight:bold; color:#ef4444;"><%= b.battery || 0 %>%</span>
+                  </div>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline status-check-btn" data-bike-id="<%= b.id %>" style="padding:4px 8px; font-size:11px; border-color:#cbd5e1; border-radius:6px; font-weight:bold; cursor:pointer;">🔍 Status Check</button>
+                </td>
+              </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
     </div>
 
   </div>
@@ -701,5 +802,133 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
       }
     });
   }
+
+  // Operations Control Center AJAX Event Listeners
+  document.querySelectorAll(".kyc-approve-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const docId = btn.getAttribute("data-id");
+      handleAction(`/admin/kyc-documents/${docId}/status`, "POST", { status: "verified" });
+    });
+  });
+
+  document.querySelectorAll(".kyc-reject-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const docId = btn.getAttribute("data-id");
+      const reason = prompt("Please enter the reason for rejecting this document:");
+      if (reason === null) return; // cancel clicked
+      if (!reason.trim()) {
+        showToast("Rejection reason cannot be empty", "error");
+        return;
+      }
+      handleAction(`/admin/kyc-documents/${docId}/status`, "POST", { status: "rejected", reason: reason.trim() });
+    });
+  });
+
+  document.querySelectorAll(".bike-lock-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const bikeId = btn.getAttribute("data-bike-id");
+      if (confirm("Are you sure you want to LOCK this bike?")) {
+        handleAction(`/admin/bikes/${bikeId}/lock`, "POST");
+      }
+    });
+  });
+
+  document.querySelectorAll(".bike-unlock-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const bikeId = btn.getAttribute("data-bike-id");
+      if (confirm("Are you sure you want to UNLOCK this bike?")) {
+        handleAction(`/admin/bikes/${bikeId}/unlock`, "POST");
+      }
+    });
+  });
+
+  document.querySelectorAll(".booking-complete-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const bookingId = btn.getAttribute("data-booking-id");
+      if (confirm("Are you sure you want to END this ride manually?")) {
+        handleAction(`/admin/bookings/${bookingId}/complete`, "POST");
+      }
+    });
+  });
+
+  document.querySelectorAll(".bike-fixed-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const bikeId = btn.getAttribute("data-bike-id");
+      if (confirm("Mark this bike as FIXED and return it to service?")) {
+        handleAction(`/admin/maintenance/${bikeId}/fixed`, "POST");
+      }
+    });
+  });
+
+  document.querySelectorAll(".status-check-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const bikeId = btn.getAttribute("data-bike-id");
+      const row = document.getElementById(`bike-row-${bikeId}`);
+      if (!row) return;
+
+      const locTextEl = row.querySelector(".bike-loc-text");
+      const fillBarEl = row.querySelector(".battery-fill-bar");
+      const pctTextEl = row.querySelector(".battery-pct-text");
+      
+      btn.disabled = true;
+      btn.innerHTML = "⏳ Checking...";
+
+      try {
+        const adminToken = localStorage.getItem("adminToken");
+        const res = await fetch(`/admin/bikes/${bikeId}/live-gps`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+          }
+        });
+        if (res.status === 401) {
+          localStorage.removeItem("adminToken");
+          window.location.href = "/admin/login";
+          return;
+        }
+        const data = await res.json();
+        if (data.success) {
+          // Update location text
+          if (data.isLive && data.lat && data.lng) {
+            locTextEl.innerHTML = `📍 Live: ${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}`;
+            locTextEl.style.color = "#10b981"; // success green
+          } else {
+            locTextEl.innerHTML = "📍 GPS signal unavailable";
+            locTextEl.style.color = "#ef4444"; // error red
+          }
+          
+          // Update battery indicators
+          const battery = Number(data.battery || 0);
+          pctTextEl.textContent = `${battery}%`;
+          fillBarEl.style.width = `${battery}%`;
+          if (battery < 25) {
+            fillBarEl.style.background = "#ef4444"; // red
+            pctTextEl.style.color = "#ef4444";
+          } else if (battery < 60) {
+            fillBarEl.style.background = "#f59e0b"; // yellow
+            pctTextEl.style.color = "#f59e0b";
+          } else {
+            fillBarEl.style.background = "#10b981"; // green
+            pctTextEl.style.color = "#10b981";
+          }
+          
+          showToast(`Status checked for bike ${bikeId}`);
+          btn.innerHTML = "✓ Updated";
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = "🔍 Status Check";
+          }, 3000);
+        } else {
+          showToast("Failed to fetch GPS status", "error");
+          btn.disabled = false;
+          btn.innerHTML = "🔍 Status Check";
+        }
+      } catch (err) {
+        showToast("Error checking status", "error");
+        btn.disabled = false;
+        btn.innerHTML = "🔍 Status Check";
+      }
+    });
+  });
 })();
 </script>

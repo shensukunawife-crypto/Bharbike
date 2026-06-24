@@ -168,50 +168,7 @@ export async function ensureSettingsInitialized() {
   }
 }
 
-export const maintenanceTickets = [
-  {
-    id: "MT-1001",
-    bikeId: "bike-1",
-    bikeCode: "BIKE-101",
-    issueType: "Brake Issue",
-    description: "Rear brake response is weak",
-    workDetails: "Adjusted rear caliper tension; preparing to replace worn brake pads.",
-    status: "under_repair",
-    technicianName: "Ravi Kumar",
-    repairCost: 450,
-    reportedDate: "2026-04-15 14:30",
-    expectedFixDate: "2026-04-19",
-    fixedDate: null,
-  },
-  {
-    id: "MT-1002",
-    bikeId: "bike-2",
-    bikeCode: "BIKE-203",
-    issueType: "Battery Drop",
-    description: "Battery drains quickly after 20km",
-    workDetails: "Testing individual cell voltages and checking battery management system (BMS).",
-    status: "in_progress",
-    technicianName: "Neha Singh",
-    repairCost: 700,
-    reportedDate: "2026-04-16 09:15",
-    expectedFixDate: "2026-04-20",
-    fixedDate: null,
-  },
-  {
-    id: "MT-1003",
-    bikeId: "bike-3",
-    bikeCode: "BIKE-309",
-    issueType: "Tyre Replacement",
-    description: "Front tyre puncture and wear",
-    workDetails: "Replaced front tyre with brand new MRF nylon tyre and aligned front wheel.",
-    status: "completed",
-    technicianName: "Aman Verma",
-    repairCost: 320,
-    reportedDate: "2026-04-10 11:00",
-    expectedFixDate: "2026-04-12",
-    fixedDate: "2026-04-12 16:45",
-  },
-];
+export const maintenanceTickets = [];
 
 const payoutQueue = [
   {

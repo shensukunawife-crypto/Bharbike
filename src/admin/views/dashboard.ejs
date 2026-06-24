@@ -522,47 +522,9 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
         </table>
       </div>
 
-      <!-- Bikes Under Maintenance -->
-      <div class="db-main" style="margin-bottom: 0;">
-        <div class="db-main-head" style="padding: 20px 24px;">
-          <div>
-            <p class="db-main-title" style="font-size: 16px;">🔧 Bikes Under Maintenance</p>
-            <p class="db-main-sub">Bikes currently in repair/maintenance state</p>
-          </div>
-          <span class="pay-badge pay-badge-failed" style="font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 9999px;"><%= (activeMaintenance || []).length %> in Repair</span>
-        </div>
-        <table class="db-table">
-          <thead>
-            <tr>
-              <th>Bike</th>
-              <th>Issue / Work Details</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if (!activeMaintenance || !activeMaintenance.length) { %>
-            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No bikes in maintenance</td></tr>
-            <% } else { %>
-              <% activeMaintenance.forEach(function(m) { %>
-              <tr>
-                <td><span class="code-badge" style="background:#f1f5f9; color:#0f172a; font-weight:bold; font-size:11px;"><%= m.bikeCode %></span></td>
-                <td>
-                  <strong><%= m.issueType %></strong><br/>
-                  <span style="font-size:11px; color:var(--text-muted); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= m.workDetails %>"><%= m.workDetails %></span>
-                </td>
-                <td>
-                  <button class="btn btn-sm btn-primary bike-fixed-btn" data-bike-id="<%= m.bikeId %>" style="padding:4px 8px; font-size:11px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold;">✅ Fixed</button>
-                </td>
-              </tr>
-              <% }) %>
-            <% } %>
-          </tbody>
-        </table>
-      </div>
-
     </div>
 
-    <!-- Right Column: Assigned Bikes (Rider-Bike Mappings) & Low Battery Warnings -->
+    <!-- Right Column: Assigned Bikes (Rider-Bike Mappings) & Maintenance -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
       
       <!-- Assigned Bikes (Active Rentals) -->
@@ -610,7 +572,43 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
         </table>
       </div>
 
-      <!-- Low Battery Alerts Removed -->
+      <!-- Bikes Under Maintenance -->
+      <div class="db-main" style="margin-bottom: 0;">
+        <div class="db-main-head" style="padding: 20px 24px;">
+          <div>
+            <p class="db-main-title" style="font-size: 16px;">🔧 Bikes Under Maintenance</p>
+            <p class="db-main-sub">Bikes currently in repair/maintenance state</p>
+          </div>
+          <span class="pay-badge pay-badge-failed" style="font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 9999px;"><%= (activeMaintenance || []).length %> in Repair</span>
+        </div>
+        <table class="db-table">
+          <thead>
+            <tr>
+              <th>Bike</th>
+              <th>Issue / Work Details</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!activeMaintenance || !activeMaintenance.length) { %>
+            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No bikes in maintenance</td></tr>
+            <% } else { %>
+              <% activeMaintenance.forEach(function(m) { %>
+              <tr>
+                <td><span class="code-badge" style="background:#f1f5f9; color:#0f172a; font-weight:bold; font-size:11px;"><%= m.bikeCode %></span></td>
+                <td>
+                  <strong><%= m.issueType %></strong><br/>
+                  <span style="font-size:11px; color:var(--text-muted); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= m.workDetails %>"><%= m.workDetails %></span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-primary bike-fixed-btn" data-bike-id="<%= m.bikeId %>" style="padding:4px 8px; font-size:11px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold;">✅ Fixed</button>
+                </td>
+              </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
 
     </div>
 

@@ -586,7 +586,7 @@ export async function dashboard(req, res) {
         .in("status", ["active", "ongoing"]),
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("id, amount, status, created_at"),
-      supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").catch(() => ({ count: 0 }))
+      supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").then(res => res, () => ({ count: 0 }))
     ]);
 
     const pendingKycCount = pendingKycResult ? (pendingKycResult.count || 0) : 0;

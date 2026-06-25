@@ -76,8 +76,8 @@ export function requirePermission(permission) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     
-    // Strict restriction: Sub-admins cannot access financial status or payments
-    if (req.admin.role === "sub_admin") {
+    // Strict restriction: Sub-admins, managers, and support agents cannot access financial status or payments
+    if (req.admin.role === "sub_admin" || req.admin.role === "manager" || req.admin.role === "support") {
       const isEditPayment = req.originalUrl.includes("payments") && req.originalUrl.includes("/edit") && req.method === "POST";
       if (isEditPayment) {
         return next();

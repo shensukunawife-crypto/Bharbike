@@ -11,7 +11,7 @@
   const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*'));
   const _perms    = Array.isArray(_admin.permissions) ? _admin.permissions : [];
   const _can      = (p) => {
-    if (_admin.role === 'sub_admin' && p === 'manage_finance') return false;
+    if (['sub_admin', 'manager', 'support'].includes(_admin.role) && p === 'manage_finance') return false;
     return _isMaster || _perms.includes(p);
   };
 

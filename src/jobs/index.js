@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { runRentalExpirySweep } from "./rentalExpiryJob.js";
 import { runGpsRefreshJob } from "./gpsRefreshJob.js";
-import { runSubscriptionExpirySweep } from "./subscriptionExpiryJob.js";
+import { runSubscriptionExpirySweep, runSubscriptionWarningSweep } from "./subscriptionExpiryJob.js";
 
 export function startScheduledJobs() {
   cron.schedule("* * * * *", async () => {
@@ -23,14 +23,24 @@ export function startScheduledJobs() {
   });
   console.log("[jobs] Scheduled: GPS location refresh (every 5 minutes)");
 
-  // Run subscription expiry check and 2-day warning sweep daily at midnight
-  cron.schedule("0 0 * * *", async () => {
+  // Run subscription expiry check every minute (real-time expiry)
+  cron.schedule("* * * * *", async () => {
     try {
       await runSubscriptionExpirySweep();
     } catch (e) {
       console.error("[jobs] Subscription expiry sweep failed", e);
     }
   });
-  console.log("[jobs] Scheduled: subscription expiry sweep (daily at midnight)");
+  console.log("[jobs] Scheduled: subscription expiry sweep (every minute)");
+
+  // Run subscription warning sweep every hour
+  cron.schedule("0 * * * *", async () => {
+    try {
+      await runSubscriptionWarningSweep();
+    } catch (e) {
+      console.error("[jobs] Subscription warning sweep failed", e);
+    }
+  });
+  console.log("[jobs] Scheduled: subscription warning sweep (every hour)");
 }
 

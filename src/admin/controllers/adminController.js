@@ -681,7 +681,7 @@ export async function dashboard(req, res) {
     let pendingKycList = [];
     let pendingPayments = [];
 
-    if (req.admin && req.admin.role === "sub_admin") {
+    if (req.admin && (req.admin.role === "sub_admin" || req.admin.role === "manager" || req.admin.role === "support")) {
       try {
         const [
           { data: allUsersData },
@@ -744,7 +744,9 @@ export async function dashboard(req, res) {
             userPhone: u ? u.phone : "—",
             bikeCode: b ? b.bike_code : (r.bike_id || "—"),
             status: r.status,
-            startTime: r.start_time ? new Date(r.start_time).toLocaleString("en-IN") : new Date(r.created_at || now).toLocaleString("en-IN")
+            startTime: r.start_time ? new Date(r.start_time).toLocaleString("en-IN") : new Date(r.created_at || now).toLocaleString("en-IN"),
+            battery: b ? Number(b.battery || 0) : 0,
+            location: b ? b.location : "Offline / No GPS"
           };
         });
 

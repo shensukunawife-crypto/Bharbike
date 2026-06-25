@@ -32,12 +32,20 @@
             </td>
             <td><span class="badge badge-soft" style="text-transform: capitalize;"><%= s.plan_display || s.plan_id %></span></td>
             <td>
-              <% if (s.status === 'active') { %>
+              <% 
+                let displayStatus = s.status;
+                if ((s.status === 'active' || s.status === 'cancelled') && s.end_date && new Date(s.end_date) < new Date()) {
+                  displayStatus = 'expired';
+                }
+              %>
+              <% if (displayStatus === 'active') { %>
                 <span class="badge success">Active</span>
-              <% } else if (s.status === 'cancelled') { %>
+              <% } else if (displayStatus === 'cancelled') { %>
                 <span class="badge danger">Cancelled</span>
+              <% } else if (displayStatus === 'expired') { %>
+                <span class="badge warning">Expired</span>
               <% } else { %>
-                <span class="badge warning"><%= s.status %></span>
+                <span class="badge warning"><%= displayStatus %></span>
               <% } %>
             </td>
             <td><%= s.start_date ? String(s.start_date).replace('T',' ').slice(0,19) : '—' %></td>

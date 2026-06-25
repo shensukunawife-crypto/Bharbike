@@ -1,11 +1,11 @@
 <%
   const gOperations = ['orders', 'bookings', 'delivery-partners', 'skipped-days'].includes(active);
   const gVehicle    = ['bikes', 'maintenance', 'hubs'].includes(active);
-  const gUsers      = ['users', 'kyc-documents', 'subscriptions'].includes(active);
+  const gUsers      = ['users', 'kyc-documents', 'subscriptions', 'payments'].includes(active);
   const gFinancial  = ['earnings', 'analytics'].includes(active);
   const gSystem     = ['system-workflow', 'backend-monitor', 'activity-logs', 'sql-editor'].includes(active);
   const gComm       = ['support', 'notifications', 'ads'].includes(active);
-  const gAdmin      = ['payments', 'settings', 'admins', 'subscription-plans'].includes(active);
+  const gAdmin      = ['settings', 'admins', 'subscription-plans'].includes(active);
 
   const _admin    = locals.admin || {};
   const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*'));
@@ -107,6 +107,11 @@
       <a class="nav-link nav-link-sub <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents">
         <span class="nav-icon"><%- icons.kyc %></span><span>KYC Documents</span>
       </a>
+      <% if (_can('manage_finance')) { %>
+      <a class="nav-link nav-link-sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments">
+        <span class="nav-icon"><%- icons.payments %></span><span>Payments</span>
+      </a>
+      <% } %>
     </div>
   </div>
 </div>
@@ -218,7 +223,7 @@
 <% } %>
 
 <!-- CONFIGURATION -->
-<% if (_can('manage_finance') || _can('manage_settings') || _isMaster) { %>
+<% if (_can('manage_settings') || _can('manage_admins') || _isMaster) { %>
 <div class="nav-section">
   <p class="nav-label">Configuration</p>
   <div class="nav-group <%= gAdmin ? 'is-open' : '' %>" data-group-id="administration">
@@ -228,11 +233,6 @@
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
-      <% if (_can('manage_finance')) { %>
-      <a class="nav-link nav-link-sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments">
-        <span class="nav-icon"><%- icons.payments %></span><span>Payments</span>
-      </a>
-      <% } %>
       <% if (_can('manage_settings')) { %>
       <a class="nav-link nav-link-sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings">
         <span class="nav-icon"><%- icons.settings %></span><span>Settings</span>

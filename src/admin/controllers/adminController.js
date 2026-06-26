@@ -1680,6 +1680,73 @@ export async function kycUpdateStatus(req, res) {
   }
 }
 
+export async function deleteUserKyc(req, res) {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: "Missing userId" });
+    }
+
+    console.log(`[admin.deleteUserKyc] Starting KYC deletion for user: ${userId}`);
+
+    // 1. List physical files in Supabase Storage under folder: userId/
+    const { data: files, error: listError } = await supabase.storage
+      .from("kyc-documents")
+      .list(userId);
+
+    if (listError) {
+      console.error(`[admin.deleteUserKyc] failed to list storage files for ${userId}:`, listError.message);
+    } else if (files && files.length > 0) {
+      // 2. Delete files from storage
+      const filePaths = files.map(f => `${userId}/${f.name}`);
+      console.log(`[admin.deleteUserKyc] Deleting files from storage:`, filePaths);
+      const { error: deleteStorageError } = await supabase.storage
+        .from("kyc-documents")
+        .remove(filePaths);
+      if (deleteStorageError) {
+        console.error(`[admin.deleteUserKyc] Storage deletion error:`, deleteStorageError.message);
+      }
+    }
+
+    // 3. Delete records from kyc_documents table
+    const { error: dbDeleteError } = await supabase
+      .from("kyc_documents")
+      .delete()
+      .eq("user_id", userId);
+
+    if (dbDeleteError) {
+      console.error(`[admin.deleteUserKyc] DB kyc_documents deletion error:`, dbDeleteError.message);
+      return res.status(500).json({ success: false, error: dbDeleteError.message });
+    }
+
+    // 4. Reset legacy columns & address_verified flag in users table
+    const { error: userUpdateError } = await supabase
+      .from("users")
+      .update({
+        aadhaar_front_url: null,
+        aadhaar_back_url: null,
+        pan_card_url: null,
+        electricity_bill_url: null,
+        selfie_url: null,
+        driving_license_url: null,
+        address_verified: false
+      })
+      .eq("id", userId);
+
+    if (userUpdateError) {
+      console.error(`[admin.deleteUserKyc] DB users update error:`, userUpdateError.message);
+      return res.status(500).json({ success: false, error: userUpdateError.message });
+    }
+
+    console.log(`[admin.deleteUserKyc] Successfully deleted all KYC for user: ${userId}`);
+    return res.json({ success: true, message: "KYC profile deleted successfully" });
+  } catch (err) {
+    console.error("[admin.deleteUserKyc] unexpected error", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+
 export async function deleteBike(req, res) {
   try {
     const { bikeId } = req.params;

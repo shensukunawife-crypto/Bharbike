@@ -3,6 +3,19 @@
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const todayStr = `${dayNames[today.getDay()]}, ${today.getDate()} ${monthNames[today.getMonth()]}`;
+
+  var pendingKycList = locals.pendingKycList || [];
+  var pendingPayments = locals.pendingPayments || [];
+  var assignedBikes = locals.assignedBikes || [];
+  var activeMaintenance = locals.activeMaintenance || [];
+  var expiringSubs = locals.expiringSubs || [];
+  var lowBatteryBikes = locals.lowBatteryBikes || [];
+  var alerts = locals.alerts || [];
+  var recentActivity = locals.recentActivity || [];
+  var earningsBreakdown = locals.earningsBreakdown || { today: 0, weekly: 0, monthly: 0 };
+  var stats = locals.stats || { usersCount: 0, bikesCount: 0, activeRentalsCount: 0, totalEarnings: 0, pendingKycCount: 0 };
+  var revenueChart = locals.revenueChart || { labels: [], data: [] };
+  var ordersChart = locals.ordersChart || { labels: [], data: [] };
 %>
 
 <style>
@@ -468,6 +481,38 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
   transition: background 0.15s, border-color 0.15s;
 }
 .db-quick-link:hover { background:var(--border-light); border-color:var(--border); }
+
+/* Premium Tab Navigation Styling */
+.db-tab-btn {
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border) !important;
+  outline: none;
+  background: var(--surface) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+.db-tab-btn:hover {
+  color: var(--text) !important;
+  background: var(--border-light) !important;
+  transform: translateY(-0.5px);
+}
+.db-tab-btn.active {
+  color: #ffffff !important;
+  background: #f26d21 !important; /* Brand orange */
+  border-color: #f26d21 !important;
+  box-shadow: 0 4px 14px rgba(242, 109, 33, 0.35) !important;
+}
+.db-tab-content {
+  display: none;
+}
+.db-tab-content.active {
+  display: block;
+  animation: dbTabFadeIn 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes dbTabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
 
 <!-- Header -->
@@ -539,16 +584,200 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
   <% } %>
 </div>
 
+<% 
+  var isSubAdmin = locals.admin && (locals.admin.role === 'sub_admin' || locals.admin.role === 'manager' || locals.admin.role === 'support');
+  var activeTab = isSubAdmin ? 'tab-approvals' : 'tab-analytics';
+%>
 
+<!-- Tabs Navigation -->
+<div class="db-tabs" style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap;">
+  <% if (!isSubAdmin) { %>
+    <button class="db-tab-btn <%= activeTab === 'tab-analytics' ? 'active' : '' %>" data-tab="tab-analytics" style="padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13.5px; border: none; background: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+      📈 Analytics & Finance
+    </button>
+  <% } %>
+  <button class="db-tab-btn <%= activeTab === 'tab-approvals' ? 'active' : '' %>" data-tab="tab-approvals" style="padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13.5px; border: none; background: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+    🛡️ Pending Approvals
+    <% var totalApprovals = (pendingKycList || []).length + (pendingPayments || []).length; %>
+    <% if (totalApprovals > 0) { %>
+      <span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-left: 4px;"><%= totalApprovals %></span>
+    <% } %>
+  </button>
+  <button class="db-tab-btn <%= activeTab === 'tab-operations' ? 'active' : '' %>" data-tab="tab-operations" style="padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13.5px; border: none; background: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+    🚲 Fleet & Operations
+  </button>
+</div>
 
-<% if (locals.admin && (locals.admin.role === 'sub_admin' || locals.admin.role === 'manager' || locals.admin.role === 'support')) { %>
-  <!-- Sub-Admin Operations Control Center Dashboard -->
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; align-items: start;">
+<!-- Tab 1: Analytics & Finance -->
+<% if (!isSubAdmin) { %>
+<div id="tab-analytics" class="db-tab-content <%= activeTab === 'tab-analytics' ? 'active' : '' %>">
+  <!-- KPI Earnings Strip -->
+  <div class="db-kpi-strip">
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      </div>
+      <div><p class="db-kpi-label">Today</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.today||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      </div>
+      <div><p class="db-kpi-label">This Week</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.weekly||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(242,109,33,0.1);color:#f26d21;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div><p class="db-kpi-label">This Month</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.monthly||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div><p class="db-kpi-label">Pending KYC</p><p class="db-kpi-value"><%= stats.pendingKycCount||0 %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="11" rx="2"/><path d="M22 11v3"/></svg>
+      </div>
+      <div><p class="db-kpi-label">Low Battery</p><p class="db-kpi-value"><%= (lowBatteryBikes||[]).length %></p></div>
+    </div>
+  </div>
+
+  <!-- Alerts Panel -->
+  <% if (alerts && alerts.length) { %>
+  <div class="db-alerts-panel">
+    <% alerts.forEach(function(a){ %>
+    <div class="db-alert db-alert-<%= a.level %>">
+      <span class="db-alert-icon">
+        <% if(a.level==='warning'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <% }else if(a.level==='success'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <% }else{ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><% } %>
+      </span>
+      <div><strong><%= a.title %></strong><% if(a.detail){ %><span class="db-alert-detail"><%= a.detail %></span><% } %></div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <!-- Master 2-col Grid -->
+  <div class="db-master-grid">
+    <!-- LEFT: Charts -->
+    <div class="db-col-left">
+      <!-- Revenue Line Chart -->
+      <div class="db-chart-card">
+        <div class="db-chart-head">
+          <div>
+            <p class="db-chart-title">Revenue — Last 7 Days</p>
+            <p class="db-chart-sub">Daily earnings from completed orders</p>
+          </div>
+          <div class="db-live-clock"><span class="db-live-dot"></span><span id="db-live-clock"></span></div>
+        </div>
+        <div style="height:230px;position:relative;"><canvas id="revenueChart"></canvas></div>
+      </div>
+
+      <!-- Two mini doughnut charts -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="db-chart-card">
+          <div class="db-chart-head">
+            <div><p class="db-chart-title">Orders by Status</p><p class="db-chart-sub">All-time breakdown</p></div>
+          </div>
+          <div style="height:180px;position:relative;"><canvas id="ordersChart"></canvas></div>
+          <div id="ordersLegend" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;"></div>
+        </div>
+        <div class="db-chart-card">
+          <div class="db-chart-head">
+            <div><p class="db-chart-title">Fleet Status</p><p class="db-chart-sub">Bike availability now</p></div>
+          </div>
+          <div style="height:180px;position:relative;"><canvas id="fleetChart"></canvas></div>
+          <div id="fleetLegend" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Recent Orders + Low Battery + Quick Links -->
+    <div class="db-col-right">
+      <!-- Recent Orders Table -->
+      <div class="db-chart-card">
+        <div class="db-chart-head" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0;">
+          <div>
+            <p class="db-chart-title">Recent Orders</p>
+            <p class="db-chart-sub"><%= (recentActivity||[]).length %> latest transactions</p>
+          </div>
+          <a href="/admin/orders" style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;">View All &rarr;</a>
+        </div>
+        <table class="db-table" style="margin:0;">
+          <thead><tr><th>Order</th><th>Amt</th><th>Status</th></tr></thead>
+          <tbody>
+            <% var rList = (recentActivity||[]).slice(0,10); %>
+            <% if(!rList.length){ %><tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px;">No recent activity</td></tr><% } %>
+            <% rList.forEach(function(item){ var st=(item.title||'').toLowerCase(); var amtM=(item.title||'').match(/\u20b9([\d,]+)/); %>
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:12.5px;color:var(--text);line-height:1.3;"><%= item.title||'—' %></div>
+                <div style="color:var(--text-muted);font-size:11px;margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%= item.subtitle||'' %></div>
+              </td>
+              <td style="font-weight:700;font-size:12.5px;">
+                <%= (item.amount !== undefined && item.amount !== null) ? '₹' + item.amount : (amtM ? '₹' + amtM[1] : '—') %>
+              </td>
+              <td>
+                <% var badge=st.includes('completed')||st.includes('paid')?'success':st.includes('active')||st.includes('ongoing')||st.includes('accepted')?'active':st.includes('cancelled')||st.includes('rejected')?'danger':'pending'; %>
+                <span class="db-badge db-badge-<%= badge %>"><%= badge==='success'?'Paid':badge==='active'?'Active':badge==='danger'?'Cancelled':'Pending' %></span>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Low Battery Bikes -->
+      <% if(lowBatteryBikes && lowBatteryBikes.length){ %>
+      <div class="db-chart-card">
+        <div class="db-chart-head" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0;">
+          <div><p class="db-chart-title" style="color:#ef4444;">&#x1F50B; Low Battery Alert</p><p class="db-chart-sub">Bikes below 25% — needs charge</p></div>
+          <span style="background:rgba(239,68,68,0.1);color:#ef4444;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;"><%= lowBatteryBikes.length %> critical</span>
+        </div>
+        <% lowBatteryBikes.slice(0,5).forEach(function(bike){ var pct=bike.battery_level||bike.battery||0; %>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border-light);">
+          <div style="width:30px;height:30px;border-radius:8px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;color:#ef4444;flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="11" rx="2"/><path d="M22 11v3"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:12.5px;"><%= bike.code||bike.bike_code||('Bike #'+(bike.id||'')) %></div>
+            <div style="width:100%;height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
+              <div style="height:100%;width:<%= pct %>%;background:#ef4444;border-radius:2px;"></div>
+            </div>
+          </div>
+          <span style="font-weight:800;font-size:12px;color:#ef4444;"><%= pct %>%</span>
+        </div>
+        <% }) %>
+      </div>
+      <% } %>
+
+      <!-- Quick Actions -->
+      <div class="db-chart-card">
+        <p class="db-chart-title" style="margin-bottom:12px;">Quick Actions</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <a href="/admin/kyc-documents" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> KYC Review</a>
+          <a href="/admin/payments" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Payments</a>
+          <a href="/admin/bikes" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg> Fleet</a>
+          <a href="/admin/earnings" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f26d21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Earnings</a>
+          <a href="/admin/orders" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg> All Orders</a>
+          <a href="/admin/users" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Users</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- Tab 2: Pending Approvals -->
+<div id="tab-approvals" class="db-tab-content <%= activeTab === 'tab-approvals' ? 'active' : '' %>">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
     
-    <!-- Left Column: KYC Approvals, Expiring Subscriptions & Maintenance Bikes -->
+    <!-- Left column: KYC Document Approvals -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
-      
-      <!-- KYC Document Approvals -->
       <div class="db-main" style="margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
           <div>
@@ -599,46 +828,62 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
         </div>
         <% } %>
       </div>
+    </div>
 
-      <!-- Expiring Subscriptions (<= 2 Days Left) -->
+    <!-- Right column: Pending manual payment verifications -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
       <div class="db-main" style="margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
           <div>
-            <p class="db-main-title" style="font-size: 16px;">⏳ Expiring Subscriptions (Next 48h)</p>
-            <p class="db-main-sub">Whose 2 days are left</p>
+            <p class="db-main-title" style="font-size: 16px;">💳 Pending Payment Verifications</p>
+            <p class="db-main-sub">Verify manual/UPI payments with UTR/receipts</p>
           </div>
-          <span class="pay-badge pay-badge-pending" style="font-size: 12px; font-weight: bold; background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 9999px;"><%= (expiringSubs || []).length %> Expiring</span>
+          <span class="pay-badge pay-badge-pending" style="font-size: 12px; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 9999px;"><%= (pendingPayments || []).length %> Pending</span>
         </div>
         <table class="db-table">
           <thead>
             <tr>
-              <th>Rider</th>
-              <th>Plan</th>
-              <th>Time Left</th>
+              <th>User</th>
+              <th>Details</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <% if (!expiringSubs || !expiringSubs.length) { %>
-            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No subscriptions expiring in next 48h</td></tr>
+            <% if (!pendingPayments || !pendingPayments.length) { %>
+            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No pending payment verifications</td></tr>
             <% } else { %>
-              <% expiringSubs.forEach(function(sub) { %>
+              <% pendingPayments.forEach(function(pay) { %>
               <tr>
-                <td><strong><%= sub.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= sub.userPhone %></span></td>
-                <td><span class="code-badge" style="background:#f1f5f9; color:#475569; font-weight:bold; font-size:11px;"><%= sub.planName %></span></td>
-                <td><span class="status-dot status-pending" style="font-weight: 700; font-size:12.5px;"><%= sub.timeLeftStr %></span></td>
+                <td><strong><%= pay.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= pay.userPhone %></span></td>
+                <td>
+                  <strong>₹<%= pay.amount %></strong><br/>
+                  <span style="font-size:11px; color:var(--text-muted);">UTR: <%= pay.utr %></span>
+                  <% if (pay.screenshotUrl) { %>
+                  <a href="<%= pay.screenshotUrl %>" target="_blank" class="view-link-badge" style="margin-left:8px; font-size:11px; padding: 2px 8px; background:#eff6ff; color:#2563eb; border: 1px solid #bfdbfe; border-radius: 6px; text-decoration:none; font-weight:600; display:inline-block; transition: all 0.2s;">
+                    📸 View Receipt
+                  </a>
+                  <% } %>
+                </td>
+                <td style="display:flex; gap:6px;">
+                  <button class="btn btn-sm btn-primary payment-approve-btn" data-id="<%= pay.id %>" style="padding:4px 10px; font-size:11.5px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Approve</button>
+                  <button class="btn btn-sm btn-danger payment-reject-btn" data-id="<%= pay.id %>" style="padding:4px 10px; font-size:11.5px; background:#ef4444; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Reject</button>
+                </td>
               </tr>
               <% }) %>
             <% } %>
           </tbody>
         </table>
       </div>
-
     </div>
+  </div>
+</div>
 
-    <!-- Right Column: Assigned Bikes (Rider-Bike Mappings) & Maintenance -->
+<!-- Tab 3: Fleet & Operations -->
+<div id="tab-operations" class="db-tab-content <%= activeTab === 'tab-operations' ? 'active' : '' %>">
+  <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; align-items: start;">
+    
+    <!-- Left column: Assigned Bikes (Active Rentals) -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
-      
-      <!-- Assigned Bikes (Active Rentals) -->
       <div class="db-main" style="margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
           <div>
@@ -702,7 +947,10 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
           </tbody>
         </table>
       </div>
+    </div>
 
+    <!-- Right column: Maintenance and Expiring Subscriptions -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
       <!-- Bikes Under Maintenance -->
       <div class="db-main" style="margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
@@ -716,8 +964,8 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
           <thead>
             <tr>
               <th>Bike</th>
-              <th>Issue / Work Details</th>
-              <th>Actions</th>
+              <th>Issue</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -741,223 +989,45 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
         </table>
       </div>
 
-      <!-- Pending Payment Verifications -->
+      <!-- Expiring Subscriptions (<= 2 Days Left) -->
       <div class="db-main" style="margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
           <div>
-            <p class="db-main-title" style="font-size: 16px;">💳 Pending Payment Verifications</p>
-            <p class="db-main-sub">Verify manual/UPI payments with UTR/receipts</p>
+            <p class="db-main-title" style="font-size: 16px;">⏳ Expiring Subscriptions (Next 48h)</p>
+            <p class="db-main-sub">Whose 2 days are left</p>
           </div>
-          <span class="pay-badge pay-badge-pending" style="font-size: 12px; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 9999px;"><%= (pendingPayments || []).length %> Pending</span>
+          <span class="pay-badge pay-badge-pending" style="font-size: 12px; font-weight: bold; background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 9999px;"><%= (expiringSubs || []).length %> Expiring</span>
         </div>
         <table class="db-table">
           <thead>
             <tr>
-              <th>User</th>
-              <th>Details</th>
-              <th>Actions</th>
+              <th>Rider</th>
+              <th>Plan</th>
+              <th>Time Left</th>
             </tr>
           </thead>
           <tbody>
-            <% if (!pendingPayments || !pendingPayments.length) { %>
-            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No pending payment verifications</td></tr>
+            <% if (!expiringSubs || !expiringSubs.length) { %>
+            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No subscriptions expiring in next 48h</td></tr>
             <% } else { %>
-              <% pendingPayments.forEach(function(pay) { %>
+              <% expiringSubs.forEach(function(sub) { %>
               <tr>
-                <td><strong><%= pay.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= pay.userPhone %></span></td>
-                <td>
-                  <strong>₹<%= pay.amount %></strong><br/>
-                  <span style="font-size:11px; color:var(--text-muted);">UTR: <%= pay.utr %></span>
-                  <% if (pay.screenshotUrl) { %>
-                  <a href="<%= pay.screenshotUrl %>" target="_blank" class="view-link-badge" style="margin-left:8px; font-size:11px; padding: 2px 8px; background:#eff6ff; color:#2563eb; border: 1px solid #bfdbfe; border-radius: 6px; text-decoration:none; font-weight:600; display:inline-block; transition: all 0.2s;">
-                    📸 View Receipt
-                  </a>
-                  <% } %>
-                </td>
-                <td style="display:flex; gap:6px;">
-                  <button class="btn btn-sm btn-primary payment-approve-btn" data-id="<%= pay.id %>" style="padding:4px 10px; font-size:11.5px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Approve</button>
-                  <button class="btn btn-sm btn-danger payment-reject-btn" data-id="<%= pay.id %>" style="padding:4px 10px; font-size:11.5px; background:#ef4444; border:none; color:white; border-radius:6px; font-weight:bold; transition: all 0.2s; cursor:pointer;">Reject</button>
-                </td>
+                <td><strong><%= sub.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= sub.userPhone %></span></td>
+                <td><span class="code-badge" style="background:#f1f5f9; color:#475569; font-weight:bold; font-size:11px;"><%= sub.planName %></span></td>
+                <td><span class="status-dot status-pending" style="font-weight: 700; font-size:12.5px;"><%= sub.timeLeftStr %></span></td>
               </tr>
               <% }) %>
             <% } %>
           </tbody>
         </table>
       </div>
-
-    </div>
-
-  </div>
-<% } else { %>
-
-  <!-- KPI Earnings Strip -->
-  <div class="db-kpi-strip">
-    <div class="db-kpi-card">
-      <div class="db-kpi-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-      </div>
-      <div><p class="db-kpi-label">Today</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.today||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
-    </div>
-    <div class="db-kpi-card">
-      <div class="db-kpi-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      </div>
-      <div><p class="db-kpi-label">This Week</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.weekly||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
-    </div>
-    <div class="db-kpi-card">
-      <div class="db-kpi-icon" style="background:rgba(242,109,33,0.1);color:#f26d21;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      </div>
-      <div><p class="db-kpi-label">This Month</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.monthly||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
-    </div>
-    <div class="db-kpi-card">
-      <div class="db-kpi-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      </div>
-      <div><p class="db-kpi-label">Pending KYC</p><p class="db-kpi-value"><%= stats.pendingKycCount||0 %></p></div>
-    </div>
-    <div class="db-kpi-card">
-      <div class="db-kpi-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="11" rx="2"/><path d="M22 11v3"/></svg>
-      </div>
-      <div><p class="db-kpi-label">Low Battery</p><p class="db-kpi-value"><%= (lowBatteryBikes||[]).length %></p></div>
     </div>
   </div>
-
-  <!-- Alerts Panel -->
-  <% if (alerts && alerts.length) { %>
-  <div class="db-alerts-panel">
-    <% alerts.forEach(function(a){ %>
-    <div class="db-alert db-alert-<%= a.level %>">
-      <span class="db-alert-icon">
-        <% if(a.level==='warning'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <% }else if(a.level==='success'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        <% }else{ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><% } %>
-      </span>
-      <div><strong><%= a.title %></strong><% if(a.detail){ %><span class="db-alert-detail"><%= a.detail %></span><% } %></div>
-    </div>
-    <% }) %>
-  </div>
-  <% } %>
-
-  <!-- Master 2-col Grid -->
-  <div class="db-master-grid">
-
-    <!-- LEFT: Charts -->
-    <div class="db-col-left">
-
-      <!-- Revenue Line Chart -->
-      <div class="db-chart-card">
-        <div class="db-chart-head">
-          <div>
-            <p class="db-chart-title">Revenue — Last 7 Days</p>
-            <p class="db-chart-sub">Daily earnings from completed orders</p>
-          </div>
-          <div class="db-live-clock"><span class="db-live-dot"></span><span id="db-live-clock"></span></div>
-        </div>
-        <div style="height:230px;position:relative;"><canvas id="revenueChart"></canvas></div>
-      </div>
-
-      <!-- Two mini doughnut charts -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="db-chart-card">
-          <div class="db-chart-head">
-            <div><p class="db-chart-title">Orders by Status</p><p class="db-chart-sub">All-time breakdown</p></div>
-          </div>
-          <div style="height:180px;position:relative;"><canvas id="ordersChart"></canvas></div>
-          <div id="ordersLegend" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;"></div>
-        </div>
-        <div class="db-chart-card">
-          <div class="db-chart-head">
-            <div><p class="db-chart-title">Fleet Status</p><p class="db-chart-sub">Bike availability now</p></div>
-          </div>
-          <div style="height:180px;position:relative;"><canvas id="fleetChart"></canvas></div>
-          <div id="fleetLegend" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;"></div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- RIGHT: Recent Orders + Low Battery + Quick Links -->
-    <div class="db-col-right">
-
-      <!-- Recent Orders Table -->
-      <div class="db-chart-card">
-        <div class="db-chart-head" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0;">
-          <div>
-            <p class="db-chart-title">Recent Orders</p>
-            <p class="db-chart-sub"><%= (recentActivity||[]).length %> latest transactions</p>
-          </div>
-          <a href="/admin/orders" style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;">View All &rarr;</a>
-        </div>
-        <table class="db-table" style="margin:0;">
-          <thead><tr><th>Order</th><th>Amt</th><th>Status</th></tr></thead>
-          <tbody>
-            <% var rList = (recentActivity||[]).slice(0,10); %>
-            <% if(!rList.length){ %><tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px;">No recent activity</td></tr><% } %>
-            <% rList.forEach(function(item){ var st=(item.title||'').toLowerCase(); var amtM=(item.title||'').match(/\u20b9([\d,]+)/); %>
-            <tr>
-              <td>
-                <div style="font-weight:600;font-size:12.5px;color:var(--text);line-height:1.3;"><%= item.title||'—' %></div>
-                <div style="color:var(--text-muted);font-size:11px;margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%= item.subtitle||'' %></div>
-              </td>
-              <td style="font-weight:700;font-size:12.5px;"><%= amtM?'₹'+amtM[1]:'—' %></td>
-              <td>
-                <% var badge=st.includes('completed')||st.includes('paid')?'success':st.includes('active')||st.includes('ongoing')||st.includes('accepted')?'active':st.includes('cancelled')||st.includes('rejected')?'danger':'pending'; %>
-                <span class="db-badge db-badge-<%= badge %>"><%= badge==='success'?'Paid':badge==='active'?'Active':badge==='danger'?'Cancelled':'Pending' %></span>
-              </td>
-            </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Low Battery Bikes -->
-      <% if(lowBatteryBikes && lowBatteryBikes.length){ %>
-      <div class="db-chart-card">
-        <div class="db-chart-head" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0;">
-          <div><p class="db-chart-title" style="color:#ef4444;">&#x1F50B; Low Battery Alert</p><p class="db-chart-sub">Bikes below 25% — needs charge</p></div>
-          <span style="background:rgba(239,68,68,0.1);color:#ef4444;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;"><%= lowBatteryBikes.length %> critical</span>
-        </div>
-        <% lowBatteryBikes.slice(0,5).forEach(function(bike){ var pct=bike.battery_level||bike.battery||0; %>
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border-light);">
-          <div style="width:30px;height:30px;border-radius:8px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;color:#ef4444;flex-shrink:0;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="11" rx="2"/><path d="M22 11v3"/></svg>
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:12.5px;"><%= bike.code||bike.bike_code||('Bike #'+(bike.id||'')) %></div>
-            <div style="width:100%;height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
-              <div style="height:100%;width:<%= pct %>%;background:#ef4444;border-radius:2px;"></div>
-            </div>
-          </div>
-          <span style="font-weight:800;font-size:12px;color:#ef4444;"><%= pct %>%</span>
-        </div>
-        <% }) %>
-      </div>
-      <% } %>
-
-      <!-- Quick Actions -->
-      <div class="db-chart-card">
-        <p class="db-chart-title" style="margin-bottom:12px;">Quick Actions</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <a href="/admin/kyc-documents" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> KYC Review</a>
-          <a href="/admin/payments" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Payments</a>
-          <a href="/admin/bikes" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg> Fleet</a>
-          <a href="/admin/earnings" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f26d21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Earnings</a>
-          <a href="/admin/orders" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg> All Orders</a>
-          <a href="/admin/users" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Users</a>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-<% } %>
+</div>
 
 
 <script>
 (() => {
-  const ctx = document.getElementById("revenueChart");
   const isDark = document.body.classList.contains("dark-mode");
   const gridColor = isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6";
   const tickColor = isDark ? "#525252" : "#9ca3af";
@@ -1252,6 +1322,27 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
       if (e.target.classList.contains('kyc-next-btn')) {
         if (currentPage < totalPages) showPage(currentPage + 1);
       }
+    });
+    // Tab Switching Logic
+    const tabBtns = document.querySelectorAll(".db-tab-btn");
+    const tabContents = document.querySelectorAll(".db-tab-content");
+    tabBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetTab = btn.getAttribute("data-tab");
+        
+        // Update buttons active class
+        tabBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        
+        // Update contents active class
+        tabContents.forEach((content) => {
+          if (content.id === targetTab) {
+            content.classList.add("active");
+          } else {
+            content.classList.remove("active");
+          }
+        });
+      });
     });
   })();
 })();

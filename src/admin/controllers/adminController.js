@@ -542,7 +542,7 @@ export async function dashboard(req, res) {
         .select("*", { count: "exact", head: true })
         .in("status", ["active", "ongoing"]),
       supabase.from("bikes").select("*"),
-      supabase.from("orders").select("id, amount, status, created_at"),
+      supabase.from("orders").select("id, amount, status, created_at, pickup_location"),
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").then(res => res, () => ({ count: 0 }))
     ]);
 
@@ -600,10 +600,18 @@ export async function dashboard(req, res) {
     };
     orders.forEach((order) => {
       const status = String(order.status || "").toLowerCase();
-      if (status in orderBuckets) {
-        orderBuckets[status] += 1;
-      } else if (status === "rejected") {
+      if (status === "paid" || status === "success" || status === "completed" || status === "done" || status === "delivered") {
+        orderBuckets.completed += 1;
+      } else if (status === "pending") {
+        orderBuckets.pending += 1;
+      } else if (status === "accepted" || status === "assigned") {
+        orderBuckets.accepted += 1;
+      } else if (status === "ongoing" || status === "active") {
+        orderBuckets.ongoing += 1;
+      } else if (status === "cancelled" || status === "failed" || status === "rejected") {
         orderBuckets.cancelled += 1;
+      } else if (status in orderBuckets) {
+        orderBuckets[status] += 1;
       }
     });
 
@@ -672,6 +680,7 @@ export async function dashboard(req, res) {
           .toUpperCase()}`,
         subtitle: `${userName} • ${detailsStr}`,
         time: new Date(order.createdAt || order.created_at || now).toLocaleString("en-IN"),
+        amount: order.amount,
       };
     });
 
@@ -681,7 +690,7 @@ export async function dashboard(req, res) {
     let pendingKycList = [];
     let pendingPayments = [];
 
-    if (req.admin && (req.admin.role === "sub_admin" || req.admin.role === "manager" || req.admin.role === "support")) {
+    if (req.admin) {
       try {
         const [
           { data: allUsersData },

@@ -378,6 +378,96 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   color: #1d4ed8 !important;
   transform: translateY(-0.5px);
 }
+
+/* ── Enhanced stat cards ── */
+.db-stat { display:flex; align-items:center; gap:16px; }
+.db-stat-icon {
+  width:44px; height:44px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.db-stat-hover { transition: transform 0.18s, box-shadow 0.18s; cursor:default; }
+.db-stat-hover:hover { transform:translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+
+/* ── KPI earnings strip ── */
+.db-kpi-strip {
+  display:grid; grid-template-columns:repeat(5,1fr);
+  gap:14px; margin-bottom:20px;
+}
+.db-kpi-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px 18px;
+  display:flex; align-items:center; gap:12px;
+  box-shadow:var(--shadow-sm); transition: transform 0.18s, box-shadow 0.18s;
+}
+.db-kpi-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.08); }
+.db-kpi-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.db-kpi-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:4px; }
+.db-kpi-value { font-size:20px; font-weight:800; color:var(--text); letter-spacing:-0.5px; line-height:1; }
+
+/* ── Alerts ── */
+.db-alerts-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+.db-alert {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 16px; border-radius:var(--radius-sm);
+  border:1px solid; font-size:13px; font-weight:500;
+}
+.db-alert-warning  { background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.25); color:#92400e; }
+.db-alert-success  { background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.25); color:#065f46; }
+.db-alert-info     { background:rgba(99,102,241,0.08); border-color:rgba(99,102,241,0.25); color:#3730a3; }
+body.dark-mode .db-alert-warning { color:#fbbf24; }
+body.dark-mode .db-alert-success { color:#34d399; }
+body.dark-mode .db-alert-info    { color:#a5b4fc; }
+.db-alert-icon { display:flex; align-items:center; padding-top:1px; flex-shrink:0; }
+.db-alert-detail { display:block; font-size:12px; margin-top:2px; opacity:0.8; }
+
+/* ── Master 2-col grid ── */
+.db-master-grid { display:grid; grid-template-columns:1fr 380px; gap:20px; align-items:start; }
+.db-col-left  { display:flex; flex-direction:column; gap:16px; }
+.db-col-right { display:flex; flex-direction:column; gap:16px; }
+.db-chart-card-full { }
+
+/* ── Chart card tweaks ── */
+.db-chart-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
+
+/* ── Status badges ── */
+.db-badge {
+  display:inline-block; padding:3px 9px; border-radius:99px;
+  font-size:11px; font-weight:700; letter-spacing:0.02em;
+}
+.db-badge-success { background:rgba(16,185,129,0.1); color:#065f46; }
+.db-badge-active  { background:rgba(99,102,241,0.1); color:#3730a3; }
+.db-badge-danger  { background:rgba(239,68,68,0.1); color:#991b1b; }
+.db-badge-pending { background:rgba(245,158,11,0.1); color:#92400e; }
+body.dark-mode .db-badge-success { color:#34d399; }
+body.dark-mode .db-badge-active  { color:#a5b4fc; }
+body.dark-mode .db-badge-danger  { color:#f87171; }
+body.dark-mode .db-badge-pending { color:#fbbf24; }
+
+/* ── Live clock ── */
+.db-live-clock { font-size:12px; color:var(--text-muted); font-weight:500; display:flex; align-items:center; gap:6px; }
+.db-live-dot { width:7px; height:7px; background:#10b981; border-radius:50%; animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.85);} }
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .db-master-grid { grid-template-columns:1fr; }
+  .db-kpi-strip { grid-template-columns:repeat(3,1fr); }
+}
+@media(max-width:700px){
+  .db-kpi-strip { grid-template-columns:repeat(2,1fr); }
+  .db-stats { grid-template-columns:repeat(2,1fr); }
+}
+
+/* ── Quick action links ── */
+.db-quick-link {
+  display:flex; align-items:center; gap:7px;
+  padding:9px 12px; border-radius:8px;
+  border:1px solid var(--border);
+  text-decoration:none; color:var(--text);
+  font-size:12.5px; font-weight:600;
+  transition: background 0.15s, border-color 0.15s;
+}
+.db-quick-link:hover { background:var(--border-light); border-color:var(--border); }
 </style>
 
 <!-- Header -->
@@ -404,30 +494,51 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
     <p class="db-stat-value"><%= stats.usersCount || 0 %></p>
     <p class="db-stat-sub">Registered accounts</p>
   </div>
-  <div class="db-stat">
-    <p class="db-stat-label">Fleet Size</p>
-    <p class="db-stat-value"><%= stats.bikesCount || 0 %></p>
-    <p class="db-stat-sub">Bikes available</p>
+  <div class="db-stat db-stat-hover">
+    <div class="db-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+    </div>
+    <div>
+      <p class="db-stat-label">Fleet Size</p>
+      <p class="db-stat-value"><%= stats.bikesCount || 0 %></p>
+      <p class="db-stat-sub">Total bikes</p>
+    </div>
   </div>
-  <div class="db-stat db-stat-accent">
-    <p class="db-stat-label">Active Rentals</p>
-    <p class="db-stat-value"><%= stats.activeRentalsCount || 0 %></p>
-    <p class="db-stat-sub">Currently ongoing</p>
+  <div class="db-stat db-stat-hover db-stat-accent">
+    <div class="db-stat-icon" style="background:rgba(242,109,33,0.12);color:#f26d21;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+    </div>
+    <div>
+      <p class="db-stat-label">Active Rentals</p>
+      <p class="db-stat-value"><%= stats.activeRentalsCount || 0 %></p>
+      <p class="db-stat-sub">Currently ongoing</p>
+    </div>
   </div>
   <% if (locals.admin && (locals.admin.role === 'sub_admin' || locals.admin.role === 'manager' || locals.admin.role === 'support')) { %>
-  <div class="db-stat db-stat-accent">
-    <p class="db-stat-label">Pending KYC Docs</p>
-    <p class="db-stat-value" style="font-size:22px;"><%= stats.pendingKycCount || 0 %></p>
-    <p class="db-stat-sub">Awaiting verification</p>
+  <div class="db-stat db-stat-hover">
+    <div class="db-stat-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
+    <div>
+      <p class="db-stat-label">Pending KYC</p>
+      <p class="db-stat-value"><%= stats.pendingKycCount || 0 %></p>
+      <p class="db-stat-sub">Awaiting verification</p>
+    </div>
   </div>
   <% } else { %>
-  <div class="db-stat">
-    <p class="db-stat-label">Total Earnings</p>
-    <p class="db-stat-value" style="font-size:22px;">₹<%= Number(stats.totalEarnings || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></p>
-    <p class="db-stat-sub">Lifetime revenue</p>
+  <div class="db-stat db-stat-hover">
+    <div class="db-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div>
+      <p class="db-stat-label">Total Earnings</p>
+      <p class="db-stat-value" style="font-size:20px;">₹<%= Number(stats.totalEarnings || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) %></p>
+      <p class="db-stat-sub">Lifetime revenue</p>
+    </div>
   </div>
   <% } %>
 </div>
+
 
 
 <% if (locals.admin && (locals.admin.role === 'sub_admin' || locals.admin.role === 'manager' || locals.admin.role === 'support')) { %>
@@ -678,88 +789,171 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
 
   </div>
 <% } else { %>
-  <!-- Recent Orders Table -->
-  <div class="db-main">
-    <div class="db-main-head">
-      <div>
-        <p class="db-main-title">Recent Orders</p>
-        <p class="db-main-sub">
-          <span><%= (recentActivity || []).length %> orders</span> — latest activity on the platform
-        </p>
+
+  <!-- KPI Earnings Strip -->
+  <div class="db-kpi-strip">
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       </div>
-      <div class="db-main-metrics">
-        <div>
-          <p class="db-metric-val"><%= stats.bikesCount || 0 %></p>
-          <p class="db-metric-label">Bikes</p>
+      <div><p class="db-kpi-label">Today</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.today||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      </div>
+      <div><p class="db-kpi-label">This Week</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.weekly||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(242,109,33,0.1);color:#f26d21;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div><p class="db-kpi-label">This Month</p><p class="db-kpi-value">₹<%= Number(earningsBreakdown&&earningsBreakdown.monthly||0).toLocaleString('en-IN',{maximumFractionDigits:0}) %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div><p class="db-kpi-label">Pending KYC</p><p class="db-kpi-value"><%= stats.pendingKycCount||0 %></p></div>
+    </div>
+    <div class="db-kpi-card">
+      <div class="db-kpi-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="11" rx="2"/><path d="M22 11v3"/></svg>
+      </div>
+      <div><p class="db-kpi-label">Low Battery</p><p class="db-kpi-value"><%= (lowBatteryBikes||[]).length %></p></div>
+    </div>
+  </div>
+
+  <!-- Alerts Panel -->
+  <% if (alerts && alerts.length) { %>
+  <div class="db-alerts-panel">
+    <% alerts.forEach(function(a){ %>
+    <div class="db-alert db-alert-<%= a.level %>">
+      <span class="db-alert-icon">
+        <% if(a.level==='warning'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <% }else if(a.level==='success'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <% }else{ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><% } %>
+      </span>
+      <div><strong><%= a.title %></strong><% if(a.detail){ %><span class="db-alert-detail"><%= a.detail %></span><% } %></div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <!-- Master 2-col Grid -->
+  <div class="db-master-grid">
+
+    <!-- LEFT: Charts -->
+    <div class="db-col-left">
+
+      <!-- Revenue Line Chart -->
+      <div class="db-chart-card">
+        <div class="db-chart-head">
+          <div>
+            <p class="db-chart-title">Revenue — Last 7 Days</p>
+            <p class="db-chart-sub">Daily earnings from completed orders</p>
+          </div>
+          <div class="db-live-clock"><span class="db-live-dot"></span><span id="db-live-clock"></span></div>
         </div>
-        <div>
-          <p class="db-metric-val"><%= stats.activeRentalsCount || 0 %></p>
-          <p class="db-metric-label">Active</p>
+        <div style="height:230px;position:relative;"><canvas id="revenueChart"></canvas></div>
+      </div>
+
+      <!-- Two mini doughnut charts -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="db-chart-card">
+          <div class="db-chart-head">
+            <div><p class="db-chart-title">Orders by Status</p><p class="db-chart-sub">All-time breakdown</p></div>
+          </div>
+          <div style="height:180px;position:relative;"><canvas id="ordersChart"></canvas></div>
+          <div id="ordersLegend" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;"></div>
+        </div>
+        <div class="db-chart-card">
+          <div class="db-chart-head">
+            <div><p class="db-chart-title">Fleet Status</p><p class="db-chart-sub">Bike availability now</p></div>
+          </div>
+          <div style="height:180px;position:relative;"><canvas id="fleetChart"></canvas></div>
+          <div id="fleetLegend" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;"></div>
         </div>
       </div>
+
     </div>
 
-    <table class="db-table">
-      <thead>
-        <tr>
-          <th>Activity</th>
-          <th>Details</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% const recentList = (recentActivity || []).slice(0, 8); %>
-        <% if (recentList.length === 0) { %>
-        <tr>
-          <td colspan="3" style="text-align:center; color:var(--text-muted); padding: 32px;">
-            No recent activity found
-          </td>
-        </tr>
-        <% } %>
-        <% recentList.forEach(item => { %>
-        <tr>
-          <td style="font-weight:600; color:var(--text);"><%= item.title || '—' %></td>
-          <td style="color:var(--text-muted); font-size:12px; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            <%= item.subtitle || '—' %>
-          </td>
-          <td>
-            <% const stText = (item.title || '').toLowerCase(); %>
-            <span class="status-dot <%= stText.includes('completed') || stText.includes('paid') ? 'status-completed' : stText.includes('accepted') || stText.includes('active') || stText.includes('ongoing') ? 'status-active' : stText.includes('cancelled') || stText.includes('rejected') ? 'status-cancelled' : 'status-pending' %>">
-              <%= stText.includes('completed') || stText.includes('paid') ? 'Paid' : stText.includes('accepted') || stText.includes('ongoing') ? 'Active' : stText.includes('cancelled') || stText.includes('rejected') ? 'Cancelled' : 'Pending' %>
-            </span>
-          </td>
-        </tr>
+    <!-- RIGHT: Recent Orders + Low Battery + Quick Links -->
+    <div class="db-col-right">
+
+      <!-- Recent Orders Table -->
+      <div class="db-chart-card">
+        <div class="db-chart-head" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0;">
+          <div>
+            <p class="db-chart-title">Recent Orders</p>
+            <p class="db-chart-sub"><%= (recentActivity||[]).length %> latest transactions</p>
+          </div>
+          <a href="/admin/orders" style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;">View All &rarr;</a>
+        </div>
+        <table class="db-table" style="margin:0;">
+          <thead><tr><th>Order</th><th>Amt</th><th>Status</th></tr></thead>
+          <tbody>
+            <% var rList = (recentActivity||[]).slice(0,10); %>
+            <% if(!rList.length){ %><tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px;">No recent activity</td></tr><% } %>
+            <% rList.forEach(function(item){ var st=(item.title||'').toLowerCase(); var amtM=(item.title||'').match(/\u20b9([\d,]+)/); %>
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:12.5px;color:var(--text);line-height:1.3;"><%= item.title||'—' %></div>
+                <div style="color:var(--text-muted);font-size:11px;margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%= item.subtitle||'' %></div>
+              </td>
+              <td style="font-weight:700;font-size:12.5px;"><%= amtM?'₹'+amtM[1]:'—' %></td>
+              <td>
+                <% var badge=st.includes('completed')||st.includes('paid')?'success':st.includes('active')||st.includes('ongoing')||st.includes('accepted')?'active':st.includes('cancelled')||st.includes('rejected')?'danger':'pending'; %>
+                <span class="db-badge db-badge-<%= badge %>"><%= badge==='success'?'Paid':badge==='active'?'Active':badge==='danger'?'Cancelled':'Pending' %></span>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Low Battery Bikes -->
+      <% if(lowBatteryBikes && lowBatteryBikes.length){ %>
+      <div class="db-chart-card">
+        <div class="db-chart-head" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0;">
+          <div><p class="db-chart-title" style="color:#ef4444;">&#x1F50B; Low Battery Alert</p><p class="db-chart-sub">Bikes below 25% — needs charge</p></div>
+          <span style="background:rgba(239,68,68,0.1);color:#ef4444;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;"><%= lowBatteryBikes.length %> critical</span>
+        </div>
+        <% lowBatteryBikes.slice(0,5).forEach(function(bike){ var pct=bike.battery_level||bike.battery||0; %>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border-light);">
+          <div style="width:30px;height:30px;border-radius:8px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;color:#ef4444;flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="11" rx="2"/><path d="M22 11v3"/></svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:12.5px;"><%= bike.code||bike.bike_code||('Bike #'+(bike.id||'')) %></div>
+            <div style="width:100%;height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
+              <div style="height:100%;width:<%= pct %>%;background:#ef4444;border-radius:2px;"></div>
+            </div>
+          </div>
+          <span style="font-weight:800;font-size:12px;color:#ef4444;"><%= pct %>%</span>
+        </div>
         <% }) %>
-      </tbody>
-    </table>
-  </div>
+      </div>
+      <% } %>
 
-  <!-- Bottom: Two Charts -->
-  <div class="db-bottom">
-    <!-- Revenue Line Chart -->
-    <div class="db-chart-card">
-      <div class="db-chart-head">
-        <p class="db-chart-title">Revenue Trend (7 Days)</p>
-        <div class="db-chart-legend">
-          <span><span class="db-chart-dot" style="background:#f26d21;"></span>Revenue (₹)</span>
+      <!-- Quick Actions -->
+      <div class="db-chart-card">
+        <p class="db-chart-title" style="margin-bottom:12px;">Quick Actions</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <a href="/admin/kyc-documents" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> KYC Review</a>
+          <a href="/admin/payments" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Payments</a>
+          <a href="/admin/bikes" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg> Fleet</a>
+          <a href="/admin/earnings" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f26d21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Earnings</a>
+          <a href="/admin/orders" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg> All Orders</a>
+          <a href="/admin/users" class="db-quick-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Users</a>
         </div>
       </div>
-      <div style="height: 220px; position:relative;">
-        <canvas id="revenueChart"></canvas>
-      </div>
-    </div>
 
-    <!-- Orders Bar Chart -->
-    <div class="db-chart-card">
-      <div class="db-chart-head">
-        <p class="db-chart-title">Orders by Status</p>
-      </div>
-      <div style="height: 220px; position:relative;">
-        <canvas id="ordersChart"></canvas>
-      </div>
     </div>
   </div>
+
 <% } %>
+
 
 <script>
 (() => {
@@ -767,92 +961,87 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   const isDark = document.body.classList.contains("dark-mode");
   const gridColor = isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6";
   const tickColor = isDark ? "#525252" : "#9ca3af";
+  const tooltipBase = {
+    backgroundColor: isDark?"#1a1a1a":"#fff",
+    titleColor: isDark?"#f5f5f5":"#111827",
+    bodyColor: isDark?"#a3a3a3":"#6b7280",
+    borderColor: isDark?"#262626":"#e5e7eb",
+    borderWidth:1, padding:10
+  };
 
+  function buildLegend(id, labels, colors) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = labels.map(function(l,i){
+      return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--text-muted);"><span style="width:8px;height:8px;border-radius:50%;background:'+colors[i]+';flex-shrink:0;"></span>'+l+'</span>';
+    }).join('');
+  }
+
+  // Revenue Line Chart
+  var ctx = document.getElementById("revenueChart");
   if (window.Chart && ctx) {
-    const labels = <%- JSON.stringify(revenueChart?.labels || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) %>;
-    const data   = <%- JSON.stringify(revenueChart?.data   || [0,0,0,0,0,0,0]) %>;
-
+    var revLabels = <%- JSON.stringify(revenueChart&&revenueChart.labels||['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) %>;
+    var revData   = <%- JSON.stringify(revenueChart&&revenueChart.data  ||[0,0,0,0,0,0,0]) %>;
     new Chart(ctx, {
       type: "line",
-      data: {
-        labels,
-        datasets: [{
-          label: "Revenue (₹)",
-          data,
-          borderColor: "#f26d21",
-          backgroundColor: "rgba(242,109,33,0.08)",
-          borderWidth: 2,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 3,
-          pointBackgroundColor: "#f26d21",
-        }]
-      },
+      data: { labels: revLabels, datasets: [{
+        label: "Revenue (₹)", data: revData,
+        borderColor: "#f26d21", backgroundColor: "rgba(242,109,33,0.10)",
+        borderWidth: 2.5, fill: true, tension: 0.4,
+        pointRadius: 4, pointBackgroundColor: "#f26d21", pointHoverRadius: 6
+      }]},
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? "#1a1a1a" : "#fff",
-            titleColor: isDark ? "#f5f5f5" : "#111827",
-            bodyColor: isDark ? "#a3a3a3" : "#6b7280",
-            borderColor: isDark ? "#262626" : "#e5e7eb",
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: ctx => `₹${Number(ctx.raw).toLocaleString('en-IN')}`
-            }
-          }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend:{display:false}, tooltip:{ ...tooltipBase, callbacks:{ label: function(c){ return '₹'+Number(c.raw).toLocaleString('en-IN'); }}}},
         scales: {
-          x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },
-          y: {
-            beginAtZero: true,
-            ticks: { color: tickColor, font: { size: 11 }, callback: v => `₹${v}` },
-            grid: { color: gridColor }
-          }
+          x: { ticks:{color:tickColor,font:{size:11}}, grid:{display:false}},
+          y: { beginAtZero:true, ticks:{color:tickColor,font:{size:11},callback:function(v){return '₹'+v;}}, grid:{color:gridColor}}
         }
       }
     });
   }
 
-  // Orders Bar Chart
-  const ordersCtx = document.getElementById("ordersChart");
+  // Orders Doughnut Chart
+  var ordersCtx = document.getElementById("ordersChart");
   if (window.Chart && ordersCtx) {
+    var oLabels = <%- JSON.stringify(ordersChart&&ordersChart.labels||['Pending','Accepted','Ongoing','Completed','Cancelled']) %>;
+    var oData   = <%- JSON.stringify(ordersChart&&ordersChart.data  ||[0,0,0,0,0]) %>;
+    var oColors = ["#fbbf24","#34d399","#60a5fa","#a78bfa","#f87171"];
     new Chart(ordersCtx, {
-      type: "bar",
-      data: {
-        labels: <%- JSON.stringify(ordersChart?.labels || ['Pending','Accepted','Ongoing','Completed','Cancelled']) %>,
-        datasets: [{
-          label: "Orders",
-          data: <%- JSON.stringify(ordersChart?.data || [0,0,0,0,0]) %>,
-          backgroundColor: ["#fbbf24","#34d399","#60a5fa","#a78bfa","#f87171"],
-          borderRadius: 6,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? "#1a1a1a" : "#fff",
-            titleColor: isDark ? "#f5f5f5" : "#111827",
-            bodyColor: isDark ? "#a3a3a3" : "#6b7280",
-            borderColor: isDark ? "#262626" : "#e5e7eb",
-            borderWidth: 1,
-            padding: 10,
-          }
-        },
-        scales: {
-          x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },
-          y: { beginAtZero: true, ticks: { precision: 0, color: tickColor, font: { size: 11 } }, grid: { color: gridColor } }
-        }
-      }
+      type: "doughnut",
+      data: { labels: oLabels, datasets:[{ data:oData, backgroundColor:oColors, borderWidth:2, borderColor: isDark?"#141414":"#fff", hoverOffset:6}]},
+      options: { responsive:true, maintainAspectRatio:false, cutout:"65%",
+        plugins:{ legend:{display:false}, tooltip:{...tooltipBase}}}
     });
+    buildLegend("ordersLegend", oLabels, oColors);
   }
+
+  // Fleet Doughnut Chart
+  var fleetCtx = document.getElementById("fleetChart");
+  if (window.Chart && fleetCtx) {
+    var activeCount = <%- JSON.stringify(stats&&stats.activeRentalsCount||0) %>;
+    var totalBikes  = <%- JSON.stringify(stats&&stats.bikesCount||0) %>;
+    var maintCount  = <%- JSON.stringify((lowBatteryBikes||[]).length) %>;
+    var available   = Math.max(0, totalBikes - activeCount - maintCount);
+    var fLabels = ["Active Rentals","Available","Low Battery"];
+    var fData   = [activeCount, available, maintCount];
+    var fColors = ["#f26d21","#10b981","#ef4444"];
+    new Chart(fleetCtx, {
+      type: "doughnut",
+      data: { labels: fLabels, datasets:[{ data:fData, backgroundColor:fColors, borderWidth:2, borderColor: isDark?"#141414":"#fff", hoverOffset:6}]},
+      options: { responsive:true, maintainAspectRatio:false, cutout:"65%",
+        plugins:{ legend:{display:false}, tooltip:{...tooltipBase}}}
+    });
+    buildLegend("fleetLegend", fLabels, fColors);
+  }
+
+  // Live Clock
+  var clockEl = document.getElementById("db-live-clock");
+  if (clockEl) {
+    var tick = function(){ clockEl.textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); };
+    tick(); setInterval(tick, 1000);
+  }
+
 
   // Dashboard Search Logic
   const searchInput = document.getElementById("dash-search");

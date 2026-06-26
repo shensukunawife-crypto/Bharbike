@@ -298,23 +298,42 @@ body {
 
 .sidebar-logout-btn:hover { background: var(--border-light); color: var(--text); }
 
-/* Sidebar Collapse Button */
-.sidebar-collapse-btn {
-  margin-left: auto;
+/* =============================================
+   SIDEBAR FLOATING TOGGLE PILL
+   ============================================= */
+.sidebar-toggle-pill {
+  position: absolute;
+  right: -14px;
+  top: 72px;
   width: 28px;
   height: 28px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  z-index: 300;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
   flex-shrink: 0;
 }
-.sidebar-collapse-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+.sidebar-toggle-pill:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(242,109,33,0.35);
+}
+.sidebar-toggle-pill .toggle-arrow {
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  display: block;
+}
+/* Make sidebar position relative so pill is anchored to it */
+.sidebar { position: sticky; overflow: visible; }
+.sidebar-nav { overflow-y: auto; }
+
 
 /* =============================================
    SIDEBAR COLLAPSED STATE

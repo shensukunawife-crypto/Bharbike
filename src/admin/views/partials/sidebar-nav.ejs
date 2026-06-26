@@ -51,11 +51,11 @@
 <!-- OVERVIEW -->
 <div class="nav-section">
   <p class="nav-label">Overview</p>
-  <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin">
+  <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin" data-label="Dashboard">
     <span class="nav-icon"><%- icons.dashboard %></span>
     <span>Dashboard</span>
   </a>
-  <a class="nav-link <%= active === 'operations' ? 'active' : '' %>" href="/admin/operations">
+  <a class="nav-link <%= active === 'operations' ? 'active' : '' %>" href="/admin/operations" data-label="Operations">
     <span class="nav-icon"><%- icons.workflow %></span>
     <span>Operations Dashboard</span>
   </a>
@@ -67,19 +67,19 @@
 <div class="nav-section">
   <p class="nav-label">Fleet</p>
   <div class="nav-group <%= gVehicle ? 'is-open' : '' %>" data-group-id="vehicle">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-vehicle">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-vehicle" data-label="Vehicle Control">
       <span class="nav-icon"><%- icons.vehicle %></span>
       <span>Vehicle Control</span>
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
-      <a class="nav-link nav-link-sub <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes">
+      <a class="nav-link nav-link-sub <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes" data-label="Bikes">
         <span class="nav-icon"><%- icons.bike %></span><span>Bikes</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'maintenance' ? 'active' : '' %>" href="/admin/maintenance">
+      <a class="nav-link nav-link-sub <%= active === 'maintenance' ? 'active' : '' %>" href="/admin/maintenance" data-label="Maintenance">
         <span class="nav-icon"><%- icons.maintenance %></span><span>Maintenance</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'hubs' ? 'active' : '' %>" href="/admin/hubs">
+      <a class="nav-link nav-link-sub <%= active === 'hubs' ? 'active' : '' %>" href="/admin/hubs" data-label="Battery Stations">
         <span class="nav-icon"><%- icons.hubs %></span><span>Battery Swapping Stations</span>
       </a>
     </div>
@@ -92,23 +92,23 @@
 <div class="nav-section">
   <p class="nav-label">Accounts</p>
   <div class="nav-group <%= gUsers ? 'is-open' : '' %>" data-group-id="accounts">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-accounts">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-accounts" data-label="User Governance">
       <span class="nav-icon"><%- icons.accounts %></span>
       <span>User Governance</span>
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
-      <a class="nav-link nav-link-sub <%= active === 'users' ? 'active' : '' %>" href="/admin/users">
+      <a class="nav-link nav-link-sub <%= active === 'users' ? 'active' : '' %>" href="/admin/users" data-label="Users">
         <span class="nav-icon"><%- icons.users %></span><span>Users</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'subscriptions' ? 'active' : '' %>" href="/admin/subscriptions">
+      <a class="nav-link nav-link-sub <%= active === 'subscriptions' ? 'active' : '' %>" href="/admin/subscriptions" data-label="Subscriptions">
         <span class="nav-icon"><%- icons.accounts %></span><span>Subscriptions</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents">
+      <a class="nav-link nav-link-sub <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents" data-label="KYC Documents">
         <span class="nav-icon"><%- icons.kyc %></span><span>KYC Documents</span>
       </a>
       <% if (_can('manage_finance')) { %>
-      <a class="nav-link nav-link-sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments">
+      <a class="nav-link nav-link-sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments" data-label="Payments">
         <span class="nav-icon"><%- icons.payments %></span><span>Payments</span>
       </a>
       <% } %>
@@ -122,16 +122,16 @@
 <div class="nav-section">
   <p class="nav-label">Finance</p>
   <div class="nav-group <%= gFinancial ? 'is-open' : '' %>" data-group-id="financial">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-financial">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-financial" data-label="Financial">
       <span class="nav-icon"><%- icons.finance %></span>
       <span>Financial</span>
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
-      <a class="nav-link nav-link-sub <%= active === 'earnings' ? 'active' : '' %>" href="/admin/earnings">
+      <a class="nav-link nav-link-sub <%= active === 'earnings' ? 'active' : '' %>" href="/admin/earnings" data-label="Earnings">
         <span class="nav-icon"><%- icons.earnings %></span><span>Earnings</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'analytics' ? 'active' : '' %>" href="/admin/analytics">
+      <a class="nav-link nav-link-sub <%= active === 'analytics' ? 'active' : '' %>" href="/admin/analytics" data-label="Analytics">
         <span class="nav-icon"><%- icons.analytics %></span><span>Analytics</span>
       </a>
     </div>
@@ -144,22 +144,22 @@
 <div class="nav-section">
   <p class="nav-label">Operations</p>
   <div class="nav-group <%= gOperations ? 'is-open' : '' %>" data-group-id="operations">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-operations">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-operations" data-label="Rental Ops">
       <span class="nav-icon"><%- icons.rental %></span>
       <span>Rental Ops</span>
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
-      <a class="nav-link nav-link-sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders">
+      <a class="nav-link nav-link-sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders" data-label="Orders">
         <span class="nav-icon"><%- icons.orders %></span><span>Orders</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
+      <a class="nav-link nav-link-sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings" data-label="Bookings">
         <span class="nav-icon"><%- icons.bookings %></span><span>Bookings</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners">
+      <a class="nav-link nav-link-sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners" data-label="Delivery">
         <span class="nav-icon"><%- icons.delivery %></span><span>Delivery</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days">
+      <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days" data-label="Skipped Days">
         <span class="nav-icon"><%- icons.skipped %></span><span>Skipped Days</span>
       </a>
     </div>
@@ -173,23 +173,23 @@
 <div class="nav-section">
   <p class="nav-label">Infrastructure</p>
   <div class="nav-group <%= gSystem ? 'is-open' : '' %>" data-group-id="system">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-system">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-system" data-label="System & Monitoring">
       <span class="nav-icon"><%- icons.infra %></span>
       <span>System & Monitoring</span>
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
-      <a class="nav-link nav-link-sub <%= active === 'system-workflow' ? 'active' : '' %>" href="/admin/system-workflow">
+      <a class="nav-link nav-link-sub <%= active === 'system-workflow' ? 'active' : '' %>" href="/admin/system-workflow" data-label="System Workflow">
         <span class="nav-icon"><%- icons.workflow %></span><span>System Workflow</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'backend-monitor' ? 'active' : '' %>" href="/admin/backend">
+      <a class="nav-link nav-link-sub <%= active === 'backend-monitor' ? 'active' : '' %>" href="/admin/backend" data-label="Backend Monitor">
         <span class="nav-icon"><%- icons.monitor %></span><span>Backend Monitor</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'activity-logs' ? 'active' : '' %>" href="/admin/activity-logs">
+      <a class="nav-link nav-link-sub <%= active === 'activity-logs' ? 'active' : '' %>" href="/admin/activity-logs" data-label="Activity Logs">
         <span class="nav-icon"><%- icons.workflow %></span><span>Activity Logs</span>
       </a>
       <% if (_can('manage_settings')) { %>
-      <a class="nav-link nav-link-sub <%= active === 'sql-editor' ? 'active' : '' %>" href="/admin/sql-editor">
+      <a class="nav-link nav-link-sub <%= active === 'sql-editor' ? 'active' : '' %>" href="/admin/sql-editor" data-label="SQL Console">
         <span class="nav-icon"><%- icons.infra %></span><span>SQL Console</span>
       </a>
       <% } %>
@@ -202,19 +202,19 @@
 <div class="nav-section">
   <p class="nav-label">Engagement</p>
   <div class="nav-group <%= gComm ? 'is-open' : '' %>" data-group-id="communication">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-communication">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-communication" data-label="Communication">
       <span class="nav-icon"><%- icons.engage %></span>
       <span>Communication</span>
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
-      <a class="nav-link nav-link-sub <%= active === 'support' ? 'active' : '' %>" href="/admin/support">
+      <a class="nav-link nav-link-sub <%= active === 'support' ? 'active' : '' %>" href="/admin/support" data-label="Support">
         <span class="nav-icon"><%- icons.support %></span><span>Support</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'notifications' ? 'active' : '' %>" href="/admin/notifications">
+      <a class="nav-link nav-link-sub <%= active === 'notifications' ? 'active' : '' %>" href="/admin/notifications" data-label="Notifications">
         <span class="nav-icon"><%- icons.notif %></span><span>Notifications</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'ads' ? 'active' : '' %>" href="/admin/ads">
+      <a class="nav-link nav-link-sub <%= active === 'ads' ? 'active' : '' %>" href="/admin/ads" data-label="Socials & Contacts">
         <span class="nav-icon"><%- icons.ads %></span><span>Socials & Contacts</span>
       </a>
     </div>
@@ -227,22 +227,22 @@
 <div class="nav-section">
   <p class="nav-label">Configuration</p>
   <div class="nav-group <%= gAdmin ? 'is-open' : '' %>" data-group-id="administration">
-    <button type="button" class="nav-group-btn" id="nav-group-toggle-administration">
+    <button type="button" class="nav-group-btn" id="nav-group-toggle-administration" data-label="Administration">
       <span class="nav-icon"><%- icons.config %></span>
       <span>Administration</span>
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
       <% if (_can('manage_settings')) { %>
-      <a class="nav-link nav-link-sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings">
+      <a class="nav-link nav-link-sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings" data-label="Settings">
         <span class="nav-icon"><%- icons.settings %></span><span>Settings</span>
       </a>
-      <a class="nav-link nav-link-sub <%= active === 'subscription-plans' ? 'active' : '' %>" href="/admin/subscription-plans">
+      <a class="nav-link nav-link-sub <%= active === 'subscription-plans' ? 'active' : '' %>" href="/admin/subscription-plans" data-label="Subscription Plans">
         <span class="nav-icon"><%- icons.config %></span><span>Subscription Plans</span>
       </a>
       <% } %>
       <% if (_can('manage_admins')) { %>
-      <a class="nav-link nav-link-sub <%= active === 'admins' ? 'active' : '' %>" href="/admin/admins">
+      <a class="nav-link nav-link-sub <%= active === 'admins' ? 'active' : '' %>" href="/admin/admins" data-label="Roles & Permissions">
         <span class="nav-icon"><%- icons.admins %></span><span>Roles & Permissions</span>
       </a>
       <% } %>

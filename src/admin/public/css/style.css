@@ -298,6 +298,109 @@ body {
 
 .sidebar-logout-btn:hover { background: var(--border-light); color: var(--text); }
 
+/* Sidebar Collapse Button */
+.sidebar-collapse-btn {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.sidebar-collapse-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+/* =============================================
+   SIDEBAR COLLAPSED STATE
+   ============================================= */
+.sidebar-collapsed {
+  width: 64px !important;
+  min-width: 64px !important;
+  overflow: visible;
+}
+
+/* Hide text labels when collapsed */
+.sidebar-collapsed .logo-text,
+.sidebar-collapsed .sidebar-user-info,
+.sidebar-collapsed .nav-label,
+.sidebar-collapsed .nav-chevron,
+.sidebar-collapsed .nav-link > span:not(.nav-icon),
+.sidebar-collapsed .nav-group-btn > span:not(.nav-icon) {
+  display: none !important;
+}
+
+/* Hide collapse button arrow when collapsed (show expand icon instead) */
+.sidebar-collapsed .sidebar-collapse-btn {
+  margin-left: 0;
+}
+
+/* Center icons in collapsed nav links */
+.sidebar-collapsed .nav-link,
+.sidebar-collapsed .nav-group-btn {
+  justify-content: center;
+  padding: 10px;
+  position: relative;
+}
+
+.sidebar-collapsed .nav-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 1;
+}
+
+/* Hide group sub-panels when collapsed */
+.sidebar-collapsed .nav-group-panel {
+  display: none !important;
+}
+
+/* Tooltip on hover when collapsed */
+.sidebar-collapsed .nav-link[title],
+.sidebar-collapsed .nav-group-btn[title] {
+  overflow: visible;
+}
+.sidebar-collapsed .nav-link:hover::after,
+.sidebar-collapsed .nav-group-btn:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--text);
+  color: var(--surface);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: var(--shadow-md);
+}
+
+/* Logo area when collapsed — center the logo mark */
+.sidebar-collapsed .sidebar-logo {
+  justify-content: center;
+  padding: 16px 8px;
+}
+
+/* User area when collapsed — center avatar only */
+.sidebar-collapsed .sidebar-user {
+  justify-content: center;
+  padding: 12px 8px;
+}
+
+/* Main area transition */
+.admin-shell { transition: none; }
+.sidebar { transition: width 0.22s cubic-bezier(0.4,0,0.2,1), min-width 0.22s cubic-bezier(0.4,0,0.2,1); }
+
+
+
 /* =============================================
    MAIN AREA
    ============================================= */

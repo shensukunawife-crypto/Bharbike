@@ -28,6 +28,10 @@
             <span class="logo-name"><%= BRAND_NAME.substring(0,4) %><span class="logo-accent"><%= BRAND_NAME.substring(4) %></span></span>
             <span class="logo-sub">Admin Console</span>
           </div>
+          <button id="sidebar-collapse-btn" class="sidebar-collapse-btn" title="Collapse sidebar" aria-label="Collapse sidebar">
+            <svg id="collapse-icon-left" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg id="collapse-icon-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </div>
 
         <!-- Nav -->
@@ -157,6 +161,28 @@
         const sidebar = document.getElementById("admin-sidebar");
         if (menuBtn && sidebar) {
           menuBtn.addEventListener("click", () => sidebar.classList.toggle("open"));
+        }
+
+        // Sidebar collapse (desktop)
+        const collapseBtn = document.getElementById("sidebar-collapse-btn");
+        const iconLeft = document.getElementById("collapse-icon-left");
+        const iconRight = document.getElementById("collapse-icon-right");
+        const shell = document.querySelector(".admin-shell");
+        const applyCollapse = (collapsed) => {
+          if (sidebar) sidebar.classList.toggle("sidebar-collapsed", collapsed);
+          if (shell) shell.classList.toggle("sidebar-is-collapsed", collapsed);
+          if (iconLeft) iconLeft.style.display = collapsed ? "none" : "block";
+          if (iconRight) iconRight.style.display = collapsed ? "block" : "none";
+          if (collapseBtn) collapseBtn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+        };
+        const savedCollapse = localStorage.getItem("adminSidebarCollapsed") === "true";
+        applyCollapse(savedCollapse);
+        if (collapseBtn) {
+          collapseBtn.addEventListener("click", () => {
+            const next = !sidebar.classList.contains("sidebar-collapsed");
+            applyCollapse(next);
+            localStorage.setItem("adminSidebarCollapsed", next ? "true" : "false");
+          });
         }
       })();
     </script>

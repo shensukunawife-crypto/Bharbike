@@ -72,7 +72,7 @@ export const getLockStatus = asyncHandler(async (req, res) => {
       bikeId: bike.id,
       bikeName: bike.name,
       licensePlate: bike.license_plate,
-      isLocked: bike.is_locked !== false, // Default to locked if null
+      isLocked: bike.is_locked === true, // Only locked if explicitly true; null/undefined = unlocked
       batteryLevel: bike.battery_level || 87,
       lastPingAt: bike.last_ping_at,
       rentalExpiresAt: rental.end_time || rental.endTime,
@@ -278,7 +278,7 @@ export const getBikeHealth = asyncHandler(async (req, res) => {
       bikeName: bike?.name,
       licensePlate: bike?.license_plate,
       batteryLevel: bike?.battery_level || health.batteryPct,
-      isLocked: bike?.is_locked !== false,
+      isLocked: bike?.is_locked === true, // Only locked if explicitly true; null/undefined = unlocked
       motorOk: health.motorOk,
       lastPingAt: health.lastPingAt,
       connectionStatus: "Connected (Bluetooth)",

@@ -3302,6 +3302,35 @@ export async function assignBike(req, res) {
       return res.status(400).json({ success: false, message: "User ID is required" });
     }
 
+    // Fix: Check bike exists and is available before assigning
+    const { data: bikeRow, error: bikeCheckErr } = await supabase
+      .from("bikes")
+      .select("id, status, bike_code")
+      .eq("id", bikeId)
+      .maybeSingle();
+
+    if (bikeCheckErr || !bikeRow) {
+      return res.status(404).json({ success: false, message: "Bike not found" });
+    }
+    if (bikeRow.status === "in_use") {
+      return res.status(409).json({ success: false, message: `Bike ${bikeRow.bike_code} is already assigned to another user` });
+    }
+    if (bikeRow.status === "maintenance") {
+      return res.status(409).json({ success: false, message: `Bike ${bikeRow.bike_code} is currently under maintenance and cannot be assigned` });
+    }
+
+    // Fix: Check user doesn't already have an active rental
+    const { data: existingRental } = await supabase
+      .from("rentals")
+      .select("id")
+      .eq("user_id", user_id)
+      .in("status", ["active", "ongoing"])
+      .maybeSingle();
+
+    if (existingRental) {
+      return res.status(409).json({ success: false, message: "This user already has an active rental. End it first before assigning a new bike." });
+    }
+
     const startTime = new Date();
     let endTime;
     let durationHours;
@@ -3335,7 +3364,7 @@ export async function assignBike(req, res) {
 
     if (rentalError) throw rentalError;
 
-    await supabase.from("bikes").update({ status: "in_use" }).eq("id", bikeId);
+    await supabase.from("bikes").update({ status: "in_use", is_locked: false }).eq("id", bikeId);
     return res.json({ success: true, message: "Bike assigned successfully" });
   } catch (error) {
     console.error("[admin.assignBike] failed", error);
@@ -4231,15 +4260,17 @@ export async function adminUnlockBike(req, res) {
   try {
     const { bikeId } = req.params;
 
-    // Call IoT service to send mobilizer request
-    const iotResult = await iotService.unlockBike(bikeId);
-    console.log("[adminUnlockBike] IoT Result:", iotResult);
-
-    if (!iotResult.ok && iotResult.message !== "Device not linked") {
-      throw new Error(iotResult.message || "IoT device failed to respond to unlock command");
+    // Call IoT service to send mobilizer request (graceful — never throw on IoT failure)
+    let iotResult;
+    try {
+      iotResult = await iotService.unlockBike(bikeId);
+      console.log("[adminUnlockBike] IoT Result:", iotResult);
+    } catch (iotErr) {
+      console.warn("[adminUnlockBike] IoT call failed, continuing with DB update:", iotErr.message);
+      iotResult = { ok: false, message: iotErr.message || "IoT service error" };
     }
 
-    // Update Supabase DB
+    // Always update DB regardless of IoT result (same as adminLockBike)
     await supabase
       .from("bikes")
       .update({ is_locked: false, last_ping_at: new Date().toISOString() })

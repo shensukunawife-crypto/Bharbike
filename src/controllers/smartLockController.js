@@ -19,21 +19,18 @@ export const getLockStatus = asyncHandler(async (req, res) => {
   }
   
   if (!rental) {
-    // Demo fallback: provide a mock active rental so the UI buttons are enabled for testing
-    console.log(`[getLockStatus] No active rental for ${req.user.id} - providing demo fallback`);
+    // No active rental - return disabled state so UI shows no controls
+    console.log(`[getLockStatus] No active rental for ${req.user.id}`);
     return res.json({
       success: true,
       data: {
-        hasActiveRental: true, // Set to true for demo
-        rentalId: "demo-rental-123",
-        bikeId: "demo-bike-456",
-        bikeName: "BHAR BIKE Demo Scooter",
-        licensePlate: "MH 01 DEMO",
+        hasActiveRental: false,
         isLocked: true,
-        batteryLevel: 92,
-        lastPingAt: new Date().toISOString(),
-        rentalExpiresAt: new Date(Date.now() + 3600000).toISOString(),
-        isDemo: true
+        bikeName: null,
+        licensePlate: null,
+        batteryLevel: null,
+        lastPingAt: null,
+        rentalExpiresAt: null,
       },
     });
   }
@@ -109,8 +106,9 @@ export const lockBike = asyncHandler(async (req, res) => {
     iotResult = { ok: false, message: err.message || "IoT service error" };
   }
   
+  // Always update DB regardless of IoT result (graceful)
   if (!iotResult.ok && iotResult.message !== "Device not linked") {
-    throw new AppError(iotResult.message || "Failed to lock bike", 500);
+    console.warn(`[lockBike] IoT failed for ${bikeId}: ${iotResult.message} — updating DB anyway`);
   }
 
   // Update bike status in database

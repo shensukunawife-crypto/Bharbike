@@ -185,8 +185,9 @@ export const unlockBike = asyncHandler(async (req, res) => {
     iotResult = { ok: false, message: err.message || "IoT service error" };
   }
   
+  // Always update DB regardless of IoT result (graceful)
   if (!iotResult.ok && iotResult.message !== "Device not linked") {
-    throw new AppError(iotResult.message || "Failed to unlock bike", 500);
+    console.warn(`[unlockBike] IoT failed for ${bikeId}: ${iotResult.message} — updating DB anyway`);
   }
 
   // Update bike status in database

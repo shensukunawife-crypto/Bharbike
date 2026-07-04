@@ -56,8 +56,8 @@
           </span>
         </td>
         <td>
-          <span class="badge <%= bike.is_locked !== false ? 'danger' : 'success' %>" style="font-size: 11px; font-weight: 600; padding: 4px 8px;">
-            <%= bike.is_locked !== false ? "Locked 🔒" : "Unlocked 🔓" %>
+          <span id="lock-badge-<%= bike.id %>" class="badge <%= bike.is_locked === true ? 'danger' : 'success' %>" style="font-size: 11px; font-weight: 600; padding: 4px 8px;">
+            <%= bike.is_locked === true ? "Locked 🔒" : "Unlocked 🔓" %>
           </span>
         </td>
         <td>
@@ -84,7 +84,17 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; min-width: 260px;">
             <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="display: flex; justify-content: center; padding: 6px 10px; font-size: 12px;">View Details</a>
             <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')" style="padding: 6px 10px; font-size: 12px;">Assign Bike</button>
-            <button class="btn btn-ghost check-status-btn" data-id="<%= bike.id %>" style="grid-column: span 2; padding: 6px 10px; font-size: 12px; border: 1px solid var(--accent); color: var(--accent); font-weight: 700; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">🔍 Status Check</button>
+            <!-- Lock / Unlock toggle buttons -->
+            <button
+              id="lock-btn-<%= bike.id %>"
+              class="bike-lock-toggle btn btn-ghost"
+              data-bike-id="<%= bike.id %>"
+              data-locked="<%= bike.is_locked === true ? 'true' : 'false' %>"
+              style="padding: 6px 10px; font-size: 12px; border-color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; font-weight: 700;"
+            >
+              <%= bike.is_locked === true ? '🔒 Lock' : '🔓 Unlock' %>
+            </button>
+            <button class="btn btn-ghost check-status-btn" data-id="<%= bike.id %>" style="padding: 6px 10px; font-size: 12px; border: 1px solid var(--accent); color: var(--accent); font-weight: 700; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">🔍 Status Check</button>
             <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST" style="grid-column: span 2; padding: 6px 10px; font-size: 12px;">Send to Maintenance</button>
             <button class="btn btn-<%= bike.status === 'offline' ? 'success' : 'danger' %> admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST" style="padding: 6px 10px; font-size: 12px;"><%= bike.status === 'offline' ? '✅ Enable Bike' : '🚫 Disable Bike' %></button>
             <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?" style="padding: 6px 10px; font-size: 12px;">Delete</button>
@@ -264,6 +274,67 @@ document.querySelectorAll('.check-status-btn').forEach(btn => {
       this.style.color = 'var(--accent)';
       this.disabled = false;
     }, 2000);
+  });
+});
+
+// Lock / Unlock toggle buttons
+document.querySelectorAll('.bike-lock-toggle').forEach(btn => {
+  btn.addEventListener('click', async function () {
+    const bikeId = this.getAttribute('data-bike-id');
+    const isCurrentlyLocked = this.getAttribute('data-locked') === 'true';
+    const action = isCurrentlyLocked ? 'unlock' : 'lock';
+    const confirmMsg = isCurrentlyLocked
+      ? 'Are you sure you want to UNLOCK this bike? The rider will be able to start it.'
+      : 'Are you sure you want to LOCK this bike? The rider will not be able to start it.';
+
+    if (!confirm(confirmMsg)) return;
+
+    const originalHTML = this.innerHTML;
+    this.innerHTML = '⏳ Sending...';
+    this.disabled = true;
+
+    try {
+      const resp = await fetch('/admin/bikes/' + bikeId + '/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        const nowLocked = action === 'lock';
+
+        // Update badge
+        const badge = document.getElementById('lock-badge-' + bikeId);
+        if (badge) {
+          badge.className = 'badge ' + (nowLocked ? 'danger' : 'success');
+          badge.style.fontSize = '11px';
+          badge.style.fontWeight = '600';
+          badge.style.padding = '4px 8px';
+          badge.textContent = nowLocked ? 'Locked 🔒' : 'Unlocked 🔓';
+        }
+
+        // Update button
+        this.setAttribute('data-locked', nowLocked ? 'true' : 'false');
+        this.innerHTML = nowLocked ? '🔒 Lock' : '🔓 Unlock';
+        this.style.borderColor = nowLocked ? '#ef4444' : '#10b981';
+        this.style.color = nowLocked ? '#ef4444' : '#10b981';
+
+        // Flash success
+        const prev = this.style.background;
+        this.style.background = nowLocked ? '#fee2e2' : '#dcfce7';
+        setTimeout(() => { this.style.background = prev; }, 800);
+      } else {
+        alert('Action failed: ' + (data.message || 'Unknown error'));
+        this.innerHTML = originalHTML;
+      }
+    } catch (err) {
+      console.error('Lock/unlock failed:', err);
+      alert('Network error. Please try again.');
+      this.innerHTML = originalHTML;
+    }
+
+    this.disabled = false;
   });
 });
 </script>

@@ -1423,9 +1423,7 @@ export async function liveGpsPoller(req, res) {
     let lockState = "unknown";
     let autoFixed = false;
 
-    if (isOffline) {
-      lockState = "offline"; // Can't determine — device not reachable
-    } else if (ignition === "ON") {
+    if (ignition === "ON") {
       // Bike engine is running — MUST be unlocked physically
       lockState = "unlocked";
       if (dbLocked) {
@@ -1437,10 +1435,8 @@ export async function liveGpsPoller(req, res) {
         autoFixed = true;
         dbLocked = false;
       }
-    } else if (ignition === "OFF") {
-      lockState = dbLocked ? "locked" : "unlocked";
     } else {
-      // No ignition data from LocoNav — trust DB
+      // Ignition is OFF or device is offline / not linked — return DB lock state
       lockState = dbLocked ? "locked" : "unlocked";
     }
 

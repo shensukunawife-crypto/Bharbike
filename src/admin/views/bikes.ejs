@@ -303,23 +303,7 @@ document.querySelectorAll('.bike-lock-toggle').forEach(btn => {
 
       if (data.success) {
         const nowLocked = action === 'lock';
-
-        // Update badge
-        const badge = document.getElementById('lock-badge-' + bikeId);
-        if (badge) {
-          badge.className = 'badge ' + (nowLocked ? 'danger' : 'success');
-          badge.style.fontSize = '11px';
-          badge.style.fontWeight = '600';
-          badge.style.padding = '4px 8px';
-          badge.textContent = nowLocked ? 'Locked 🔒' : 'Unlocked 🔓';
-        }
-
-        // Update button
-        this.setAttribute('data-locked', nowLocked ? 'true' : 'false');
-        this.innerHTML = nowLocked ? '🔒 Lock' : '🔓 Unlock';
-        this.style.borderColor = nowLocked ? '#ef4444' : '#10b981';
-        this.style.color = nowLocked ? '#ef4444' : '#10b981';
-
+        updateLockUI(bikeId, nowLocked ? 'locked' : 'unlocked', false);
         // Flash success
         const prev = this.style.background;
         this.style.background = nowLocked ? '#fee2e2' : '#dcfce7';
@@ -337,4 +321,118 @@ document.querySelectorAll('.bike-lock-toggle').forEach(btn => {
     this.disabled = false;
   });
 });
+
+// ── Smart Lock State UI updater ──────────────────────────────────────
+function updateLockUI(bikeId, lockState, autoFixed) {
+  const badge = document.getElementById('lock-badge-' + bikeId);
+  const btn   = document.getElementById('lock-btn-'   + bikeId);
+  if (!badge || !btn) return;
+
+  badge.style.fontSize   = '11px';
+  badge.style.fontWeight = '600';
+  badge.style.padding    = '4px 8px';
+
+  if (lockState === 'locked') {
+    badge.className   = 'badge danger';
+    badge.textContent = '🔒 Locked';
+    btn.setAttribute('data-locked', 'true');
+    btn.innerHTML          = '🔒 Lock';
+    btn.style.borderColor  = '#ef4444';
+    btn.style.color        = '#ef4444';
+  } else if (lockState === 'unlocked') {
+    badge.className   = 'badge success';
+    badge.textContent = autoFixed ? '🔓 Auto-Fixed' : '🔓 Unlocked';
+    btn.setAttribute('data-locked', 'false');
+    btn.innerHTML          = '🔓 Unlock';
+    btn.style.borderColor  = '#10b981';
+    btn.style.color        = '#10b981';
+    if (autoFixed) {
+      // Flash green to signal auto-correction happened
+      badge.style.background = '#bbf7d0';
+      setTimeout(() => { badge.style.background = ''; badge.textContent = '🔓 Unlocked'; }, 2500);
+    }
+  } else if (lockState === 'offline') {
+    badge.className   = 'badge';
+    badge.style.background = '#f3f4f6';
+    badge.style.color      = '#9ca3af';
+    badge.textContent      = '📡 Offline';
+  }
+}
+
+// ── 10-second Auto-Poll for ALL bikes ───────────────────────────────
+(function startAutoPoll() {
+  // Collect all bike IDs from lock buttons
+  const allBikeIds = Array.from(document.querySelectorAll('.bike-lock-toggle'))
+    .map(b => b.getAttribute('data-bike-id'));
+
+  if (!allBikeIds.length) return;
+
+  // Add a live indicator in the toolbar
+  const toolbar = document.querySelector('.toolbar');
+  if (toolbar) {
+    const indicator = document.createElement('div');
+    indicator.id = 'live-poll-indicator';
+    indicator.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280;font-weight:500;margin-left:auto;';
+    indicator.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:livePulse 1.5s infinite;"></span> Live lock sync every 10s';
+    toolbar.appendChild(indicator);
+    // Add pulse animation
+    const style = document.createElement('style');
+    style.textContent = '@keyframes livePulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.3);}}';
+    document.head.appendChild(style);
+  }
+
+  let pollIndex = 0; // stagger requests so we don't hammer all at once
+
+  async function pollOneBike(bikeId) {
+    try {
+      const r = await fetch('/admin/bikes/' + bikeId + '/live-gps', { credentials: 'include' });
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!data.success) return;
+
+      // Update battery
+      const row = document.querySelector('[id="lock-badge-' + bikeId + '"]')?.closest('tr');
+      if (row) {
+        const batteryCell = row.querySelector('.battery-cell');
+        if (batteryCell && typeof data.battery === 'number') {
+          const fill = batteryCell.querySelector('.battery-fill');
+          const small = batteryCell.querySelector('small');
+          if (fill) {
+            fill.style.width = data.battery + '%';
+            fill.classList.remove('good','mid','low');
+            if (data.battery > 60) fill.classList.add('good');
+            else if (data.battery > 30) fill.classList.add('mid');
+            else fill.classList.add('low');
+          }
+          if (small) small.textContent = data.battery + '%';
+        }
+
+        // Update location
+        if (data.lat && data.lng) {
+          const locCell = row.querySelector('.location-cell');
+          if (locCell) locCell.textContent = Number(data.lat).toFixed(5) + ', ' + Number(data.lng).toFixed(5);
+        }
+      }
+
+      // Update lock badge with smart state
+      if (data.lockState) {
+        updateLockUI(bikeId, data.lockState, data.autoFixed);
+      }
+    } catch (_) {}
+  }
+
+  async function runPollCycle() {
+    // Stagger: poll one bike every 500ms across the cycle
+    for (let i = 0; i < allBikeIds.length; i++) {
+      await new Promise(res => setTimeout(res, 500));
+      pollOneBike(allBikeIds[i]);
+    }
+  }
+
+  // Start first poll after 3 seconds, then every 10 seconds
+  setTimeout(() => {
+    runPollCycle();
+    setInterval(runPollCycle, 10000);
+  }, 3000);
+})();
 </script>

@@ -1406,15 +1406,60 @@ export async function liveGpsPoller(req, res) {
     const { bikeId } = req.params;
     const { getBikeHealth } = await import("../../services/iotService.js");
     const health = await getBikeHealth(bikeId);
+
+    // --- Smart lock state detection using ignition as proxy ---
+    const ignition = health.ignition || null; // "ON", "OFF", or null
+    const movementStatus = health.movementStatus || null;
+    const isOffline = movementStatus === "DEVICE OFFLINE" || (!health.lat && !health.lng);
+
+    // Fetch current DB lock state
+    const { data: bikeRow } = await supabase
+      .from("bikes")
+      .select("is_locked")
+      .eq("id", bikeId)
+      .maybeSingle();
+
+    let dbLocked = bikeRow?.is_locked === true;
+    let lockState = "unknown";
+    let autoFixed = false;
+
+    if (isOffline) {
+      lockState = "offline"; // Can't determine — device not reachable
+    } else if (ignition === "ON") {
+      // Bike engine is running — MUST be unlocked physically
+      lockState = "unlocked";
+      if (dbLocked) {
+        // CONFLICT: DB says locked but ignition is ON — auto-fix DB
+        await supabase
+          .from("bikes")
+          .update({ is_locked: false, last_ping_at: new Date().toISOString() })
+          .eq("id", bikeId);
+        autoFixed = true;
+        dbLocked = false;
+      }
+    } else if (ignition === "OFF") {
+      lockState = dbLocked ? "locked" : "unlocked";
+    } else {
+      // No ignition data from LocoNav — trust DB
+      lockState = dbLocked ? "locked" : "unlocked";
+    }
+
     return res.json({
       success: true,
       lat: health.lat,
       lng: health.lng,
       isLive: !!(health.lat && health.lng),
       battery: health.batteryPct,
-      lastPingAt: health.lastPingAt
+      lastPingAt: health.lastPingAt,
+      // Lock state fields
+      ignition,
+      isOffline,
+      lockState,      // "locked" | "unlocked" | "offline" | "unknown"
+      isLocked: lockState === "locked",
+      autoFixed,      // true if we corrected a DB conflict
     });
   } catch (error) {
+    console.error("[liveGpsPoller] failed", error);
     return res.status(500).json({ success: false, error: "Failed to poll GPS" });
   }
 }

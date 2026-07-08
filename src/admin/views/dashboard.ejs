@@ -393,6 +393,31 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   transform: translateY(-0.5px);
 }
 
+/* Expiry Orders Pagination & Enhanced UI */
+.expiry-row {
+  transition: background-color 0.2s ease;
+}
+.expiry-row-animate {
+  animation: expiryFadeIn 0.3s ease-out forwards;
+}
+@keyframes expiryFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.expiry-prev-btn, .expiry-next-btn {
+  transition: all 0.2s ease !important;
+}
+.expiry-prev-btn:hover:not(:disabled), .expiry-next-btn:hover:not(:disabled) {
+  border-color: #ef4444 !important;
+  color: #dc2626 !important;
+  background: #fef2f2 !important;
+  transform: translateY(-0.5px);
+}
+.expiry-prev-btn:disabled, .expiry-next-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Enhanced stat cards ── */
 .db-stat { display:flex; align-items:center; gap:16px; }
 .db-stat-icon {
@@ -972,7 +997,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
             <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding: 24px; font-size:13px;">No expired rentals</td></tr>
             <% } else { %>
               <% expiryOrders.forEach(function(item) { %>
-              <tr id="bike-row-<%= item.bikeId %>">
+              <tr id="bike-row-<%= item.bikeId %>" class="expiry-row">
                 <td>
                   <strong><%= item.userName %></strong><br/>
                   <span style="font-size:11px; color:var(--text-muted);"><%= item.userPhone %></span>
@@ -999,6 +1024,17 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
             <% } %>
           </tbody>
         </table>
+        <% if (expiryOrders && expiryOrders.length > 5) { %>
+        <div class="db-pagination" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid var(--border-light); background:rgba(0,0,0,0.01);">
+          <button type="button" class="expiry-prev-btn" style="padding: 6px 14px; font-size:12px; font-weight:600; border-radius:6px; border:1px solid var(--border); background:#fff; color:#334155; cursor:pointer; display:flex; align-items:center; gap:4px; transition: all 0.2s;" disabled>
+            ← Prev
+          </button>
+          <span class="expiry-page-info" style="font-size:12.5px; color:#475569; font-weight:600;">Page 1 of <%= Math.ceil(expiryOrders.length / 5) %></span>
+          <button type="button" class="expiry-next-btn" style="padding: 6px 14px; font-size:12px; font-weight:600; border-radius:6px; border:1px solid var(--border); background:#fff; color:#334155; cursor:pointer; display:flex; align-items:center; gap:4px; transition: all 0.2s;">
+            Next →
+          </button>
+        </div>
+        <% } %>
       </div>
     </div>
 
@@ -1376,6 +1412,52 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
         if (currentPage < totalPages) showPage(currentPage + 1);
       }
     });
+
+    // Client-side Expiry Orders pagination
+    (function () {
+      let currentPage = 1;
+      const itemsPerPage = 5;
+      const rows = document.querySelectorAll('.expiry-row');
+      const totalPages = Math.ceil(rows.length / itemsPerPage);
+      
+      function showPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        const start = (page - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        
+        rows.forEach((row, idx) => {
+          if (idx >= start && idx < end) {
+            row.style.display = '';
+            row.classList.add('expiry-row-animate');
+          } else {
+            row.style.display = 'none';
+            row.classList.remove('expiry-row-animate');
+          }
+        });
+        
+        const prevBtn = document.querySelector('.expiry-prev-btn');
+        const nextBtn = document.querySelector('.expiry-next-btn');
+        const pageInfo = document.querySelector('.expiry-page-info');
+        
+        if (prevBtn) prevBtn.disabled = (currentPage === 1);
+        if (nextBtn) nextBtn.disabled = (currentPage === totalPages || totalPages === 0);
+        if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+      }
+      
+      if (rows.length > 0) {
+        showPage(1);
+      }
+      
+      document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('expiry-prev-btn')) {
+          if (currentPage > 1) showPage(currentPage - 1);
+        }
+        if (e.target.classList.contains('expiry-next-btn')) {
+          if (currentPage < totalPages) showPage(currentPage + 1);
+        }
+      });
+    })();
     // Tab Switching Logic
     const tabBtns = document.querySelectorAll(".db-tab-btn");
     const tabContents = document.querySelectorAll(".db-tab-content");

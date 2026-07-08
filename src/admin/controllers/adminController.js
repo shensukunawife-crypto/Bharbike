@@ -3226,13 +3226,48 @@ export async function editUser(req, res) {
         updated_at: new Date().toISOString()
       };
       
-      const { error: subErr } = await supabase
+      const { data: subData, error: subErr } = await supabase
         .from("user_subscriptions")
-        .upsert(subUpdates, { onConflict: "user_id" });
+        .upsert(subUpdates, { onConflict: "user_id" })
+        .select("id")
+        .single();
         
       if (subErr) {
         console.error("❌ [admin.editUser] failed to save subscription:", subErr.message);
         return res.status(500).json({ success: false, message: `Failed to save user subscription: ${subErr.message}` });
+      }
+
+      if (subData?.id) {
+        try {
+          let planPrice = 1950;
+          const { data: planInfo } = await supabase
+            .from("subscription_plans")
+            .select("price")
+            .eq("id", sub_plan)
+            .maybeSingle();
+          if (planInfo?.price) planPrice = Number(planInfo.price);
+
+          const { data: bills } = await supabase
+            .from("subscription_billing")
+            .select("id")
+            .eq("user_id", userId)
+            .limit(1);
+
+          if (!bills || bills.length === 0) {
+            await supabase.from("subscription_billing").insert([{
+              subscription_id: subData.id,
+              user_id: userId,
+              amount: planPrice,
+              status: "paid",
+              billing_date: new Date().toISOString(),
+              paid_at: new Date().toISOString(),
+              payment_method: "admin_override"
+            }]);
+            console.log(`[admin.editUser] Created manual override billing record for user ${userId}`);
+          }
+        } catch (bErr) {
+          console.warn("[admin.editUser] billing record creation failed:", bErr.message);
+        }
       }
     } else if (sub_plan === "none") {
       // If plan is set to "none", remove active subscription record
@@ -4751,16 +4786,49 @@ export async function addSubscription(req, res) {
     const { data: user } = await supabase.from("users").select("id").eq("id", user_id).maybeSingle();
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    const { error } = await supabase.from("user_subscriptions").insert([{
+    const { data: subData, error } = await supabase.from("user_subscriptions").insert([{
       user_id,
       plan_id,
       status: "active",
       start_date: new Date().toISOString(),
       end_date: expiry.toISOString(),
       auto_renew: false
-    }]);
+    }]).select("id").single();
 
     if (error) throw error;
+
+    if (subData?.id) {
+      try {
+        let planPrice = 1950;
+        const { data: planInfo } = await supabase
+          .from("subscription_plans")
+          .select("price")
+          .eq("id", plan_id)
+          .maybeSingle();
+        if (planInfo?.price) planPrice = Number(planInfo.price);
+
+        const { data: bills } = await supabase
+          .from("subscription_billing")
+          .select("id")
+          .eq("user_id", user_id)
+          .limit(1);
+
+        if (!bills || bills.length === 0) {
+          await supabase.from("subscription_billing").insert([{
+            subscription_id: subData.id,
+            user_id: user_id,
+            amount: planPrice,
+            status: "paid",
+            billing_date: new Date().toISOString(),
+            paid_at: new Date().toISOString(),
+            payment_method: "admin_manual_add"
+          }]);
+        }
+      } catch (bErr) {
+        console.warn("[admin.addSubscription] billing record creation failed:", bErr.message);
+      }
+    }
+
     res.json({ success: true, message: "Subscription added successfully" });
   } catch (error) {
     console.error("[adminController.addSubscription] failed", error);

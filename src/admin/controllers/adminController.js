@@ -686,6 +686,7 @@ export async function dashboard(req, res) {
 
     let expiringSubs = [];
     let assignedBikes = [];
+    let expiryOrders = [];
     let activeMaintenance = [];
     let pendingKycList = [];
     let pendingPayments = [];
@@ -703,7 +704,7 @@ export async function dashboard(req, res) {
           supabase.from("users").select("id, full_name, phone"),
           supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
           supabase.from("subscription_plans").select("id, name"),
-          supabase.from("rentals").select("*").in("status", ["active", "ongoing"]),
+          supabase.from("rentals").select("*").in("status", ["active", "ongoing", "expired"]),
           supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending"),
           supabase.from("payments").select("*").eq("status", "pending").order("created_at", { ascending: false })
         ]);
@@ -742,8 +743,19 @@ export async function dashboard(req, res) {
             };
           });
 
+        // Filter active vs expired rentals
+        const activeRentalsFiltered = activeRentals.filter(r => {
+          const isExpired = r.status === "expired" || (r.end_time && new Date(r.end_time) <= now);
+          return !isExpired;
+        });
+
+        const expiredRentalsFiltered = activeRentals.filter(r => {
+          const isExpired = r.status === "expired" || (r.end_time && new Date(r.end_time) <= now);
+          return isExpired;
+        });
+
         // Assigned Bikes to Who and all details (with IDs for IoT/cancel actions)
-        assignedBikes = activeRentals.map(r => {
+        assignedBikes = activeRentalsFiltered.map(r => {
           const u = allUsers.find(user => user.id === r.user_id);
           const b = bikes.find(bike => bike.id === r.bike_id);
           return {
@@ -756,6 +768,36 @@ export async function dashboard(req, res) {
             startTime: r.start_time ? new Date(r.start_time).toLocaleString("en-IN") : new Date(r.created_at || now).toLocaleString("en-IN"),
             battery: b ? Number(b.battery || 0) : 0,
             location: b ? b.location : "Offline / No GPS"
+          };
+        });
+
+        // Expiry Orders (Expired Rentals)
+        expiryOrders = expiredRentalsFiltered.map(r => {
+          const u = allUsers.find(user => user.id === r.user_id);
+          const b = bikes.find(bike => bike.id === r.bike_id);
+          
+          const endMs = new Date(r.end_time).getTime();
+          const diffMs = nowMs - endMs;
+          const hoursAgo = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
+          let timeLeftStr = `${hoursAgo} hours overdue`;
+          if (hoursAgo > 24) {
+            const daysAgo = Math.floor(hoursAgo / 24);
+            const remHours = hoursAgo % 24;
+            timeLeftStr = `${daysAgo}d ${remHours}h overdue`;
+          }
+
+          return {
+            id: r.id,
+            bikeId: r.bike_id,
+            userName: u ? u.full_name : "Unknown User",
+            userPhone: u ? u.phone : "—",
+            bikeCode: b ? b.bike_code : (r.bike_id || "—"),
+            status: r.status,
+            startTime: r.start_time ? new Date(r.start_time).toLocaleString("en-IN") : new Date(r.created_at || now).toLocaleString("en-IN"),
+            endDate: r.end_time ? new Date(r.end_time).toLocaleString("en-IN") : "—",
+            battery: b ? Number(b.battery || 0) : 0,
+            location: b ? b.location : "Offline / No GPS",
+            timeLeftStr
           };
         });
 
@@ -813,6 +855,7 @@ export async function dashboard(req, res) {
       bodyView: "dashboard",
       expiringSubs,
       assignedBikes,
+      expiryOrders,
       activeMaintenance,
       pendingKycList,
       pendingPayments,

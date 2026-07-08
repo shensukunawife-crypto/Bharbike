@@ -1,10 +1,10 @@
 <%
-  const gOperations = ['orders', 'bookings', 'delivery-partners', 'skipped-days'].includes(active);
+  const gOperations = ['orders', 'bookings', 'delivery-partners'].includes(active);
   const gVehicle    = ['bikes', 'maintenance', 'hubs'].includes(active);
-  const gUsers      = ['users', 'kyc-documents', 'subscriptions', 'payments'].includes(active);
+  const gUsers      = ['users', 'kyc-documents', 'subscriptions', 'payments', 'skipped-days', 'ads'].includes(active);
   const gFinancial  = ['earnings', 'analytics'].includes(active);
   const gSystem     = ['system-workflow', 'backend-monitor', 'activity-logs', 'sql-editor'].includes(active);
-  const gComm       = ['support', 'notifications', 'ads'].includes(active);
+  const gComm       = ['support', 'notifications'].includes(active);
   const gAdmin      = ['settings', 'admins', 'subscription-plans'].includes(active);
 
   const _admin    = locals.admin || {};
@@ -112,6 +112,12 @@
         <span class="nav-icon"><%- icons.payments %></span><span>Payments</span>
       </a>
       <% } %>
+      <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days" data-label="Skipped Days">
+        <span class="nav-icon"><%- icons.skipped %></span><span>Skipped Days</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'ads' ? 'active' : '' %>" href="/admin/ads" data-label="Socials & Contacts">
+        <span class="nav-icon"><%- icons.ads %></span><span>Socials & Contacts</span>
+      </a>
     </div>
   </div>
 </div>
@@ -158,9 +164,6 @@
       </a>
       <a class="nav-link nav-link-sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners" data-label="Delivery">
         <span class="nav-icon"><%- icons.delivery %></span><span>Delivery</span>
-      </a>
-      <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days" data-label="Skipped Days">
-        <span class="nav-icon"><%- icons.skipped %></span><span>Skipped Days</span>
       </a>
     </div>
   </div>
@@ -213,9 +216,6 @@
       </a>
       <a class="nav-link nav-link-sub <%= active === 'notifications' ? 'active' : '' %>" href="/admin/notifications" data-label="Notifications">
         <span class="nav-icon"><%- icons.notif %></span><span>Notifications</span>
-      </a>
-      <a class="nav-link nav-link-sub <%= active === 'ads' ? 'active' : '' %>" href="/admin/ads" data-label="Socials & Contacts">
-        <span class="nav-icon"><%- icons.ads %></span><span>Socials & Contacts</span>
       </a>
     </div>
   </div>

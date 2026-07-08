@@ -17,11 +17,12 @@ async function adjustSubscriptionDates(riderName, days, isAddition = true) {
       return;
     }
 
-    // 2. Fetch the user's active/expired subscription
+    // 2. Fetch the user's active subscription
     const { data: subscription } = await supabase
       .from("user_subscriptions")
       .select("id, end_date")
       .eq("user_id", profile.id)
+      .eq("status", "active")
       .maybeSingle();
 
     if (!subscription) {

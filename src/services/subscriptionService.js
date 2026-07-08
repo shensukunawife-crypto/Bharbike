@@ -424,6 +424,47 @@ export async function getUserBillingHistory(userId, limit = 10) {
       }
     }
 
+    // FIX: If the user has no billing history but has an existing subscription,
+    // they are NOT a first-time user. Return a mock billing item to bypass the registration fee in the app.
+    if (bills.length === 0) {
+      try {
+        const { data: subRows } = await supabase
+          .from("user_subscriptions")
+          .select("id, created_at, plan_id")
+          .eq("user_id", userId)
+          .limit(1);
+
+        if (subRows && subRows.length > 0) {
+          console.log(`[getUserBillingHistory] User ${userId} has no billing records but has a subscription. Returning mock history.`);
+          const mockBill = {
+            id: `mock-bill-${subRows[0].id}`,
+            subscription_id: subRows[0].id,
+            user_id: userId,
+            amount: 0,
+            currency: "INR",
+            status: "paid",
+            payment_method: "historical",
+            razorpay_order_id: "historical",
+            razorpay_payment_id: "historical",
+            billing_date: subRows[0].created_at || new Date().toISOString(),
+            paid_at: subRows[0].created_at || new Date().toISOString(),
+            created_at: subRows[0].created_at || new Date().toISOString(),
+            subscription: {
+              id: subRows[0].id,
+              plan_id: subRows[0].plan_id,
+              status: "expired",
+              plan: {
+                display_name: subRows[0].plan_id === "weekly" ? "Weekly Plan" : "Subscription Plan"
+              }
+            }
+          };
+          bills.push(mockBill);
+        }
+      } catch (subErr) {
+        console.warn("[getUserBillingHistory] failed to fetch sub check:", subErr.message);
+      }
+    }
+
     return bills;
   } catch (error) {
     console.error("[subscriptionService] getUserBillingHistory failed:", error.message);

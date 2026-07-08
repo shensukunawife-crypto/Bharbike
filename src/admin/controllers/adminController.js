@@ -2803,6 +2803,7 @@ export async function sendSupportMessage(req, res) {
 
 export async function notificationsPage(req, res) {
   let history = [];
+  let systemHistory = [];
   let users = [];
   try {
     // Fetch real notification history from DB (admin-sent notifications)
@@ -2828,6 +2829,43 @@ export async function notificationsPage(req, res) {
   }
 
   try {
+    // Fetch system/automated notifications (KYC warnings, subscription alerts, wallet recharges)
+    const { data: systemRows } = await supabase
+      .from("notifications")
+      .select("id, user_id, title, message, body, type, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (Array.isArray(systemRows) && systemRows.length > 0) {
+      const userIds = [...new Set(systemRows.map((n) => n.user_id).filter(Boolean))];
+      let profileMap = new Map();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone")
+          .in("id", userIds);
+        if (profiles) {
+          profiles.forEach((p) => profileMap.set(p.id, p));
+        }
+      }
+
+      systemHistory = systemRows.map((row) => {
+        const profile = profileMap.get(row.user_id) || {};
+        return {
+          title: row.title || "Untitled Alert",
+          message: row.message || row.body || "",
+          category: row.type || "system",
+          userName: profile.full_name || "System / Guest",
+          userPhone: profile.phone || "-",
+          time: new Date(row.created_at || Date.now()).toLocaleString("en-IN"),
+        };
+      });
+    }
+  } catch (err) {
+    console.error("[notificationsPage] system history failed", err?.message);
+  }
+
+  try {
     // Fetch users for single-user picker (name + phone)
     const { data: userRows } = await supabase
       .from("profiles")
@@ -2836,14 +2874,14 @@ export async function notificationsPage(req, res) {
       .limit(300);
     if (Array.isArray(userRows)) {
       users = userRows
-        .filter((u) => u.full_name && u.full_name !== "Rider" && u.full_name !== "BharBike Rider" && u.full_name !== "Demo Rider")
-        .map((u) => ({
-          id: u.id,
-          name: u.full_name || "Unknown",
-          phone: u.phone || "",
-          email: u.email || "",
-          label: `${u.full_name}${u.phone ? " · " + u.phone : ""}`,
-        }));
+          .filter((u) => u.full_name && u.full_name !== "Rider" && u.full_name !== "BharBike Rider" && u.full_name !== "Demo Rider")
+          .map((u) => ({
+            id: u.id,
+            name: u.full_name || "Unknown",
+            phone: u.phone || "",
+            email: u.email || "",
+            label: `${u.full_name}${u.phone ? " · " + u.phone : ""}`,
+          }));
     }
   } catch (_) {
     // users stays empty
@@ -2854,6 +2892,7 @@ export async function notificationsPage(req, res) {
     active: "notifications",
     bodyView: "notifications",
     history,
+    systemHistory,
     users,
   });
 }

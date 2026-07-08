@@ -249,6 +249,48 @@
 .notif-history-card .table tr:hover td { background: var(--border-light); }
 .notif-empty-row td { text-align: center; padding: 2.5rem !important; color: var(--text-muted) !important; }
 
+/* ── Tabbed View Styles ────────────────────────────────────── */
+.notif-tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 2px solid var(--border-light);
+  margin-bottom: 1.5rem;
+}
+.notif-tab {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.75rem 0.25rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+  outline: none;
+}
+.notif-tab:hover {
+  color: var(--text);
+}
+.notif-tab.active {
+  color: var(--accent, #f0b429);
+}
+.notif-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent, #f0b429);
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+
 .hidden { display: none !important; }
 </style>
 
@@ -377,40 +419,105 @@
 
   <!-- ── History ─────────────────────────────────────────── -->
   <div class="notif-history-card">
-    <h3>📜 Notification History</h3>
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Audience</th>
-            <th>Channels</th>
-            <th>Status</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (history && history.length > 0) { %>
-            <% history.forEach(function(item) { %>
+    <div class="notif-tabs">
+      <button class="notif-tab active" data-tab="admin-broadcasts">📢 Admin Broadcasts</button>
+      <button class="notif-tab" data-tab="system-alerts">🤖 Automated System Logs</button>
+    </div>
+
+    <!-- Tab 1: Admin Broadcasts -->
+    <div class="tab-content active" id="tab-admin-broadcasts">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
             <tr>
-              <td><strong><%= item.title %></strong></td>
-              <td><%= item.audience %></td>
-              <td><%= item.type %></td>
-              <td>
-                <span class="badge <%= item.status === 'Sent' ? 'success' : item.status === 'Scheduled' ? 'warning' : '' %>">
-                  <%= item.status %>
-                </span>
-              </td>
-              <td style="white-space:nowrap"><%= item.time %></td>
+              <th>Title</th>
+              <th>Audience</th>
+              <th>Channels</th>
+              <th>Status</th>
+              <th>Time</th>
             </tr>
-            <% }) %>
-          <% } else { %>
-          <tr class="notif-empty-row">
-            <td colspan="5">No notifications sent yet</td>
-          </tr>
-          <% } %>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <% if (history && history.length > 0) { %>
+              <% history.forEach(function(item) { %>
+              <tr>
+                <td><strong><%= item.title %></strong></td>
+                <td><%= item.audience %></td>
+                <td><%= item.type %></td>
+                <td>
+                  <span class="badge <%= item.status === 'Sent' ? 'success' : item.status === 'Scheduled' ? 'warning' : '' %>">
+                    <%= item.status %>
+                  </span>
+                </td>
+                <td style="white-space:nowrap"><%= item.time %></td>
+              </tr>
+              <% }) %>
+            <% } else { %>
+            <tr class="notif-empty-row">
+              <td colspan="5">No broadcasts sent yet</td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Automated System Logs -->
+    <div class="tab-content" id="tab-system-alerts">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Recipient</th>
+              <th>Title</th>
+              <th>Message Body</th>
+              <th>Category</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (systemHistory && systemHistory.length > 0) { %>
+              <% systemHistory.forEach(function(item) { %>
+              <tr>
+                <td>
+                  <strong><%= item.userName %></strong>
+                  <div style="font-size: 11px; color: var(--text-muted);"><%= item.userPhone %></div>
+                </td>
+                <td><strong><%= item.title %></strong></td>
+                <td>
+                  <span style="font-size: 13px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 400px; line-height: 1.4;">
+                    <%= item.message %>
+                  </span>
+                </td>
+                <td>
+                  <% 
+                    var catBadge = 'info';
+                    var cat = String(item.category || "").toLowerCase();
+                    if (cat.includes('expired') || cat.includes('warning') || cat.includes('alert') || cat === 'critical' || cat === 'subscription_warning') {
+                      catBadge = 'danger';
+                    } else if (cat.includes('kyc') || cat === 'document') {
+                      catBadge = 'warning';
+                    } else if (cat === 'wallet' || cat.includes('recharge') || cat === 'payment' || cat === 'success') {
+                      catBadge = 'success';
+                    } else if (cat === 'lock' || cat === 'unlock') {
+                      catBadge = 'info';
+                    }
+                  %>
+                  <span class="badge <%= catBadge %>" style="font-size: 10px; font-weight:600; text-transform: uppercase;">
+                    <%= item.category %>
+                  </span>
+                </td>
+                <td style="white-space:nowrap"><%= item.time %></td>
+              </tr>
+              <% }) %>
+            <% } else { %>
+            <tr class="notif-empty-row">
+              <td colspan="5">No automated logs recorded yet</td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -418,6 +525,25 @@
 
 <script>
 (function () {
+  /* ── Tab Switcher Logic ─────────────────────────── */
+  var tabs = document.querySelectorAll('.notif-tab');
+  var tabContents = document.querySelectorAll('.tab-content');
+  
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var targetTab = this.getAttribute('data-tab');
+      
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      tabContents.forEach(function(tc) { tc.classList.remove('active'); });
+      
+      this.classList.add('active');
+      var targetContent = document.getElementById('tab-' + targetTab);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+    });
+  });
+
   /* ── Schedule toggle ─────────────────────────── */
   var schedToggle = document.getElementById('sched-toggle');
   var schedFields = document.getElementById('sched-fields');

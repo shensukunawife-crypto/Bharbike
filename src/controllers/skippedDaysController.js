@@ -1,6 +1,58 @@
 import supabase from "../utils/supabaseClient.js";
 import { getIdMappings } from "../admin/controllers/adminController.js";
 
+async function adjustSubscriptionDates(riderName, days, isAddition = true) {
+  try {
+    if (!riderName || !days) return;
+
+    // 1. Find profile by full_name (case-insensitive)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .ilike("full_name", riderName.trim())
+      .maybeSingle();
+
+    if (!profile) {
+      console.log(`[adjustSubscriptionDates] No profile found matching name: ${riderName}`);
+      return;
+    }
+
+    // 2. Fetch the user's active/expired subscription
+    const { data: subscription } = await supabase
+      .from("user_subscriptions")
+      .select("id, end_date")
+      .eq("user_id", profile.id)
+      .maybeSingle();
+
+    if (!subscription) {
+      console.log(`[adjustSubscriptionDates] No subscription found for user: ${profile.id} (${riderName})`);
+      return;
+    }
+
+    // 3. Calculate new end date
+    const currentEnd = new Date(subscription.end_date);
+    const adjustment = isAddition ? days : -days;
+    const newEnd = new Date(currentEnd.getTime() + adjustment * 24 * 60 * 60 * 1000);
+
+    // 4. Update user_subscriptions
+    const { error: updateErr } = await supabase
+      .from("user_subscriptions")
+      .update({
+        end_date: newEnd.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", subscription.id);
+
+    if (updateErr) {
+      console.error(`[adjustSubscriptionDates] Failed to update subscription end_date:`, updateErr.message);
+    } else {
+      console.log(`[adjustSubscriptionDates] Adjusted subscription end_date for ${riderName} by ${adjustment} days. New end date: ${newEnd.toISOString()}`);
+    }
+  } catch (err) {
+    console.error("[adjustSubscriptionDates] unexpected error:", err.message);
+  }
+}
+
 export async function addSkippedDay(req, res) {
   try {
     const row = {
@@ -24,6 +76,11 @@ export async function addSkippedDay(req, res) {
     if (error) {
       console.log("INSERT ERROR:", error);
       return res.status(500).json(error);
+    }
+
+    // Extend subscription end_date if status is Active
+    if (String(row.status || "").toLowerCase() === "active" && row.days_skipped) {
+      await adjustSubscriptionDates(row.rider_name, row.days_skipped, true);
     }
 
     console.log("INSERT SUCCESS:", data);
@@ -72,7 +129,7 @@ export async function toggleSkippedDayStatus(req, res) {
 
     const { data: current, error: getError } = await supabase
       .from("rider_skipped_days")
-      .select("status")
+      .select("rider_name, days_skipped, status")
       .eq("id", id)
       .maybeSingle();
 
@@ -100,6 +157,12 @@ export async function toggleSkippedDayStatus(req, res) {
       return res.status(500).json(error);
     }
 
+    // Extend subscription if changing to Active, shorten if changing to Inactive
+    if (current.days_skipped) {
+      const isAddition = nextStatus === "Active";
+      await adjustSubscriptionDates(current.rider_name, current.days_skipped, isAddition);
+    }
+
     res.json({ success: true, nextStatus, data });
   } catch (err) {
     console.error("[toggleSkippedDayStatus]", err);
@@ -110,6 +173,18 @@ export async function toggleSkippedDayStatus(req, res) {
 export async function deleteSkippedDay(req, res) {
   try {
     const { id } = req.params;
+
+    // Fetch the skipped day record before deleting it
+    const { data: record, error: getError } = await supabase
+      .from("rider_skipped_days")
+      .select("rider_name, days_skipped, status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (getError || !record) {
+      return res.status(404).json({ success: false, message: "Record not found" });
+    }
+
     const { error } = await supabase
       .from("rider_skipped_days")
       .delete()
@@ -118,6 +193,11 @@ export async function deleteSkippedDay(req, res) {
     if (error) {
       console.log("DELETE ERROR:", error);
       return res.status(500).json(error);
+    }
+
+    // If the record was Active, revert the subscription end_date extension
+    if (String(record.status || "").toLowerCase() === "active" && record.days_skipped) {
+      await adjustSubscriptionDates(record.rider_name, record.days_skipped, false);
     }
 
     res.json({ success: true, message: "Record deleted successfully" });

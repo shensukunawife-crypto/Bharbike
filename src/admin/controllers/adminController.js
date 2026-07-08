@@ -801,6 +801,18 @@ export async function dashboard(req, res) {
           };
         });
 
+        if (expiryOrders.length > 0) {
+          const allClearIndex = alerts.findIndex(a => a.title === "All Clear");
+          if (allClearIndex !== -1) {
+            alerts.splice(allClearIndex, 1);
+          }
+          alerts.push({
+            level: "warning",
+            title: "Expiry Orders",
+            detail: `${expiryOrders.length} rentals have expired and are overdue.`,
+          });
+        }
+
         // Maintenance Bikes Given Details (with IDs for marking fixed)
         activeMaintenance = maintenanceTickets
           .filter(t => t.status === "under_repair" || t.status === "in_progress")

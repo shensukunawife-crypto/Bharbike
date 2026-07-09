@@ -323,6 +323,41 @@
     border-color: #fca5a5;
     color: #dc2626;
   }
+
+  /* Autocomplete suggestion dropdown styling */
+  .autocomplete-container {
+    position: relative;
+  }
+  .autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    margin-top: 4px;
+  }
+  .autocomplete-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .autocomplete-item:hover {
+    background: #fef08a;
+    color: #ca8a04;
+    font-weight: 500;
+  }
+  .autocomplete-item:not(:last-child) {
+    border-bottom: 1px solid #f3f4f6;
+  }
 </style>
 
 <% var _rows = skippedRows || []; %>
@@ -358,11 +393,17 @@
       <form id="skipped-days-form" class="skipped-form-stack" autocomplete="off">
         <div>
           <label class="skipped-label" for="sd-rider-name">Rider name</label>
-          <input id="sd-rider-name" name="rider_name" class="skipped-input" type="text" placeholder="e.g. Rahul Sharma" required />
+          <div class="autocomplete-container">
+            <input id="sd-rider-name" name="rider_name" class="skipped-input" type="text" placeholder="e.g. Rahul Sharma" required />
+            <div class="autocomplete-dropdown" id="rider-dropdown" style="display: none;"></div>
+          </div>
         </div>
         <div>
           <label class="skipped-label" for="sd-bike-id">Bike ID</label>
-          <input id="sd-bike-id" name="bike_id" class="skipped-input" type="text" placeholder="Bike / fleet ID" required />
+          <div class="autocomplete-container">
+            <input id="sd-bike-id" name="bike_id" class="skipped-input" type="text" placeholder="Bike / fleet ID" required />
+            <div class="autocomplete-dropdown" id="bike-dropdown" style="display: none;"></div>
+          </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <div>
@@ -671,5 +712,112 @@
         alert("Failed to delete record: " + (err.message || err));
       }
     };
+
+    // ─── Autocomplete suggestions logic ───
+    var rawRiders = <%- JSON.stringify(locals.riders || []) %>;
+    var rawBikes = <%- JSON.stringify(locals.bikes || []) %>;
+
+    // Rider Autocomplete
+    var riderInput = document.getElementById("sd-rider-name");
+    var riderDropdown = document.getElementById("rider-dropdown");
+
+    function renderRiderDropdown(filterText) {
+      if (!riderDropdown) return;
+      var query = String(filterText || "").toLowerCase().trim();
+      var matches = rawRiders.filter(function (r) {
+        var name = String(r.full_name || "").toLowerCase();
+        var phone = String(r.phone || "").toLowerCase();
+        return name.includes(query) || phone.includes(query);
+      });
+
+      if (!matches.length) {
+        riderDropdown.style.display = "none";
+        riderDropdown.innerHTML = "";
+        return;
+      }
+
+      var html = "";
+      matches.forEach(function (r) {
+        var displayName = r.full_name + (r.phone ? " (" + r.phone + ")" : "");
+        html += '<div class="autocomplete-item" data-name="' + escapeHtml(r.full_name) + '">' +
+                escapeHtml(displayName) + '</div>';
+      });
+
+      riderDropdown.innerHTML = html;
+      riderDropdown.style.display = "block";
+    }
+
+    if (riderInput && riderDropdown) {
+      riderInput.addEventListener("focus", function () {
+        renderRiderDropdown(this.value);
+      });
+      riderInput.addEventListener("input", function () {
+        renderRiderDropdown(this.value);
+      });
+      riderDropdown.addEventListener("click", function (e) {
+        var item = e.target.closest(".autocomplete-item");
+        if (item) {
+          riderInput.value = item.getAttribute("data-name");
+          riderDropdown.style.display = "none";
+        }
+      });
+    }
+
+    // Bike Autocomplete
+    var bikeInput = document.getElementById("sd-bike-id");
+    var bikeDropdown = document.getElementById("bike-dropdown");
+
+    function renderBikeDropdown(filterText) {
+      if (!bikeDropdown) return;
+      var query = String(filterText || "").toLowerCase().trim();
+      var matches = rawBikes.filter(function (b) {
+        var code = String(b.bike_code || "").toLowerCase();
+        var name = String(b.name || "").toLowerCase();
+        return code.includes(query) || name.includes(query);
+      });
+
+      if (!matches.length) {
+        bikeDropdown.style.display = "none";
+        bikeDropdown.innerHTML = "";
+        return;
+      }
+
+      var html = "";
+      matches.forEach(function (b) {
+        var displayName = b.bike_code + " - " + b.name;
+        html += '<div class="autocomplete-item" data-code="' + escapeHtml(b.bike_code) + '">' +
+                escapeHtml(displayName) + '</div>';
+      });
+
+      bikeDropdown.innerHTML = html;
+      bikeDropdown.style.display = "block";
+    }
+
+    if (bikeInput && bikeDropdown) {
+      bikeInput.addEventListener("focus", function () {
+        renderBikeDropdown(this.value);
+      });
+      bikeInput.addEventListener("input", function () {
+        renderBikeDropdown(this.value);
+      });
+      bikeDropdown.addEventListener("click", function (e) {
+        var item = e.target.closest(".autocomplete-item");
+        if (item) {
+          bikeInput.value = item.getAttribute("data-code");
+          bikeDropdown.style.display = "none";
+        }
+      });
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener("click", function (e) {
+      if (riderInput && !riderInput.contains(e.target) && riderDropdown && !riderDropdown.contains(e.target)) {
+        riderDropdown.style.display = "none";
+      }
+      if (bikeInput && !bikeInput.contains(e.target) && bikeDropdown && !bikeDropdown.contains(e.target)) {
+        bikeDropdown.style.display = "none";
+      }
+    });
+
   })();
 </script>

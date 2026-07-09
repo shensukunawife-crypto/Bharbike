@@ -3194,17 +3194,30 @@ export async function skippedDaysPage(req, res) {
   try {
     const [
       mappings,
-      { data, error }
+      { data, error },
+      { data: profilesData, error: profilesErr },
+      { data: bikesData, error: bikesErr }
     ] = await Promise.all([
       getIdMappings(),
       supabase
         .from("rider_skipped_days")
         .select("*")
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("id, full_name, phone")
+        .not("full_name", "is", null)
+        .order("full_name", { ascending: true }),
+      supabase
+        .from("bikes")
+        .select("id, name, bike_code")
+        .not("bike_code", "is", null)
+        .order("bike_code", { ascending: true })
     ]);
-    if (error) {
-      console.error("[admin.skippedDaysPage]", error);
-    }
+    if (error) console.error("[admin.skippedDaysPage] skipped days error:", error);
+    if (profilesErr) console.error("[admin.skippedDaysPage] profiles error:", profilesErr);
+    if (bikesErr) console.error("[admin.skippedDaysPage] bikes error:", bikesErr);
+
     const skippedRows = safeData(data).map(r => {
       const bikeNum = r.bike_id ? (mappings.bikeMap.get(r.bike_id) || String(r.bike_id).slice(0, 8)) : null;
       return {
@@ -3217,6 +3230,8 @@ export async function skippedDaysPage(req, res) {
       active: "skipped-days",
       bodyView: "skipped-days",
       skippedRows,
+      riders: safeData(profilesData),
+      bikes: safeData(bikesData)
     });
   } catch (error) {
     console.error("[admin.skippedDaysPage] unexpected", error);
@@ -3225,6 +3240,8 @@ export async function skippedDaysPage(req, res) {
       active: "skipped-days",
       bodyView: "skipped-days",
       skippedRows: [],
+      riders: [],
+      bikes: []
     });
   }
 }

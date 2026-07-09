@@ -449,6 +449,15 @@ body.dark-mode .db-dark-card { background: #000000; border: 1px solid #1f1f1f; }
   display:flex; align-items:flex-start; gap:10px;
   padding:10px 16px; border-radius:var(--radius-sm);
   border:1px solid; font-size:13px; font-weight:500;
+  cursor: pointer; transition: all 0.2s ease;
+}
+.db-alert:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+@keyframes pulse-highlight {
+  0% { transform: scale(1.01); background-color: rgba(245,158,11,0.18); box-shadow: 0 0 15px rgba(245,158,11,0.25); }
+  100% { transform: scale(1); background-color: transparent; box-shadow: none; }
 }
 .db-alert-warning  { background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.25); color:#92400e; }
 .db-alert-success  { background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.25); color:#065f46; }
@@ -675,14 +684,22 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
   <% if (alerts && alerts.length) { %>
   <div class="db-alerts-panel">
     <% alerts.forEach(function(a){ %>
-    <div class="db-alert db-alert-<%= a.level %>">
-      <span class="db-alert-icon">
-        <% if(a.level==='warning'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <% }else if(a.level==='success'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        <% }else{ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><% } %>
-      </span>
-      <div><strong><%= a.title %></strong><% if(a.detail){ %><span class="db-alert-detail"><%= a.detail %></span><% } %></div>
-    </div>
+      <% 
+        var targetUrl = "";
+        if (a.title === "Pending Orders" || a.title === "Expiry Orders") {
+          targetUrl = "/admin/orders";
+        } else if (a.title === "Low Battery") {
+          targetUrl = "/admin/bikes";
+        }
+      %>
+      <div class="db-alert db-alert-<%= a.level %>" <% if (targetUrl) { %> onclick="window.location.href='<%= targetUrl %>'" <% } %>>
+        <span class="db-alert-icon">
+          <% if(a.level==='warning'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <% }else if(a.level==='success'){ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <% }else{ %><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><% } %>
+        </span>
+        <div><strong><%= a.title %></strong><% if(a.detail){ %><span class="db-alert-detail"><%= a.detail %></span><% } %></div>
+      </div>
     <% }) %>
   </div>
   <% } %>

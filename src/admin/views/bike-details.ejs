@@ -196,7 +196,7 @@ function closeMapModal() {
 <script>
   // Real-time GPS Polling
   function pollLiveGPS() {
-    fetch('/api/admin/bikes/<%= bike.id %>/live-gps')
+    fetch('/admin/bikes/<%= bike.id %>/live-gps')
       .then(res => res.json())
       .then(data => {
         if(data && data.success) {

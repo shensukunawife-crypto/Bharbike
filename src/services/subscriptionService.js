@@ -465,6 +465,50 @@ export async function getUserBillingHistory(userId, limit = 10) {
       }
     }
 
+    // FIX: If still no billing history, check for any rental (active or past).
+    // Prepaid / admin-assigned users may have a rental but no subscription record.
+    // They are existing customers — bypass the registration fee by returning a mock billing entry.
+    if (bills.length === 0) {
+      try {
+        const { data: rentalRows } = await supabase
+          .from("rentals")
+          .select("id, created_at, start_time")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (rentalRows && rentalRows.length > 0) {
+          const r = rentalRows[0];
+          console.log(`[getUserBillingHistory] User ${userId} has no billing/subscription but has a rental. Treating as existing customer (prepaid).`);
+          const mockBill = {
+            id: `mock-bill-rental-${r.id}`,
+            subscription_id: null,
+            user_id: userId,
+            amount: 0,
+            currency: "INR",
+            status: "paid",
+            payment_method: "prepaid",
+            razorpay_order_id: "prepaid",
+            razorpay_payment_id: "prepaid",
+            billing_date: r.created_at || r.start_time || new Date().toISOString(),
+            paid_at: r.created_at || r.start_time || new Date().toISOString(),
+            created_at: r.created_at || r.start_time || new Date().toISOString(),
+            subscription: {
+              id: r.id,
+              plan_id: "prepaid",
+              status: "expired",
+              plan: {
+                display_name: "Prepaid Plan"
+              }
+            }
+          };
+          bills.push(mockBill);
+        }
+      } catch (rentalErr) {
+        console.warn("[getUserBillingHistory] failed to fetch rental check:", rentalErr.message);
+      }
+    }
+
     return bills;
   } catch (error) {
     console.error("[subscriptionService] getUserBillingHistory failed:", error.message);

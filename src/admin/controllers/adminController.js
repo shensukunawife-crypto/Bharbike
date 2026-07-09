@@ -1100,6 +1100,9 @@ export async function users(req, res) {
           } else {
             subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
           }
+        } else if (!userSub && activeRental && activeRental.end_time && new Date(activeRental.end_time) > new Date()) {
+          // No subscription at all, but bike is manually assigned — show rental window
+          subText = `Bike Assigned (till ${formatReadableDate(activeRental.end_time)})`;
         }
         return {
           ...base,

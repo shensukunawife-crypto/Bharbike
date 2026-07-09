@@ -1380,8 +1380,8 @@ export async function bikeDetails(req, res) {
       console.warn("[admin.bikeDetails] IoT fetch failed:", iotErr.message);
     }
 
-    // Fetch orders by bike_id OR bike_code to catch all linked orders
-    const { data: orders } = await supabase.from("orders").select("*").or(`bike_id.eq.${bikeId},bike_code.eq.${bike.bike_code}`);
+    // Fetch orders by bike_id to catch all linked orders
+    const { data: orders } = await supabase.from("orders").select("*").eq("bike_id", bikeId);
     const { data: rentals } = await supabase.from("rentals").select("*").eq("bike_id", bikeId);
     // Fix: Read maintenance logs from Supabase DB, not memory (survives server restarts)
     let maintenanceLogs = [];

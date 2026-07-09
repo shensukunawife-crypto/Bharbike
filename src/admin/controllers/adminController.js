@@ -1345,6 +1345,9 @@ export async function bikeDetails(req, res) {
       bike.liveLng = health.lng;
       bike.lastPingAt = health.lastPingAt;
       bike.isLive = !!(health.lat && health.lng);
+      bike.speed = health.speed;
+      bike.ignition = health.ignition;
+      bike.movementStatus = health.movementStatus;
 
       // Write GPS coords back to Supabase so the bikes LIST stays updated
       if (health.lat && health.lng) {

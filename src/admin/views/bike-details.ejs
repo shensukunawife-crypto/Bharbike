@@ -80,6 +80,28 @@
       <%= currentRenter || "Available" %>
     </strong>
   </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">⚡</span><span class="stat-label">Ignition</span></div>
+    <strong class="stat-value" style="color: <%= bike.ignition === 'ON' ? '#4ade80' : '#f87171' %>;">
+      <%= bike.ignition || "OFF" %>
+    </strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">💨</span><span class="stat-label">Live Speed</span></div>
+    <strong class="stat-value"><%= bike.speed != null ? bike.speed + ' km/h' : '0 km/h' %></strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">🚦</span><span class="stat-label">Movement Status</span></div>
+    <strong class="stat-value" style="font-size: 18px; color: <%= bike.movementStatus === 'MOVING' ? '#38bdf8' : '#e5e7eb' %>;">
+      <%= bike.movementStatus || "STOPPED" %>
+    </strong>
+  </div>
+  <div class="stat-card">
+    <div class="stat-head"><span class="stat-icon">🕒</span><span class="stat-label">Last Communication</span></div>
+    <strong class="stat-value" style="font-size: 13px; font-weight: normal; margin-top: 4px; display: block; word-break: break-word;">
+      <%= bike.lastPingAt ? new Date(bike.lastPingAt).toLocaleString('en-IN') : 'N/A' %>
+    </strong>
+  </div>
 </div>
 <div class="analytics-grid">
   <div class="chart-card">

@@ -1,4 +1,4 @@
-import supabase from "../utils/supabaseClient.js";
+import supabase, { createIsolatedClient } from "../utils/supabaseClient.js";
 import { AppError } from "../utils/AppError.js";
 import { signToken } from "../middleware/auth.js";
 import { shapePublicUser } from "../utils/userShape.js";
@@ -160,7 +160,8 @@ async function ensureDemoProfileByPhone(phone) {
   if (existingByEmail?.id) return existingByEmail;
 
   let authUser = null;
-  const loginRes = await supabase.auth.signInWithPassword({
+  const authClient = createIsolatedClient();
+  const loginRes = await authClient.auth.signInWithPassword({
     email: emailAlias,
     password: demoPassword,
   });
@@ -168,7 +169,7 @@ async function ensureDemoProfileByPhone(phone) {
   if (loginRes?.data?.user) {
     authUser = loginRes.data.user;
   } else {
-    const signupRes = await supabase.auth.signUp({
+    const signupRes = await authClient.auth.signUp({
       email: emailAlias,
       password: demoPassword,
       options: {
@@ -202,7 +203,8 @@ async function ensureProfileByPhone(phone) {
   const password = `UserPhoneOtp#${phone.replace(/\D/g, "")}#Secured`;
 
   let authUser = null;
-  const loginRes = await supabase.auth.signInWithPassword({
+  const authClient = createIsolatedClient();
+  const loginRes = await authClient.auth.signInWithPassword({
     email: emailAlias,
     password: password,
   });
@@ -210,7 +212,7 @@ async function ensureProfileByPhone(phone) {
   if (loginRes?.data?.user) {
     authUser = loginRes.data.user;
   } else {
-    const signupRes = await supabase.auth.signUp({
+    const signupRes = await authClient.auth.signUp({
       email: emailAlias,
       password: password,
       options: {
@@ -332,7 +334,7 @@ export async function sendOtp({ phone, ip }) {
     };
   }
 
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await createIsolatedClient().auth.signInWithOtp({
     phone: normalizedPhone,
     options: {
       shouldCreateUser: true,
@@ -496,7 +498,7 @@ export async function verifyOtp({ phone, otp }) {
     };
   }
 
-  const { data, error } = await supabase.auth.verifyOtp({
+  const { data, error } = await createIsolatedClient().auth.verifyOtp({
     phone: normalizedPhone,
     token: code,
     type: "sms",
@@ -544,7 +546,7 @@ export async function signupWithEmail({ email, password, full_name, address }) {
   if (!cleanEmail) throw new AppError("Email is required", 422);
   if (cleanPassword.length < 6) throw new AppError("Password must be at least 6 characters", 422);
 
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await createIsolatedClient().auth.signUp({
     email: cleanEmail,
     password: cleanPassword,
     options: {
@@ -596,7 +598,7 @@ export async function loginWithEmail({ email, password }) {
   if (!cleanEmail) throw new AppError("Email is required", 422);
   if (!cleanPassword) throw new AppError("Password is required", 422);
 
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await createIsolatedClient().auth.signInWithPassword({
     email: cleanEmail,
     password: cleanPassword,
   });
@@ -672,11 +674,12 @@ export async function verifyWithFirebaseToken({ idToken }) {
     const tempPassword = `Firebase#${firebaseUid.slice(0, 10)}`;
 
     let authUser = null;
-    const loginRes = await supabase.auth.signInWithPassword({ email: emailAlias, password: tempPassword });
+    const authClient = createIsolatedClient();
+    const loginRes = await authClient.auth.signInWithPassword({ email: emailAlias, password: tempPassword });
     if (loginRes?.data?.user) {
       authUser = loginRes.data.user;
     } else {
-      const signupRes = await supabase.auth.signUp({
+      const signupRes = await authClient.auth.signUp({
         email: emailAlias,
         password: tempPassword,
         options: { data: { full_name: decoded.name || "Rider", phone: normalizedPhone } },

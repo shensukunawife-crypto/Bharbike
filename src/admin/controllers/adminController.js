@@ -4490,7 +4490,7 @@ export async function linkGpsTracker(req, res) {
         .eq("vehicle_uuid", trimmedUuid)
         .maybeSingle();
 
-      if (existing && existing.bike_id !== bikeId) {
+      if (existing && String(existing.bike_id) !== String(bikeId)) {
         const { data: otherBike } = await supabase
           .from("bikes")
           .select("bike_code")

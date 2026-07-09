@@ -478,30 +478,38 @@
         }
 
         // ─── Topbar Notifications Dropdown + Detail Modal ───
-        const notifBtn = document.getElementById("notif-bell-btn");
-        const notifPanel = document.getElementById("notif-dropdown-panel");
-        const notifList = document.getElementById("notif-dropdown-list");
-        const notifBadge = document.getElementById("notif-badge");
-        const notifModalOverlay = document.getElementById("notif-modal-overlay");
-        const notifModalClose = document.getElementById("notif-modal-close");
+        const notifBtn    = document.getElementById("notif-bell-btn");
+        const notifPanel  = document.getElementById("notif-dropdown-panel");
+        const notifList   = document.getElementById("notif-dropdown-list");
+        const notifBadge  = document.getElementById("notif-badge");
+        // NOTE: modal elements are looked up lazily (they live after this script tag)
 
         // ── Helpers ──────────────────────────────────────────────
         const timeAgo = (ds) => {
-          const s = Math.floor((new Date() - new Date(ds)) / 1000);
-          if (s < 60) return "just now";
+          if (!ds) return "";
+          const date = new Date(ds);
+          const now  = new Date();
+          const s    = Math.floor((now - date) / 1000);
+          if (s < 60)   return "just now";
           const m = Math.floor(s / 60);
-          if (m < 60) return m + "m ago";
+          if (m < 60)   return m + " min ago";
           const h = Math.floor(m / 60);
-          if (h < 24) return h + "h ago";
-          return Math.floor(h / 24) + "d ago";
+          if (h < 24)   return h + " hr" + (h > 1 ? "s" : "") + " ago";
+          // Check if yesterday
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const daysDiff   = Math.floor((todayStart - new Date(date.getFullYear(), date.getMonth(), date.getDate())) / 86400000);
+          if (daysDiff === 1) return "Yesterday";
+          if (daysDiff < 7)  return daysDiff + " days ago";
+          // Older — show actual date
+          return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: daysDiff > 365 ? "numeric" : undefined });
         };
 
         const fmtDate = (ds) => {
-          if (!ds) return "—";
+          if (!ds || ds === "N/A") return "—";
           try {
             return new Date(ds).toLocaleString("en-IN", {
               day: "2-digit", month: "short", year: "numeric",
-              hour: "2-digit", minute: "2-digit"
+              hour: "2-digit", minute: "2-digit", hour12: true
             });
           } catch { return ds; }
         };
@@ -514,7 +522,6 @@
           subscription: { char: "⚡", bg: "rgba(139,92,246,0.15)",  color: "#8b5cf6" },
           default:      { char: "🔔", bg: "rgba(156,163,175,0.15)", color: "#9ca3af" }
         };
-
         const getIcon = (t) => ICONS[t] || ICONS.default;
 
         const esc = (s) => s == null ? "" : String(s)
@@ -527,23 +534,15 @@
              <div class="notif-modal-field-value">${esc(value || "—")}</div>
            </div>`;
 
-        const statusBadge = (status) => {
-          const s = String(status || "").toLowerCase();
-          const color = s === "active" || s === "completed" || s === "approved" || s === "sent"
-            ? "#10b981" : s === "pending" || s === "processing" ? "#f59e0b" : "#ef4444";
-          return `<span class="notif-modal-badge" style="background:${color}22; color:${color};">${esc(status)}</span>`;
-        };
-
-        // ── Build modal body from log ─────────────────────────────
+        // ── Build modal body ──────────────────────────────────────
         const buildModalBody = (log) => {
           const r = log.raw || {};
           let eventFields = "";
-
           if (log.type === "order") {
             eventFields = field("Amount", r.amount) + field("Status", r.status);
           } else if (log.type === "booking") {
             eventFields = field("Bike ID", r.bike_id) + field("Status", r.status)
-              + (r.amount !== "N/A" ? field("Rental Price", r.amount) : "");
+              + (r.amount && r.amount !== "N/A" ? field("Rental Price", r.amount) : "");
           } else if (log.type === "payment") {
             eventFields = field("Transaction Type", r.tx_type) + field("Amount", r.amount)
               + field("Status", r.status) + field("Description", r.description, true);
@@ -553,14 +552,13 @@
             eventFields = field("Plan", r.plan) + field("Status", r.status)
               + field("Start Date", fmtDate(r.start_date)) + field("End Date", fmtDate(r.end_date));
           }
-
           return `
             <div class="notif-modal-section">
               <div class="notif-modal-section-title">Rider Information</div>
               <div class="notif-modal-grid">
                 ${field("Name", log.user_name)}
                 ${field("Phone", log.user_phone)}
-                ${log.user_email ? field("Email", log.user_email) : ""}
+                ${log.user_email ? field("Email", log.user_email, true) : ""}
               </div>
             </div>
             <div class="notif-modal-section">
@@ -569,40 +567,46 @@
                 ${eventFields}
                 ${field("Date & Time", fmtDate(log.timestamp), true)}
               </div>
-            </div>
-          `;
+            </div>`;
         };
 
-        // ── Open detail modal ─────────────────────────────────────
-        const openModal = (log) => {
-          const icon = getIcon(log.type);
-          document.getElementById("notif-modal-icon-wrap").innerHTML = icon.char;
-          document.getElementById("notif-modal-icon-wrap").style.cssText =
-            `background:${icon.bg}; color:${icon.color}; width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;`;
-          document.getElementById("notif-modal-title").textContent = log.action;
-          document.getElementById("notif-modal-subtitle").textContent =
-            log.user_name + (log.user_phone ? " · " + log.user_phone : "");
-          document.getElementById("notif-modal-body").innerHTML = buildModalBody(log);
-          notifModalOverlay.style.display = "flex";
-          document.body.style.overflow = "hidden";
-          // Close dropdown
-          notifPanel.style.display = "none";
-        };
-
+        // ── Modal open / close (lazy element lookup) ──────────────
         const closeModal = () => {
-          notifModalOverlay.style.display = "none";
+          const ov = document.getElementById("notif-modal-overlay");
+          if (ov) ov.style.display = "none";
           document.body.style.overflow = "";
         };
 
-        if (notifModalClose) notifModalClose.addEventListener("click", closeModal);
-        if (notifModalOverlay) {
-          notifModalOverlay.addEventListener("click", (e) => {
-            if (e.target === notifModalOverlay) closeModal();
-          });
-        }
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") closeModal();
+        const openModal = (log) => {
+          const ov      = document.getElementById("notif-modal-overlay");
+          const iconWrap = document.getElementById("notif-modal-icon-wrap");
+          const titleEl  = document.getElementById("notif-modal-title");
+          const subEl    = document.getElementById("notif-modal-subtitle");
+          const bodyEl   = document.getElementById("notif-modal-body");
+          if (!ov || !iconWrap || !titleEl || !subEl || !bodyEl) {
+            console.warn("[notif] modal elements not found in DOM");
+            return;
+          }
+          const icon = getIcon(log.type);
+          iconWrap.textContent = icon.char;
+          iconWrap.style.cssText =
+            `background:${icon.bg};color:${icon.color};width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;`;
+          titleEl.textContent = log.action;
+          subEl.textContent   = log.user_name + (log.user_phone ? " · " + log.user_phone : "");
+          bodyEl.innerHTML    = buildModalBody(log);
+          ov.style.display    = "flex";
+          document.body.style.overflow = "hidden";
+          if (notifPanel) notifPanel.style.display = "none";
+        };
+
+        // Delegated close handlers (work even though modal HTML comes after script)
+        document.addEventListener("click", (e) => {
+          const ov = document.getElementById("notif-modal-overlay");
+          if (!ov || ov.style.display === "none") return;
+          if (e.target === ov || e.target.id === "notif-modal-close") closeModal();
         });
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
 
         // ── Render dropdown list ──────────────────────────────────
         let allLogs = [];

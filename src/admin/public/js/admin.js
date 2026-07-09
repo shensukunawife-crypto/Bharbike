@@ -43,10 +43,16 @@ async function handleAction(url, method = "POST", body = null) {
   setTimeout(() => window.location.reload(), 500);
 }
 
-document.querySelectorAll(".admin-action").forEach((btn) => {
-  btn.addEventListener("click", () => {
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".admin-action");
+  if (btn) {
+    e.preventDefault();
+    const confirmMsg = btn.dataset.confirm;
+    if (confirmMsg && !confirm(confirmMsg)) {
+      return;
+    }
     handleAction(btn.dataset.url, btn.dataset.method || "POST");
-  });
+  }
 });
 
 document.querySelectorAll("[data-modal-target]").forEach((btn) => {

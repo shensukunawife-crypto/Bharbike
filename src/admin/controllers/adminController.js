@@ -4318,12 +4318,12 @@ export async function activityLogsPage(req, res) {
       subsRes,
       profilesRes
     ] = await Promise.all([
-      supabase.from("orders").select("id, user_id, total_amount, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
-      supabase.from("rentals").select("id, user_id, bike_id, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
-      supabase.from("wallet_transactions").select("id, user_id, amount, type, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
-      supabase.from("kyc_documents").select("id, user_id, type, status, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
-      supabase.from("user_subscriptions").select("id, user_id, status, plan_id, created_at").order("created_at", { ascending: false }).limit(30).then(r => r, e => ({ data: [] })),
-      supabase.from("users").select("id, full_name, name, phone").then(r => r, e => ({ data: [] }))
+      supabase.from("orders").select("id, user_id, total_amount, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("rentals").select("id, user_id, bike_id, status, price, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, status, description, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("kyc_documents").select("id, user_id, type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("user_subscriptions").select("id, user_id, status, plan_id, start_date, end_date, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("users").select("id, full_name, name, phone, email, created_at").then(r => r, e => ({ data: [] }))
     ]);
 
     // Normalize Orders
@@ -4333,7 +4333,8 @@ export async function activityLogsPage(req, res) {
       action: "Placed a ride order",
       type: "order",
       timestamp: o.created_at || new Date().toISOString(),
-      details: `Order total: ₹${o.total_amount || 0} (Status: ${o.status || 'Pending'})`
+      details: `Order total: ₹${o.total_amount || 0} (Status: ${o.status || 'Pending'})`,
+      raw: { ref_id: o.id, category: "Order", amount: `₹${o.total_amount || 0}`, status: o.status || 'Pending', created_at: o.created_at }
     }));
 
     // Normalize Rentals
@@ -4343,7 +4344,8 @@ export async function activityLogsPage(req, res) {
       action: "Rented a bike",
       type: "booking",
       timestamp: r.created_at || new Date().toISOString(),
-      details: `Bike ID: ${r.bike_id || '-'} (Rental status: ${r.status || 'Active'})`
+      details: `Bike ID: ${r.bike_id || '-'} (Status: ${r.status || 'Active'})`,
+      raw: { ref_id: r.id, category: "Bike Rental", bike_id: r.bike_id || '-', amount: r.price ? `₹${r.price}` : 'N/A', status: r.status || 'Active', created_at: r.created_at }
     }));
 
     // Normalize Wallet Transactions
@@ -4357,7 +4359,8 @@ export async function activityLogsPage(req, res) {
         action: actionText,
         type: "payment",
         timestamp: t.created_at || new Date().toISOString(),
-        details: `Amount: ₹${t.amount || 0} (Status: ${t.status || 'Completed'})`
+        details: `Amount: ₹${t.amount || 0} (Status: ${t.status || 'Completed'})`,
+        raw: { ref_id: t.id, category: "Wallet Transaction", tx_type: t.type || 'N/A', amount: `₹${t.amount || 0}`, status: t.status || 'Completed', description: t.description || 'N/A', created_at: t.created_at }
       };
     });
 
@@ -4365,20 +4368,22 @@ export async function activityLogsPage(req, res) {
     const normalizedKyc = safeData(kycRes.data).map(k => ({
       id: `kyc_${k.id}`,
       user_id: k.user_id,
-      action: `Uploaded ${String(k.type || 'KYC').toUpperCase()} document`,
+      action: `KYC document uploaded`,
       type: "kyc",
       timestamp: k.created_at || new Date().toISOString(),
-      details: `Status: ${String(k.status || 'Pending').toUpperCase()}`
+      details: `Type: ${String(k.type || 'KYC').toUpperCase()} — Status: ${String(k.status || 'Pending').toUpperCase()}`,
+      raw: { ref_id: k.id, category: "KYC Document", doc_type: String(k.type || 'KYC').toUpperCase(), status: String(k.status || 'Pending').toUpperCase(), created_at: k.created_at }
     }));
 
     // Normalize Subscriptions
     const normalizedSubs = safeData(subsRes.data).map(s => ({
       id: `sub_${s.id}`,
       user_id: s.user_id,
-      action: `Subscription status updated to '${s.status}'`,
+      action: `Subscription ${s.status || 'activated'}`,
       type: "subscription",
       timestamp: s.created_at || new Date().toISOString(),
-      details: `Plan Reference: ${s.plan_id || 'Weekly Plan'}`
+      details: `Plan: ${s.plan_id || 'Weekly Plan'} — Status: ${s.status || 'active'}`,
+      raw: { ref_id: s.id, category: "Subscription", plan: s.plan_id || 'Weekly Plan', status: s.status || 'active', start_date: s.start_date || 'N/A', end_date: s.end_date || 'N/A', created_at: s.created_at }
     }));
 
     // Map profiles
@@ -4398,13 +4403,15 @@ export async function activityLogsPage(req, res) {
       return {
         ...item,
         user_name: profile ? (profile.full_name || profile.name || "Rider") : "Rider",
-        user_phone: profile ? (profile.phone || "No Phone") : ""
+        user_phone: profile ? (profile.phone || "No Phone") : "",
+        user_email: profile ? (profile.email || "") : "",
+        user_joined: profile ? (profile.created_at || "") : ""
       };
     });
 
     // Sort by timestamp DESC
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    logs = logs.slice(0, 100);
+    logs = logs.slice(0, 150);
 
     const stats = {
       total: logs.length,

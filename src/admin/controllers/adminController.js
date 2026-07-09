@@ -625,13 +625,7 @@ export async function dashboard(req, res) {
         detail: `${lowBatteryBikes.length} bikes are below 25% battery.`,
       });
     }
-    if (pendingOrders.length > 0) {
-      alerts.push({
-        level: "info",
-        title: "Pending Orders",
-        detail: `${pendingOrders.length} orders need admin action.`,
-      });
-    }
+
     if (alerts.length === 0) {
       alerts.push({
         level: "success",

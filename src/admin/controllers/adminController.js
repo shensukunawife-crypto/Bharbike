@@ -4430,7 +4430,8 @@ export async function adminLockBike(req, res) {
 
     return res.json({
       success: true,
-      message: iotResult?.ok ? "Bike locked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`
+      message: iotResult?.ok ? "Bike locked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`,
+      requestId: iotResult?.requestId || null
     });
   } catch (error) {
     console.error("[adminLockBike] failed", error);
@@ -4473,10 +4474,66 @@ export async function adminUnlockBike(req, res) {
 
     return res.json({
       success: true,
-      message: iotResult?.ok ? "Bike unlocked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`
+      message: iotResult?.ok ? "Bike unlocked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`,
+      requestId: iotResult?.requestId || null
     });
   } catch (error) {
     console.error("[adminUnlockBike] failed", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+export async function adminGetLockUnlockStatus(req, res) {
+  try {
+    const { requestId } = req.params;
+    
+    if (!requestId) {
+      return res.status(400).json({ success: false, message: "Request ID is required" });
+    }
+
+    const statusResult = await iotService.getLockUnlockStatus(requestId);
+    
+    if (!statusResult.ok) {
+      return res.status(500).json({ success: false, message: statusResult.message || "Failed to retrieve status from IoT provider" });
+    }
+
+    // Sync DB if status is confirmed success
+    if (statusResult.status === "success") {
+      try {
+        const { data: logData } = await supabase
+          .from("bike_lock_logs")
+          .select("bike_id, action")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (logData?.bike_id) {
+          const isLocked = logData.action === "lock";
+          await supabase
+            .from("bikes")
+            .update({
+              is_locked: isLocked,
+              last_ping_at: new Date().toISOString()
+            })
+            .eq("id", logData.bike_id);
+          console.log(`[Admin Portal] Successfully synced DB state for bike ${logData.bike_id} to is_locked=${isLocked} based on GPRS success.`);
+        }
+      } catch (syncErr) {
+        console.warn("[Admin Portal] Failed to sync DB state on GPRS success:", syncErr.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        requestId,
+        status: statusResult.status,
+        message: statusResult.message,
+        action: statusResult.mobilize ? "unlock" : "lock"
+      }
+    });
+  } catch (error) {
+    console.error("[adminGetLockUnlockStatus] failed", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }

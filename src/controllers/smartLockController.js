@@ -150,6 +150,7 @@ export const lockBike = asyncHandler(async (req, res) => {
       bikeId: bikeId,
       isLocked: true,
       message: "Bike locked successfully",
+      requestId: iotResult?.requestId || null,
     },
   });
 });
@@ -230,9 +231,73 @@ export const unlockBike = asyncHandler(async (req, res) => {
       isLocked: false,
       message: "Bike unlocked successfully",
       method: method,
+      requestId: iotResult?.requestId || null,
     },
   });
 });
+
+/**
+ * Get the status of an immobilization request (Lock/Unlock)
+ * GET /api/smartlock/lock-status/:requestId
+ */
+export const getImmobilizationStatus = asyncHandler(async (req, res) => {
+  const { requestId } = req.params;
+  
+  if (!requestId) {
+    return res.status(400).json({
+      success: false,
+      message: "Request ID is required"
+    });
+  }
+
+  const statusResult = await iotService.getLockUnlockStatus(requestId);
+  
+  if (!statusResult.ok) {
+    return res.status(500).json({
+      success: false,
+      message: statusResult.message || "Failed to retrieve status from IoT provider"
+    });
+  }
+
+  // If the status is "success", update the bike's lock state in our DB accordingly
+  if (statusResult.status === "success") {
+    try {
+      // Find the bike associated with this active/recent lock log
+      const { data: logData } = await supabase
+        .from("bike_lock_logs")
+        .select("bike_id, action")
+        .eq("user_id", req.user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (logData?.bike_id) {
+        const isLocked = logData.action === "lock";
+        await supabase
+          .from("bikes")
+          .update({
+            is_locked: isLocked,
+            last_ping_at: new Date().toISOString()
+          })
+          .eq("id", logData.bike_id);
+        console.log(`[SmartLock] Successfully synced DB state for bike ${logData.bike_id} to is_locked=${isLocked} based on confirmed GPRS success.`);
+      }
+    } catch (syncErr) {
+      console.warn("[SmartLock] Failed to sync DB state on GPRS success:", syncErr.message);
+    }
+  }
+
+  return res.json({
+    success: true,
+    data: {
+      requestId: requestId,
+      status: statusResult.status, // "success", "pending", "failed"
+      message: statusResult.message,
+      action: statusResult.mobilize ? "unlock" : "lock"
+    }
+  });
+});
+
 
 /**
  * Get bike health/status

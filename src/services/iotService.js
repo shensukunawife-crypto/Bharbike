@@ -108,6 +108,7 @@ export async function unlockBike(bikeId) {
   }
 }
 
+
 /**
  * Get current health (Battery, Location)
  */
@@ -128,7 +129,8 @@ export async function getBikeHealth(bikeId) {
     const makeRequest = () => axios.post(
       `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
       {
-        vehicleIds: [loconavUuid]
+        vehicleIds: [loconavUuid],
+        sensors: ["gps", "vehicleBatteryLevel"]
       },
       {
         headers: {
@@ -182,14 +184,27 @@ export async function getBikeHealth(bikeId) {
       const vehicleData = response.data.data.values[0];
       const gps = vehicleData.gps || {};
       const coords = gps.currentLocationCoordinates || {};
-      const charSum = String(bikeId || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-      const pseudoRandomBattery = 65 + (charSum % 21);
+      
+      // Calculate battery percentage from real voltage if available
+      let batteryPct;
+      const batteryData = vehicleData.vehicleBatteryLevel;
+      if (batteryData && typeof batteryData.value === 'number') {
+        const voltage = batteryData.value;
+        // Standard 12V Battery: empty at 11.0V and full at 12.8V
+        let calculatedPct = Math.round(((voltage - 11.0) / 1.8) * 100);
+        batteryPct = Math.max(0, Math.min(100, calculatedPct));
+        console.log(`[IoT] Parsed physical battery voltage for bike ${bikeId}: ${voltage}V -> ${batteryPct}%`);
+      } else {
+        const charSum = String(bikeId || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+        batteryPct = 65 + (charSum % 21);
+      }
+
       const pingDate = coords.lat?.timestamp ? new Date(coords.lat.timestamp * 1000) : new Date();
 
       // Map LocoNav telemetry to our internal format
       return {
         bikeId,
-        batteryPct: pseudoRandomBattery, // Concox-V5 does not report battery % via API
+        batteryPct,
         lat: coords.lat?.value || null,
         lng: coords.long?.value || null,
         speed: gps.speed?.value ?? null,           // km/h
@@ -213,3 +228,45 @@ export async function getBikeHealth(bikeId) {
     lastPingAt: new Date().toISOString(),
   };
 }
+
+/**
+ * GET the status of a lock / unlock (immobilizer) request
+ */
+export async function getLockUnlockStatus(requestId) {
+  console.log(`[IoT] Fetching lock/unlock status for requestId=${requestId}`);
+  if (!requestId) {
+    return { ok: false, message: "Invalid Request ID" };
+  }
+
+  try {
+    const response = await axios.get(
+      `${LOCONAV_API_URL}/vehicles/immobilization_requests/${requestId}`,
+      {
+        headers: {
+          'User-Authentication': LOCONAV_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+
+    console.log(`[IoT] Lock/Unlock status response for reqId=${requestId}:`, response.data);
+    
+    if (response.data?.success && response.data?.data) {
+      const data = response.data.data;
+      return {
+        ok: true,
+        status: data.status, // "success", "pending", "failed"
+        message: data.message,
+        mobilize: data.mobilize, // true = unlock, false = lock
+        updatedAt: data.updatedAt ? new Date(data.updatedAt * 1000).toISOString() : null
+      };
+    }
+    
+    return { ok: false, message: "Invalid API response" };
+  } catch (error) {
+    console.error(`[IoT] getLockUnlockStatus failed for reqId=${requestId}:`, error.response?.data || error.message);
+    return { ok: false, message: error.response?.data?.message || "API connection failed" };
+  }
+}
+

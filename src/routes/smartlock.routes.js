@@ -12,6 +12,9 @@ r.use(authMiddleware);
 // Get lock status
 r.get("/status", smartLockController.getLockStatus);
 
+// Get GPRS lock/unlock request status
+r.get("/lock-status/:requestId", smartLockController.getImmobilizationStatus);
+
 // Lock the bike
 r.post("/lock", smartLockController.lockBike);
 

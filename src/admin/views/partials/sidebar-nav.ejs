@@ -198,7 +198,7 @@
 </div>
 
 <!-- ENGAGEMENT -->
-<% if (_can('manage_support')) { %>
+<% if (_can('manage_support') || _can('manage_notifications')) { %>
 <div class="nav-section">
   <p class="nav-label">Engagement</p>
   <div class="nav-group <%= gComm ? 'is-open' : '' %>" data-group-id="communication">
@@ -208,15 +208,21 @@
       <span class="nav-chevron"><%- icons.chevron %></span>
     </button>
     <div class="nav-group-panel">
+      <% if (_can('manage_support')) { %>
       <a class="nav-link nav-link-sub <%= active === 'support' ? 'active' : '' %>" href="/admin/support" data-label="Support">
         <span class="nav-icon"><%- icons.support %></span><span>Support</span>
       </a>
+      <% } %>
+      <% if (_can('manage_notifications')) { %>
       <a class="nav-link nav-link-sub <%= active === 'notifications' ? 'active' : '' %>" href="/admin/notifications" data-label="Notifications">
         <span class="nav-icon"><%- icons.notif %></span><span>Notifications</span>
       </a>
+      <% } %>
+      <% if (_can('manage_support')) { %>
       <a class="nav-link nav-link-sub <%= active === 'ads' ? 'active' : '' %>" href="/admin/ads" data-label="Socials & Contacts">
         <span class="nav-icon"><%- icons.ads %></span><span>Socials & Contacts</span>
       </a>
+      <% } %>
     </div>
   </div>
 </div>

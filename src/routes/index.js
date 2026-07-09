@@ -820,7 +820,7 @@ api.post("/admin/orders/create", async (req, res) => {
       drop_location,
       price: Number(price),
       amount: Number(price),
-      plan_name: plan_name || "Standard Delivery",
+      plan_name: plan_name || "Standard Rider",
       distance: distance || "5.0 km",
       status: "pending",
       created_at: new Date().toISOString()

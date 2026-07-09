@@ -1091,6 +1091,10 @@ export async function users(req, res) {
           const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
           const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
           subText = `${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
+        } else if (userSub && userSub.status === "expired") {
+          const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
+          const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
+          subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
         }
         return {
           ...base,

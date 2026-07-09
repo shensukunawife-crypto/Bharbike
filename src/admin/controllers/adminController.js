@@ -694,12 +694,12 @@ export async function dashboard(req, res) {
     if (req.admin) {
       try {
         const [
-          { data: allUsersData },
-          { data: allSubsData },
-          { data: allPlansData },
-          { data: activeRentalsData },
-          { data: pendingKycDocsData },
-          { data: pendingPaymentsDocsData }
+          { data: allUsersData, error: uErr },
+          { data: allSubsData, error: sErr },
+          { data: allPlansData, error: pErr },
+          { data: activeRentalsData, error: rErr },
+          { data: pendingKycDocsData, error: kErr },
+          { data: pendingPaymentsDocsData, error: payErr }
         ] = await Promise.all([
           supabase.from("users").select("id, full_name, phone"),
           supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
@@ -715,6 +715,12 @@ export async function dashboard(req, res) {
         const activeRentals = activeRentalsData || [];
         const pendingKycDocs = pendingKycDocsData || [];
         const pendingPaymentsDocs = pendingPaymentsDocsData || [];
+
+        console.log(`[Dashboard Debug]
+        - Users: ${allUsers.length} (error: ${uErr ? uErr.message : 'none'})
+        - Subs: ${allSubs.length} (error: ${sErr ? sErr.message : 'none'})
+        - Rentals: ${activeRentals.length} (error: ${rErr ? rErr.message : 'none'})
+        `);
 
         // Expiring Subscriptions (<= 2 Days left)
         const nowMs = now.getTime();

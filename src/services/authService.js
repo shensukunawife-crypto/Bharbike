@@ -124,12 +124,22 @@ async function upsertProfileFromAuthUser(authUser, fallbackPhone, address = null
 }
 
 async function findProfileByPhone(phone) {
-  const { data, error } = await supabase.from("profiles").select("*").eq("phone", phone).maybeSingle();
+  const cleanTarget = String(phone || "").replace(/\D/g, "");
+  if (!cleanTarget) return null;
+
+  const { data: allProfiles, error } = await supabase.from("profiles").select("*");
   if (error) {
     console.error("[authService.findProfileByPhone] lookup failed", error);
     throw new AppError("Unable to lookup demo profile", 500);
   }
-  return data ? shapePublicUser(data) : null;
+
+  const match = (allProfiles || []).find(p => {
+    const cleanDb = String(p.phone || "").replace(/\D/g, "");
+    if (!cleanDb) return false;
+    return cleanDb.endsWith(cleanTarget) || cleanTarget.endsWith(cleanDb);
+  });
+
+  return match ? shapePublicUser(match) : null;
 }
 
 async function findProfileByEmail(email) {

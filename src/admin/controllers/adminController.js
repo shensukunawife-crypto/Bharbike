@@ -788,6 +788,7 @@ export async function dashboard(req, res) {
       try {
         const [
           { data: allUsersData, error: uErr },
+          { data: allProfilesData, error: profErr },
           { data: allSubsData, error: sErr },
           { data: allPlansData, error: pErr },
           { data: activeRentalsData, error: rErr },
@@ -795,6 +796,7 @@ export async function dashboard(req, res) {
           { data: pendingPaymentsDocsData, error: payErr }
         ] = await Promise.all([
           supabase.from("users").select("id, full_name, phone"),
+          supabase.from("profiles").select("id, full_name, phone"),
           supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
           supabase.from("subscription_plans").select("id, name"),
           supabase.from("rentals").select("*").in("status", ["active", "ongoing", "expired"]),
@@ -802,7 +804,19 @@ export async function dashboard(req, res) {
           supabase.from("payments").select("*").eq("status", "pending").order("created_at", { ascending: false })
         ]);
 
-        const allUsers = allUsersData || [];
+        const usersMap = {};
+        (allUsersData || []).forEach(u => {
+          usersMap[u.id] = { id: u.id, full_name: u.full_name, phone: u.phone };
+        });
+        (allProfilesData || []).forEach(p => {
+          if (usersMap[p.id]) {
+            usersMap[p.id].full_name = usersMap[p.id].full_name || p.full_name;
+            usersMap[p.id].phone = usersMap[p.id].phone || p.phone;
+          } else {
+            usersMap[p.id] = { id: p.id, full_name: p.full_name, phone: p.phone };
+          }
+        });
+        const allUsers = Object.values(usersMap);
         const allSubs = allSubsData || [];
         const allPlans = allPlansData || [];
         const activeRentals = activeRentalsData || [];
@@ -810,7 +824,7 @@ export async function dashboard(req, res) {
         const pendingPaymentsDocs = pendingPaymentsDocsData || [];
 
         console.log(`[Dashboard Debug]
-        - Users: ${allUsers.length} (error: ${uErr ? uErr.message : 'none'})
+        - Users: ${allUsers.length} (error: ${uErr ? uErr.message : 'none'}, profError: ${profErr ? profErr.message : 'none'})
         - Subs: ${allSubs.length} (error: ${sErr ? sErr.message : 'none'})
         - Rentals: ${activeRentals.length} (error: ${rErr ? rErr.message : 'none'})
         `);

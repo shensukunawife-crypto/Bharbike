@@ -545,6 +545,7 @@ export async function dashboard(req, res) {
       { count: activeRentalsCount, error: rentalsError },
       { data: bikesData, error: bikesDataError },
       { data: ordersData, error: ordersError },
+      { data: walletCredits, error: walletError },
       pendingKycResult
     ] = await Promise.all([
       getIdMappings(),
@@ -556,6 +557,7 @@ export async function dashboard(req, res) {
         .in("status", ["active", "ongoing"]),
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("id, amount, status, created_at, pickup_location"),
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, description, status, created_at").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").then(res => res, () => ({ count: 0 }))
     ]);
 
@@ -569,12 +571,32 @@ export async function dashboard(req, res) {
     }
     const bikes = safeData(bikesData).map(normalizeBike);
     const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
-    const earnings = safeData(ordersData)
-      .filter(o => ["success", "paid", "completed", "done", "delivered"].includes((o.status || "").toLowerCase()))
-      .map((item) => ({
-        amount: Number(item.amount || item.earnings || item.price || item.fare || item.total_amount || item.total) || 0,
-        createdAt: new Date(item.created_at || item.createdAt || now),
-      }));
+
+    // ── Real revenue from wallet credits (QR/cash payments verified by admin) ──
+    // Excludes: promo credits, admin test credits — includes: cash, QR recharges, subscriptions paid
+    const isRealPayment = (t) => {
+      const title = (t.title || "").toLowerCase();
+      return !title.includes("promo") && !title.includes("test") && !title.includes("admin manual credit test");
+    };
+
+    // First credit per user = registration/onboarding fee
+    const firstCreditByUser = {};
+    const realCredits = safeData(walletCredits).filter(isRealPayment);
+    realCredits.forEach(t => {
+      if (!firstCreditByUser[t.user_id]) firstCreditByUser[t.user_id] = t;
+    });
+    const registrationFeeTotal = Object.values(firstCreditByUser)
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+    const rechargeTotal = realCredits
+      .filter(t => t !== firstCreditByUser[t.user_id])
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+
+    const earnings = realCredits.map(t => ({
+      amount: Number(t.amount || 0),
+      createdAt: new Date(t.created_at || now),
+      isRegistration: t === firstCreditByUser[t.user_id],
+      title: t.title
+    }));
 
     const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0);
     const earningsBreakdown = earnings.reduce(
@@ -586,6 +608,8 @@ export async function dashboard(req, res) {
       },
       { today: 0, weekly: 0, monthly: 0 }
     );
+    earningsBreakdown.registrationFees = registrationFeeTotal;
+    earningsBreakdown.recharges = rechargeTotal;
 
     const revenueLabels = [];
     const revenueData = [];
@@ -2037,29 +2061,53 @@ export async function deliveryPartnerProfile(req, res) {
 export async function earnings(req, res) {
   try {
     const filter = req.query.filter || "weekly";
-    const { data: orderData, error } = await supabase.from("orders").select("*");
-    if (error) {
-      console.error("[admin.earnings] fetch failed", error);
-    }
-    const earningsData = (orderData || []).filter(item => ["success", "paid", "completed"].includes((item.status || "").toLowerCase()));
-    const rows = safeData(earningsData);
     const now = Date.now();
     const days = filter === "today" ? 1 : filter === "monthly" ? 30 : 7;
-    const filtered = rows.filter((row) => {
-      const created = new Date(row.createdAt || row.created_at || now).getTime();
+
+    // ── Fetch wallet credits (real cash received via QR/cash payments) ──
+    const [{ data: walletData, error: walletErr }, { data: dbProfiles }] = await Promise.all([
+      supabase.from("wallet_transactions").select("*").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
+      supabase.from("users").select("id, full_name, name, phone")
+    ]);
+    if (walletErr) console.error("[admin.earnings] wallet fetch failed", walletErr);
+
+    const profileMap = {};
+    (dbProfiles || []).forEach((p) => {
+      profileMap[p.id] = p.full_name || p.name || "BHAR BIKE Rider";
+    });
+
+    // Exclude promo and test credits — only real payments
+    const isRealPayment = (t) => {
+      const title = (t.title || "").toLowerCase();
+      return !title.includes("promo") && !title.includes("test");
+    };
+
+    const allRealCredits = (walletData || []).filter(isRealPayment);
+
+    // First credit per user = registration fee
+    const firstCreditByUser = {};
+    allRealCredits.forEach(t => {
+      if (!firstCreditByUser[t.user_id]) firstCreditByUser[t.user_id] = t.id;
+    });
+
+    // Filter to selected time window
+    const filtered = allRealCredits.filter(t => {
+      const created = new Date(t.created_at || now).getTime();
       return now - created <= days * 24 * 60 * 60 * 1000;
     });
 
-    const rental = filtered.filter((item) => !item.pickup_location)
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const delivery = filtered.filter((item) => !!item.pickup_location)
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const registrationInPeriod = filtered.filter(t => firstCreditByUser[t.user_id] === t.id)
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+    const rechargesInPeriod = filtered.filter(t => firstCreditByUser[t.user_id] !== t.id)
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+    const rental = registrationInPeriod + rechargesInPeriod; // total cash in
+    const delivery = 0; // delivery via separate flow
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEarnings = filtered
-      .filter((item) => new Date(item.createdAt || item.created_at || now).getTime() >= todayStart.getTime())
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      .filter(t => new Date(t.created_at || now).getTime() >= todayStart.getTime())
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
     const pendingPayout = payoutQueue
       .filter((item) => item.status === "pending")
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -2067,20 +2115,13 @@ export async function earnings(req, res) {
       .filter((item) => item.status === "paid")
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-    // Fetch profile names for realistic transaction mapping
-    const { data: dbProfiles } = await supabase.from("users").select("id, full_name, name");
-    const profileMap = {};
-    (dbProfiles || []).forEach((p) => {
-      profileMap[p.id] = p.full_name || p.name || "BHAR BIKE Rider";
-    });
-
     const transactions = filtered.slice(0, 20).map((item, index) => ({
       id: `TX-${2000 + index}`,
       user: profileMap[item.user_id] || "BHAR BIKE Rider",
-      type: item.pickup_location ? "Delivery" : "Bike Rental",
+      type: firstCreditByUser[item.user_id] === item.id ? "Registration Fee" : (item.title || "Wallet Recharge"),
       amount: Number(item.amount || 0),
-      status: Number(item.amount || 0) > 0 ? "Success" : "Pending",
-      date: (item.createdAt || item.created_at || new Date().toISOString()).slice(0, 10),
+      status: "Success",
+      date: (item.created_at || new Date().toISOString()).slice(0, 10),
     }));
 
     const payoutHistory = payoutQueue
@@ -2119,6 +2160,11 @@ export async function earnings(req, res) {
       value: Number(value.toFixed(0)),
     }));
 
+    const pieSeries = [
+      { label: "Registration Fees", value: registrationInPeriod },
+      { label: "Wallet Recharges", value: rechargesInPeriod },
+    ];
+
     return renderPage(res, {
       title: "Earnings",
       active: "earnings",
@@ -2128,6 +2174,8 @@ export async function earnings(req, res) {
         rental,
         delivery,
         total: rental + delivery,
+        registrationFees: registrationInPeriod,
+        recharges: rechargesInPeriod,
       },
       financeCards: {
         todayEarnings,

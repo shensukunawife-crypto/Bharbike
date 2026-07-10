@@ -4135,9 +4135,22 @@ export async function markBikeFixed(req, res) {
     const { bikeId } = req.params;
     const fixedDate = new Date().toISOString().slice(0, 16).replace("T", " ");
     
-    // First update the bike
-    const { error: bikeErr } = await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
-    if (bikeErr) throw bikeErr;
+    // First update the bike safely
+    const numericId = Number(bikeId);
+    if (Number.isInteger(numericId) && String(bikeId).trim() !== "" && !isNaN(numericId)) {
+      const { error: bikeErr } = await supabase.from("bikes").update({ status: "available" }).eq("id", numericId);
+      if (bikeErr) throw bikeErr;
+    } else {
+      // Fallback: try updating by checking code from maintenance record
+      const { data: mTicket } = await supabase
+        .from("maintenance")
+        .select("bike_code")
+        .eq("bike_id", bikeId)
+        .maybeSingle();
+      if (mTicket && mTicket.bike_code) {
+        await supabase.from("bikes").update({ status: "available" }).eq("bike_code", mTicket.bike_code);
+      }
+    }
 
     // Fetch the active maintenance ticket from database for this bike
     const { data: ticket, error: fetchErr } = await supabase
@@ -4249,12 +4262,23 @@ export async function updateMaintenanceStatus(req, res) {
     const reportedDate = req.body.reportedDate ? req.body.reportedDate.replace("T", " ") : ticket.reported_date;
     
     let fixedDate = ticket.fixed_date;
+    const numericId = Number(ticket.bike_id);
+    const hasNumericId = Number.isInteger(numericId) && String(ticket.bike_id).trim() !== "" && !isNaN(numericId);
+    
     if (status === "completed") {
       fixedDate = req.body.fixedDate ? req.body.fixedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " ");
-      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bike_id);
+      if (hasNumericId) {
+        await supabase.from("bikes").update({ status: "available" }).eq("id", numericId);
+      } else if (ticket.bike_code) {
+        await supabase.from("bikes").update({ status: "available" }).eq("bike_code", ticket.bike_code);
+      }
     } else {
       fixedDate = null;
-      await supabase.from("bikes").update({ status: "maintenance" }).eq("id", ticket.bike_id);
+      if (hasNumericId) {
+        await supabase.from("bikes").update({ status: "maintenance" }).eq("id", numericId);
+      } else if (ticket.bike_code) {
+        await supabase.from("bikes").update({ status: "maintenance" }).eq("bike_code", ticket.bike_code);
+      }
     }
 
     // Persist update to maintenance DB table using ID
@@ -4310,7 +4334,12 @@ export async function removeMaintenanceTicket(req, res) {
     }
 
     if (ticket.status !== "completed") {
-      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bike_id);
+      const numericId = Number(ticket.bike_id);
+      if (Number.isInteger(numericId) && String(ticket.bike_id).trim() !== "" && !isNaN(numericId)) {
+        await supabase.from("bikes").update({ status: "available" }).eq("id", numericId);
+      } else if (ticket.bike_code) {
+        await supabase.from("bikes").update({ status: "available" }).eq("bike_code", ticket.bike_code);
+      }
     }
 
     // Delete from maintenance DB table by primary key id

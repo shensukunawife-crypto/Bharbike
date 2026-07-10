@@ -2884,20 +2884,21 @@ export async function maintenance(req, res) {
     const search = String(req.query.search || "").trim().toLowerCase();
     const filteredTickets = maintenanceTickets.filter((ticket) => {
       if (search && !String(ticket.bikeCode || "").toLowerCase().includes(search)) return false;
-      if (filter === "active") {
-        return ticket.status === "under_repair" || ticket.status === "in_progress";
-      }
       if (filter === "completed") {
         return ticket.status === "completed";
       }
-      return true;
+      if (filter === "active") {
+        return ticket.status === "under_repair" || ticket.status === "in_progress";
+      }
+      // Default (all) -> show only active maintenance tickets in the top table
+      return ticket.status === "under_repair" || ticket.status === "in_progress";
     });
     const history = maintenanceTickets.filter((item) => item.status === "completed");
     const maintenanceStats = {
-      total: filteredTickets.length,
-      inProgress: filteredTickets.filter((x) => x.status === "in_progress").length,
-      completed: filteredTickets.filter((x) => x.status === "completed").length,
-      totalCost: filteredTickets.reduce((sum, x) => sum + Number(x.repairCost || 0), 0),
+      total: maintenanceTickets.filter((x) => x.status !== "completed").length,
+      inProgress: maintenanceTickets.filter((x) => x.status === "in_progress").length,
+      completed: maintenanceTickets.filter((x) => x.status === "completed").length,
+      totalCost: maintenanceTickets.reduce((sum, x) => sum + Number(x.repairCost || 0), 0),
     };
     return renderPage(res, {
       title: "Maintenance",

@@ -532,12 +532,13 @@ export const verifyPayment = async (req, res) => {
       let planDisplayName = "Weekly Plan"; // Default fallback
       let serverSidePrice = Number(amount) || 0; // Start with client amount, then override with DB price
       try {
-        const { data: planRow } = await supabase
-          .from("subscription_plans")
-          .select("display_name, price")
-          .or(`id.eq.${plan_id},name.eq.${plan_id}`)
-          .limit(1)
-          .maybeSingle();
+        let planQuery = supabase.from("subscription_plans").select("display_name, price");
+        if (isValidUuid(plan_id)) {
+          planQuery = planQuery.or(`id.eq.${plan_id},name.eq.${plan_id}`);
+        } else {
+          planQuery = planQuery.eq("name", plan_id);
+        }
+        const { data: planRow } = await planQuery.limit(1).maybeSingle();
         if (planRow?.display_name) {
           planDisplayName = planRow.display_name;
         }

@@ -47,17 +47,30 @@ export async function getSubscriptionPlans() {
 /**
  * Get a specific subscription plan by ID
  */
+const isValidUuid = (str) => {
+  if (!str) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 export async function getSubscriptionPlanById(planId) {
   try {
-    // Try UUID lookup first
-    let { data, error } = await supabase
-      .from("subscription_plans")
-      .select("*")
-      .eq("id", planId)
-      .single();
+    let data = null;
+    let error = null;
+
+    // Try UUID lookup first only if valid UUID
+    if (isValidUuid(planId)) {
+      const res = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("id", planId)
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     // If not found, try by name (payment flow may pass plan name as plan_id)
-    if (error || !data) {
+    if (!data) {
       const byName = await supabase
         .from("subscription_plans")
         .select("*")

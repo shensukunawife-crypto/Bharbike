@@ -1,11 +1,22 @@
 <%
-  // Convert UTC date to IST (Indian Standard Time = UTC+5:30) for display
+  // Convert UTC date to IST (Indian Standard Time = UTC+5:30) for display in 12-hour format
   function toIST(dateStr) {
     if (!dateStr) return '—';
     const d = new Date(dateStr);
-    if (isNaN(d)) return dateStr;
-    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-    return ist.toISOString().replace('T', ' ').slice(0, 19) + ' IST';
+    if (isNaN(d.getTime())) return dateStr;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(d.getTime() + istOffset);
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    let hours = istDate.getUTCHours();
+    const minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+    return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
   }
 %>
 <div class="dashboard-container">

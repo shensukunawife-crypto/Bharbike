@@ -1,3 +1,23 @@
+<%
+  function formatToIST12Hr(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(d.getTime() + istOffset);
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    let hours = istDate.getUTCHours();
+    const minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+    return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+  }
+%>
 <div class="payments-dashboard-v2">
   <div class="dashboard-container">
     <!-- SECTION 1: LIVE STATS (Supabase payments table) -->
@@ -108,7 +128,7 @@
                   <a href="<%= screenshotUrl %>" target="_blank" class="btn btn-sm btn-gold" style="padding: 4px 8px; font-size: 11px; background: #eab308; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">🖼 View Screenshot</a>
                 <% } %>
               </td>
-              <td><%= p.created_at ? String(p.created_at).replace('T',' ').slice(0,19) : '—' %></td>
+              <td><%= formatToIST12Hr(p.created_at) %></td>
               <td style="display:flex; gap:8px;">
                 <button class="btn btn-sm btn-outline open-edit-payment" style="padding:4px 8px; font-size:12px;"
                   data-id="<%= p.id %>" 
@@ -637,6 +657,24 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
   }
+  function formatToIST12Hr(dateStr) {
+    if (!dateStr) return '—';
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    var istOffset = 5.5 * 60 * 60 * 1000;
+    var istDate = new Date(d.getTime() + istOffset);
+    var year = istDate.getUTCFullYear();
+    var month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    var day = String(istDate.getUTCDate()).padStart(2, '0');
+    var hours = istDate.getUTCHours();
+    var minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+    var seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+    var ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    var hoursStr = String(hours).padStart(2, '0');
+    return year + '-' + month + '-' + day + ' ' + hoursStr + ':' + minutes + ':' + seconds + ' ' + ampm;
+  }
   window.refreshAdminPayments = async function () {
     var token = localStorage.getItem("adminToken");
     if (!token) return;
@@ -672,9 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
           var isOk = st === "success";
           var isFail = st === "failed" || st === "failure";
           var badgeClass = isOk ? "pay-badge-success" : isFail ? "pay-badge-failed" : "pay-badge-pending";
-          var created = p.created_at
-            ? String(p.created_at).replace("T", " ").slice(0, 19)
-            : "—";
+          var created = formatToIST12Hr(p.created_at);
           return (
             "<tr>" +
             '<td><span class="code-badge" title="' + escapeHtml(p.id) + '">' +

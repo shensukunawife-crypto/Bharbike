@@ -41,14 +41,14 @@
     <table style="width:100%;border-collapse:collapse;">
       <thead>
         <tr style="background:var(--border-light);border-bottom:1px solid var(--border);">
-          <% ['User Info','Phone','Address','Status','Subscription','Assigned Bike','Wallet','Joined','Actions'].forEach(h => { %>
+          <% ['User Info','Phone','Address','Subscription','Assigned Bike','Wallet','Joined','Actions'].forEach(h => { %>
           <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);"><%=h%></th>
           <% }) %>
         </tr>
       </thead>
       <tbody id="users-tbody">
         <% if (!users.length) { %>
-        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:48px;">No users found</td></tr>
+        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:48px;">No users found</td></tr>
         <% } %>
         <% users.forEach(user => { %>
         <tr style="border-bottom:1px solid var(--border-light);" data-user-id="<%= user.id %>" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background=''">
@@ -59,11 +59,6 @@
           <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);"><%= user.phone || 'N/A' %></td>
           <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);">
             <%= user.address || user.location || 'N/A' %>
-          </td>
-          <td style="padding:13px 16px;">
-            <span class="st-dot <%= user.isBlocked ? 'st-cancelled' : 'st-ongoing' %>">
-               <%= user.statusLabel %>
-            </span>
           </td>
           <td style="padding:13px 16px;font-size:13px;">
             <% if (user.subscriptionText && user.subscriptionText.startsWith('Expired:')) { %>
@@ -96,10 +91,6 @@
                 data-sub-end="<%= user.subscription ? user.subscription.end_date : '' %>"
                 data-sub-plan="<%= user.subscription ? user.subscription.plan_id : '' %>"
                 data-location="<%= user.address || user.location || '' %>">Edit</button>
-              <button class="btn btn-sm <%= user.isBlocked ? 'btn-primary' : 'btn-danger' %> admin-action"
-                data-url="/admin/users/<%= user.id %>/block" data-method="POST">
-                <%= user.isBlocked ? 'Unblock' : 'Block' %>
-              </button>
               <button class="btn btn-sm btn-danger admin-action" style="background:white; color:#ef4444; border:1px solid #fca5a5;"
                 data-url="/admin/users/<%= user.id %>/delete" data-method="POST" data-confirm="Are you absolutely sure you want to PERMANENTLY delete this user and all their data? This cannot be undone.">
                 Delete

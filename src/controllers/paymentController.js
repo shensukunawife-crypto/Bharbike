@@ -22,7 +22,7 @@ export const createOrder = async (req, res) => {
     const normalizedAmount = amount_in_paise ? numericAmount / 100 : numericAmount;
 
     // Check if the user is prepaid (offline paid)
-    if (user_id) {
+    if (user_id && isValidUuid(user_id)) {
       try {
         const { data: userProfile } = await supabase
           .from("profiles")
@@ -278,6 +278,21 @@ export const verifyPayment = async (req, res) => {
     if (payment_method === "manual_qr") {
       if (!razorpay_payment_id) {
         return res.status(400).json({ success: false, message: "Reference ID (UTR) is required for verification." });
+      }
+
+      // Check if user exists in database to prevent foreign key violation
+      if (user_id) {
+        if (!isValidUuid(user_id)) {
+          return res.status(400).json({ success: false, message: "Invalid rider account. Please log out and log in again." });
+        }
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("id")
+          .eq("id", user_id)
+          .maybeSingle();
+        if (!userRow) {
+          return res.status(400).json({ success: false, message: "Rider account not found. Please log out and log in again." });
+        }
       }
 
       // 1. Double check duplicate UTR

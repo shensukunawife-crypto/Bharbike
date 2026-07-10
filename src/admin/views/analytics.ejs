@@ -26,21 +26,27 @@
 <div class="analytics-grid">
   <div class="chart-card">
     <h3>📈 Revenue Over Time</h3>
-    <canvas id="revenueChart" height="120"></canvas>
+    <div class="chart-box">
+      <canvas id="revenueChart"></canvas>
+    </div>
     <% if (!revenueSeries || !revenueSeries.length) { %>
       <p style="color:#9ca3af;text-align:center;padding:20px 0;font-size:13px;">No revenue data for this period</p>
     <% } %>
   </div>
   <div class="chart-card">
     <h3>📊 Orders Breakdown</h3>
-    <canvas id="ordersBarChart" height="120"></canvas>
+    <div class="chart-box">
+      <canvas id="ordersBarChart"></canvas>
+    </div>
     <% if (!ordersSeries || !ordersSeries.length) { %>
       <p style="color:#9ca3af;text-align:center;padding:20px 0;font-size:13px;">No order data for this period</p>
     <% } %>
   </div>
   <div class="chart-card">
     <h3>🍩 Earnings Breakdown</h3>
-    <canvas id="earningsPieChart" height="120"></canvas>
+    <div class="chart-box">
+      <canvas id="earningsPieChart"></canvas>
+    </div>
   </div>
   <div class="chart-card">
     <h3>📋 Summary</h3>

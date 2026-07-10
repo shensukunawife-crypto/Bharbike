@@ -644,6 +644,16 @@ export async function dashboard(req, res) {
       }
     });
 
+    // Adjust first credit of every user to include 1500 registration fee if not already included
+    earnings.forEach(item => {
+      if (firstCreditByUser[item.userId] === item) {
+        item.title = "Registration Fee + Plan";
+        if (item.amount < 3000) {
+          item.amount += 1500;
+        }
+      }
+    });
+
     const registrationFeeTotal = Object.values(firstCreditByUser)
       .reduce((s, item) => s + item.amount, 0);
     const rechargeTotal = earnings
@@ -2216,6 +2226,16 @@ export async function earnings(req, res) {
       if (!firstCreditByUser[t.user_id]) firstCreditByUser[t.user_id] = t.id;
     });
 
+    // Adjust first credit of every user to include 1500 registration fee if not already included
+    allRealCredits.forEach(t => {
+      if (firstCreditByUser[t.user_id] === t.id) {
+        t.title = "Registration Fee + Plan";
+        if (t.amount < 3000) {
+          t.amount += 1500;
+        }
+      }
+    });
+
     // Filter to selected time window
     const filtered = allRealCredits.filter(t => {
       const created = new Date(t.created_at || now).getTime();
@@ -2715,6 +2735,23 @@ export async function analytics(req, res) {
           created_at: new Date(now).toISOString(),
           user_id: uid
         });
+      }
+    });
+
+    // Sort by date ascending to determine first credit (registration fee) per unique user
+    realCreditsInPeriod.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    const firstCreditByUser = {};
+    realCreditsInPeriod.forEach(t => {
+      if (!firstCreditByUser[t.user_id]) firstCreditByUser[t.user_id] = t;
+    });
+
+    // Adjust first credit of every user to include 1500 registration fee if not already included
+    realCreditsInPeriod.forEach(t => {
+      if (firstCreditByUser[t.user_id] === t) {
+        if (t.amount < 3000) {
+          t.amount += 1500;
+        }
       }
     });
 

@@ -5212,7 +5212,7 @@ export async function subscriptionsPage(req, res) {
       { data: plans, error: plansError }
     ] = await Promise.all([
       getIdMappings(),
-      supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
+      supabase.from("user_subscriptions").select("*").order("start_date", { ascending: false }),
       supabase.from("users").select("id, full_name, email, phone"),
       supabase.from("subscription_plans").select("*")
     ]);

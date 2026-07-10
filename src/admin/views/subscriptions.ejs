@@ -1,3 +1,13 @@
+<%
+  // Convert UTC date to IST (Indian Standard Time = UTC+5:30) for display
+  function toIST(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d)) return dateStr;
+    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+    return ist.toISOString().replace('T', ' ').slice(0, 19) + ' IST';
+  }
+%>
 <div class="dashboard-container">
   <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
     <div>
@@ -56,10 +66,10 @@
                 <span class="badge warning"><%= displayStatus %></span>
               <% } %>
             </td>
-            <td><%= s.start_date ? String(s.start_date).replace('T',' ').slice(0,19) : '—' %></td>
+            <td><%= toIST(s.start_date) %></td>
             <td>
               <span style="font-family: monospace; font-weight: 500;">
-                <%= s.end_date ? String(s.end_date).replace('T',' ').slice(0,19) : '—' %>
+                <%= toIST(s.end_date) %>
               </span>
             </td>
             <td style="display:flex;gap:8px;flex-wrap:wrap;">

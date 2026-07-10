@@ -5711,13 +5711,32 @@ export async function assignBikeToUser(req, res) {
     const { data: bike } = await supabase.from("bikes").select("id").eq("bike_code", bike_code).maybeSingle();
     if (!bike) return res.status(404).json({ success: false, message: "Bike code not found" });
     
-    // Start new rental
+    // Query active subscription for this user to set correct end_time
+    const { data: activeSub } = await supabase
+      .from("user_subscriptions")
+      .select("end_date")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+
     const startTime = new Date();
-    const endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
+    let endTime;
+    let durationHours = 24;
+
+    if (activeSub && activeSub.end_date) {
+      endTime = new Date(activeSub.end_date);
+      // Calculate duration in hours between now and subscription end_date
+      const diffMs = endTime.getTime() - startTime.getTime();
+      durationHours = Math.max(24, Math.round(diffMs / (1000 * 60 * 60)));
+    } else {
+      endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
+    }
+    
+    // Start new rental
     const { error: rentalError } = await supabase.from("rentals").insert([{
       bike_id: bike.id,
       user_id: userId,
-      duration: 24,
+      duration: durationHours,
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       status: "ongoing",

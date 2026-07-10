@@ -324,12 +324,30 @@ export const verifyPayment = async (req, res) => {
       }
 
       if (!updateSuccess && app_order_id && isValidUuid(app_order_id)) {
+        // Fetch existing payment to retrieve original QR order code
+        let dbQrId = "";
+        try {
+          const { data: payRow } = await supabase
+            .from("payments")
+            .select("razorpay_order_id")
+            .eq("order_id", app_order_id)
+            .maybeSingle();
+          if (payRow?.razorpay_order_id && !payRow.razorpay_order_id.startsWith("http")) {
+            dbQrId = payRow.razorpay_order_id;
+          }
+        } catch (e) { console.warn("[verifyPayment] failed to fetch original QR ID:", e.message); }
+
+        // Combine QR ID and screenshot URL if both exist
+        const updatedOrderIdVal = (dbQrId && String(razorpay_order_id || "").startsWith("http"))
+          ? `${dbQrId}|${razorpay_order_id}`
+          : razorpay_order_id;
+
         const { data: updatedRows } = await supabase
           .from("payments")
           .update({
             razorpay_payment_id: razorpay_payment_id,
             status: "pending",
-            razorpay_order_id: razorpay_order_id
+            razorpay_order_id: updatedOrderIdVal
           })
           .eq("order_id", app_order_id)
           .select();

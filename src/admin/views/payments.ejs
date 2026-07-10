@@ -86,10 +86,26 @@
               </td>
               <td><span class="code-badge"><%= p.razorpay_payment_id %></span></td>
               <td>
-                <% if (String(p.razorpay_order_id || '').startsWith('http')) { %>
-                  <a href="<%= p.razorpay_order_id %>" target="_blank" class="btn btn-sm btn-gold" style="padding: 4px 8px; font-size: 11px; background: #eab308; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">🖼 View Screenshot</a>
-                <% } else { %>
-                  <span class="code-badge"><%= p.razorpay_order_id %></span>
+                <% 
+                  var displayQrId = "";
+                  var screenshotUrl = "";
+                  var orderIdVal = String(p.razorpay_order_id || '');
+                  if (orderIdVal.includes('|')) {
+                    var parts = orderIdVal.split('|');
+                    displayQrId = parts[0];
+                    screenshotUrl = parts[1];
+                  } else if (orderIdVal.startsWith('http')) {
+                    screenshotUrl = orderIdVal;
+                  } else {
+                    displayQrId = orderIdVal;
+                  }
+                %>
+                <% if (displayQrId) { %>
+                  <span class="code-badge" style="margin-bottom: 4px; display: inline-block;"><%= displayQrId %></span>
+                <% } %>
+                <% if (screenshotUrl) { %>
+                  <% if (displayQrId) { %><br/><% } %>
+                  <a href="<%= screenshotUrl %>" target="_blank" class="btn btn-sm btn-gold" style="padding: 4px 8px; font-size: 11px; background: #eab308; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">🖼 View Screenshot</a>
                 <% } %>
               </td>
               <td><%= p.created_at ? String(p.created_at).replace('T',' ').slice(0,19) : '—' %></td>
@@ -670,11 +686,29 @@ document.addEventListener('DOMContentLoaded', () => {
             '<td><span class="code-badge">' +
             escapeHtml(p.razorpay_payment_id) +
             "</span></td>" +
-            '<td>' +
-            (String(p.razorpay_order_id || '').startsWith('http')
-              ? '<a href="' + escapeHtml(p.razorpay_order_id) + '" target="_blank" class="btn btn-sm btn-gold" style="padding: 4px 8px; font-size: 11px; background: #eab308; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">🖼 View Screenshot</a>'
-              : '<span class="code-badge">' + escapeHtml(p.razorpay_order_id || '') + '</span>') +
-            '</td>' +
+            (() => {
+              var displayQrId = "";
+              var screenshotUrl = "";
+              var orderIdVal = String(p.razorpay_order_id || "");
+              if (orderIdVal.indexOf('|') !== -1) {
+                var parts = orderIdVal.split('|');
+                displayQrId = parts[0];
+                screenshotUrl = parts[1];
+              } else if (orderIdVal.startsWith('http')) {
+                screenshotUrl = orderIdVal;
+              } else {
+                displayQrId = orderIdVal;
+              }
+              var html = "";
+              if (displayQrId) {
+                html += '<span class="code-badge" style="margin-bottom: 4px; display: inline-block;">' + escapeHtml(displayQrId) + '</span>';
+              }
+              if (screenshotUrl) {
+                if (displayQrId) html += '<br/>';
+                html += '<a href="' + escapeHtml(screenshotUrl) + '" target="_blank" class="btn btn-sm btn-gold" style="padding: 4px 8px; font-size: 11px; background: #eab308; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">🖼 View Screenshot</a>';
+              }
+              return html;
+            })() +
             "<td>" +
             escapeHtml(created) +
             "</td>" +

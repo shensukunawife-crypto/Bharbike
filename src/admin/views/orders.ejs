@@ -229,31 +229,7 @@
 }
 </style>
 
-<!-- Stats row — auto-fit fills naturally -->
-<div class="page-stat-bar">
-  <div class="page-stat">
-    <p class="page-stat-label">Total</p>
-    <p class="page-stat-value"><%= stats.total %></p>
-  </div>
-  <div class="page-stat page-stat-accent">
-    <p class="page-stat-label">Pending</p>
-    <p class="page-stat-value"><%= stats.pending %></p>
-  </div>
-  <div class="page-stat">
-    <p class="page-stat-label">Accepted</p>
-    <p class="page-stat-value"><%= stats.accepted %></p>
-  </div>
-  <div class="page-stat">
-    <p class="page-stat-label">Completed</p>
-    <p class="page-stat-value"><%= stats.completed %></p>
-  </div>
-  <% if (stats.cancelled != null) { %>
-  <div class="page-stat">
-    <p class="page-stat-label">Cancelled</p>
-    <p class="page-stat-value"><%= stats.cancelled || 0 %></p>
-  </div>
-  <% } %>
-</div>
+
 
 <!-- Quick Create Order -->
 <div class="create-order-card">

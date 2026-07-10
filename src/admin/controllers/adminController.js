@@ -2854,10 +2854,9 @@ export async function maintenance(req, res) {
       });
     }
 
-    // Sync: ensure any bike with status=maintenance in DB has a ticket in database
     const maintenanceBikesInDb = bikes.filter(b => b.status === "maintenance");
     for (const bike of maintenanceBikesInDb) {
-      const hasTicket = maintenanceTickets.some(t => t.bikeId === bike.id && t.status !== "completed");
+      const hasTicket = maintenanceTickets.some(t => String(t.bikeId) === String(bike.id) && t.status !== "completed");
       if (!hasTicket) {
         const ticketId = `MT-${1000 + maintenanceTickets.length + 1}`;
         const newTicket = {
@@ -4066,7 +4065,7 @@ export async function markBikeFixed(req, res) {
     if (error) throw error;
 
     // Update in-memory active ticket
-    const ticket = maintenanceTickets.find((item) => item.bikeId === bikeId && item.status !== "completed");
+    const ticket = maintenanceTickets.find((item) => String(item.bikeId) === String(bikeId) && item.status !== "completed");
     if (ticket) {
       ticket.status = "completed";
       ticket.fixedDate = fixedDate;

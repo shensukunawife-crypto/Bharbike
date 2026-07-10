@@ -2161,10 +2161,6 @@ export async function earnings(req, res) {
       }));
 
     const recentActivity = transactions.slice(0, 5);
-    const pieSeries = [
-      { label: "Bike Rental", value: rental },
-      { label: "Delivery", value: delivery },
-    ];
 
     // Group transactions by date for realistic, premium daily trend charts
     const dailyMap = {};

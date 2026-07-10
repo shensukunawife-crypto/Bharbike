@@ -246,11 +246,9 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
     const startDate = new Date();
     const endDate = new Date();
     if (plan.duration_days === 7) {
-      // Weekly Plan: 7 days inclusive — snapped to 9:00 AM IST (3:30 AM UTC) of Day 7
+      // Weekly Plan: 7 days inclusive — ends at the exact same time of day on Day 7 (start + 6 days)
       const expireMs = startDate.getTime() + 6 * 24 * 60 * 60 * 1000;
-      const expireDate = new Date(expireMs);
-      expireDate.setUTCHours(3, 30, 0, 0); // 9:00 AM IST
-      endDate.setTime(expireDate.getTime());
+      endDate.setTime(expireMs);
     } else {
       endDate.setDate(endDate.getDate() + plan.duration_days - 1);
     }

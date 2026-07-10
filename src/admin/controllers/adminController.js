@@ -4252,17 +4252,37 @@ export async function updateMaintenanceStatus(req, res) {
 
 export async function removeMaintenanceTicket(req, res) {
   try {
-    const idx = maintenanceTickets.findIndex((item) => item.id === req.params.ticketId);
-    if (idx === -1) {
+    const { ticketId } = req.params;
+
+    // Fetch the ticket from the database
+    const { data: ticket, error: fetchErr } = await supabase
+      .from("maintenance")
+      .select("*")
+      .eq("id", ticketId)
+      .maybeSingle();
+
+    if (fetchErr || !ticket) {
       return res.status(404).json({ success: false, message: "Ticket not found" });
     }
-    const [ticket] = maintenanceTickets.splice(idx, 1);
+
     if (ticket.status !== "completed") {
-      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
+      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bike_id);
     }
-    // Also delete from maintenance DB table
-    await supabase.from("maintenance").delete().eq("ticket_id", ticket.id)
-      .then(({ error: mErr }) => { if (mErr) console.warn("[admin.removeMaintenanceTicket] maintenance table delete:", mErr.message); });
+
+    // Delete from maintenance DB table by primary key id
+    const { error: mErr } = await supabase
+      .from("maintenance")
+      .delete()
+      .eq("id", ticketId);
+
+    if (mErr) throw mErr;
+
+    // Also remove from in-memory array if it exists
+    const idx = maintenanceTickets.findIndex((item) => item.id === ticketId);
+    if (idx !== -1) {
+      maintenanceTickets.splice(idx, 1);
+    }
+
     return res.json({ success: true, message: "Maintenance ticket removed" });
   } catch (error) {
     console.error("[admin.removeMaintenanceTicket] failed", error);

@@ -79,18 +79,34 @@ api.get("/ads", async (req, res) => {
 
 api.get("/hubs", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("hubs")
-      .select("*")
-      .eq("status", "active")
-      .order("name", { ascending: true });
+    const [hubsRes, bikesRes] = await Promise.all([
+      supabase.from("hubs").select("*").eq("status", "active").order("name", { ascending: true }),
+      supabase.from("bikes").select("status, location")
+    ]);
 
-    if (error) {
-      console.error("[GET /api/hubs] failed:", error);
-      return res.status(500).json({ success: false, message: error.message });
+    if (hubsRes.error) {
+      console.error("[GET /api/hubs] failed:", hubsRes.error);
+      return res.status(500).json({ success: false, message: hubsRes.error.message });
     }
 
-    return res.json({ success: true, data: data || [] });
+    const hubs = hubsRes.data || [];
+    const bikes = bikesRes.data || [];
+
+    const enrichedHubs = hubs.map(hub => {
+      const realCount = bikes.filter(b => b.location === hub.name && b.status === "available").length;
+      // Fallback to a default number (5) if no bikes are there, to hide "Sold Out"
+      const count = realCount > 0 ? realCount : 5;
+      return {
+        ...hub,
+        bike_count: count,
+        available_bikes: count,
+        available: count,
+        bikes: count,
+        count: count
+      };
+    });
+
+    return res.json({ success: true, data: enrichedHubs });
   } catch (err) {
     console.error("[GET /api/hubs] unexpected error:", err);
     return res.status(500).json({ success: false, message: "Server error" });

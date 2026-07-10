@@ -596,6 +596,8 @@ function renderLineChart(canvasId, labels, values, label, color) {
       ],
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { labels: { color: "#374151" } } },
       scales: {
         x: { ticks: { color: "#6b7280" }, grid: { color: "#e5e7eb" } },
@@ -616,6 +618,8 @@ function renderBarChart(canvasId, labels, values, label, color) {
       datasets: [{ label, data: values, backgroundColor: color }],
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { labels: { color: "#374151" } } },
       scales: {
         x: { ticks: { color: "#6b7280" }, grid: { color: "#e5e7eb" } },
@@ -641,6 +645,8 @@ function renderPieChart(canvasId, labels, values) {
       ],
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { labels: { color: "#374151" } } },
     },
   });

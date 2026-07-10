@@ -242,17 +242,17 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       throw new Error("Subscription plan not found");
     }
 
-    // Calculate end date
+    // Calculate end date (inclusive: 7-day plan = Days 1-7, so end = start + 6 days)
     const startDate = new Date();
     const endDate = new Date();
     if (plan.duration_days === 7) {
-      // Weekly Plan: Exactly 7 days, snapped to 9:00 AM IST (3:30 AM UTC) of the expiration day
-      const expireMs = startDate.getTime() + 7 * 24 * 60 * 60 * 1000;
+      // Weekly Plan: 7 days inclusive — snapped to 9:00 AM IST (3:30 AM UTC) of Day 7
+      const expireMs = startDate.getTime() + 6 * 24 * 60 * 60 * 1000;
       const expireDate = new Date(expireMs);
       expireDate.setUTCHours(3, 30, 0, 0); // 9:00 AM IST
       endDate.setTime(expireDate.getTime());
     } else {
-      endDate.setDate(endDate.getDate() + plan.duration_days);
+      endDate.setDate(endDate.getDate() + plan.duration_days - 1);
     }
 
     // Create or update subscription (upsert on user_id)

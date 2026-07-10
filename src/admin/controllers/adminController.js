@@ -545,9 +545,10 @@ export async function dashboard(req, res) {
       { count: activeRentalsCount, error: rentalsError },
       { data: bikesData, error: bikesDataError },
       { data: ordersData, error: ordersError },
-      { data: walletCredits, error: walletError },
+      { data: walletTransactionsData, error: walletError },
       { data: paymentsData, error: paymentsError },
       { data: allProfiles, error: profilesError },
+      { data: billingData, error: billingError },
       pendingKycResult
     ] = await Promise.all([
       getIdMappings(),
@@ -559,18 +560,19 @@ export async function dashboard(req, res) {
         .in("status", ["active", "ongoing"]),
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("id, amount, status, created_at, pickup_location"),
-      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, description, status, created_at").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at").eq("status", "completed").order("created_at", { ascending: true }),
       supabase.from("payments").select("id, user_id, amount, status, order_id, created_at"),
       supabase.from("profiles").select("id, full_name"),
+      supabase.from("subscription_billing").select("id, user_id, amount, status, created_at, payment_method, razorpay_payment_id"),
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").then(res => res, () => ({ count: 0 }))
     ]);
 
     const pendingKycCount = pendingKycResult ? (pendingKycResult.count || 0) : 0;
 
-    if (usersError || bikesError || rentalsError || bikesDataError || ordersError || paymentsError || profilesError) {
+    if (usersError || bikesError || rentalsError || bikesDataError || ordersError || walletError || paymentsError || profilesError || billingError) {
       console.error(
         "[admin.dashboard] fetch failed",
-        usersError || bikesError || rentalsError || bikesDataError || ordersError || paymentsError || profilesError
+        usersError || bikesError || rentalsError || bikesDataError || ordersError || walletError || paymentsError || profilesError || billingError
       );
     }
     const bikes = safeData(bikesData).map(normalizeBike);
@@ -584,42 +586,53 @@ export async function dashboard(req, res) {
       }).map(u => u.id)
     );
 
-    // 1. Direct Payments (success or paid)
-    const validPayments = safeData(paymentsData).filter(p => {
-      const status = String(p.status || "").toLowerCase();
-      const isPaid = status === "success" || status === "paid";
-      return isPaid && p.user_id && realUserIds.has(p.user_id);
+    // 1. Subscription Billing Revenue (paid bills)
+    const validBillings = safeData(billingData).filter(b => {
+      const status = String(b.status || "").toLowerCase();
+      return status === "paid" && b.user_id && realUserIds.has(b.user_id);
     });
 
-    const successfulPaymentIds = new Set(validPayments.map(p => p.id));
-    const successfulPaymentOrderIds = new Set(validPayments.map(p => p.order_id).filter(Boolean));
+    // 2. Wallet Net Revenue (credits - debits per user) to capture unspent deposits
+    const walletCreditsByUser = {};
+    const walletDebitsByUser = {};
 
-    // 2. Wallet Credits (completed credits, excluding double-counted ones)
-    const validWalletCredits = safeData(walletCredits).filter(t => {
+    safeData(walletTransactionsData).forEach(t => {
+      if (!t.user_id || !realUserIds.has(t.user_id)) return;
       const title = (t.title || "").toLowerCase();
-      const isPromo = title.includes("promo");
-      const isTest = title.includes("test");
-      const isDouble = (t.payment_id && successfulPaymentIds.has(t.payment_id)) || 
-                       (t.order_id && (successfulPaymentOrderIds.has(t.order_id) || successfulPaymentIds.has(t.order_id)));
-      
-      return !isPromo && !isTest && !isDouble && t.user_id && realUserIds.has(t.user_id);
+      if (title.includes("promo") || title.includes("test")) return;
+
+      const amt = Number(t.amount || 0);
+      if (t.type === "credit") {
+        walletCreditsByUser[t.user_id] = (walletCreditsByUser[t.user_id] || 0) + amt;
+      } else if (t.type === "debit") {
+        walletDebitsByUser[t.user_id] = (walletDebitsByUser[t.user_id] || 0) + amt;
+      }
     });
 
     // Merge into combined earnings array
     const earnings = [
-      ...validPayments.map(p => ({
-        amount: Number(p.amount || 0),
-        createdAt: new Date(p.created_at || now),
-        title: "Direct Payment (Online/UPI)",
-        userId: p.user_id
-      })),
-      ...validWalletCredits.map(t => ({
-        amount: Number(t.amount || 0),
-        createdAt: new Date(t.created_at || now),
-        title: t.title || "Admin Credit",
-        userId: t.user_id
+      ...validBillings.map(b => ({
+        amount: Number(b.amount || 0),
+        createdAt: new Date(b.created_at || now),
+        title: `Subscription (${b.payment_method === 'admin_override' || b.payment_method === 'admin_manual_add' ? 'Admin Manual' : 'Online/QR'})`,
+        userId: b.user_id
       }))
     ];
+
+    // Add net unspent wallet balance per user if positive
+    realUserIds.forEach(uid => {
+      const cred = walletCreditsByUser[uid] || 0;
+      const deb = walletDebitsByUser[uid] || 0;
+      const net = cred - deb;
+      if (net > 0) {
+        earnings.push({
+          amount: net,
+          createdAt: new Date(now),
+          title: "Wallet Deposit (Unspent)",
+          userId: uid
+        });
+      }
+    });
 
     // Sort by date ascending to determine first credit (registration fee) per unique user
     earnings.sort((a, b) => a.createdAt - b.createdAt);
@@ -2120,16 +2133,16 @@ export async function earnings(req, res) {
 
     // ── Fetch payments, wallet credits, and profiles ──
     const [
-      { data: walletData, error: walletErr },
-      { data: paymentsData, error: paymentsErr },
+      { data: walletTransactionsData, error: walletErr },
+      { data: billingData, error: billingErr },
       { data: dbProfiles, error: profilesErr }
     ] = await Promise.all([
-      supabase.from("wallet_transactions").select("*").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
-      supabase.from("payments").select("id, user_id, amount, status, order_id, created_at"),
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at").eq("status", "completed").order("created_at", { ascending: true }),
+      supabase.from("subscription_billing").select("id, user_id, amount, status, created_at, payment_method, razorpay_payment_id"),
       supabase.from("profiles").select("id, full_name, phone")
     ]);
-    if (walletErr || paymentsErr || profilesErr) {
-      console.error("[admin.earnings] fetch failed", walletErr || paymentsErr || profilesErr);
+    if (walletErr || billingErr || profilesErr) {
+      console.error("[admin.earnings] fetch failed", walletErr || billingErr || profilesErr);
     }
 
     const profileMap = {};
@@ -2137,7 +2150,6 @@ export async function earnings(req, res) {
       profileMap[p.id] = p.full_name || "BHAR BIKE Rider";
     });
 
-    // Exclude promo and test credits — only real payments from real non-test users
     const realUserIds = new Set(
       (dbProfiles || []).filter(u => {
         const name = (u.full_name || "").toLowerCase();
@@ -2145,44 +2157,55 @@ export async function earnings(req, res) {
       }).map(u => u.id)
     );
 
-    // 1. Direct Payments (success or paid)
-    const validPayments = safeData(paymentsData).filter(p => {
-      const status = String(p.status || "").toLowerCase();
-      const isPaid = status === "success" || status === "paid";
-      return isPaid && p.user_id && realUserIds.has(p.user_id);
+    // 1. Subscription Billing Revenue (paid bills)
+    const validBillings = safeData(billingData).filter(b => {
+      const status = String(b.status || "").toLowerCase();
+      return status === "paid" && b.user_id && realUserIds.has(b.user_id);
     });
 
-    const successfulPaymentIds = new Set(validPayments.map(p => p.id));
-    const successfulPaymentOrderIds = new Set(validPayments.map(p => p.order_id).filter(Boolean));
+    // 2. Wallet Net Revenue (credits - debits per user) to capture unspent deposits
+    const walletCreditsByUser = {};
+    const walletDebitsByUser = {};
 
-    // 2. Wallet Credits (completed credits, excluding double-counted ones)
-    const validWalletCredits = safeData(walletData).filter(t => {
+    safeData(walletTransactionsData).forEach(t => {
+      if (!t.user_id || !realUserIds.has(t.user_id)) return;
       const title = (t.title || "").toLowerCase();
-      const isPromo = title.includes("promo");
-      const isTest = title.includes("test");
-      const isDouble = (t.payment_id && successfulPaymentIds.has(t.payment_id)) || 
-                       (t.order_id && (successfulPaymentOrderIds.has(t.order_id) || successfulPaymentIds.has(t.order_id)));
-      
-      return !isPromo && !isTest && !isDouble && t.user_id && realUserIds.has(t.user_id);
+      if (title.includes("promo") || title.includes("test")) return;
+
+      const amt = Number(t.amount || 0);
+      if (t.type === "credit") {
+        walletCreditsByUser[t.user_id] = (walletCreditsByUser[t.user_id] || 0) + amt;
+      } else if (t.type === "debit") {
+        walletDebitsByUser[t.user_id] = (walletDebitsByUser[t.user_id] || 0) + amt;
+      }
     });
 
     // Merge into combined earnings array
     const allRealCredits = [
-      ...validPayments.map(p => ({
-        id: p.id,
-        amount: Number(p.amount || 0),
-        created_at: p.created_at,
-        title: "Direct Payment (Online/UPI)",
-        user_id: p.user_id
-      })),
-      ...validWalletCredits.map(t => ({
-        id: t.id,
-        amount: Number(t.amount || 0),
-        created_at: t.created_at,
-        title: t.title || "Admin Credit",
-        user_id: t.user_id
+      ...validBillings.map(b => ({
+        id: b.id,
+        amount: Number(b.amount || 0),
+        created_at: b.created_at,
+        title: `Subscription (${b.payment_method === 'admin_override' || b.payment_method === 'admin_manual_add' ? 'Admin Manual' : 'Online/QR'})`,
+        user_id: b.user_id
       }))
     ];
+
+    // Add net unspent wallet balance per user if positive
+    realUserIds.forEach(uid => {
+      const cred = walletCreditsByUser[uid] || 0;
+      const deb = walletDebitsByUser[uid] || 0;
+      const net = cred - deb;
+      if (net > 0) {
+        allRealCredits.push({
+          id: `WLT-UNSPENT-${uid}`,
+          amount: net,
+          created_at: new Date(now).toISOString(),
+          title: "Wallet Deposit (Unspent)",
+          user_id: uid
+        });
+      }
+    });
 
     // Sort by date ascending to determine first credit (registration fee) per unique user
     allRealCredits.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -2625,20 +2648,20 @@ export async function analytics(req, res) {
       { data: orderRows, error: orderError },
       { data: bikeRows, error: bikesError },
       { data: rentalRows, error: rentalError },
-      { data: walletCredits, error: walletError },
-      { data: paymentsData, error: paymentsError },
+      { data: walletTransactionsData, error: walletError },
+      { data: billingData, error: billingErr },
       { data: dbProfiles, error: profilesErr }
     ] = await Promise.all([
       getIdMappings(),
       supabase.from("orders").select("*").gte("created_at", filterDate),
       supabase.from("bikes").select("*"),
       supabase.from("rentals").select("*").gte("created_at", filterDate),
-      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at, payment_id, order_id").eq("type", "credit").eq("status", "completed").gte("created_at", filterDate).order("created_at", { ascending: true }),
-      supabase.from("payments").select("id, user_id, amount, status, order_id, created_at").gte("created_at", filterDate),
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at").eq("status", "completed").gte("created_at", filterDate).order("created_at", { ascending: true }),
+      supabase.from("subscription_billing").select("id, user_id, amount, status, created_at, payment_method, razorpay_payment_id").gte("created_at", filterDate),
       supabase.from("profiles").select("id, full_name")
     ]);
-    if (orderError || bikesError || rentalError || walletError || paymentsError || profilesErr) {
-      console.error("[admin.analytics] fetch failed", orderError || bikesError || rentalError || walletError || paymentsError || profilesErr);
+    if (orderError || bikesError || rentalError || walletError || billingErr || profilesErr) {
+      console.error("[admin.analytics] fetch failed", orderError || bikesError || rentalError || walletError || billingErr || profilesErr);
     }
 
     // Build set of real user IDs (exclude test accounts)
@@ -2649,40 +2672,51 @@ export async function analytics(req, res) {
       }).map(u => u.id)
     );
 
-    // 1. Direct Payments (success or paid)
-    const validPayments = safeData(paymentsData).filter(p => {
-      const status = String(p.status || "").toLowerCase();
-      const isPaid = status === "success" || status === "paid";
-      return isPaid && p.user_id && realUserIds.has(p.user_id);
+    // 1. Subscription Billing Revenue (paid bills)
+    const validBillings = safeData(billingData).filter(b => {
+      const status = String(b.status || "").toLowerCase();
+      return status === "paid" && b.user_id && realUserIds.has(b.user_id);
     });
 
-    const successfulPaymentIds = new Set(validPayments.map(p => p.id));
-    const successfulPaymentOrderIds = new Set(validPayments.map(p => p.order_id).filter(Boolean));
+    // 2. Wallet Net Revenue (credits - debits per user) to capture unspent deposits
+    const walletCreditsByUser = {};
+    const walletDebitsByUser = {};
 
-    // 2. Wallet Credits (completed credits, excluding double-counted ones)
-    const validWalletCredits = safeData(walletCredits).filter(t => {
+    safeData(walletTransactionsData).forEach(t => {
+      if (!t.user_id || !realUserIds.has(t.user_id)) return;
       const title = (t.title || "").toLowerCase();
-      const isPromo = title.includes("promo");
-      const isTest = title.includes("test");
-      const isDouble = (t.payment_id && successfulPaymentIds.has(t.payment_id)) || 
-                       (t.order_id && (successfulPaymentOrderIds.has(t.order_id) || successfulPaymentIds.has(t.order_id)));
-      
-      return !isPromo && !isTest && !isDouble && t.user_id && realUserIds.has(t.user_id);
+      if (title.includes("promo") || title.includes("test")) return;
+
+      const amt = Number(t.amount || 0);
+      if (t.type === "credit") {
+        walletCreditsByUser[t.user_id] = (walletCreditsByUser[t.user_id] || 0) + amt;
+      } else if (t.type === "debit") {
+        walletDebitsByUser[t.user_id] = (walletDebitsByUser[t.user_id] || 0) + amt;
+      }
     });
 
     // Merge into combined earnings array
     const realCreditsInPeriod = [
-      ...validPayments.map(p => ({
-        amount: Number(p.amount || 0),
-        created_at: p.created_at,
-        user_id: p.user_id
-      })),
-      ...validWalletCredits.map(t => ({
-        amount: Number(t.amount || 0),
-        created_at: t.created_at,
-        user_id: t.user_id
+      ...validBillings.map(b => ({
+        amount: Number(b.amount || 0),
+        created_at: b.created_at,
+        user_id: b.user_id
       }))
     ];
+
+    // Add net unspent wallet balance per user if positive
+    realUserIds.forEach(uid => {
+      const cred = walletCreditsByUser[uid] || 0;
+      const deb = walletDebitsByUser[uid] || 0;
+      const net = cred - deb;
+      if (net > 0) {
+        realCreditsInPeriod.push({
+          amount: net,
+          created_at: new Date(now).toISOString(),
+          user_id: uid
+        });
+      }
+    });
 
     const totalRevenue = realCreditsInPeriod.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 

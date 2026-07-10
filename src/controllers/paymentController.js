@@ -32,7 +32,7 @@ export const createOrder = async (req, res) => {
 
         if (userProfile && userProfile.is_prepaid) {
           console.log(`[createOrder] User ${user_id} is marked as prepaid. Bypassing Razorpay order creation.`);
-          const mockOrderId = `bypass_order_${Date.now()}`;
+          const mockOrderId = crypto.randomUUID();
           return res.status(200).json({
             success: true,
             id: mockOrderId,
@@ -262,6 +262,12 @@ export const createOrder = async (req, res) => {
   }
 };
 
+const isValidUuid = (str) => {
+  if (!str) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 /**
  * Verifies Payment (Supports Cryptographic Signature Check)
  */
@@ -302,7 +308,7 @@ export const verifyPayment = async (req, res) => {
         if (updatedRows && updatedRows.length > 0) updateSuccess = true;
       }
 
-      if (!updateSuccess && app_order_id) {
+      if (!updateSuccess && app_order_id && isValidUuid(app_order_id)) {
         const { data: updatedRows } = await supabase
           .from("payments")
           .update({
@@ -319,7 +325,7 @@ export const verifyPayment = async (req, res) => {
         const { error: insertError } = await supabase.from("payments").insert([
           {
             user_id: user_id || null,
-            order_id: app_order_id || null,
+            order_id: app_order_id && isValidUuid(app_order_id) ? app_order_id : null,
             razorpay_order_id: razorpay_order_id || `ORD-QR-${Date.now()}`,
             razorpay_payment_id: razorpay_payment_id,
             amount: Number(amount),
@@ -450,7 +456,7 @@ export const verifyPayment = async (req, res) => {
         return res.status(500).json({ success: false, message: "Internal server error updating ticket: " + e.message });
       }
 
-      if (app_order_id) {
+      if (app_order_id && isValidUuid(app_order_id)) {
         try {
           await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
         } catch (e) {
@@ -473,7 +479,7 @@ export const verifyPayment = async (req, res) => {
     const markOrderAndPaymentAsPaid = async () => {
       // Wrap all DB operations in try/catch — don't fail on RLS or missing tables
       try {
-        if (app_order_id) {
+        if (app_order_id && isValidUuid(app_order_id)) {
           await supabase.from("orders").update({ status: "paid" }).eq("id", app_order_id);
         }
       } catch (e) { console.warn("[verifyPayment] orders update skipped:", e?.message); }
@@ -486,7 +492,7 @@ export const verifyPayment = async (req, res) => {
           
         if (razorpay_order_id && razorpay_order_id !== "bypass_order_id") {
           query.eq("razorpay_order_id", razorpay_order_id);
-        } else if (app_order_id) {
+        } else if (app_order_id && isValidUuid(app_order_id)) {
           query.eq("order_id", app_order_id);
         } else {
           throw new Error("No valid identifier for payments update");
@@ -603,7 +609,7 @@ export const verifyPayment = async (req, res) => {
       let addAmount = Number(amount) || 0;
 
       // Fallback: If amount is missing, retrieve it from the orders table
-      if (addAmount <= 0 && app_order_id) {
+      if (addAmount <= 0 && app_order_id && isValidUuid(app_order_id)) {
         try {
           const { data: orderRow } = await supabase
             .from("orders")

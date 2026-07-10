@@ -4133,28 +4133,43 @@ export async function markBikeFixed(req, res) {
   try {
     const { bikeId } = req.params;
     const fixedDate = new Date().toISOString().slice(0, 16).replace("T", " ");
-    const { error } = await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
-    if (error) throw error;
+    
+    // First update the bike
+    const { error: bikeErr } = await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
+    if (bikeErr) throw bikeErr;
 
-    // Update in-memory active ticket
-    const ticket = maintenanceTickets.find((item) => String(item.bikeId) === String(bikeId) && item.status !== "completed");
+    // Fetch the active maintenance ticket from database for this bike
+    const { data: ticket, error: fetchErr } = await supabase
+      .from("maintenance")
+      .select("*")
+      .eq("bike_id", bikeId)
+      .neq("status", "completed")
+      .maybeSingle();
+
     if (ticket) {
-      ticket.status = "completed";
-      ticket.fixedDate = fixedDate;
-      ticket.workDetails = ticket.workDetails || "General repairs completed.";
+      // Update in database using primary key id
+      const { error: mErr } = await supabase
+        .from("maintenance")
+        .update({
+          status: "completed",
+          fixed_date: fixedDate,
+          work_details: ticket.work_details || "General repairs completed."
+        })
+        .eq("id", ticket.id);
 
-      // Persist to maintenance DB table using unique ticket ID
-      await supabase.from("maintenance")
-        .update({ status: "completed", fixed_date: fixedDate, work_details: ticket.workDetails })
-        .eq("ticket_id", ticket.id)
-        .then(({ error: mErr }) => { if (mErr) console.warn("[admin.markBikeFixed] maintenance table update:", mErr.message); });
-    } else {
-      // Fallback: update any active ticket for this bike in database
-      await supabase.from("maintenance")
-        .update({ status: "completed", fixed_date: fixedDate })
-        .eq("bike_id", bikeId)
-        .neq("status", "completed")
-        .then(({ error: mErr }) => { if (mErr) console.warn("[admin.markBikeFixed] fallback update:", mErr.message); });
+      if (mErr) {
+        console.warn("[admin.markBikeFixed] database update failed:", mErr.message);
+      }
+    }
+
+    // Also update in-memory array if it exists
+    const inMemTicket = maintenanceTickets.find(
+      (item) => String(item.bikeId) === String(bikeId) && item.status !== "completed"
+    );
+    if (inMemTicket) {
+      inMemTicket.status = "completed";
+      inMemTicket.fixedDate = fixedDate;
+      inMemTicket.workDetails = inMemTicket.workDetails || "General repairs completed.";
     }
 
     return res.json({ success: true, message: "Bike marked as fixed" });
@@ -4210,39 +4225,67 @@ export async function addMaintenanceTicket(req, res) {
 
 export async function updateMaintenanceStatus(req, res) {
   try {
-    const ticket = maintenanceTickets.find((item) => item.id === req.params.ticketId);
-    if (!ticket) {
+    const { ticketId } = req.params;
+
+    // Fetch the ticket from the database
+    const { data: ticket, error: fetchErr } = await supabase
+      .from("maintenance")
+      .select("*")
+      .eq("id", ticketId)
+      .maybeSingle();
+
+    if (fetchErr || !ticket) {
       return res.status(404).json({ success: false, message: "Ticket not found" });
     }
-    ticket.status = req.body.status || ticket.status;
-    ticket.technicianName = req.body.technicianName !== undefined ? req.body.technicianName : ticket.technicianName;
-    ticket.repairCost = req.body.repairCost !== undefined ? Number(req.body.repairCost) || 0 : ticket.repairCost;
-    ticket.expectedFixDate = req.body.expectedFixDate || ticket.expectedFixDate;
-    ticket.workDetails = req.body.workDetails !== undefined ? req.body.workDetails : ticket.workDetails;
-    ticket.issueType = req.body.issueType || ticket.issueType;
-    ticket.description = req.body.description || ticket.description;
-    ticket.reportedDate = req.body.reportedDate ? req.body.reportedDate.replace("T", " ") : ticket.reportedDate;
+
+    const status = req.body.status || ticket.status;
+    const technicianName = req.body.technicianName !== undefined ? req.body.technicianName : ticket.technician_name;
+    const repairCost = req.body.repairCost !== undefined ? Number(req.body.repairCost) || 0 : Number(ticket.repair_cost || 0);
+    const expectedFixDate = req.body.expectedFixDate || ticket.expected_fix_date;
+    const workDetails = req.body.workDetails !== undefined ? req.body.workDetails : ticket.work_details;
+    const issueType = req.body.issueType || ticket.issue_type;
+    const description = req.body.description || ticket.description;
+    const reportedDate = req.body.reportedDate ? req.body.reportedDate.replace("T", " ") : ticket.reported_date;
     
-    if (ticket.status === "completed") {
-      ticket.fixedDate = req.body.fixedDate ? req.body.fixedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " ");
-      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
+    let fixedDate = ticket.fixed_date;
+    if (status === "completed") {
+      fixedDate = req.body.fixedDate ? req.body.fixedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " ");
+      await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bike_id);
     } else {
-      ticket.fixedDate = null;
-      await supabase.from("bikes").update({ status: "maintenance" }).eq("id", ticket.bikeId);
+      fixedDate = null;
+      await supabase.from("bikes").update({ status: "maintenance" }).eq("id", ticket.bike_id);
     }
-    // Persist update to maintenance DB table
-    await supabase.from("maintenance").update({
-      status: ticket.status,
-      technician_name: ticket.technicianName,
-      repair_cost: ticket.repairCost,
-      expected_fix_date: ticket.expectedFixDate,
-      issue_type: ticket.issueType,
-      description: ticket.description,
-      reported_date: ticket.reportedDate,
-      work_details: ticket.workDetails,
-      ...(ticket.status === "completed" ? { fixed_date: ticket.fixedDate } : { fixed_date: null }),
-    }).eq("ticket_id", ticket.id)
-      .then(({ error: mErr }) => { if (mErr) console.warn("[admin.updateMaintenanceStatus] maintenance table update:", mErr.message); });
+
+    // Persist update to maintenance DB table using ID
+    const { error: mErr } = await supabase.from("maintenance").update({
+      status,
+      technician_name: technicianName,
+      repair_cost: repairCost,
+      expected_fix_date: expectedFixDate,
+      issue_type: issueType,
+      description,
+      reported_date: reportedDate,
+      work_details: workDetails,
+      fixed_date: fixedDate
+    }).eq("id", ticketId);
+
+    if (mErr) throw mErr;
+
+    // Also update in-memory array if it exists
+    const idx = maintenanceTickets.findIndex((item) => item.id === ticketId);
+    if (idx !== -1) {
+      const t = maintenanceTickets[idx];
+      t.status = status;
+      t.technicianName = technicianName;
+      t.repairCost = repairCost;
+      t.expectedFixDate = expectedFixDate;
+      t.workDetails = workDetails;
+      t.issueType = issueType;
+      t.description = description;
+      t.reportedDate = reportedDate;
+      t.fixedDate = fixedDate;
+    }
+
     return res.json({ success: true, message: "Maintenance ticket updated successfully" });
   } catch (error) {
     console.error("[admin.updateMaintenanceStatus] failed", error);

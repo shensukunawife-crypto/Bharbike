@@ -18,35 +18,64 @@ export async function runGpsRefreshJob() {
       return;
     }
 
-    console.log(`[gpsRefresh] Refreshing GPS for ${vehicles.length} linked bikes...`);
+    const uuids = vehicles.map(v => v.vehicle_uuid).filter(Boolean);
+    console.log(`[gpsRefresh] Refreshing GPS for ${vehicles.length} linked bikes in bulk...`);
 
-    const updates = await Promise.allSettled(
-      vehicles.map(async ({ bike_id }) => {
+    const telemetry = await iotService.getBulkTelemetry(uuids);
+    console.log(`[gpsRefresh] LocoNav returned telemetry for ${telemetry.length} vehicles.`);
+
+    let ok = 0;
+    let noGps = 0;
+    let errors = 0;
+
+    await Promise.allSettled(
+      vehicles.map(async ({ bike_id, vehicle_uuid }) => {
         try {
-          const health = await iotService.getBikeHealth(bike_id);
-          if (health.lat && health.lng) {
-            const gpsLocationStr = `${Number(health.lat).toFixed(5)}, ${Number(health.lng).toFixed(5)}`;
+          const val = telemetry.find(t => t.vehicleId === vehicle_uuid);
+          if (!val) {
+            noGps++;
+            return;
+          }
+
+          const coords = val.gps?.currentLocationCoordinates || {};
+          const lat = coords.lat?.value;
+          const lng = coords.long?.value;
+
+          if (lat && lng) {
+            const gpsLocationStr = `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+            const pingDate = coords.lat?.timestamp ? new Date(coords.lat.timestamp * 1000) : new Date();
+
+            let batteryPct = 85;
+            const batteryData = val.vehicleBatteryLevel;
+            if (batteryData && typeof batteryData.value === 'number') {
+              const voltage = batteryData.value;
+              let calculatedPct = Math.round(((voltage - 11.0) / 1.8) * 100);
+              batteryPct = Math.max(0, Math.min(100, calculatedPct));
+            }
+
             await supabase
               .from("bikes")
               .update({
-                last_lat: health.lat,
-                last_lng: health.lng,
+                last_lat: lat,
+                last_lng: lng,
                 location: gpsLocationStr,
-                last_gps_updated_at: new Date().toISOString(),
+                battery: batteryPct,
+                last_gps_updated_at: pingDate.toISOString(),
+                last_ping_at: pingDate.toISOString()
               })
               .eq("id", bike_id);
-            return { bike_id, status: "ok", location: gpsLocationStr };
+
+            ok++;
+          } else {
+            noGps++;
           }
-          return { bike_id, status: "no_gps" };
         } catch (err) {
-          return { bike_id, status: "error", error: err.message };
+          errors++;
+          console.error(`[gpsRefresh] Failed for bike ${bike_id}:`, err.message);
         }
       })
     );
 
-    const ok = updates.filter(r => r.value?.status === "ok").length;
-    const noGps = updates.filter(r => r.value?.status === "no_gps").length;
-    const errors = updates.filter(r => r.value?.status === "error").length;
     console.log(`[gpsRefresh] Done: ${ok} updated, ${noGps} no GPS data, ${errors} errors`);
   } catch (err) {
     console.error("[gpsRefresh] Job failed:", err.message);

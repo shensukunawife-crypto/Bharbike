@@ -270,3 +270,32 @@ export async function getLockUnlockStatus(requestId) {
   }
 }
 
+/**
+ * Fetch telematics in bulk for multiple vehicle UUIDs
+ */
+export async function getBulkTelemetry(uuids) {
+  if (!uuids || uuids.length === 0) return [];
+  try {
+    const response = await axios.post(
+      `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
+      {
+        vehicleIds: uuids,
+        sensors: ["gps", "vehicleBatteryLevel"]
+      },
+      {
+        headers: {
+          'User-Authentication': LOCONAV_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      }
+    );
+
+    return response.data?.data?.values || [];
+  } catch (error) {
+    console.error("[IoT] getBulkTelemetry failed:", error.response?.data || error.message);
+    throw error;
+  }
+}
+
+

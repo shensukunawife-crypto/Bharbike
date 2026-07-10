@@ -802,10 +802,25 @@ export async function dashboard(req, res) {
           return !isExpired;
         });
 
-        const expiredRentalsFiltered = activeRentals.filter(r => {
+        const rawExpired = activeRentals.filter(r => {
           const isExpired = r.status === "expired" || (r.end_time && new Date(r.end_time) <= now);
           return isExpired;
         });
+
+        // Filter to unique users only, taking the most recent expired rental first
+        const expiredRentalsFiltered = [];
+        const seenUsers = new Set();
+        rawExpired.sort((a, b) => new Date(b.end_time || 0) - new Date(a.end_time || 0));
+        for (const r of rawExpired) {
+          if (r.user_id) {
+            if (!seenUsers.has(r.user_id)) {
+              seenUsers.add(r.user_id);
+              expiredRentalsFiltered.push(r);
+            }
+          } else {
+            expiredRentalsFiltered.push(r);
+          }
+        }
 
         // Assigned Bikes to Who and all details (with IDs for IoT/cancel actions)
         assignedBikes = activeRentalsFiltered.map(r => {

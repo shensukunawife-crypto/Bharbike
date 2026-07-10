@@ -621,7 +621,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
 
 <% 
   var isSubAdmin = locals.admin && (locals.admin.role === 'sub_admin' || locals.admin.role === 'manager' || locals.admin.role === 'support');
-  var activeTab = isSubAdmin ? 'tab-approvals' : 'tab-analytics';
+  var activeTab = locals.activeTab || (isSubAdmin ? 'tab-approvals' : 'tab-analytics');
 %>
 
 <!-- Tabs Navigation -->
@@ -689,7 +689,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
         if (a.title === "Pending Orders") {
           targetUrl = "/admin/orders";
         } else if (a.title === "Expiry Orders") {
-          targetUrl = "/admin/operations";
+          targetUrl = "/admin?tab=tab-operations";
         } else if (a.title === "Low Battery") {
           targetUrl = "/admin/bikes";
         }

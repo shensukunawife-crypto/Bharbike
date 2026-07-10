@@ -979,6 +979,7 @@ export async function dashboard(req, res) {
       title: "Dashboard",
       active: "dashboard",
       bodyView: "dashboard",
+      activeTab: req.query.tab || null,
       expiringSubs,
       assignedBikes,
       expiryOrders,

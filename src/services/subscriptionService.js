@@ -53,8 +53,24 @@ const isValidUuid = (str) => {
   return uuidRegex.test(str);
 };
 
+// Legacy plan ID mapping — normalizes old IDs to current ones permanently
+const LEGACY_PLAN_ID_MAP = {
+  'weekly': 'weekly_plan',
+  'monthly': 'monthly_plan',
+  'weekly_plan_old': 'weekly_plan',
+  'plan_weekly': 'weekly_plan',
+  'plan_monthly': 'monthly_plan',
+  'Weekly Plan': 'weekly_plan',
+  'Monthly Plan': 'monthly_plan',
+};
+
 export async function getSubscriptionPlanById(planId) {
   try {
+    // Normalize legacy plan IDs before any lookup
+    if (planId && LEGACY_PLAN_ID_MAP[planId]) {
+      planId = LEGACY_PLAN_ID_MAP[planId];
+    }
+
     let data = null;
     let error = null;
 

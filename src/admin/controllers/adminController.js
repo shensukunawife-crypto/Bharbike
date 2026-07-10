@@ -5184,7 +5184,10 @@ export async function subscriptionsPage(req, res) {
 
     const mergedSubs = (subs || []).map(s => {
       const user = (users || []).find(u => u.id === s.user_id);
-      const plan = (plans || []).find(p => p.id === s.plan_id || p.name === s.plan_id);
+      let lookupId = s.plan_id;
+      if (lookupId === "weekly") lookupId = "weekly_plan";
+      if (lookupId === "monthly") lookupId = "monthly_plan";
+      const plan = (plans || []).find(p => p.id === lookupId || p.name === lookupId);
       const userNum = s.user_id ? (mappings.userMap.get(s.user_id) || String(s.user_id).slice(0, 8)) : "—";
       return {
         ...s,

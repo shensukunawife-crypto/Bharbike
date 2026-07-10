@@ -14,6 +14,7 @@
           <tr>
             <th>User</th>
             <th>Plan</th>
+            <th>Amount</th>
             <th>Status</th>
             <th>Start Date</th>
             <th>End Date</th>
@@ -22,7 +23,7 @@
         </thead>
         <tbody>
           <% if (!subs || !subs.length) { %>
-          <tr><td colspan="6" style="text-align:center;padding:28px;color:#64748b;">No subscriptions found</td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:28px;color:#64748b;">No subscriptions found</td></tr>
           <% } %>
           <% (subs || []).forEach(function(s) { %>
           <tr>
@@ -31,6 +32,13 @@
               <span class="muted-small" title="<%= s.user_id %>"><%= (s.users && s.users.displayUserId) || '' %> • <%= (s.users && s.users.phone) ? s.users.phone || s.users.email : '' %></span>
             </td>
             <td><span class="badge badge-soft" style="text-transform: capitalize;"><%= s.plan_display || s.plan_id %></span></td>
+            <td>
+              <% if (s.plan_price != null) { %>
+                <strong style="color: var(--accent);">₹<%= s.plan_price.toLocaleString('en-IN') %></strong>
+              <% } else { %>
+                <span style="color:#64748b;">—</span>
+              <% } %>
+            </td>
             <td>
               <% 
                 let displayStatus = s.status;
@@ -54,12 +62,30 @@
                 <%= s.end_date ? String(s.end_date).replace('T',' ').slice(0,19) : '—' %>
               </span>
             </td>
-            <td style="display:flex;gap:8px;">
-              <button class="btn btn-sm btn-outline open-edit-sub" 
-                data-id="<%= s.id %>" 
-                data-status="<%= s.status %>" 
+            <td style="display:flex;gap:8px;flex-wrap:wrap;">
+              <!-- Detail button -->
+              <button class="btn btn-sm btn-outline open-sub-detail"
+                data-id="<%= s.id %>"
+                data-name="<%= (s.users && s.users.full_name) ? s.users.full_name : 'User' %>"
+                data-userid="<%= (s.users && s.users.displayUserId) || '' %>"
+                data-phone="<%= (s.users && s.users.phone) || '' %>"
+                data-email="<%= (s.users && s.users.email) || '' %>"
+                data-plan="<%= s.plan_display || s.plan_id %>"
+                data-price="<%= s.plan_price != null ? s.plan_price : '' %>"
+                data-currency="<%= s.plan_currency || 'INR' %>"
+                data-duration="<%= s.plan_duration || '' %>"
+                data-status="<%= displayStatus %>"
+                data-start="<%= s.start_date ? String(s.start_date).replace('T',' ').slice(0,19) : '' %>"
+                data-end="<%= s.end_date ? String(s.end_date).replace('T',' ').slice(0,19) : '' %>"
+                data-created="<%= s.created_at ? String(s.created_at).replace('T',' ').slice(0,19) : '' %>"
+              >Detail</button>
+
+              <!-- Edit button -->
+              <button class="btn btn-sm btn-outline open-edit-sub"
+                data-id="<%= s.id %>"
+                data-status="<%= s.status %>"
                 data-end="<%= s.end_date ? String(s.end_date).slice(0,16) : '' %>">Edit</button>
-              
+
               <% if (s.status === 'active') { %>
                 <button class="btn btn-sm btn-danger admin-action" data-url="/admin/subscriptions/<%= s.id %>/cancel" data-method="POST">Cancel</button>
               <% } %>
@@ -68,6 +94,87 @@
           <% }); %>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Subscription Detail Modal ─────────────────────────── -->
+<div class="modal" id="sub-detail-modal">
+  <div class="modal-card" style="max-width: 520px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div id="sub-detail-icon" style="width:44px;height:44px;border-radius:12px;background:rgba(139,92,246,0.15);color:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">⚡</div>
+        <div>
+          <h3 style="margin:0;font-size:16px;font-weight:700;" id="sub-detail-title">Subscription Details</h3>
+          <p style="margin:0;font-size:12px;color:var(--text-muted);" id="sub-detail-sub">—</p>
+        </div>
+      </div>
+      <button type="button" style="background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280;line-height:1;" onclick="document.getElementById('sub-detail-modal').classList.remove('show')">&times;</button>
+    </div>
+
+    <!-- Rider section -->
+    <div style="margin-bottom:18px;">
+      <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:10px;">Rider Information</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Name</div>
+          <div class="sub-detail-value" id="sd-name">—</div>
+        </div>
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">User ID</div>
+          <div class="sub-detail-value" id="sd-userid">—</div>
+        </div>
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Phone</div>
+          <div class="sub-detail-value" id="sd-phone">—</div>
+        </div>
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Email</div>
+          <div class="sub-detail-value" id="sd-email">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan section -->
+    <div style="margin-bottom:18px;">
+      <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:10px;">Plan & Payment</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Plan</div>
+          <div class="sub-detail-value" id="sd-plan">—</div>
+        </div>
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Amount</div>
+          <div class="sub-detail-value" id="sd-price" style="color:var(--accent);font-weight:700;">—</div>
+        </div>
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Duration</div>
+          <div class="sub-detail-value" id="sd-duration">—</div>
+        </div>
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Status</div>
+          <div class="sub-detail-value" id="sd-status">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dates section -->
+    <div>
+      <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:10px;">Dates</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">Start Date</div>
+          <div class="sub-detail-value" id="sd-start">—</div>
+        </div>
+        <div class="sub-detail-field">
+          <div class="sub-detail-label">End Date</div>
+          <div class="sub-detail-value" id="sd-end">—</div>
+        </div>
+        <div class="sub-detail-field" style="grid-column:1/-1;">
+          <div class="sub-detail-label">Subscription ID</div>
+          <div class="sub-detail-value" id="sd-id" style="font-size:11px;font-family:monospace;word-break:break-all;">—</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -129,13 +236,78 @@
   </div>
 </div>
 
+<style>
+  .sub-detail-field {
+    background: var(--bg-secondary, #f8fafc);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .dark-mode .sub-detail-field { background: #0f172a; }
+  .sub-detail-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .sub-detail-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-word;
+  }
+</style>
+
 <script>
+  // ── Edit modal ──────────────────────────────────────────
   document.querySelectorAll('.open-edit-sub').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById('edit-subscription-form').dataset.url = '/admin/subscriptions/' + btn.dataset.id + '/edit';
       document.getElementById('edit-sub-status').value = btn.dataset.status;
       document.getElementById('edit-sub-end').value = btn.dataset.end;
       document.getElementById('edit-subscription-modal').classList.add('show');
+    });
+  });
+
+  // ── Detail modal ────────────────────────────────────────
+  const statusColors = {
+    active: { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
+    expired: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+    cancelled: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' }
+  };
+
+  document.querySelectorAll('.open-sub-detail').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const d = btn.dataset;
+      const status = d.status || 'unknown';
+      const sc = statusColors[status] || { bg: 'rgba(156,163,175,0.15)', color: '#9ca3af' };
+
+      // Header
+      document.getElementById('sub-detail-title').textContent = d.name || 'Subscription Details';
+      document.getElementById('sub-detail-sub').textContent = (d.plan || '—') + ' Plan';
+
+      // Rider
+      document.getElementById('sd-name').textContent    = d.name    || '—';
+      document.getElementById('sd-userid').textContent  = d.userid  || '—';
+      document.getElementById('sd-phone').textContent   = d.phone   || '—';
+      document.getElementById('sd-email').textContent   = d.email   || '—';
+
+      // Plan
+      document.getElementById('sd-plan').textContent     = d.plan || '—';
+      document.getElementById('sd-price').textContent    = d.price ? '₹' + Number(d.price).toLocaleString('en-IN') : '—';
+      document.getElementById('sd-duration').textContent = d.duration ? d.duration + ' days' : '—';
+
+      // Status badge
+      const statusEl = document.getElementById('sd-status');
+      statusEl.innerHTML = `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${sc.bg};color:${sc.color};">${status.charAt(0).toUpperCase()+status.slice(1)}</span>`;
+
+      // Dates
+      document.getElementById('sd-start').textContent = d.start || '—';
+      document.getElementById('sd-end').textContent   = d.end   || '—';
+      document.getElementById('sd-id').textContent    = d.id    || '—';
+
+      document.getElementById('sub-detail-modal').classList.add('show');
     });
   });
 </script>

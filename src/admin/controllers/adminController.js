@@ -4918,7 +4918,10 @@ export async function subscriptionsPage(req, res) {
       return {
         ...s,
         users: user ? { ...user, displayUserId: "#" + userNum } : { displayUserId: "#" + userNum },
-        plan_display: plan ? plan.display_name : s.plan_id
+        plan_display: plan ? plan.display_name : s.plan_id,
+        plan_price: plan ? plan.price : null,
+        plan_duration: plan ? plan.duration_days : null,
+        plan_currency: plan ? (plan.currency || 'INR') : 'INR'
       };
     });
 

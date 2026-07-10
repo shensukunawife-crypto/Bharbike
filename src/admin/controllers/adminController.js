@@ -2904,7 +2904,8 @@ export async function maintenance(req, res) {
     const supportTickets = safeData(supportRows);
 
     const mapDbTicket = (row) => ({
-      id: row.ticket_id,
+      id: row.id,
+      ticketId: row.ticket_id,
       bikeId: row.bike_id,
       bikeCode: row.bike_code,
       issueType: row.issue_type,

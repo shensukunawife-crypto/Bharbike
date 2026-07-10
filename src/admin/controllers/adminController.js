@@ -5462,6 +5462,8 @@ export async function editPayment(req, res) {
   try {
     const { paymentId } = req.params;
     const { status } = req.body;
+    // Admin can override the payment amount (e.g. ₹1950 vs ₹3450 for new users)
+    const adminAmount = req.body.amount ? Number(req.body.amount) : null;
     
     if (!status) return res.status(400).json({ success: false, message: "Status is required" });
     
@@ -5476,12 +5478,18 @@ export async function editPayment(req, res) {
       return res.status(404).json({ success: false, message: "Payment not found" });
     }
 
-    const { error } = await supabase.from("payments").update({ status }).eq("id", paymentId);
+    // Use admin-selected amount if provided, otherwise keep original
+    const finalAmount = (adminAmount && adminAmount > 0) ? adminAmount : Number(oldPayment.amount || 0);
+
+    // Update payment status (and amount if admin changed it)
+    const paymentUpdate = { status };
+    if (adminAmount && adminAmount > 0) paymentUpdate.amount = finalAmount;
+    const { error } = await supabase.from("payments").update(paymentUpdate).eq("id", paymentId);
     if (error) throw error;
     
     // Transitioning from pending to success!
     if (oldPayment.status === "pending" && status === "success") {
-      const { user_id, amount, razorpay_order_id, razorpay_payment_id, order_id } = oldPayment;
+      const { user_id, razorpay_order_id, razorpay_payment_id, order_id } = oldPayment;
       
       if (user_id) {
         const { createUserNotification } = await import("../../services/notificationService.js");
@@ -5497,7 +5505,7 @@ export async function editPayment(req, res) {
         if (isWallet) {
           // 1. Credit to wallet
           const { addMoney } = await import("../../services/walletService.js");
-          await addMoney(user_id, Number(amount), "Manual QR Recharge", razorpay_payment_id, order_id);
+          await addMoney(user_id, finalAmount, "Manual QR Recharge", razorpay_payment_id, order_id);
           
           if (order_id) {
             await supabase.from("orders").update({ status: "paid" }).eq("id", order_id);
@@ -5517,11 +5525,11 @@ export async function editPayment(req, res) {
           createUserNotification(
             user_id,
             "Repair Cost Approved ✅",
-            `Your payment of ₹${amount} for ticket #${ticketId} has been successfully verified.`,
+            `Your payment of ₹${finalAmount} for ticket #${ticketId} has been successfully verified.`,
             "success"
           ).catch(() => {});
         } else {
-          // 3. Activate subscription
+          // 3. Activate subscription with correct amount
           let targetPlan = razorpay_order_id;
           if (order_id) {
             const { data: ord } = await supabase.from("orders").select("plan_name").eq("id", order_id).maybeSingle();
@@ -5530,7 +5538,16 @@ export async function editPayment(req, res) {
             }
           }
           const { createSubscription } = await import("../../services/subscriptionService.js");
-          await createSubscription(user_id, targetPlan, paymentId, Number(amount));
+          await createSubscription(user_id, targetPlan, paymentId, finalAmount);
+
+          // Also update billing record with the correct admin-selected amount
+          if (adminAmount && adminAmount > 0) {
+            await supabase.from("subscription_billing")
+              .update({ amount: finalAmount })
+              .eq("user_id", user_id)
+              .order("created_at", { ascending: false })
+              .limit(1);
+          }
           
           if (order_id) {
             await supabase.from("orders").update({ status: "paid" }).eq("id", order_id);

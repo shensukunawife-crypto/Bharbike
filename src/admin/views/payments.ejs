@@ -161,7 +161,7 @@
     <div class="modal" id="edit-payment-modal">
       <div class="modal-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
-          <h3>Edit Payment Status</h3>
+          <h3>Edit Payment</h3>
           <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('edit-payment-modal').classList.remove('show')">&times;</button>
         </div>
         <form class="admin-form ajax-form" id="edit-payment-form" data-url="">
@@ -174,7 +174,17 @@
               <option value="refunded">Refunded</option>
             </select>
           </div>
-          <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Update Status</button>
+          <div class="form-group" id="edit-amount-group">
+            <label>Payment Amount</label>
+            <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm btn-outline amount-quick-btn" data-amount="1950" style="padding:6px 14px; font-weight:600;">₹1,950</button>
+              <button type="button" class="btn btn-sm btn-outline amount-quick-btn" data-amount="3450" style="padding:6px 14px; font-weight:600; border-color:#d4af37; color:#d4af37;">₹3,450 <small style="font-weight:400;">(Reg + Plan)</small></button>
+              <button type="button" class="btn btn-sm btn-outline amount-quick-btn" data-amount="custom" style="padding:6px 14px;">Custom</button>
+            </div>
+            <input type="number" name="amount" id="edit-payment-amount" placeholder="Enter amount (e.g. 1950)" style="display:none; width:100%; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+            <input type="hidden" name="amount" id="edit-payment-amount-hidden" value="" />
+          </div>
+          <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Update Payment</button>
         </form>
       </div>
     </div>
@@ -735,8 +745,31 @@ document.addEventListener('DOMContentLoaded', () => {
       const btn = e.target;
       document.getElementById('edit-payment-form').dataset.url = '/admin/payments/' + btn.dataset.id + '/edit';
       document.getElementById('edit-payment-status').value = btn.dataset.status;
+      // Reset amount UI
+      document.getElementById('edit-payment-amount').style.display = 'none';
+      document.getElementById('edit-payment-amount').value = '';
+      document.getElementById('edit-payment-amount-hidden').value = '';
+      document.querySelectorAll('.amount-quick-btn').forEach(b => b.style.outline = 'none');
       document.getElementById('edit-payment-modal').classList.add('show');
     }
+    // Quick amount buttons
+    if (e.target.classList.contains('amount-quick-btn')) {
+      const val = e.target.dataset.amount;
+      document.querySelectorAll('.amount-quick-btn').forEach(b => b.style.outline = 'none');
+      e.target.style.outline = '2px solid #d4af37';
+      if (val === 'custom') {
+        document.getElementById('edit-payment-amount').style.display = 'block';
+        document.getElementById('edit-payment-amount-hidden').value = '';
+      } else {
+        document.getElementById('edit-payment-amount').style.display = 'none';
+        document.getElementById('edit-payment-amount-hidden').value = val;
+      }
+    }
+  });
+
+  // Custom amount input syncs to hidden field
+  document.getElementById('edit-payment-amount').addEventListener('input', function() {
+    document.getElementById('edit-payment-amount-hidden').value = this.value;
   });
 })();
 </script>

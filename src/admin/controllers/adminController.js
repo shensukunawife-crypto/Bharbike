@@ -546,6 +546,8 @@ export async function dashboard(req, res) {
       { data: bikesData, error: bikesDataError },
       { data: ordersData, error: ordersError },
       { data: walletCredits, error: walletError },
+      { data: paymentsData, error: paymentsError },
+      { data: allProfiles, error: profilesError },
       pendingKycResult
     ] = await Promise.all([
       getIdMappings(),
@@ -558,61 +560,82 @@ export async function dashboard(req, res) {
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("id, amount, status, created_at, pickup_location"),
       supabase.from("wallet_transactions").select("id, user_id, amount, type, title, description, status, created_at").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
+      supabase.from("payments").select("id, user_id, amount, status, payment_method, order_id, created_at"),
+      supabase.from("profiles").select("id, full_name"),
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").then(res => res, () => ({ count: 0 }))
     ]);
 
     const pendingKycCount = pendingKycResult ? (pendingKycResult.count || 0) : 0;
 
-    if (usersError || bikesError || rentalsError || bikesDataError || ordersError) {
+    if (usersError || bikesError || rentalsError || bikesDataError || ordersError || paymentsError || profilesError) {
       console.error(
         "[admin.dashboard] fetch failed",
-        usersError || bikesError || rentalsError || bikesDataError || ordersError
+        usersError || bikesError || rentalsError || bikesDataError || ordersError || paymentsError || profilesError
       );
     }
     const bikes = safeData(bikesData).map(normalizeBike);
     const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
-    // ── Real revenue from wallet credits (QR/cash payments verified by admin) ──
-    // Smart exclusions:
-    //   1. Promo credits (not real cash)
-    //   2. Titles containing 'test'
-    //   3. Users who don't exist in users table (orphaned/deleted)
-    //   4. Users whose name contains 'test' (e.g. 'Adil Ansari Test')
-
-    // Build set of real (non-test) user IDs from users table
-    const { data: allUsersForRevenue } = await supabase.from("users").select("id, full_name");
+    // Build set of real (non-test) user IDs from profiles table
     const realUserIds = new Set(
-      (allUsersForRevenue || []).filter(u => {
+      (allProfiles || []).filter(u => {
         const name = (u.full_name || "").toLowerCase();
         return !name.includes("test");
       }).map(u => u.id)
     );
 
-    const isRealPayment = (t) => {
-      const title = (t.title || "").toLowerCase();
-      return !title.includes("promo")
-        && !title.includes("test")
-        && realUserIds.has(t.user_id);  // must be a real non-test user
-    };
-
-    // First credit per user = registration/onboarding fee
-    const firstCreditByUser = {};
-    const realCredits = safeData(walletCredits).filter(isRealPayment);
-    realCredits.forEach(t => {
-      if (!firstCreditByUser[t.user_id]) firstCreditByUser[t.user_id] = t;
+    // 1. Direct Payments (success or paid)
+    const validPayments = safeData(paymentsData).filter(p => {
+      const status = String(p.status || "").toLowerCase();
+      const isPaid = status === "success" || status === "paid";
+      return isPaid && p.user_id && realUserIds.has(p.user_id);
     });
-    const registrationFeeTotal = Object.values(firstCreditByUser)
-      .reduce((s, t) => s + Number(t.amount || 0), 0);
-    const rechargeTotal = realCredits
-      .filter(t => t !== firstCreditByUser[t.user_id])
-      .reduce((s, t) => s + Number(t.amount || 0), 0);
 
-    const earnings = realCredits.map(t => ({
-      amount: Number(t.amount || 0),
-      createdAt: new Date(t.created_at || now),
-      isRegistration: t === firstCreditByUser[t.user_id],
-      title: t.title
-    }));
+    const successfulPaymentIds = new Set(validPayments.map(p => p.id));
+    const successfulPaymentOrderIds = new Set(validPayments.map(p => p.order_id).filter(Boolean));
+
+    // 2. Wallet Credits (completed credits, excluding double-counted ones)
+    const validWalletCredits = safeData(walletCredits).filter(t => {
+      const title = (t.title || "").toLowerCase();
+      const isPromo = title.includes("promo");
+      const isTest = title.includes("test");
+      const isDouble = (t.payment_id && successfulPaymentIds.has(t.payment_id)) || 
+                       (t.order_id && (successfulPaymentOrderIds.has(t.order_id) || successfulPaymentIds.has(t.order_id)));
+      
+      return !isPromo && !isTest && !isDouble && t.user_id && realUserIds.has(t.user_id);
+    });
+
+    // Merge into combined earnings array
+    const earnings = [
+      ...validPayments.map(p => ({
+        amount: Number(p.amount || 0),
+        createdAt: new Date(p.created_at || now),
+        title: `Direct Payment (${p.payment_method || 'Online/UPI'})`,
+        userId: p.user_id
+      })),
+      ...validWalletCredits.map(t => ({
+        amount: Number(t.amount || 0),
+        createdAt: new Date(t.created_at || now),
+        title: t.title || "Admin Credit",
+        userId: t.user_id
+      }))
+    ];
+
+    // Sort by date ascending to determine first credit (registration fee) per unique user
+    earnings.sort((a, b) => a.createdAt - b.createdAt);
+
+    const firstCreditByUser = {};
+    earnings.forEach(item => {
+      if (!firstCreditByUser[item.userId]) {
+        firstCreditByUser[item.userId] = item;
+      }
+    });
+
+    const registrationFeeTotal = Object.values(firstCreditByUser)
+      .reduce((s, item) => s + item.amount, 0);
+    const rechargeTotal = earnings
+      .filter(item => item !== firstCreditByUser[item.userId])
+      .reduce((s, item) => s + item.amount, 0);
 
     const totalEarnings = earnings.reduce((sum, item) => sum + item.amount, 0);
     const earningsBreakdown = earnings.reduce(
@@ -2095,35 +2118,74 @@ export async function earnings(req, res) {
     const now = Date.now();
     const days = filter === "today" ? 1 : filter === "monthly" ? 30 : 7;
 
-    // ── Fetch wallet credits (real cash received via QR/cash payments) ──
-    const [{ data: walletData, error: walletErr }, { data: dbProfiles }] = await Promise.all([
+    // ── Fetch payments, wallet credits, and profiles ──
+    const [
+      { data: walletData, error: walletErr },
+      { data: paymentsData, error: paymentsErr },
+      { data: dbProfiles, error: profilesErr }
+    ] = await Promise.all([
       supabase.from("wallet_transactions").select("*").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
-      supabase.from("users").select("id, full_name, name, phone")
+      supabase.from("payments").select("id, user_id, amount, status, payment_method, order_id, created_at"),
+      supabase.from("profiles").select("id, full_name, phone")
     ]);
-    if (walletErr) console.error("[admin.earnings] wallet fetch failed", walletErr);
+    if (walletErr || paymentsErr || profilesErr) {
+      console.error("[admin.earnings] fetch failed", walletErr || paymentsErr || profilesErr);
+    }
 
     const profileMap = {};
     (dbProfiles || []).forEach((p) => {
-      profileMap[p.id] = p.full_name || p.name || "BHAR BIKE Rider";
+      profileMap[p.id] = p.full_name || "BHAR BIKE Rider";
     });
 
     // Exclude promo and test credits — only real payments from real non-test users
-    // Build set of real (non-test) user IDs
     const realUserIds = new Set(
       (dbProfiles || []).filter(u => {
-        const name = (u.full_name || u.name || "").toLowerCase();
+        const name = (u.full_name || "").toLowerCase();
         return !name.includes("test");
       }).map(u => u.id)
     );
 
-    const isRealPayment = (t) => {
-      const title = (t.title || "").toLowerCase();
-      return !title.includes("promo")
-        && !title.includes("test")
-        && realUserIds.has(t.user_id);  // only real non-test users
-    };
+    // 1. Direct Payments (success or paid)
+    const validPayments = safeData(paymentsData).filter(p => {
+      const status = String(p.status || "").toLowerCase();
+      const isPaid = status === "success" || status === "paid";
+      return isPaid && p.user_id && realUserIds.has(p.user_id);
+    });
 
-    const allRealCredits = (walletData || []).filter(isRealPayment);
+    const successfulPaymentIds = new Set(validPayments.map(p => p.id));
+    const successfulPaymentOrderIds = new Set(validPayments.map(p => p.order_id).filter(Boolean));
+
+    // 2. Wallet Credits (completed credits, excluding double-counted ones)
+    const validWalletCredits = safeData(walletData).filter(t => {
+      const title = (t.title || "").toLowerCase();
+      const isPromo = title.includes("promo");
+      const isTest = title.includes("test");
+      const isDouble = (t.payment_id && successfulPaymentIds.has(t.payment_id)) || 
+                       (t.order_id && (successfulPaymentOrderIds.has(t.order_id) || successfulPaymentIds.has(t.order_id)));
+      
+      return !isPromo && !isTest && !isDouble && t.user_id && realUserIds.has(t.user_id);
+    });
+
+    // Merge into combined earnings array
+    const allRealCredits = [
+      ...validPayments.map(p => ({
+        id: p.id,
+        amount: Number(p.amount || 0),
+        created_at: p.created_at,
+        title: `Direct Payment (${p.payment_method || 'Online/UPI'})`,
+        user_id: p.user_id
+      })),
+      ...validWalletCredits.map(t => ({
+        id: t.id,
+        amount: Number(t.amount || 0),
+        created_at: t.created_at,
+        title: t.title || "Admin Credit",
+        user_id: t.user_id
+      }))
+    ];
+
+    // Sort by date ascending to determine first credit (registration fee) per unique user
+    allRealCredits.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     // First credit per user = registration fee
     const firstCreditByUser = {};
@@ -2564,36 +2626,64 @@ export async function analytics(req, res) {
       { data: bikeRows, error: bikesError },
       { data: rentalRows, error: rentalError },
       { data: walletCredits, error: walletError },
-      { data: dbProfiles }
+      { data: paymentsData, error: paymentsError },
+      { data: dbProfiles, error: profilesErr }
     ] = await Promise.all([
       getIdMappings(),
       supabase.from("orders").select("*").gte("created_at", filterDate),
       supabase.from("bikes").select("*"),
       supabase.from("rentals").select("*").gte("created_at", filterDate),
-      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at").eq("type", "credit").eq("status", "completed").gte("created_at", filterDate).order("created_at", { ascending: true }),
-      supabase.from("users").select("id, full_name, name")
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at, payment_id, order_id").eq("type", "credit").eq("status", "completed").gte("created_at", filterDate).order("created_at", { ascending: true }),
+      supabase.from("payments").select("id, user_id, amount, status, payment_method, order_id, created_at").gte("created_at", filterDate),
+      supabase.from("profiles").select("id, full_name")
     ]);
-    if (orderError) {
-      console.error("[admin.analytics] fetch failed", orderError);
-    }
-    if (bikesError || rentalError || walletError) {
-      console.error("[admin.analytics] fetch failed", bikesError || rentalError || walletError);
+    if (orderError || bikesError || rentalError || walletError || paymentsError || profilesErr) {
+      console.error("[admin.analytics] fetch failed", orderError || bikesError || rentalError || walletError || paymentsError || profilesErr);
     }
 
     // Build set of real user IDs (exclude test accounts)
     const realUserIds = new Set(
       (dbProfiles || []).filter(u => {
-        const name = (u.full_name || u.name || "").toLowerCase();
+        const name = (u.full_name || "").toLowerCase();
         return !name.includes("test");
       }).map(u => u.id)
     );
 
-    const isRealPayment = (t) => {
-      const title = (t.title || "").toLowerCase();
-      return !title.includes("promo") && !title.includes("test") && realUserIds.has(t.user_id);
-    };
+    // 1. Direct Payments (success or paid)
+    const validPayments = safeData(paymentsData).filter(p => {
+      const status = String(p.status || "").toLowerCase();
+      const isPaid = status === "success" || status === "paid";
+      return isPaid && p.user_id && realUserIds.has(p.user_id);
+    });
 
-    const realCreditsInPeriod = safeData(walletCredits).filter(isRealPayment);
+    const successfulPaymentIds = new Set(validPayments.map(p => p.id));
+    const successfulPaymentOrderIds = new Set(validPayments.map(p => p.order_id).filter(Boolean));
+
+    // 2. Wallet Credits (completed credits, excluding double-counted ones)
+    const validWalletCredits = safeData(walletCredits).filter(t => {
+      const title = (t.title || "").toLowerCase();
+      const isPromo = title.includes("promo");
+      const isTest = title.includes("test");
+      const isDouble = (t.payment_id && successfulPaymentIds.has(t.payment_id)) || 
+                       (t.order_id && (successfulPaymentOrderIds.has(t.order_id) || successfulPaymentIds.has(t.order_id)));
+      
+      return !isPromo && !isTest && !isDouble && t.user_id && realUserIds.has(t.user_id);
+    });
+
+    // Merge into combined earnings array
+    const realCreditsInPeriod = [
+      ...validPayments.map(p => ({
+        amount: Number(p.amount || 0),
+        created_at: p.created_at,
+        user_id: p.user_id
+      })),
+      ...validWalletCredits.map(t => ({
+        amount: Number(t.amount || 0),
+        created_at: t.created_at,
+        user_id: t.user_id
+      }))
+    ];
+
     const totalRevenue = realCreditsInPeriod.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     const filteredOrders = safeData(orderRows).filter((item) => {

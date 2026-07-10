@@ -686,8 +686,10 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
     <% alerts.forEach(function(a){ %>
       <% 
         var targetUrl = "";
-        if (a.title === "Pending Orders" || a.title === "Expiry Orders") {
+        if (a.title === "Pending Orders") {
           targetUrl = "/admin/orders";
+        } else if (a.title === "Expiry Orders") {
+          targetUrl = "/admin/operations";
         } else if (a.title === "Low Battery") {
           targetUrl = "/admin/bikes";
         }

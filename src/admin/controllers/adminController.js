@@ -2711,35 +2711,67 @@ export async function analytics(req, res) {
 
 export async function maintenance(req, res) {
   try {
-    const [{ data, error }, { data: supportRows, error: supportError }] = await Promise.all([
+    const [
+      { data, error },
+      { data: supportRows, error: supportError },
+      { data: dbTickets, error: dbTicketsError }
+    ] = await Promise.all([
       supabase.from("bikes").select("*"),
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }).limit(20),
+      supabase.from("maintenance").select("*").order("created_at", { ascending: false })
     ]);
-    if (error || supportError) {
-      console.error("[admin.maintenance] fetch failed", error || supportError);
+    if (error || supportError || dbTicketsError) {
+      console.error("[admin.maintenance] fetch failed", error || supportError || dbTicketsError);
     }
     const bikes = safeData(data).map(normalizeBike);
     const supportTickets = safeData(supportRows);
 
-    // Sync: ensure any bike with status=maintenance in DB has a ticket in memory
-    // This covers bikes sent to maintenance before the fix, or after a server restart
+    const mapDbTicket = (row) => ({
+      id: row.ticket_id,
+      bikeId: row.bike_id,
+      bikeCode: row.bike_code,
+      issueType: row.issue_type,
+      description: row.description,
+      workDetails: row.work_details || "-",
+      status: row.status,
+      technicianName: row.technician_name,
+      repairCost: Number(row.repair_cost || 0),
+      reportedDate: row.reported_date,
+      expectedFixDate: row.expected_fix_date,
+      fixedDate: row.fixed_date,
+    });
+
+    // Clear and reload global maintenanceTickets array from database
+    maintenanceTickets.length = 0;
+    if (dbTickets) {
+      dbTickets.forEach(row => {
+        maintenanceTickets.push(mapDbTicket(row));
+      });
+    }
+
+    // Sync: ensure any bike with status=maintenance in DB has a ticket in database
     const maintenanceBikesInDb = bikes.filter(b => b.status === "maintenance");
     for (const bike of maintenanceBikesInDb) {
-      const hasTicket = maintenanceTickets.some(t => t.bikeId === bike.id);
+      const hasTicket = maintenanceTickets.some(t => t.bikeId === bike.id && t.status !== "completed");
       if (!hasTicket) {
-        maintenanceTickets.unshift({
-          id: `MT-${1000 + maintenanceTickets.length + 1}`,
-          bikeId: bike.id,
-          bikeCode: bike.bike_code || bike.id,
-          issueType: "General Maintenance",
+        const ticketId = `MT-${1000 + maintenanceTickets.length + 1}`;
+        const newTicket = {
+          ticket_id: ticketId,
+          bike_id: bike.id,
+          bike_code: bike.bike_code || bike.id,
+          issue_type: "General Maintenance",
           description: "Sent to maintenance from Admin Panel",
           status: "under_repair",
-          technicianName: "Unassigned",
-          repairCost: 0,
-          reportedDate: new Date().toISOString().slice(0, 10),
-          expectedFixDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-          fixedDate: null,
-        });
+          technician_name: "Unassigned",
+          repair_cost: 0,
+          work_details: "-",
+          reported_date: new Date().toISOString().slice(0, 16).replace("T", " "),
+          expected_fix_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          fixed_date: null
+        };
+        
+        await supabase.from("maintenance").insert(newTicket);
+        maintenanceTickets.unshift(mapDbTicket(newTicket));
       }
     }
 
@@ -3946,8 +3978,9 @@ export async function markBikeFixed(req, res) {
 export async function addMaintenanceTicket(req, res) {
   try {
     const bike = req.body.bikeId ? JSON.parse(req.body.bikeId) : null;
+    const ticketId = `MT-${1000 + maintenanceTickets.length + 1}`;
     const ticket = {
-      id: `MT-${1000 + maintenanceTickets.length + 1}`,
+      id: ticketId,
       bikeId: bike?.id || `bike-${maintenanceTickets.length + 1}`,
       bikeCode: bike?.bike_code || "BIKE-NEW",
       issueType: req.body.issueType || "General Check",
@@ -3966,6 +3999,7 @@ export async function addMaintenanceTicket(req, res) {
     }
     // Persist ticket to maintenance DB table for durability across server restarts
     await supabase.from("maintenance").insert({
+      ticket_id: ticket.id,
       bike_id: ticket.bikeId,
       bike_code: ticket.bikeCode,
       issue_type: ticket.issueType,
@@ -3975,6 +4009,7 @@ export async function addMaintenanceTicket(req, res) {
       repair_cost: ticket.repairCost,
       reported_date: ticket.reportedDate,
       expected_fix_date: ticket.expectedFixDate,
+      work_details: ticket.workDetails,
     }).then(({ error: mErr }) => { if (mErr) console.warn("[admin.addMaintenanceTicket] maintenance table insert:", mErr.message); });
     return res.json({ success: true, message: "Bike added to maintenance" });
   } catch (error) {
@@ -4016,7 +4051,7 @@ export async function updateMaintenanceStatus(req, res) {
       reported_date: ticket.reportedDate,
       work_details: ticket.workDetails,
       ...(ticket.status === "completed" ? { fixed_date: ticket.fixedDate } : { fixed_date: null }),
-    }).eq("bike_id", ticket.bikeId)
+    }).eq("ticket_id", ticket.id)
       .then(({ error: mErr }) => { if (mErr) console.warn("[admin.updateMaintenanceStatus] maintenance table update:", mErr.message); });
     return res.json({ success: true, message: "Maintenance ticket updated successfully" });
   } catch (error) {
@@ -4036,7 +4071,7 @@ export async function removeMaintenanceTicket(req, res) {
       await supabase.from("bikes").update({ status: "available" }).eq("id", ticket.bikeId);
     }
     // Also delete from maintenance DB table
-    await supabase.from("maintenance").delete().eq("bike_id", ticket.bikeId)
+    await supabase.from("maintenance").delete().eq("ticket_id", ticket.id)
       .then(({ error: mErr }) => { if (mErr) console.warn("[admin.removeMaintenanceTicket] maintenance table delete:", mErr.message); });
     return res.json({ success: true, message: "Maintenance ticket removed" });
   } catch (error) {

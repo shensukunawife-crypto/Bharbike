@@ -2771,6 +2771,7 @@ export async function maintenance(req, res) {
       if (!hasTicket) {
         const ticketId = `MT-${1000 + maintenanceTickets.length + 1}`;
         const newTicket = {
+          id: randomUUID(),
           ticket_id: ticketId,
           bike_id: bike.id,
           bike_code: bike.bike_code || bike.id,
@@ -4014,6 +4015,7 @@ export async function addMaintenanceTicket(req, res) {
     }
     // Persist ticket to maintenance DB table for durability across server restarts
     await supabase.from("maintenance").insert({
+      id: randomUUID(),
       ticket_id: ticket.id,
       bike_id: ticket.bikeId,
       bike_code: ticket.bikeCode,

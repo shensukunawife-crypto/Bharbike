@@ -2552,43 +2552,59 @@ export async function analytics(req, res) {
       { data: orderRows, error: orderError },
       { data: bikeRows, error: bikesError },
       { data: rentalRows, error: rentalError },
+      { data: walletCredits, error: walletError },
+      { data: dbProfiles }
     ] = await Promise.all([
       getIdMappings(),
       supabase.from("orders").select("*").gte("created_at", filterDate),
       supabase.from("bikes").select("*"),
       supabase.from("rentals").select("*").gte("created_at", filterDate),
+      supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at").eq("type", "credit").eq("status", "completed").gte("created_at", filterDate).order("created_at", { ascending: true }),
+      supabase.from("users").select("id, full_name, name")
     ]);
     if (orderError) {
       console.error("[admin.analytics] fetch failed", orderError);
     }
-    if (bikesError || rentalError) {
-      console.error("[admin.analytics] bike/rental fetch failed", bikesError || rentalError);
+    if (bikesError || rentalError || walletError) {
+      console.error("[admin.analytics] fetch failed", bikesError || rentalError || walletError);
     }
 
-    const filteredEarnings = safeData(orderRows).filter((item) => {
-      const created = new Date(item.createdAt || item.created_at || now).getTime();
-      const validStatus = ["success", "paid", "completed"].includes((item.status || "").toLowerCase());
-      return validStatus && (now - created <= days * 24 * 60 * 60 * 1000);
-    });
+    // Build set of real user IDs (exclude test accounts)
+    const realUserIds = new Set(
+      (dbProfiles || []).filter(u => {
+        const name = (u.full_name || u.name || "").toLowerCase();
+        return !name.includes("test");
+      }).map(u => u.id)
+    );
+
+    const isRealPayment = (t) => {
+      const title = (t.title || "").toLowerCase();
+      return !title.includes("promo") && !title.includes("test") && realUserIds.has(t.user_id);
+    };
+
+    const realCreditsInPeriod = safeData(walletCredits).filter(isRealPayment);
+    const totalRevenue = realCreditsInPeriod.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
     const filteredOrders = safeData(orderRows).filter((item) => {
       const created = new Date(item.createdAt || item.created_at || now).getTime();
       return now - created <= days * 24 * 60 * 60 * 1000;
     });
 
-    const totalRevenue = filteredEarnings.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const totalOrders = filteredOrders.length;
     const activeBikes = safeData(bikeRows).filter((bike) => {
       const status = bike.status || bike.bike_status || "";
       return status === "available" || status === "in_use" || status === "rented";
     }).length;
-    const deliveryEarnings = filteredEarnings
-      .filter((item) => item.type === "delivery")
+
+    // Delivery earnings remain based on orders if any exist
+    const deliveryEarnings = filteredOrders
+      .filter((item) => item.type === "delivery" && ["success", "paid", "completed"].includes((item.status || "").toLowerCase()))
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-    // Group earnings by date for chronological Revenue Over Time chart
+    // Group earnings by date for chronological Revenue Over Time chart (from wallet transactions)
     const dailyEarnMap = {};
-    filteredEarnings.forEach((item) => {
-      const dateStr = new Date(item.created_at || item.createdAt || now).toLocaleDateString("en-US", {
+    realCreditsInPeriod.forEach((item) => {
+      const dateStr = new Date(item.created_at || now).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       });
@@ -2623,11 +2639,8 @@ export async function analytics(req, res) {
       value,
     }));
 
-    const bikeEarnings = filteredEarnings
-      .filter((item) => item.type === "rental")
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const pieSeries = [
-      { label: "Bike Rental", value: bikeEarnings },
+      { label: "Bike Rental / Registration", value: totalRevenue - deliveryEarnings },
       { label: "Delivery", value: deliveryEarnings },
     ];
 

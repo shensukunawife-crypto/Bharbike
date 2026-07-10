@@ -560,7 +560,7 @@ export async function dashboard(req, res) {
       supabase.from("bikes").select("*"),
       supabase.from("orders").select("id, amount, status, created_at, pickup_location"),
       supabase.from("wallet_transactions").select("id, user_id, amount, type, title, description, status, created_at").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
-      supabase.from("payments").select("id, user_id, amount, status, payment_method, order_id, created_at"),
+      supabase.from("payments").select("id, user_id, amount, status, order_id, created_at"),
       supabase.from("profiles").select("id, full_name"),
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending").then(res => res, () => ({ count: 0 }))
     ]);
@@ -610,7 +610,7 @@ export async function dashboard(req, res) {
       ...validPayments.map(p => ({
         amount: Number(p.amount || 0),
         createdAt: new Date(p.created_at || now),
-        title: `Direct Payment (${p.payment_method || 'Online/UPI'})`,
+        title: "Direct Payment (Online/UPI)",
         userId: p.user_id
       })),
       ...validWalletCredits.map(t => ({
@@ -2125,7 +2125,7 @@ export async function earnings(req, res) {
       { data: dbProfiles, error: profilesErr }
     ] = await Promise.all([
       supabase.from("wallet_transactions").select("*").eq("type", "credit").eq("status", "completed").order("created_at", { ascending: true }),
-      supabase.from("payments").select("id, user_id, amount, status, payment_method, order_id, created_at"),
+      supabase.from("payments").select("id, user_id, amount, status, order_id, created_at"),
       supabase.from("profiles").select("id, full_name, phone")
     ]);
     if (walletErr || paymentsErr || profilesErr) {
@@ -2172,7 +2172,7 @@ export async function earnings(req, res) {
         id: p.id,
         amount: Number(p.amount || 0),
         created_at: p.created_at,
-        title: `Direct Payment (${p.payment_method || 'Online/UPI'})`,
+        title: "Direct Payment (Online/UPI)",
         user_id: p.user_id
       })),
       ...validWalletCredits.map(t => ({
@@ -2634,7 +2634,7 @@ export async function analytics(req, res) {
       supabase.from("bikes").select("*"),
       supabase.from("rentals").select("*").gte("created_at", filterDate),
       supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at, payment_id, order_id").eq("type", "credit").eq("status", "completed").gte("created_at", filterDate).order("created_at", { ascending: true }),
-      supabase.from("payments").select("id, user_id, amount, status, payment_method, order_id, created_at").gte("created_at", filterDate),
+      supabase.from("payments").select("id, user_id, amount, status, order_id, created_at").gte("created_at", filterDate),
       supabase.from("profiles").select("id, full_name")
     ]);
     if (orderError || bikesError || rentalError || walletError || paymentsError || profilesErr) {

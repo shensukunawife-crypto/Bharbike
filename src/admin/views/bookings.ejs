@@ -1,3 +1,23 @@
+<%
+  function formatToIST12Hr(dateStr) {
+    if (!dateStr || dateStr === '-') return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(d.getTime() + istOffset);
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    let hours = istDate.getUTCHours();
+    const minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+    return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+  }
+%>
 <div class="toolbar">
   <h2 style="margin:0;font-size:1.1rem">📋 All Bookings / Active Rentals</h2>
 </div>
@@ -42,7 +62,7 @@
           <% } %>
         </td>
         <td><span class="badge <%= badgeClass %>"><%= booking.status || '-' %></span></td>
-        <td style="font-size:12px"><%= booking.start_time ? String(booking.start_time).replace('T', ' ').slice(0, 16) : '-' %></td>
+        <td style="font-size:12px"><%= formatToIST12Hr(booking.start_time) %></td>
         <td class="actions">
           <% if (status === 'active' || status === 'pending') { %>
             <button class="btn btn-success admin-action"

@@ -1,3 +1,23 @@
+<%
+  function formatToIST12Hr(dateStr) {
+    if (!dateStr || dateStr === 'N/A' || dateStr === '-') return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(d.getTime() + istOffset);
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    let hours = istDate.getUTCHours();
+    const minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+    return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+  }
+%>
 <div class="stats-grid">
   <div class="stat-card" style="display: flex; align-items: center; gap: 16px;">
     <% if (user.selfie_url) { %>
@@ -91,7 +111,7 @@
     <div class="summary-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Last Login</span>
-        <strong style="text-align: right;"><%= String(user.lastLogin).slice(0, 16).replace("T", " ") %></strong>
+        <strong style="text-align: right;"><%= formatToIST12Hr(user.lastLogin) %></strong>
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;">
         <span style="color: #6b7280; font-weight: 500;">Last Order ID</span>

@@ -1,5 +1,23 @@
 <%
   const PAGE_SIZE = 10;
+  function formatToIST12Hr(dateStr) {
+    if (!dateStr || dateStr === '-') return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(d.getTime() + istOffset);
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+    let hours = istDate.getUTCHours();
+    const minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+    return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+  }
 %>
 
 <style>
@@ -321,7 +339,7 @@
           <td style="padding:13px 16px;"><span class="st-dot <%= stClass %>"><%= order.status %></span></td>
           <td style="padding:13px 16px;"><span class="st-dot <%= payClass %>"><%= order.paymentStatus || 'pending' %></span></td>
           <td style="padding:13px 16px;font-size:12px;color:var(--text-muted);white-space:nowrap;">
-            <%= order.createdAt ? String(order.createdAt).replace('T', ' ').slice(0, 16) : '—' %>
+            <%= formatToIST12Hr(order.createdAt) %>
           </td>
           <td style="padding:13px 16px;">
             <div class="row-actions">
@@ -454,6 +472,24 @@
     if (s == null) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  function formatToIST12Hr(dateStr) {
+    if (!dateStr || dateStr === '-') return '—';
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    var istOffset = 5.5 * 60 * 60 * 1000;
+    var istDate = new Date(d.getTime() + istOffset);
+    var year = istDate.getUTCFullYear();
+    var month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    var day = String(istDate.getUTCDate()).padStart(2, '0');
+    var hours = istDate.getUTCHours();
+    var minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+    var seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+    var ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    var hoursStr = String(hours).padStart(2, '0');
+    return year + '-' + month + '-' + day + ' ' + hoursStr + ':' + minutes + ':' + seconds + ' ' + ampm;
+  }
   function stClass(st) {
     var s = String(st||'').toLowerCase();
     if (s==='completed') return 'st-completed';
@@ -503,7 +539,7 @@
         const st = String(order.status||'').toLowerCase();
         const sc = stClass(st);
         const pc = payClass(order.paymentStatus);
-        const created = order.createdAt ? String(order.createdAt).replace('T',' ').slice(0,16) : '—';
+        const created = formatToIST12Hr(order.createdAt);
         return '<tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background=\'var(--border-light)\'" onmouseout="this.style.background=\'\'" data-order-id="' + escapeHtml(order.id) + '">' +
           '<td style="padding:13px 16px;"><p class="order-id-main">' + escapeHtml(order.displayOrderId) + '</p><p class="order-id-sub" style="font-size: 10px; opacity: 0.6;">' + escapeHtml(order.plan_name || 'Bike Rental') + '</p></td>' +
           '<td style="padding:13px 16px;font-size:13px;color:var(--text);">' + escapeHtml(order.userName||'—') + '</td>' +

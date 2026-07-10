@@ -573,10 +573,26 @@ export async function dashboard(req, res) {
     const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
     // ── Real revenue from wallet credits (QR/cash payments verified by admin) ──
-    // Excludes: promo credits, admin test credits — includes: cash, QR recharges, subscriptions paid
+    // Smart exclusions:
+    //   1. Promo credits (not real cash)
+    //   2. Titles containing 'test'
+    //   3. Users who don't exist in users table (orphaned/deleted)
+    //   4. Users whose name contains 'test' (e.g. 'Adil Ansari Test')
+
+    // Build set of real (non-test) user IDs from users table
+    const { data: allUsersForRevenue } = await supabase.from("users").select("id, full_name");
+    const realUserIds = new Set(
+      (allUsersForRevenue || []).filter(u => {
+        const name = (u.full_name || "").toLowerCase();
+        return !name.includes("test");
+      }).map(u => u.id)
+    );
+
     const isRealPayment = (t) => {
       const title = (t.title || "").toLowerCase();
-      return !title.includes("promo") && !title.includes("test") && !title.includes("admin manual credit test");
+      return !title.includes("promo")
+        && !title.includes("test")
+        && realUserIds.has(t.user_id);  // must be a real non-test user
     };
 
     // First credit per user = registration/onboarding fee
@@ -2076,10 +2092,20 @@ export async function earnings(req, res) {
       profileMap[p.id] = p.full_name || p.name || "BHAR BIKE Rider";
     });
 
-    // Exclude promo and test credits — only real payments
+    // Exclude promo and test credits — only real payments from real non-test users
+    // Build set of real (non-test) user IDs
+    const realUserIds = new Set(
+      (dbProfiles || []).filter(u => {
+        const name = (u.full_name || u.name || "").toLowerCase();
+        return !name.includes("test");
+      }).map(u => u.id)
+    );
+
     const isRealPayment = (t) => {
       const title = (t.title || "").toLowerCase();
-      return !title.includes("promo") && !title.includes("test");
+      return !title.includes("promo")
+        && !title.includes("test")
+        && realUserIds.has(t.user_id);  // only real non-test users
     };
 
     const allRealCredits = (walletData || []).filter(isRealPayment);

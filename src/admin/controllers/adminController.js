@@ -4064,16 +4064,28 @@ export async function markBikeFixed(req, res) {
     const fixedDate = new Date().toISOString().slice(0, 16).replace("T", " ");
     const { error } = await supabase.from("bikes").update({ status: "available" }).eq("id", bikeId);
     if (error) throw error;
-    // Update in-memory ticket
-    const ticket = maintenanceTickets.find((item) => item.bikeId === bikeId);
+
+    // Update in-memory active ticket
+    const ticket = maintenanceTickets.find((item) => item.bikeId === bikeId && item.status !== "completed");
     if (ticket) {
       ticket.status = "completed";
       ticket.fixedDate = fixedDate;
       ticket.workDetails = ticket.workDetails || "General repairs completed.";
+
+      // Persist to maintenance DB table using unique ticket ID
+      await supabase.from("maintenance")
+        .update({ status: "completed", fixed_date: fixedDate, work_details: ticket.workDetails })
+        .eq("ticket_id", ticket.id)
+        .then(({ error: mErr }) => { if (mErr) console.warn("[admin.markBikeFixed] maintenance table update:", mErr.message); });
+    } else {
+      // Fallback: update any active ticket for this bike in database
+      await supabase.from("maintenance")
+        .update({ status: "completed", fixed_date: fixedDate })
+        .eq("bike_id", bikeId)
+        .neq("status", "completed")
+        .then(({ error: mErr }) => { if (mErr) console.warn("[admin.markBikeFixed] fallback update:", mErr.message); });
     }
-    // Also persist to maintenance DB table if it exists
-    await supabase.from("maintenance").update({ status: "completed", fixed_date: fixedDate }).eq("bike_id", bikeId)
-      .then(({ error: mErr }) => { if (mErr) console.warn("[admin.markBikeFixed] maintenance table update:", mErr.message); });
+
     return res.json({ success: true, message: "Bike marked as fixed" });
   } catch (error) {
     console.error("[admin.markBikeFixed] failed", error);

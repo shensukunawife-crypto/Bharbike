@@ -56,21 +56,21 @@
           </span>
         </td>
         <td>
-          <span id="lock-badge-<%= bike.id %>" class="badge <%= bike.is_locked === true ? 'danger' : 'success' %>" style="font-size: 11px; font-weight: 600; padding: 4px 8px;">
-            <%= bike.is_locked === true ? "Locked 🔒" : "Unlocked 🔓" %>
+          <span id="lock-badge-<%= bike.id %>" class="badge <%= bike.is_locked === true ? 'danger' : 'success' %>" style="font-size: 11px; font-weight: 600; padding: 4px 8px; white-space: nowrap; display: inline-block;">
+            <%= bike.is_locked === true ? "🔒 Locked" : "🔓 Unlocked" %>
           </span>
         </td>
         <td>
           <% if (bike.riderName && bike.riderName !== '-') { %>
-            <strong style="color: var(--accent);"><%= bike.riderName %></strong>
+            <strong style="color: var(--accent); white-space: nowrap;"><%= bike.riderName %></strong>
             <% if (bike.riderPhone) { %>
-              <div style="font-size: 11px; color: var(--text-muted);"><%= bike.riderPhone %></div>
+              <div style="font-size: 11px; color: var(--text-muted); white-space: nowrap;"><%= bike.riderPhone %></div>
             <% } %>
           <% } else { %>
             <span class="text-muted-foreground">-</span>
           <% } %>
         </td>
-        <td><%= bike.usage %></td>
+        <td style="white-space: nowrap;"><%= bike.usage %></td>
         <td class="battery-cell">
           <div class="battery-wrap">
             <div class="battery-bar">
@@ -79,25 +79,24 @@
             <small><%= bike.battery %>%</small>
           </div>
         </td>
-        <td class="location-cell"><%= bike.location %></td>
+        <td class="location-cell" style="font-size: 13px; max-width: 150px;"><%= bike.location %></td>
         <td class="actions">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; min-width: 260px;">
-            <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="display: flex; justify-content: center; padding: 6px 10px; font-size: 12px;">View Details</a>
-            <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')" style="padding: 6px 10px; font-size: 12px;">Assign Bike</button>
-            <!-- Lock / Unlock toggle buttons -->
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; min-width: 220px; max-width: 280px;">
+            <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;">👁️ View</a>
+            <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;">👤 Assign</button>
             <button
               id="lock-btn-<%= bike.id %>"
               class="bike-lock-toggle btn btn-ghost"
               data-bike-id="<%= bike.id %>"
               data-locked="<%= bike.is_locked === true ? 'true' : 'false' %>"
-              style="padding: 6px 10px; font-size: 12px; border-color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; font-weight: 700;"
+              style="padding: 4px 8px; font-size: 11px; border-color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; font-weight: 600; white-space: nowrap;"
             >
               <%= bike.is_locked === true ? '🔒 Lock' : '🔓 Unlock' %>
             </button>
-            <button class="btn btn-ghost check-status-btn" data-id="<%= bike.id %>" style="padding: 6px 10px; font-size: 12px; border: 1px solid var(--accent); color: var(--accent); font-weight: 700; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">🔍 Status Check</button>
-            <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST" style="grid-column: span 2; padding: 6px 10px; font-size: 12px;">Send to Maintenance</button>
-            <button class="btn btn-<%= bike.status === 'offline' ? 'success' : 'danger' %> admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST" style="padding: 6px 10px; font-size: 12px;"><%= bike.status === 'offline' ? '✅ Enable Bike' : '🚫 Disable Bike' %></button>
-            <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?" style="padding: 6px 10px; font-size: 12px;">Delete</button>
+            <button class="btn btn-ghost check-status-btn" data-id="<%= bike.id %>" style="padding: 4px 8px; font-size: 11px; border: 1px solid var(--accent); color: var(--accent); font-weight: 600; white-space: nowrap;">🔍 Check</button>
+            <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;">🔧 Maint.</button>
+            <button class="btn btn-<%= bike.status === 'offline' ? 'success' : 'danger' %> admin-action" data-url="/admin/bikes/<%= bike.id %>/disable" data-method="POST" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;"><%= bike.status === 'offline' ? '✅ Enable' : '🚫 Disable' %></button>
+            <button class="btn btn-danger admin-action" data-url="/admin/bikes/<%= bike.id %>/delete" data-method="POST" data-confirm="Are you sure you want to completely delete this bike?" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;">🗑️ Del</button>
           </div>
         </td>
       </tr>

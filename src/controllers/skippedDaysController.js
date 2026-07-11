@@ -63,16 +63,17 @@ async function adjustSubscriptionDates(riderName, days, isAddition = true) {
       return;
     }
 
-    // 2. Fetch the user's active subscription
+    // 2. Fetch the user's latest subscription (active or expired)
     const { data: subscription } = await supabase
       .from("user_subscriptions")
-      .select("id, end_date")
+      .select("id, end_date, status")
       .eq("user_id", profile.id)
-      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (!subscription) {
-      console.log(`[adjustSubscriptionDates] No active subscription found for user: ${profile.id} ("${riderName}")`);
+      console.log(`[adjustSubscriptionDates] No subscription found for user: ${profile.id} ("${riderName}")`);
       return;
     }
 
@@ -81,11 +82,16 @@ async function adjustSubscriptionDates(riderName, days, isAddition = true) {
     const adjustment = isAddition ? days : -days;
     const newEnd = new Date(currentEnd.getTime() + adjustment * 24 * 60 * 60 * 1000);
 
+    // Determine updated status based on new end date relative to now
+    const now = new Date();
+    const updatedStatus = newEnd > now ? "active" : "expired";
+
     // 4. Update user_subscriptions
     const { error: updateErr } = await supabase
       .from("user_subscriptions")
       .update({
         end_date: newEnd.toISOString(),
+        status: updatedStatus,
         updated_at: new Date().toISOString()
       })
       .eq("id", subscription.id);
@@ -93,13 +99,12 @@ async function adjustSubscriptionDates(riderName, days, isAddition = true) {
     if (updateErr) {
       console.error(`[adjustSubscriptionDates] Failed to update subscription end_date:`, updateErr.message);
     } else {
-      console.log(`[adjustSubscriptionDates] Adjusted subscription end_date for "${riderName}" (matched: "${profile.full_name}") by ${adjustment} days. New end date: ${newEnd.toISOString()}`);
+      console.log(`[adjustSubscriptionDates] Adjusted subscription end_date for "${riderName}" (matched: "${profile.full_name}") by ${adjustment} days. New status: ${updatedStatus}, New end date: ${newEnd.toISOString()}`);
     }
   } catch (err) {
     console.error("[adjustSubscriptionDates] unexpected error:", err.message);
   }
 }
-
 
 export async function addSkippedDay(req, res) {
   try {

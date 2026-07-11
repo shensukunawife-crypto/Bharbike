@@ -52,12 +52,12 @@ export const getActiveSubscription = async (req, res) => {
 
         if (rawSub) {
           const endDate = new Date(rawSub.end_date);
-          const today = new Date();
-          const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-          const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const diffDays = Math.round((endDay.getTime() - todayDay.getTime()) / (1000 * 60 * 60 * 24));
-          let daysRemaining = diffDays + 1; // Inclusive day count
-          if (daysRemaining < 0) daysRemaining = 0;
+          const now = new Date();
+          // Calculate inclusive calendar days remaining
+          const endMidnight = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+          const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
+          const daysRemaining = Math.max(0, diffDays + 1);
           
           // Try to look up plan details by plan_id
           let planInfo = { display_name: "Active Plan", price: null, duration_days: null };
@@ -92,14 +92,13 @@ export const getActiveSubscription = async (req, res) => {
       return res.json({ success: true, data: null, message: "No active subscription" });
     }
 
-    // Calculate days remaining
+    // Calculate inclusive calendar days remaining
     const endDate = new Date(subscription.end_date);
     const now = new Date();
-    const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-    const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffDays = Math.round((endDay.getTime() - todayDay.getTime()) / (1000 * 60 * 60 * 24));
-    let daysRemaining = diffDays + 1; // Inclusive day count
-    if (daysRemaining < 0) daysRemaining = 0;
+    const endMidnight = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
+    const daysRemaining = Math.max(0, diffDays + 1);
 
     return res.json({
       success: true,

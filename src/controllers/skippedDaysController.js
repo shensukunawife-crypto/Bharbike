@@ -55,7 +55,7 @@ async function findProfileByName(riderName) {
 // When targetEndDate is provided (activating a skipped day), the subscription end_date
 // is set to that exact date — even if the subscription was expired.
 // When deactivating, recalculates from all remaining active skipped day records.
-async function syncSubscriptionForSkippedDays(riderName, targetEndDate = null) {
+async function syncSubscriptionForSkippedDays(riderName, targetEndDate = null, days = 0, isAddition = true) {
   try {
     if (!riderName) return;
 
@@ -81,39 +81,31 @@ async function syncSubscriptionForSkippedDays(riderName, targetEndDate = null) {
       return;
     }
 
-    let newEnd;
+    let currentEnd = new Date(subscription.end_date);
+    let newEnd = new Date(currentEnd);
+    const now = new Date();
 
-    if (targetEndDate) {
-      // Activating: set subscription end_date directly to the skipped day's end date
-      newEnd = new Date(targetEndDate);
-      // If the skipped day end date is earlier than current subscription end date, keep the current one
-      const currentEnd = new Date(subscription.end_date);
-      if (currentEnd > newEnd) {
-        newEnd = currentEnd;
+    if (isAddition) {
+      // Activating an entry
+      if (currentEnd < now && targetEndDate) {
+        // User is EXPIRED. Reactivate them by setting end date directly to skipped_end_date
+        newEnd = new Date(targetEndDate);
+        
+        // Ensure time is set to end of day if it's just a date
+        if (targetEndDate.length <= 10) {
+           newEnd.setHours(23, 59, 59, 999);
+        }
+      } else {
+        // User is ACTIVE. Add the skipped days to their current end date
+        newEnd.setDate(newEnd.getDate() + parseInt(days));
       }
     } else {
-      // Deactivating/deleting: recalculate from all remaining active skipped day records
-      const { data: activeRecords } = await supabase
-        .from("rider_skipped_days")
-        .select("skipped_end_date, days_skipped")
-        .ilike("rider_name", `%${riderName.trim()}%`)
-        .eq("status", "Active");
-
-      if (activeRecords && activeRecords.length > 0) {
-        // Set end_date to the latest skipped_end_date among all remaining active records
-        const latestSkippedEnd = activeRecords.reduce((latest, r) => {
-          const d = new Date(r.skipped_end_date);
-          return d > latest ? d : latest;
-        }, new Date(0));
-        newEnd = latestSkippedEnd;
-      } else {
-        // No active skipped days left — mark subscription as expired
-        newEnd = new Date(subscription.end_date);
-      }
+      // Deactivating/deleting an entry
+      // Subtract the skipped days
+      newEnd.setDate(newEnd.getDate() - parseInt(days));
     }
 
     // Determine status based on new end date vs now
-    const now = new Date();
     const updatedStatus = newEnd > now ? "active" : "expired";
 
     // 3. Update user_subscriptions
@@ -161,9 +153,9 @@ export async function addSkippedDay(req, res) {
       return res.status(500).json(error);
     }
 
-    // If status is Active, set the user's subscription end_date directly to the skipped_end_date
-    if (String(row.status || "").toLowerCase() === "active" && row.skipped_end_date) {
-      await syncSubscriptionForSkippedDays(row.rider_name, row.skipped_end_date);
+    // Sync subscription if status is Active
+    if (row.status === "Active") {
+      await syncSubscriptionForSkippedDays(row.rider_name, row.skipped_end_date, row.days_skipped, true);
     }
 
     console.log("INSERT SUCCESS:", data);
@@ -214,7 +206,7 @@ export async function toggleSkippedDayStatus(req, res) {
       .from("rider_skipped_days")
       .select("rider_name, days_skipped, status, skipped_end_date")
       .eq("id", id)
-      .maybeSingle();
+      .single();
 
     if (getError || !current) {
       console.log("GET ERROR:", getError);
@@ -235,13 +227,9 @@ export async function toggleSkippedDayStatus(req, res) {
       return res.status(500).json(error);
     }
 
-    if (nextStatus === "Active" && current.skipped_end_date) {
-      // Activating: set subscription end_date directly to this skipped day's end date
-      await syncSubscriptionForSkippedDays(current.rider_name, current.skipped_end_date);
-    } else {
-      // Deactivating: recalculate from remaining active skipped day records
-      await syncSubscriptionForSkippedDays(current.rider_name, null);
-    }
+    // Sync subscription: if nextStatus is active, add days. If inactive, subtract days.
+    const isAddition = nextStatus === "Active";
+    await syncSubscriptionForSkippedDays(current.rider_name, isAddition ? current.skipped_end_date : null, current.days_skipped, isAddition);
 
     res.json({ success: true, nextStatus, data });
   } catch (err) {
@@ -275,9 +263,9 @@ export async function deleteSkippedDay(req, res) {
       return res.status(500).json(error);
     }
 
-    // If the deleted record was Active, recalculate from remaining active records
+    // If the deleted record was Active, subtract days
     if (String(record.status || "").toLowerCase() === "active") {
-      await syncSubscriptionForSkippedDays(record.rider_name, null);
+      await syncSubscriptionForSkippedDays(record.rider_name, null, record.days_skipped, false);
     }
 
     res.json({ success: true, message: "Record deleted successfully" });

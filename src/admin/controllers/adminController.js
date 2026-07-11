@@ -5808,9 +5808,21 @@ export async function assignBikeToUser(req, res) {
     const { userId } = req.params;
     const { bike_code } = req.body;
     
-    // First, end any existing ongoing rentals for this user
+    // First, end any existing ongoing rentals for this user and free the old bike
+    const { data: existingRentals } = await supabase
+      .from("rentals")
+      .select("bike_id")
+      .eq("user_id", userId)
+      .eq("status", "ongoing");
+
     await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).eq("status", "ongoing");
-    
+
+    // Reset old bike(s) status back to available
+    if (existingRentals && existingRentals.length > 0) {
+      const oldBikeIds = [...new Set(existingRentals.map(r => r.bike_id))];
+      await supabase.from("bikes").update({ status: "available", is_locked: true }).in("id", oldBikeIds);
+    }
+
     if (!bike_code || bike_code.trim() === "None" || bike_code.trim() === "") {
        return res.json({ success: true, message: "Bike unassigned successfully" });
     }

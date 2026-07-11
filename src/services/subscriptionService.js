@@ -23,6 +23,23 @@ function isDatabaseError(error) {
 }
 
 /**
+ * Helper to check if a subscription is past its grace period
+ * Grace period ends at 9:30 AM IST (04:00 UTC) on the day AFTER the end_date.
+ */
+export function hasPassedGracePeriod(endDateStr) {
+  if (!endDateStr) return true;
+  const end = new Date(endDateStr);
+  const now = new Date();
+  
+  // The grace expiration is 9:30 AM IST (04:00 UTC) on the day AFTER the end date.
+  const graceExp = new Date(end);
+  graceExp.setDate(graceExp.getDate() + 1);
+  graceExp.setUTCHours(4, 0, 0, 0); // 9:30 AM IST
+
+  return now > graceExp;
+}
+
+/**
  * Get all active subscription plans
  */
 export async function getSubscriptionPlans() {
@@ -141,10 +158,6 @@ export async function getSubscriptionPlanById(planId) {
  */
 export async function getUserActiveSubscription(userId) {
   try {
-    const now = new Date();
-    // Add 6 hour grace period for expiration to handle timezone shifts/delays
-    const graceThreshold = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
-
     const { data, error } = await supabase
       .from("user_subscriptions")
       .select(`
@@ -153,7 +166,6 @@ export async function getUserActiveSubscription(userId) {
       `)
       .eq("user_id", userId)
       .in("status", ["active", "cancelled"])
-      .gt("end_date", graceThreshold)
       .order("end_date", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -166,12 +178,12 @@ export async function getUserActiveSubscription(userId) {
         .select("*")
         .eq("user_id", userId)
         .in("status", ["active", "cancelled"])
-        .gt("end_date", graceThreshold)
         .order("end_date", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (rawData) {
+        if (hasPassedGracePeriod(rawData.end_date)) return null;
         let planData = null;
         try {
           planData = await getSubscriptionPlanById(rawData.plan_id);
@@ -180,8 +192,14 @@ export async function getUserActiveSubscription(userId) {
       }
       
       if (isDatabaseError(error) || isDatabaseError(rawError)) {
-        return mockSubscriptionsDB.get(userId) || null;
+        const mockSub = mockSubscriptionsDB.get(userId) || null;
+        if (mockSub && hasPassedGracePeriod(mockSub.end_date)) return null;
+        return mockSub;
       }
+      return null;
+    }
+
+    if (!data || hasPassedGracePeriod(data.end_date)) {
       return null;
     }
 
@@ -627,15 +645,34 @@ export async function updateAutoRenew(userId, subscriptionId, autoRenew) {
  */
 export async function expireOldSubscriptions() {
   try {
+    // 1. Fetch all potentially expired subscriptions (where end_date is in the past)
+    const { data: activeSubs, error: fetchErr } = await supabase
+      .from("user_subscriptions")
+      .select("id, user_id, end_date")
+      .in("status", ["active", "cancelled"])
+      .lt("end_date", new Date().toISOString());
+
+    if (fetchErr) throw fetchErr;
+    
+    // 2. Filter for those that have passed the 9:30 AM next-day grace period
+    const toExpire = (activeSubs || []).filter(sub => hasPassedGracePeriod(sub.end_date));
+    
+    if (toExpire.length === 0) {
+      console.log(`[subscriptionService] No subscriptions ready for expiration yet.`);
+      return [];
+    }
+
+    const expireIds = toExpire.map(s => s.id);
+
+    // 3. Mark them as expired
     const { data, error } = await supabase
       .from("user_subscriptions")
       .update({ status: "expired" })
-      .in("status", ["active", "cancelled"])
-      .lt("end_date", new Date().toISOString())
+      .in("id", expireIds)
       .select();
 
     if (error) throw error;
-    console.log(`[subscriptionService] Expired ${data?.length || 0} subscriptions`);
+    console.log(`[subscriptionService] Expired ${data?.length || 0} subscriptions that passed grace period.`);
 
     // Trigger non-blocking notifications for all expired subscriptions
     if (data && data.length > 0) {

@@ -52,7 +52,12 @@ export const getActiveSubscription = async (req, res) => {
 
         if (rawSub) {
           const endDate = new Date(rawSub.end_date);
-          const daysRemaining = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24));
+          const today = new Date();
+          const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+          const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const diffDays = Math.round((endDay.getTime() - todayDay.getTime()) / (1000 * 60 * 60 * 24));
+          let daysRemaining = diffDays + 1; // Inclusive day count
+          if (daysRemaining < 0) daysRemaining = 0;
           
           // Try to look up plan details by plan_id
           let planInfo = { display_name: "Active Plan", price: null, duration_days: null };
@@ -90,7 +95,11 @@ export const getActiveSubscription = async (req, res) => {
     // Calculate days remaining
     const endDate = new Date(subscription.end_date);
     const now = new Date();
-    const daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+    const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.round((endDay.getTime() - todayDay.getTime()) / (1000 * 60 * 60 * 24));
+    let daysRemaining = diffDays + 1; // Inclusive day count
+    if (daysRemaining < 0) daysRemaining = 0;
 
     return res.json({
       success: true,

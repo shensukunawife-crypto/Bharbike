@@ -3383,6 +3383,7 @@ Database tables and their EXACT columns (use these when writing queries):
 - delivery_partners: id, user_id, status, created_at
 
 IMPORTANT SQL rules (to match the admin dashboard perfectly):
+- NEVER use a semicolon (;) at the end of your queries.
 - Always use "created_at" for date filtering, never "timestamp" or "date"
 - For "Today": WHERE DATE(created_at) = CURRENT_DATE
 - For "This Week": WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
@@ -3413,7 +3414,7 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
             properties: {
               query: {
                 type: "string",
-                description: "The SQL SELECT query to run (e.g. SELECT COUNT(*) FROM users;)"
+                description: "The SQL SELECT query to run (e.g. SELECT COUNT(*) FROM users)"
               }
             },
             required: ["query"]
@@ -3435,7 +3436,12 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
 
       // If AI returned a plain text answer, send it back
       if (!responseMessage.tool_calls || responseMessage.tool_calls.length === 0) {
-        return res.json({ success: true, reply: responseMessage.content });
+        // Strip out hallucinated function call text if it exists
+        let cleanReply = responseMessage.content || "";
+        if (cleanReply.includes("function=run_sql_query")) {
+           cleanReply = cleanReply.replace(/function=run_sql_query>[^\n]*\n?/g, '').trim();
+        }
+        return res.json({ success: true, reply: cleanReply || "Sorry, I couldn't process that properly." });
       }
 
       // Push AI's tool-call message into context
@@ -3449,23 +3455,27 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
 
           try {
             const args = JSON.parse(toolCall.function.arguments);
-            sqlQuery = args.query || "";
+            // Remove trailing semicolons which break the RPC
+            sqlQuery = (args.query || "").replace(/;/g, '').trim();
 
             console.log("[BharBot] Running query:", sqlQuery);
 
-            if (!sqlQuery.trim().toUpperCase().startsWith("SELECT")) {
+            if (!sqlQuery.toUpperCase().startsWith("SELECT")) {
               throw new Error("Only SELECT queries are allowed.");
             }
 
-            // Try exec_sql RPC first
+            // Try exec_sql RPC
             const { data, error } = await supabase.rpc("exec_sql", { sql_query: sqlQuery });
             if (error) throw error;
+            // The RPC might return { error: "..." } inside data when it fails
+            if (data && data.error) throw new Error(data.error);
+            
             resultData = data;
 
           } catch (sqlErr) {
             console.error("[BharBot] Query error:", sqlErr.message, "| SQL:", sqlQuery);
             // Give the AI a meaningful error so it can explain properly
-            resultData = { error: `Could not get data: ${sqlErr.message}. Tell the user there was a problem fetching that information and ask them to try again.` };
+            resultData = { error: `Could not get data: ${sqlErr.message}. The SQL query failed.` };
           }
 
           currentMessages.push({

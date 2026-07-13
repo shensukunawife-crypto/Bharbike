@@ -3369,11 +3369,14 @@ STRICT RULES — follow these always:
 Database tables and their EXACT columns (use these when writing queries):
 - users: id, full_name, email, phone, role, wallet_balance, is_delivery_partner, created_at
 - rentals: id, user_id, bike_id, start_time, end_time, status, total_cost, created_at
-- bikes: id, brand, model, license_plate, status, battery_level, created_at
+- bikes: id, brand, model, license_plate, status, battery_level, location, created_at
 - payments: id, user_id, amount, status, type, created_at  ← use "created_at" NOT "timestamp"
 - bookings: id, user_id, start_time, end_time, status, created_at
 - subscriptions: id, user_id, plan_id, status, start_date, end_date, created_at
 - kyc_documents: id, user_id, status, created_at
+- orders: id, amount, status, pickup_location, created_at
+- wallet_transactions: id, user_id, amount, type, title, status, created_at
+- support_tickets: id, user_id, subject, status, created_at
 
 IMPORTANT SQL rules (to match the admin dashboard perfectly):
 - Always use "created_at" for date filtering, never "timestamp" or "date"

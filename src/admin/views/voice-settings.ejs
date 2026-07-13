@@ -1,0 +1,152 @@
+<%- include('partials/header') %>
+<%- include('partials/sidebar') %>
+
+<div class="main-content">
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">Voice Assistant Settings</h1>
+      <p class="page-subtitle">Configure the AI voice that reads out real-time dashboard notifications.</p>
+    </div>
+  </div>
+
+  <div class="content-body" style="max-width: 600px;">
+    <div class="card" style="padding: 30px;">
+      
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+        <div>
+          <strong style="font-size: 16px; color: var(--text);">Enable Voice Assistant</strong>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Allow the browser to read new notifications aloud automatically.</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="voice-enable-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label for="voice-select" style="font-weight: 600; margin-bottom: 8px; display: block;">Select Voice / Accent</label>
+        <select id="voice-select" class="form-control">
+          <!-- Populated by JS -->
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label style="font-weight: 600; margin-bottom: 8px; display: block;">Volume <span id="volume-val" style="float: right; color: var(--primary);">100%</span></label>
+        <input type="range" id="voice-volume" min="0" max="1" step="0.1" value="1" style="width: 100%;" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label style="font-weight: 600; margin-bottom: 8px; display: block;">Speech Rate <span id="rate-val" style="float: right; color: var(--primary);">1.0</span></label>
+        <input type="range" id="voice-rate" min="0.5" max="2" step="0.1" value="1" style="width: 100%;" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 30px;">
+        <label style="font-weight: 600; margin-bottom: 8px; display: block;">Pitch <span id="pitch-val" style="float: right; color: var(--primary);">1.0</span></label>
+        <input type="range" id="voice-pitch" min="0" max="2" step="0.1" value="1" style="width: 100%;" />
+      </div>
+
+      <div style="display: flex; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+        <button id="btn-test-voice" class="btn btn-secondary" style="flex: 1;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: text-bottom;">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          Test Voice
+        </button>
+        <button id="btn-save-voice" class="btn btn-primary" style="flex: 1;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: text-bottom;">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Save Settings
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.getElementById("voice-enable-toggle");
+  const select = document.getElementById("voice-select");
+  const volume = document.getElementById("voice-volume");
+  const rate = document.getElementById("voice-rate");
+  const pitch = document.getElementById("voice-pitch");
+  
+  const volVal = document.getElementById("volume-val");
+  const rateVal = document.getElementById("rate-val");
+  const pitchVal = document.getElementById("pitch-val");
+
+  let voices = [];
+
+  const populateVoices = () => {
+    voices = window.speechSynthesis.getVoices();
+    select.innerHTML = "";
+    voices.forEach((v, i) => {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = `${v.name} (${v.lang})`;
+      select.appendChild(option);
+    });
+
+    const savedVoice = localStorage.getItem("adminVoiceURI");
+    if (savedVoice) {
+      const idx = voices.findIndex(v => v.voiceURI === savedVoice);
+      if (idx !== -1) select.value = idx;
+    }
+  };
+
+  populateVoices();
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = populateVoices;
+  }
+
+  // Load saved preferences
+  const loadSettings = () => {
+    toggle.checked = localStorage.getItem("adminVoiceEnabled") === "true";
+    volume.value = localStorage.getItem("adminVoiceVolume") || "1";
+    rate.value = localStorage.getItem("adminVoiceRate") || "1";
+    pitch.value = localStorage.getItem("adminVoicePitch") || "1";
+    
+    updateLabels();
+  };
+
+  const updateLabels = () => {
+    volVal.textContent = Math.round(volume.value * 100) + "%";
+    rateVal.textContent = parseFloat(rate.value).toFixed(1);
+    pitchVal.textContent = parseFloat(pitch.value).toFixed(1);
+  };
+
+  volume.addEventListener("input", updateLabels);
+  rate.addEventListener("input", updateLabels);
+  pitch.addEventListener("input", updateLabels);
+
+  loadSettings();
+
+  document.getElementById("btn-test-voice").addEventListener("click", () => {
+    const utterance = new SpeechSynthesisUtterance("Hey, Kismat Ali just subscribed to a weekly plan.");
+    utterance.volume = parseFloat(volume.value);
+    utterance.rate = parseFloat(rate.value);
+    utterance.pitch = parseFloat(pitch.value);
+    if (voices[select.value]) {
+      utterance.voice = voices[select.value];
+    }
+    window.speechSynthesis.speak(utterance);
+  });
+
+  document.getElementById("btn-save-voice").addEventListener("click", () => {
+    localStorage.setItem("adminVoiceEnabled", toggle.checked);
+    localStorage.setItem("adminVoiceVolume", volume.value);
+    localStorage.setItem("adminVoiceRate", rate.value);
+    localStorage.setItem("adminVoicePitch", pitch.value);
+    if (voices[select.value]) {
+      localStorage.setItem("adminVoiceURI", voices[select.value].voiceURI);
+    }
+    alert("Voice Settings Saved Successfully!");
+  });
+});
+</script>
+
+<%- include('partials/footer') %>

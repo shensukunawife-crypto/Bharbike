@@ -5,7 +5,7 @@
   const gFinancial  = ['earnings', 'analytics'].includes(active);
   const gSystem     = ['system-workflow', 'backend-monitor', 'activity-logs', 'sql-editor'].includes(active);
   const gComm       = ['support', 'notifications', 'ads'].includes(active);
-  const gAdmin      = ['settings', 'admins', 'subscription-plans'].includes(active);
+  const gAdmin      = ['settings', 'admins', 'subscription-plans', 'voice-settings'].includes(active);
 
   const _admin    = locals.admin || {};
   const _isMaster = _admin.role === 'master_admin' || _admin.role === 'admin' || (_admin.permissions && _admin.permissions.includes('*'));
@@ -242,6 +242,9 @@
       <% if (_can('manage_settings')) { %>
       <a class="nav-link nav-link-sub <%= active === 'settings' ? 'active' : '' %>" href="/admin/settings" data-label="Settings">
         <span class="nav-icon"><%- icons.settings %></span><span>Settings</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'voice-settings' ? 'active' : '' %>" href="/admin/voice-settings" data-label="Voice Assistant">
+        <span class="nav-icon"><%- icons.notif %></span><span>Voice Assistant</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'subscription-plans' ? 'active' : '' %>" href="/admin/subscription-plans" data-label="Subscription Plans">
         <span class="nav-icon"><%- icons.config %></span><span>Subscription Plans</span>

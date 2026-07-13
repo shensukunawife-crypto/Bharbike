@@ -3344,6 +3344,13 @@ export async function getNotificationUsers(req, res) {
 }
 
 
+export async function voiceSettingsPage(req, res) {
+  res.render("voice-settings", {
+    title: "Voice Assistant Settings",
+    active: "voice-settings"
+  });
+}
+
 export async function settingsPage(req, res) {
   // Load settings persistently
   await ensureSettingsInitialized();

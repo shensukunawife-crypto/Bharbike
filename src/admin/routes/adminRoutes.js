@@ -118,6 +118,7 @@ router.post("/ads/:id/delete", requirePermission("manage_support"), adminControl
 
 // System Settings
 router.get("/settings", requirePermission("manage_settings"), adminController.settingsPage);
+router.get("/voice-settings", requirePermission("manage_settings"), adminController.voiceSettingsPage);
 router.post("/settings/save", requirePermission("manage_settings"), adminController.saveSettings);
 router.get("/sql-editor", requirePermission("manage_settings"), adminController.sqlEditorPage);
 router.post("/sql-editor/run", requirePermission("manage_settings"), adminController.runSqlQuery);

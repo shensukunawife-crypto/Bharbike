@@ -698,6 +698,31 @@
           });
         };
 
+        // ── Voice Assistant Logic ─────────────────────────────────
+        let lastSpokenTimestamp = parseInt(localStorage.getItem("adminLastSpokenTimestamp")) || Date.now();
+
+        const speakText = (text) => {
+            const isEnabled = localStorage.getItem("adminVoiceEnabled") === "true";
+            if (!isEnabled || !window.speechSynthesis) return;
+
+            const volume = parseFloat(localStorage.getItem("adminVoiceVolume")) || 1;
+            const rate = parseFloat(localStorage.getItem("adminVoiceRate")) || 1;
+            const pitch = parseFloat(localStorage.getItem("adminVoicePitch")) || 1;
+            const voiceURI = localStorage.getItem("adminVoiceURI");
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.volume = volume;
+            utterance.rate = rate;
+            utterance.pitch = pitch;
+
+            if (voiceURI) {
+                const voices = window.speechSynthesis.getVoices();
+                const selectedVoice = voices.find(v => v.voiceURI === voiceURI);
+                if (selectedVoice) utterance.voice = selectedVoice;
+            }
+            window.speechSynthesis.speak(utterance);
+        };
+
         // ── Fetch activities ──────────────────────────────────────
         const fetchActivities = async () => {
           try {
@@ -707,6 +732,32 @@
             if (data && data.success && Array.isArray(data.logs)) {
               allLogs = data.logs;
               renderList();
+              
+              // --- VOICE ASSISTANT TRIGGER ---
+              if (localStorage.getItem("adminVoiceEnabled") === "true" && allLogs.length > 0) {
+                  const newLogsToSpeak = allLogs.filter(log => new Date(log.timestamp).getTime() > lastSpokenTimestamp);
+                  if (newLogsToSpeak.length > 0) {
+                      newLogsToSpeak.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                      newLogsToSpeak.forEach(log => {
+                          let msg = "";
+                          const name = log.user_name || "Someone";
+                          switch(log.type) {
+                            case "subscription": msg = `Awesome! ${name} just subscribed to a plan.`; break;
+                            case "support": msg = `Attention needed: ${name} just submitted a new support ticket.`; break;
+                            case "order": msg = `Great news, ${name} has just placed a new rental order.`; break;
+                            case "booking": msg = `Great news, ${name} has just booked a ride.`; break;
+                            case "kyc": msg = `Hey, ${name} has just uploaded their KYC documents for verification.`; break;
+                            case "payment": msg = `Cha-ching! A new payment has been successfully received from ${name}.`; break;
+                            case "maintenance": msg = `Alert: A bike has been reported for maintenance.`; break;
+                            case "user": msg = `We have a new rider! ${name} has just registered an account.`; break;
+                            default: msg = `New notification from ${name}.`;
+                          }
+                          speakText(msg);
+                      });
+                      lastSpokenTimestamp = new Date(newLogsToSpeak[newLogsToSpeak.length - 1].timestamp).getTime();
+                      localStorage.setItem("adminLastSpokenTimestamp", lastSpokenTimestamp);
+                  }
+              }
               if (allLogs.length > 0 && notifBadge) notifBadge.style.display = "block";
 
               // --- SIDEBAR BADGES LOGIC ---

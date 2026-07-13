@@ -771,10 +771,11 @@
           const renderCurrentTicker = () => {
             const log = topLogs[currentTickerIdx];
             const icon = getIcon(log.type);
-            tickerContainer.innerHTML = `<div class="topbar-ticker-item">
+            tickerContainer.innerHTML = `<div class="topbar-ticker-item" style="cursor:pointer;">
               <span style="font-size:16px;">${icon.char}</span>
               <span><strong>${esc(log.user_name)}</strong> ${esc(log.action)} <span style="opacity:0.6;font-size:11.5px;margin-left:4px;">· ${timeAgo(log.timestamp)}</span></span>
             </div>`;
+            tickerContainer.firstElementChild.addEventListener("click", () => openModal(log));
             currentTickerIdx = (currentTickerIdx + 1) % topLogs.length;
           };
           

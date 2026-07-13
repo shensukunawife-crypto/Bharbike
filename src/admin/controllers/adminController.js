@@ -4749,21 +4749,26 @@ export async function activityLogsPage(req, res) {
     const safeData = (arr) => Array.isArray(arr) ? arr : [];
 
     // Fetch data in parallel with independent try-catches to ensure high resilience
-    const [
-      ordersRes,
-      rentalsRes,
       txsRes,
       kycRes,
       subsRes,
       profilesRes
-    ] = await Promise.all([
+    const responses = await Promise.all([
       supabase.from("orders").select("id, user_id, total_amount, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("rentals").select("id, user_id, bike_id, status, price, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("wallet_transactions").select("id, user_id, amount, type, status, description, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("kyc_documents").select("id, user_id, type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("user_subscriptions").select("id, user_id, status, plan_id, start_date, end_date, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
-      supabase.from("users").select("id, full_name, name, phone, email, created_at").then(r => r, e => ({ data: [] }))
+      supabase.from("users").select("id, full_name, name, phone, email, created_at").then(r => r, e => ({ data: [] })),
+      supabase.from("support_tickets").select("id, user_id, ticket_number, issue_type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("payments").select("id, user_id, amount, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("maintenance").select("id, ticket_id, bike_code, issue_type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] }))
     ]);
+
+    const profilesRes = responses[5];
+    const supportRes = responses[6];
+    const paymentsRes = responses[7];
+    const maintenanceRes = responses[8];
 
     // Normalize Orders
     const normalizedOrders = safeData(ordersRes.data).map(o => ({
@@ -4828,13 +4833,61 @@ export async function activityLogsPage(req, res) {
     // Map profiles
     const profileMap = new Map(safeData(profilesRes.data).map(p => [String(p.id), p]));
 
+    // Normalize Support Tickets
+    const normalizedSupport = safeData(supportRes.data).map(t => ({
+      id: `support_${t.id}`,
+      user_id: t.user_id,
+      action: `Submitted a support ticket`,
+      type: "support",
+      timestamp: t.created_at || new Date().toISOString(),
+      details: `Ticket: #${t.ticket_number || 'N/A'} (Issue: ${t.issue_type || 'General'})`,
+      raw: { ref_id: t.id, category: "Support Ticket", issue: t.issue_type || 'General', status: t.status || 'Pending', created_at: t.created_at }
+    }));
+
+    // Normalize Direct Payments
+    const normalizedPayments = safeData(paymentsRes.data).map(p => ({
+      id: `pay_${p.id}`,
+      user_id: p.user_id,
+      action: `Made a direct payment`,
+      type: "payment",
+      timestamp: p.created_at || new Date().toISOString(),
+      details: `Amount: ₹${p.amount || 0} (Status: ${p.status || 'Completed'})`,
+      raw: { ref_id: p.id, category: "Payment", tx_type: "direct", amount: `₹${p.amount || 0}`, status: p.status || 'Completed', created_at: p.created_at }
+    }));
+
+    // Normalize Maintenance
+    const normalizedMaintenance = safeData(maintenanceRes.data).map(m => ({
+      id: `maint_${m.id}`,
+      user_id: null,
+      action: `Bike sent to maintenance`,
+      type: "maintenance",
+      timestamp: m.created_at || new Date().toISOString(),
+      details: `Bike: ${m.bike_code || 'Unknown'} (Issue: ${m.issue_type || 'General'})`,
+      raw: { ref_id: m.ticket_id, category: "Maintenance", bike: m.bike_code || 'Unknown', issue: m.issue_type, status: m.status, created_at: m.created_at }
+    }));
+
+    // Normalize New Users
+    const normalizedUsers = safeData(profilesRes.data).map(u => ({
+      id: `user_${u.id}`,
+      user_id: u.id,
+      action: `Registered a new account`,
+      type: "user",
+      timestamp: u.created_at || new Date().toISOString(),
+      details: `Phone: ${u.phone || 'N/A'} (Email: ${u.email || 'N/A'})`,
+      raw: { ref_id: u.id, category: "New Registration", phone: u.phone, email: u.email, created_at: u.created_at }
+    }));
+
     // Combine and sort
     let logs = [
       ...normalizedOrders,
       ...normalizedRentals,
       ...normalizedTxs,
       ...normalizedKyc,
-      ...normalizedSubs
+      ...normalizedSubs,
+      ...normalizedSupport,
+      ...normalizedPayments,
+      ...normalizedMaintenance,
+      ...normalizedUsers
     ];
 
     logs = logs.map(item => {
@@ -4857,7 +4910,10 @@ export async function activityLogsPage(req, res) {
       bookings: logs.filter(l => l.type === 'booking' || l.type === 'order').length,
       payments: logs.filter(l => l.type === 'payment').length,
       kyc: logs.filter(l => l.type === 'kyc').length,
-      subscriptions: logs.filter(l => l.type === 'subscription').length
+      subscriptions: logs.filter(l => l.type === 'subscription').length,
+      support: logs.filter(l => l.type === 'support').length,
+      maintenance: logs.filter(l => l.type === 'maintenance').length,
+      users: logs.filter(l => l.type === 'user').length
     };
 
     if (req.query.ajax) {

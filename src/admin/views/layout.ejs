@@ -520,6 +520,9 @@
           payment:      { char: "💰", bg: "rgba(245,158,11,0.15)",  color: "#f59e0b" },
           kyc:          { char: "🛡️", bg: "rgba(239,68,68,0.15)",   color: "#ef4444" },
           subscription: { char: "⚡", bg: "rgba(139,92,246,0.15)",  color: "#8b5cf6" },
+          support:      { char: "💬", bg: "rgba(59,130,246,0.15)",  color: "#3b82f6" },
+          maintenance:  { char: "🛠️", bg: "rgba(249,115,22,0.15)",  color: "#f97316" },
+          user:         { char: "👋", bg: "rgba(236,72,153,0.15)",  color: "#ec4899" },
           default:      { char: "🔔", bg: "rgba(156,163,175,0.15)", color: "#9ca3af" }
         };
         const getIcon = (t) => ICONS[t] || ICONS.default;
@@ -551,6 +554,12 @@
           } else if (log.type === "subscription") {
             eventFields = field("Plan", r.plan) + field("Status", r.status)
               + field("Start Date", fmtDate(r.start_date)) + field("End Date", fmtDate(r.end_date));
+          } else if (log.type === "support") {
+            eventFields = field("Issue", r.issue) + field("Status", r.status);
+          } else if (log.type === "maintenance") {
+            eventFields = field("Bike Code", r.bike) + field("Issue", r.issue) + field("Status", r.status);
+          } else if (log.type === "user") {
+            eventFields = field("Phone", r.phone) + field("Email", r.email, true);
           }
           return `
             <div class="notif-modal-section">

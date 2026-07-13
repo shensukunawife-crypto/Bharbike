@@ -1012,9 +1012,14 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2a10 10 0 1 0 10 10H12z"/><path d="M12 12 2.1 7.1"/>
           </svg>
-          AI Admin Assistant
+          BharBot
         </div>
-        <button id="chatbot-close" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 18px;">&times;</button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button id="chatbot-clear" title="Clear chat" style="background: rgba(255,255,255,0.2); border: none; color: #fff; cursor: pointer; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4h6v2"></path></svg>
+          </button>
+          <button id="chatbot-close" title="Close" style="background: rgba(255,255,255,0.2); border: none; color: #fff; cursor: pointer; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 18px; line-height:1; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">&times;</button>
+        </div>
       </div>
       <div id="chatbot-body">
         <div class="chat-msg bot" style="background: rgba(242,109,33,0.1); color: #c45510; font-weight:500;">👋 Hi! I'm your BharBike AI Assistant. Ask me anything about your platform — bookings, revenue, users, bikes, or recent activity!</div>
@@ -1112,6 +1117,13 @@
           }
         });
         closeBtn.addEventListener("click", () => { chatWin.style.display = "none"; });
+        document.getElementById("chatbot-clear").addEventListener("click", () => {
+          if (confirm("Clear all chat history?")) {
+            chatHistory = [];
+            localStorage.removeItem("adminChatHistory");
+            renderHistory();
+          }
+        });
 
         // Handle Submit
         chatForm.addEventListener("submit", async (e) => {

@@ -3406,7 +3406,7 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
       }
     ];
 
-    let maxLoops = 3;
+    let maxLoops = 4;
     while (maxLoops > 0) {
       const chatCompletion = await groq.chat.completions.create({
         messages: currentMessages,
@@ -3416,41 +3416,62 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
       });
 
       const responseMessage = chatCompletion.choices[0].message;
-      currentMessages.push(responseMessage);
 
-      if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-        for (const toolCall of responseMessage.tool_calls) {
-          if (toolCall.function.name === "run_sql_query") {
-            const args = JSON.parse(toolCall.function.arguments);
-            let resultData;
-            
-            try {
-              if (!args.query.trim().toUpperCase().startsWith("SELECT")) {
-                 throw new Error("SECURITY BLOCK: Only SELECT queries are permitted.");
-              }
-              const { data, error } = await supabase.rpc("exec_sql", { sql_query: args.query });
-              if (error) throw error;
-              resultData = data;
-            } catch (sqlErr) {
-              resultData = { error: sqlErr.message || "Query failed" };
-            }
-
-            currentMessages.push({
-              tool_call_id: toolCall.id,
-              role: "tool",
-              name: "run_sql_query",
-              content: JSON.stringify(resultData)
-            });
-          }
-        }
-        maxLoops--;
-      } else {
+      // If AI returned a plain text answer, send it back
+      if (!responseMessage.tool_calls || responseMessage.tool_calls.length === 0) {
         return res.json({ success: true, reply: responseMessage.content });
       }
+
+      // Push AI's tool-call message into context
+      currentMessages.push(responseMessage);
+
+      // Execute each tool call
+      for (const toolCall of responseMessage.tool_calls) {
+        if (toolCall.function.name === "run_sql_query") {
+          let resultData;
+          let sqlQuery = "";
+
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            sqlQuery = args.query || "";
+
+            console.log("[BharBot] Running query:", sqlQuery);
+
+            if (!sqlQuery.trim().toUpperCase().startsWith("SELECT")) {
+              throw new Error("Only SELECT queries are allowed.");
+            }
+
+            // Try exec_sql RPC first
+            const { data, error } = await supabase.rpc("exec_sql", { sql_query: sqlQuery });
+            if (error) throw error;
+            resultData = data;
+
+          } catch (sqlErr) {
+            console.error("[BharBot] Query error:", sqlErr.message, "| SQL:", sqlQuery);
+            // Give the AI a meaningful error so it can explain properly
+            resultData = { error: `Could not get data: ${sqlErr.message}. Tell the user there was a problem fetching that information and ask them to try again.` };
+          }
+
+          currentMessages.push({
+            tool_call_id: toolCall.id,
+            role: "tool",
+            name: "run_sql_query",
+            content: JSON.stringify(resultData)
+          });
+        }
+      }
+
+      maxLoops--;
     }
-    
-    return res.json({ success: true, reply: currentMessages[currentMessages.length - 1].content || "Processing took too long, try a simpler request." });
-    
+
+    // If we exhausted loops, get a final response
+    const finalCompletion = await groq.chat.completions.create({
+      messages: currentMessages,
+      model: "llama-3.1-8b-instant",
+    });
+    return res.json({ success: true, reply: finalCompletion.choices[0]?.message?.content || "Sorry, I couldn't process that. Please try again!" });
+
+
   } catch (err) {
     console.error("[admin.chatBot]", err);
     return res.status(500).json({ success: false, message: err.message });

@@ -3858,10 +3858,22 @@ export async function assignBike(req, res) {
     let endTime;
     let durationHours;
 
-    if (duration_unit === "days") {
+    // Always check user's active subscription first — rental should last till subscription end
+    const { data: activeSub } = await supabase
+      .from("user_subscriptions")
+      .select("end_date")
+      .eq("user_id", user_id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (activeSub && activeSub.end_date) {
+      // Use subscription end date as the rental end time
+      endTime = new Date(activeSub.end_date);
+      const diffMs = endTime.getTime() - startTime.getTime();
+      durationHours = Math.max(24, Math.round(diffMs / (1000 * 60 * 60)));
+    } else if (duration_unit === "days") {
       const days = Number(duration_value || 1);
       durationHours = days * 24;
-      
       const now = new Date();
       const istOffset = 5.5 * 60 * 60 * 1000;
       const istTime = new Date(now.getTime() + istOffset);

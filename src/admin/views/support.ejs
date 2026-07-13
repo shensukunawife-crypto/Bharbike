@@ -516,9 +516,9 @@
                data-short-user-id="<%= t.shortUserId %>"
                data-bike="<%= t.bike_name || '' %>"
                data-issue="<%= t.issue_type || '' %>"
-               data-desc="<%= t.description || '' %>"
                data-status="<%= t.status %>"
                data-created="<%= t.created_at %>"
+               data-user-name="<%= t.userName %>"
                data-image="<%= t.image_url || '' %>"
                onclick="selectTicket(this)">
             <div class="ticket-item-header">
@@ -526,7 +526,7 @@
               <span class="ticket-date"><%= t.relativeCreatedAt || 'Just now' %></span>
             </div>
             <div class="ticket-meta">
-              <span title="<%= t.user_id %>">👤 <%= t.shortUserId || 'User' %></span>
+              <span title="<%= t.user_id %>">👤 <strong><%= t.userName %></strong> <span class="muted-small">(<%= t.shortUserId || 'User' %>)</span></span>
               <span class="ticket-issue"><%= t.issue_type %></span>
             </div>
             <div class="ticket-preview"><%= t.description || 'No description provided.' %></div>
@@ -644,10 +644,11 @@
     const desc = el.dataset.desc;
     const status = el.dataset.status;
     const created = el.dataset.created;
+    const userName = el.dataset.userName;
     const image = el.dataset.image;
 
     activeTicketId = id;
-    activeTicketData = { id, number, userId, bike, issue, desc, status, created, image };
+    activeTicketData = { id, number, userId, bike, issue, desc, status, created, userName, image };
 
     // Toggle panels
     document.getElementById('chat-placeholder-el').style.display = 'none';
@@ -656,7 +657,7 @@
     // Populate header
     const shortUserId = el.dataset.shortUserId || userId.slice(0, 8);
     document.getElementById('active-chat-title').innerText = 'Ticket #' + number;
-    document.getElementById('active-chat-user-lbl').innerText = 'User: ' + shortUserId;
+    document.getElementById('active-chat-user-lbl').innerText = 'User: ' + userName + ' (' + shortUserId + ')';
     document.getElementById('active-chat-issue-lbl').innerText = 'Issue: ' + (issue === 'rsa' ? 'RSA (Road Side Support)' : issue);
     
     // Status badge styling

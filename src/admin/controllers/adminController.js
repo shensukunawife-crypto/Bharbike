@@ -3045,12 +3045,18 @@ export async function supportPage(req, res) {
       resolved: tickets.filter((x) => x.status === "resolved").length,
     };
     const mappings = await getIdMappings();
+    
+    // Fetch actual user names for the tickets
+    const userIds = [...new Set(tickets.map(t => t.user_id).filter(Boolean))];
+    const nameMap = await fetchNameMapForIds(userIds);
+
     const displayTickets = tickets.map((t) => {
       const userNum = t.user_id ? (mappings.userMap.get(t.user_id) || String(t.user_id).slice(0, 8)) : null;
       return {
         ...t,
         shortId: t.ticket_number != null ? String(t.ticket_number) : "—",
         shortUserId: userNum ? "#" + userNum : "—",
+        userName: (t.user_id && nameMap.get(t.user_id)) || "User",
         relativeCreatedAt: relativeTime(t.created_at),
       };
     });

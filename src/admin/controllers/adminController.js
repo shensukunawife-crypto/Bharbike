@@ -5567,16 +5567,29 @@ export async function addPayment(req, res) {
       return res.status(400).json({ success: false, message: "User ID and Amount are required" });
     }
 
-    const { error } = await supabase.from("payments").insert([{
+    const finalStatus = status || "success";
+
+    const { data: newPayment, error } = await supabase.from("payments").insert([{
       user_id,
       amount: Number(amount),
-      status: status || "success",
+      status: finalStatus,
       razorpay_payment_id: razorpay_payment_id || "manual_cash",
       order_id: order_id || null
-    }]);
+    }]).select("id").single();
 
     if (error) throw error;
-    res.json({ success: true, message: "Payment added successfully" });
+
+    // If admin is logging a successful payment, activate the weekly subscription
+    if (finalStatus === "success" && user_id) {
+      try {
+        const { createSubscription } = await import("../../services/subscriptionService.js");
+        await createSubscription(user_id, "weekly_plan", newPayment?.id, Number(amount));
+      } catch (subErr) {
+        console.warn("[addPayment] subscription activation failed:", subErr?.message);
+      }
+    }
+
+    res.json({ success: true, message: "Payment added and subscription activated successfully" });
   } catch (error) {
     console.error("[adminController.addPayment] failed", error);
     res.status(500).json({ success: false, message: error.message || "Failed to add payment" });
@@ -5612,8 +5625,8 @@ export async function editPayment(req, res) {
     const { error } = await supabase.from("payments").update(paymentUpdate).eq("id", paymentId);
     if (error) throw error;
     
-    // Transitioning from pending to success!
-    if (oldPayment.status === "pending" && status === "success") {
+    // Activate subscription whenever ANY payment is transitioned TO success by admin
+    if (status === "success" && oldPayment.status !== "success") {
       const { user_id, razorpay_order_id, razorpay_payment_id, order_id } = oldPayment;
       
       if (user_id) {

@@ -872,11 +872,21 @@ export async function dashboard(req, res) {
           return isExpired;
         });
 
+        // Collect active bike IDs and active user IDs to hide stale/ghost expired rentals
+        const activeBikeIds = new Set(activeRentalsFiltered.map(r => r.bike_id).filter(Boolean));
+        const activeUserIds = new Set(activeRentalsFiltered.map(r => r.user_id).filter(Boolean));
+
         // Filter to unique users only, taking the most recent expired rental first
         const expiredRentalsFiltered = [];
         const seenUsers = new Set();
         rawExpired.sort((a, b) => new Date(b.end_time || 0) - new Date(a.end_time || 0));
         for (const r of rawExpired) {
+          // Hide this expired rental if the bike is already reassigned to an active rental
+          if (r.bike_id && activeBikeIds.has(r.bike_id)) continue;
+          
+          // Hide this expired rental if the user already has a newer active rental
+          if (r.user_id && activeUserIds.has(r.user_id)) continue;
+
           if (r.user_id) {
             if (!seenUsers.has(r.user_id)) {
               seenUsers.add(r.user_id);

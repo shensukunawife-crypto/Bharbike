@@ -3448,7 +3448,7 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
 }
 
 export async function voiceSettingsPage(req, res) {
-  res.render("layout", {
+  return renderPage(res, {
     title: "Voice Assistant Settings",
     active: "voice-settings",
     bodyView: "voice-settings"

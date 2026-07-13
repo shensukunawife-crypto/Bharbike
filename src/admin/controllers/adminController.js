@@ -4757,11 +4757,17 @@ export async function activityLogsPage(req, res) {
     const safeData = (arr) => Array.isArray(arr) ? arr : [];
 
     // Fetch data in parallel with independent try-catches to ensure high resilience
+    const [
+      ordersRes,
+      rentalsRes,
       txsRes,
       kycRes,
       subsRes,
-      profilesRes
-    const responses = await Promise.all([
+      profilesRes,
+      supportRes,
+      paymentsRes,
+      maintenanceRes
+    ] = await Promise.all([
       supabase.from("orders").select("id, user_id, total_amount, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("rentals").select("id, user_id, bike_id, status, price, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("wallet_transactions").select("id, user_id, amount, type, status, description, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
@@ -4772,11 +4778,6 @@ export async function activityLogsPage(req, res) {
       supabase.from("payments").select("id, user_id, amount, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("maintenance").select("id, ticket_id, bike_code, issue_type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] }))
     ]);
-
-    const profilesRes = responses[5];
-    const supportRes = responses[6];
-    const paymentsRes = responses[7];
-    const maintenanceRes = responses[8];
 
     // Normalize Orders
     const normalizedOrders = safeData(ordersRes.data).map(o => ({

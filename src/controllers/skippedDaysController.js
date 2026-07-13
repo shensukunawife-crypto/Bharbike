@@ -87,17 +87,13 @@ async function syncSubscriptionForSkippedDays(riderName, targetEndDate = null, d
 
     if (isAddition) {
       // Activating an entry
-      if (currentEnd < now && targetEndDate) {
-        // User is EXPIRED. Reactivate them by setting end date directly to skipped_end_date
-        newEnd = new Date(targetEndDate);
-        
-        // Ensure time is set to end of day if it's just a date
-        if (targetEndDate.length <= 10) {
-           newEnd.setHours(23, 59, 59, 999);
-        }
+      if (currentEnd < now) {
+        // User is EXPIRED. Reactivate them by adding skipped days starting from NOW
+        newEnd = new Date(now.getTime());
+        newEnd.setDate(newEnd.getDate() + parseInt(days || 0));
       } else {
         // User is ACTIVE. Add the skipped days to their current end date
-        newEnd.setDate(newEnd.getDate() + parseInt(days));
+        newEnd.setDate(newEnd.getDate() + parseInt(days || 0));
       }
     } else {
       // Deactivating/deleting an entry

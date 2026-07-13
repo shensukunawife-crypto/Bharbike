@@ -3373,12 +3373,15 @@ Database tables and their EXACT columns (use these when writing queries):
 - payments: id, user_id, amount, status, type, created_at  ← use "created_at" NOT "timestamp"
 - bookings: id, user_id, start_time, end_time, status, created_at
 - subscriptions: id, user_id, plan_id, status, start_date, end_date, created_at
+- kyc_documents: id, user_id, status, created_at
 
-IMPORTANT SQL rules:
+IMPORTANT SQL rules (to match the admin dashboard perfectly):
 - Always use "created_at" for date filtering, never "timestamp" or "date"
 - For recent data use: WHERE created_at >= NOW() - INTERVAL '2 days'
 - For payments (revenue/earnings), use: WHERE status = 'success' AND amount > 0
-- For counting real users, exclude delivery partners and test accounts: WHERE is_delivery_partner IS NOT TRUE AND full_name NOT ILIKE '%test%'
+- For Total Users, exclude delivery partners and test accounts: WHERE is_delivery_partner IS NOT TRUE AND full_name NOT ILIKE '%test%'
+- For Active Rentals, use: WHERE status IN ('active', 'ongoing')
+- For Pending KYC, use: WHERE status = 'pending'
 - Only write SELECT queries. Never INSERT, UPDATE or DELETE.
 
 Here is the latest activity on BHAR BIKE right now:

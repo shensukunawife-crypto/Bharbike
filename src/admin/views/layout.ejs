@@ -730,9 +730,10 @@
               }
               
               const typeCounts = {};
+              const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
               allLogs.forEach(log => {
                 const logTime = new Date(log.timestamp).getTime();
-                if (logTime > (lastViewed[log.type] || 0)) {
+                if (logTime > oneDayAgo && logTime > (lastViewed[log.type] || 0)) {
                   typeCounts[log.type] = (typeCounts[log.type] || 0) + 1;
                 }
               });

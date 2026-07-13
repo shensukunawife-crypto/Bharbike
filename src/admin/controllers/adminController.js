@@ -11,6 +11,7 @@ import XLSX from "xlsx";
 import { createUserNotification } from "../../services/notificationService.js";
 import { sendFcmPushToTokens, sendFcmPush } from "../../utils/firebaseAdmin.js";
 import * as walletService from "../../services/walletService.js";
+import Groq from "groq-sdk";
 
 function parseIST(dateStr) {
   if (!dateStr) return null;
@@ -3343,6 +3344,108 @@ export async function getNotificationUsers(req, res) {
   }
 }
 
+
+export async function chatBot(req, res) {
+  try {
+    const { messages, recentActivity } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ success: false, message: "Invalid messages format" });
+    }
+
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY
+    });
+
+    const systemPrompt = `You are a helpful AI assistant for the Admin Dashboard of BHAR BIKE.
+You have access to real-time information about recent events and logs from the platform.
+You also have access to a tool to query the PostgreSQL database for historical data.
+Tables available:
+- users: id, full_name, email, phone, role, wallet_balance, created_at
+- rentals: id, user_id, bike_id, start_time, end_time, status, total_cost
+- bikes: id, brand, model, license_plate, status, battery_level, location
+- payments: id, user_id, amount, status, type, created_at
+- bookings: id, user_id, start_time, end_time, status, created_at
+
+CRITICAL INSTRUCTION: If you need to query the database, ONLY run SELECT queries. NEVER attempt to run INSERT, UPDATE, or DELETE.
+
+Here is the most recent activity on the platform right now:
+${JSON.stringify(recentActivity || [], null, 2)}`;
+
+    let currentMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages
+    ];
+
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "run_sql_query",
+          description: "Execute a raw SQL SELECT query against the PostgreSQL database to fetch historical or aggregated data.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "The SQL SELECT query to run (e.g. SELECT COUNT(*) FROM users;)"
+              }
+            },
+            required: ["query"]
+          }
+        }
+      }
+    ];
+
+    let maxLoops = 3;
+    while (maxLoops > 0) {
+      const chatCompletion = await groq.chat.completions.create({
+        messages: currentMessages,
+        model: "llama-3.1-8b-instant",
+        tools: tools,
+        tool_choice: "auto"
+      });
+
+      const responseMessage = chatCompletion.choices[0].message;
+      currentMessages.push(responseMessage);
+
+      if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+        for (const toolCall of responseMessage.tool_calls) {
+          if (toolCall.function.name === "run_sql_query") {
+            const args = JSON.parse(toolCall.function.arguments);
+            let resultData;
+            
+            try {
+              if (!args.query.trim().toUpperCase().startsWith("SELECT")) {
+                 throw new Error("SECURITY BLOCK: Only SELECT queries are permitted.");
+              }
+              const { data, error } = await supabase.rpc("exec_sql", { sql_query: args.query });
+              if (error) throw error;
+              resultData = data;
+            } catch (sqlErr) {
+              resultData = { error: sqlErr.message || "Query failed" };
+            }
+
+            currentMessages.push({
+              tool_call_id: toolCall.id,
+              role: "tool",
+              name: "run_sql_query",
+              content: JSON.stringify(resultData)
+            });
+          }
+        }
+        maxLoops--;
+      } else {
+        return res.json({ success: true, reply: responseMessage.content });
+      }
+    }
+    
+    return res.json({ success: true, reply: currentMessages[currentMessages.length - 1].content || "Processing took too long, try a simpler request." });
+    
+  } catch (err) {
+    console.error("[admin.chatBot]", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
 
 export async function voiceSettingsPage(req, res) {
   res.render("layout", {

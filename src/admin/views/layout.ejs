@@ -13,6 +13,118 @@
       window.__BRAND_PRODUCT_NAME__ = "<%= BRAND_PRODUCT_NAME %>";
     </script>
     <style>
+      /* ─── Chatbot Floating UI ─────────────────────────────── */
+      #chatbot-fab {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        z-index: 9999;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      #chatbot-fab:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.5);
+      }
+      #chatbot-window {
+        position: fixed;
+        bottom: 90px;
+        right: 24px;
+        width: 340px;
+        height: 480px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        display: none;
+        flex-direction: column;
+        z-index: 9998;
+        overflow: hidden;
+      }
+      #chatbot-header {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        padding: 14px 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      #chatbot-body {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .chat-msg {
+        max-width: 85%;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 13.5px;
+        line-height: 1.4;
+      }
+      .chat-msg.user {
+        align-self: flex-end;
+        background: var(--primary);
+        color: #fff;
+        border-bottom-right-radius: 2px;
+      }
+      .chat-msg.bot {
+        align-self: flex-start;
+        background: var(--bg-secondary);
+        color: var(--text);
+        border-bottom-left-radius: 2px;
+      }
+      .chat-msg.sys {
+        align-self: center;
+        font-size: 11px;
+        color: var(--text-muted);
+        text-align: center;
+        background: none;
+      }
+      #chatbot-input-area {
+        display: flex;
+        padding: 12px;
+        border-top: 1px solid var(--border-color);
+        background: var(--bg-card);
+      }
+      #chatbot-input {
+        flex: 1;
+        border: 1px solid var(--border-color);
+        background: var(--bg);
+        color: var(--text);
+        border-radius: 20px;
+        padding: 8px 14px;
+        outline: none;
+        font-size: 13.5px;
+      }
+      #chatbot-send {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        margin-left: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s;
+      }
+      #chatbot-send:hover { opacity: 0.8; }
+      
       /* ─── Notification dropdown ─────────────────────────────── */
       @keyframes pulseRed {
         0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -878,5 +990,120 @@
         <div id="notif-modal-body"></div>
       </div>
     </div>
+
+    <!-- ── Floating Chatbot ── -->
+    <div id="chatbot-fab">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+    </div>
+    <div id="chatbot-window">
+      <div id="chatbot-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 1 0 10 10H12z"/><path d="M12 12 2.1 7.1"/>
+          </svg>
+          AI Admin Assistant
+        </div>
+        <button id="chatbot-close" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 18px;">&times;</button>
+      </div>
+      <div id="chatbot-body">
+        <div class="chat-msg sys">Chat history is saved locally.</div>
+      </div>
+      <form id="chatbot-input-area">
+        <input type="text" id="chatbot-input" placeholder="Ask about recent data..." autocomplete="off" />
+        <button type="submit" id="chatbot-send">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </form>
+    </div>
+
+    <script>
+      // ── Chatbot Logic ─────────────────────────────────────────
+      document.addEventListener("DOMContentLoaded", () => {
+        const fab = document.getElementById("chatbot-fab");
+        const chatWin = document.getElementById("chatbot-window");
+        const closeBtn = document.getElementById("chatbot-close");
+        const chatBody = document.getElementById("chatbot-body");
+        const chatForm = document.getElementById("chatbot-input-area");
+        const chatInput = document.getElementById("chatbot-input");
+
+        // Load History
+        let chatHistory = JSON.parse(localStorage.getItem("adminChatHistory") || "[]");
+
+        const renderHistory = () => {
+          // Keep sys message
+          chatBody.innerHTML = '<div class="chat-msg sys">Chat history is saved locally.</div>';
+          chatHistory.forEach(msg => {
+            const div = document.createElement("div");
+            div.className = `chat-msg ${msg.role === "user" ? "user" : "bot"}`;
+            div.textContent = msg.content;
+            chatBody.appendChild(div);
+          });
+          chatBody.scrollTop = chatBody.scrollHeight;
+        };
+        renderHistory();
+
+        // Toggle UI
+        fab.addEventListener("click", () => {
+          chatWin.style.display = chatWin.style.display === "flex" ? "none" : "flex";
+          if (chatWin.style.display === "flex") {
+            chatInput.focus();
+            chatBody.scrollTop = chatBody.scrollHeight;
+          }
+        });
+        closeBtn.addEventListener("click", () => { chatWin.style.display = "none"; });
+
+        // Handle Submit
+        chatForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const text = chatInput.value.trim();
+          if (!text) return;
+
+          // Add User msg
+          chatHistory.push({ role: "user", content: text });
+          renderHistory();
+          chatInput.value = "";
+
+          // Add temporary loading indicator
+          const loadDiv = document.createElement("div");
+          loadDiv.className = "chat-msg bot";
+          loadDiv.textContent = "...";
+          loadDiv.id = "chat-loader";
+          chatBody.appendChild(loadDiv);
+          chatBody.scrollTop = chatBody.scrollHeight;
+
+          try {
+            // Get latest logs (allLogs is available globally from fetchActivities)
+            const recentActivity = window.allLogs ? window.allLogs.slice(0, 20) : [];
+            
+            const res = await fetch("/admin/chatbot", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messages: chatHistory,
+                recentActivity: recentActivity
+              })
+            });
+            const data = await res.json();
+            
+            document.getElementById("chat-loader").remove();
+            
+            if (data.success) {
+              chatHistory.push({ role: "assistant", content: data.reply });
+            } else {
+              chatHistory.push({ role: "assistant", content: "Error: " + data.message });
+            }
+          } catch (err) {
+            document.getElementById("chat-loader").remove();
+            chatHistory.push({ role: "assistant", content: "Network error. Could not reach AI." });
+          }
+          
+          // Save and render
+          localStorage.setItem("adminChatHistory", JSON.stringify(chatHistory));
+          renderHistory();
+        });
+      });
+    </script>
   </body>
 </html>

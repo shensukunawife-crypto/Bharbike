@@ -474,6 +474,9 @@ async function loadAdminPaymentsData(req, mappings) {
     for (const o of safeData(ordRows)) orderMap.set(o.id, o);
   }
 
+  const userIds = [...new Set([...paymentsRaw.map(p => p.user_id), ...safeData(Array.from(orderMap.values())).map(o => o.user_id)].filter(Boolean))];
+  const nameMap = await fetchNameMapForIds(userIds);
+
   const allPayments = paymentsRaw.map((row) => {
     const ord = orderMap.get(row.order_id);
     const amt = Number(row.amount ?? ord?.amount ?? ord?.price ?? 0);
@@ -481,6 +484,7 @@ async function loadAdminPaymentsData(req, mappings) {
     
     const payNum = mappings.paymentMap.get(row.id) || String(row.id).slice(0, 8);
     const ordNum = row.order_id ? (mappings.orderMap.get(row.order_id) || String(row.order_id).slice(0, 8)) : "—";
+    const uid = row.user_id || ord?.user_id;
     
     return {
       id: row.id,
@@ -493,6 +497,7 @@ async function loadAdminPaymentsData(req, mappings) {
       razorpay_order_id: row.razorpay_order_id || "—",
       razorpay_payment_id: row.razorpay_payment_id || "—",
       created_at: row.created_at,
+      userName: (uid && nameMap.get(uid)) || "—",
     };
   });
 

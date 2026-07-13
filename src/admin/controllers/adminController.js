@@ -3374,7 +3374,7 @@ Database tables and their EXACT columns (use these when writing queries):
 - bookings: id, user_id, start_time, end_time, status, created_at
 - subscriptions: id, user_id, plan_id, status, start_date, end_date, created_at
 - kyc_documents: id, user_id, status, created_at
-- orders: id, amount, status, pickup_location, created_at
+- orders: id, user_id, bike_id, amount, total_amount, status, pickup_location, assigned_user_id, created_at
 - wallet_transactions: id, user_id, amount, type, title, status, created_at
 - support_tickets: id, user_id, subject, status, created_at
 

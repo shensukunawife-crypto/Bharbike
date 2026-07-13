@@ -3345,9 +3345,10 @@ export async function getNotificationUsers(req, res) {
 
 
 export async function voiceSettingsPage(req, res) {
-  res.render("voice-settings", {
+  res.render("layout", {
     title: "Voice Assistant Settings",
-    active: "voice-settings"
+    active: "voice-settings",
+    bodyView: "voice-settings"
   });
 }
 

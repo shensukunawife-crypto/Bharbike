@@ -1396,3 +1396,13 @@ body.dark-mode .diagnostic-bar-bg {
 
 
 
+
+/* Distinct Sidebar Badge Colors */
+#badge-maintenance { background: #f59e0b !important; color: #fff; } /* Amber */
+#badge-user { background: #10b981 !important; color: #fff; } /* Emerald Green */
+#badge-subscription { background: #8b5cf6 !important; color: #fff; } /* Violet */
+#badge-kyc { background: #3b82f6 !important; color: #fff; } /* Blue */
+#badge-payment { background: #14b8a6 !important; color: #fff; } /* Teal */
+#badge-order { background: #f43f5e !important; color: #fff; } /* Rose */
+#badge-booking { background: #ec4899 !important; color: #fff; } /* Pink */
+#badge-support { background: #ef4444 !important; color: #fff; } /* Red */

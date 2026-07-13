@@ -3377,6 +3377,10 @@ Database tables and their EXACT columns (use these when writing queries):
 - orders: id, user_id, bike_id, amount, total_amount, status, pickup_location, assigned_user_id, created_at
 - wallet_transactions: id, user_id, amount, type, title, status, created_at
 - support_tickets: id, user_id, subject, status, created_at
+- hubs: id, name, location, status, created_at
+- maintenance: id, bike_id, status, description, cost, created_at
+- promo_codes: id, code, discount, max_uses, status, created_at
+- delivery_partners: id, user_id, status, created_at
 
 IMPORTANT SQL rules (to match the admin dashboard perfectly):
 - Always use "created_at" for date filtering, never "timestamp" or "date"

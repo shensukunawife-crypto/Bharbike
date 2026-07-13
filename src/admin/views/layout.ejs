@@ -273,6 +273,16 @@
         font-size: 11px;
         font-weight: 700;
       }
+      .sidebar-badge {
+        background-color: #ef4444;
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: auto;
+        box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+      }
     </style>
   </head>
   <body>
@@ -658,6 +668,47 @@
               allLogs = data.logs;
               renderList();
               if (allLogs.length > 0 && notifBadge) notifBadge.style.display = "block";
+
+              // --- SIDEBAR BADGES LOGIC ---
+              const currentPath = window.location.pathname;
+              let lastViewed = JSON.parse(localStorage.getItem('adminLastViewed') || '{}');
+              
+              const pathToType = {
+                '/admin/orders': 'order',
+                '/admin/bookings': 'booking',
+                '/admin/payments': 'payment',
+                '/admin/kyc-documents': 'kyc',
+                '/admin/subscriptions': 'subscription',
+                '/admin/support': 'support',
+                '/admin/maintenance': 'maintenance',
+                '/admin/users': 'user'
+              };
+              
+              if (pathToType[currentPath]) {
+                lastViewed[pathToType[currentPath]] = Date.now();
+                localStorage.setItem('adminLastViewed', JSON.stringify(lastViewed));
+              }
+              
+              const typeCounts = {};
+              allLogs.forEach(log => {
+                const logTime = new Date(log.timestamp).getTime();
+                if (logTime > (lastViewed[log.type] || 0)) {
+                  typeCounts[log.type] = (typeCounts[log.type] || 0) + 1;
+                }
+              });
+              
+              Object.values(pathToType).forEach(type => {
+                const badgeEl = document.getElementById('badge-' + type);
+                if (badgeEl) {
+                  if (typeCounts[type] > 0) {
+                    badgeEl.textContent = typeCounts[type];
+                    badgeEl.style.display = 'inline-block';
+                  } else {
+                    badgeEl.style.display = 'none';
+                  }
+                }
+              });
+              // ----------------------------
             }
           } catch (err) {
             console.warn("[notif] fetch error:", err);

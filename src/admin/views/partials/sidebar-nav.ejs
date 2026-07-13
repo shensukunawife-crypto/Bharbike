@@ -74,10 +74,10 @@
     </button>
     <div class="nav-group-panel">
       <a class="nav-link nav-link-sub <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes" data-label="Bikes">
-        <span class="nav-icon"><%- icons.bike %></span><span>Bikes</span>
+        <span class="nav-icon"><%- icons.bike %></span><span style="flex:1;">Bikes</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'maintenance' ? 'active' : '' %>" href="/admin/maintenance" data-label="Maintenance">
-        <span class="nav-icon"><%- icons.maintenance %></span><span>Maintenance</span>
+        <span class="nav-icon"><%- icons.maintenance %></span><span style="flex:1;">Maintenance</span><span class="sidebar-badge" id="badge-maintenance" style="display:none;">0</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'hubs' ? 'active' : '' %>" href="/admin/hubs" data-label="Battery Stations">
         <span class="nav-icon"><%- icons.hubs %></span><span>Battery Swapping Stations</span>
@@ -99,17 +99,17 @@
     </button>
     <div class="nav-group-panel">
       <a class="nav-link nav-link-sub <%= active === 'users' ? 'active' : '' %>" href="/admin/users" data-label="Users">
-        <span class="nav-icon"><%- icons.users %></span><span>Users</span>
+        <span class="nav-icon"><%- icons.users %></span><span style="flex:1;">Users</span><span class="sidebar-badge" id="badge-user" style="display:none;">0</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'subscriptions' ? 'active' : '' %>" href="/admin/subscriptions" data-label="Subscriptions">
-        <span class="nav-icon"><%- icons.accounts %></span><span>Subscriptions</span>
+        <span class="nav-icon"><%- icons.accounts %></span><span style="flex:1;">Subscriptions</span><span class="sidebar-badge" id="badge-subscription" style="display:none;">0</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents" data-label="KYC Documents">
-        <span class="nav-icon"><%- icons.kyc %></span><span>KYC Documents</span>
+        <span class="nav-icon"><%- icons.kyc %></span><span style="flex:1;">KYC Documents</span><span class="sidebar-badge" id="badge-kyc" style="display:none;">0</span>
       </a>
       <% if (_can('manage_finance')) { %>
       <a class="nav-link nav-link-sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments" data-label="Payments">
-        <span class="nav-icon"><%- icons.payments %></span><span>Payments</span>
+        <span class="nav-icon"><%- icons.payments %></span><span style="flex:1;">Payments</span><span class="sidebar-badge" id="badge-payment" style="display:none;">0</span>
       </a>
       <% } %>
       <a class="nav-link nav-link-sub <%= active === 'skipped-days' ? 'active' : '' %>" href="/admin/skipped-days" data-label="Skipped Days">
@@ -154,10 +154,10 @@
     </button>
     <div class="nav-group-panel">
       <a class="nav-link nav-link-sub <%= active === 'orders' ? 'active' : '' %>" href="/admin/orders" data-label="Orders">
-        <span class="nav-icon"><%- icons.orders %></span><span>Orders</span>
+        <span class="nav-icon"><%- icons.orders %></span><span style="flex:1;">Orders</span><span class="sidebar-badge" id="badge-order" style="display:none;">0</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'bookings' ? 'active' : '' %>" href="/admin/bookings" data-label="Bookings">
-        <span class="nav-icon"><%- icons.bookings %></span><span>Bookings</span>
+        <span class="nav-icon"><%- icons.bookings %></span><span style="flex:1;">Bookings</span><span class="sidebar-badge" id="badge-booking" style="display:none;">0</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'delivery-partners' ? 'active' : '' %>" href="/admin/delivery-partners" data-label="Delivery">
         <span class="nav-icon"><%- icons.delivery %></span><span>Delivery</span>
@@ -210,7 +210,7 @@
     <div class="nav-group-panel">
       <% if (_can('manage_support')) { %>
       <a class="nav-link nav-link-sub <%= active === 'support' ? 'active' : '' %>" href="/admin/support" data-label="Support">
-        <span class="nav-icon"><%- icons.support %></span><span>Support</span>
+        <span class="nav-icon"><%- icons.support %></span><span style="flex:1;">Support</span><span class="sidebar-badge" id="badge-support" style="display:none;">0</span>
       </a>
       <% } %>
       <% if (_can('manage_notifications')) { %>

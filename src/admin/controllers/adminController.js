@@ -3865,6 +3865,14 @@ export async function assignBike(req, res) {
       return res.status(409).json({ success: false, message: "This user already has an active rental. End it first before assigning a new bike." });
     }
 
+    // NEW: Auto-complete any old expired rentals for this user so they don't stay stuck in the Dashboard Expiry Orders list
+    await supabase
+      .from("rentals")
+      .update({ status: "completed", updated_at: new Date().toISOString() })
+      .eq("user_id", user_id)
+      .eq("status", "expired");
+
+
     const startTime = new Date();
     let endTime;
     let durationHours;
@@ -5907,7 +5915,7 @@ export async function assignBikeToUser(req, res) {
       .eq("user_id", userId)
       .eq("status", "ongoing");
 
-    await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).eq("status", "ongoing");
+    await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).in("status", ["ongoing", "expired"]);
 
     // Reset old bike(s) status back to available
     if (existingRentals && existingRentals.length > 0) {

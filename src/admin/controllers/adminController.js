@@ -3377,10 +3377,13 @@ Database tables and their EXACT columns (use these when writing queries):
 
 IMPORTANT SQL rules (to match the admin dashboard perfectly):
 - Always use "created_at" for date filtering, never "timestamp" or "date"
-- For recent data use: WHERE created_at >= NOW() - INTERVAL '2 days'
+- For "Today": WHERE DATE(created_at) = CURRENT_DATE
+- For "This Week": WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
 - For payments (revenue/earnings), use: WHERE status = 'success' AND amount > 0
 - For Total Users, exclude delivery partners and test accounts: WHERE is_delivery_partner IS NOT TRUE AND full_name NOT ILIKE '%test%'
 - For Active Rentals, use: WHERE status IN ('active', 'ongoing')
+- For Expiry/Overdue Orders, use: WHERE end_time < NOW() AND status IN ('active', 'ongoing')
+- For Fleet Size (Total Bikes), count all rows in the bikes table without filters.
 - For Pending KYC, use: WHERE status = 'pending'
 - Only write SELECT queries. Never INSERT, UPDATE or DELETE.
 

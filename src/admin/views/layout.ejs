@@ -1139,10 +1139,20 @@
           // Add temporary loading indicator
           const loadDiv = document.createElement("div");
           loadDiv.className = "chat-msg bot";
-          loadDiv.textContent = "...";
+          loadDiv.textContent = "Thinking...";
           loadDiv.id = "chat-loader";
+          loadDiv.style.fontStyle = "italic";
+          loadDiv.style.opacity = "0.7";
           chatBody.appendChild(loadDiv);
           chatBody.scrollTop = chatBody.scrollHeight;
+          
+          const loadingMessages = ["Thinking...", "Looking up data...", "Pulling records...", "Analyzing..."];
+          let loaderIndex = 0;
+          const loaderInterval = setInterval(() => {
+            loaderIndex = (loaderIndex + 1) % loadingMessages.length;
+            const el = document.getElementById("chat-loader");
+            if (el) el.textContent = loadingMessages[loaderIndex];
+          }, 1500);
 
           try {
             // Get latest logs (allLogs is available globally from fetchActivities)
@@ -1158,6 +1168,7 @@
             });
             const data = await res.json();
             
+            clearInterval(loaderInterval);
             document.getElementById("chat-loader").remove();
             
             if (data.success) {
@@ -1166,6 +1177,7 @@
               chatHistory.push({ role: "assistant", content: "Error: " + data.message });
             }
           } catch (err) {
+            clearInterval(loaderInterval);
             document.getElementById("chat-loader").remove();
             chatHistory.push({ role: "assistant", content: "Network error. Could not reach AI." });
           }

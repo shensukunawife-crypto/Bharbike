@@ -20,20 +20,20 @@
         right: 24px;
         width: 56px;
         height: 56px;
-        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        background: linear-gradient(135deg, #f26d21, #ff8c42);
         color: #fff;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        box-shadow: 0 4px 12px rgba(242, 109, 33, 0.45);
         z-index: 9999;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
       #chatbot-fab:hover {
         transform: scale(1.05);
-        box-shadow: 0 6px 16px rgba(79, 70, 229, 0.5);
+        box-shadow: 0 6px 16px rgba(242, 109, 33, 0.55);
       }
       #chatbot-window {
         position: fixed;
@@ -41,17 +41,17 @@
         right: 24px;
         width: 340px;
         height: 480px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
+        background: #fff;
+        border: 1px solid rgba(242, 109, 33, 0.2);
         border-radius: 16px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(242,109,33,0.08);
         display: none;
         flex-direction: column;
         z-index: 9998;
         overflow: hidden;
       }
       #chatbot-header {
-        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        background: linear-gradient(135deg, #f26d21, #ff8c42);
         color: #fff;
         padding: 14px 16px;
         font-weight: 600;
@@ -66,6 +66,7 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
+        background: #fff;
       }
       .chat-msg {
         max-width: 85%;
@@ -76,14 +77,14 @@
       }
       .chat-msg.user {
         align-self: flex-end;
-        background: var(--primary);
+        background: #f26d21;
         color: #fff;
         border-bottom-right-radius: 2px;
       }
       .chat-msg.bot {
         align-self: flex-start;
-        background: var(--bg-secondary);
-        color: var(--text);
+        background: #f5f5f5;
+        color: #1a1a1a;
         border-bottom-left-radius: 2px;
       }
       .chat-msg.sys {
@@ -97,20 +98,20 @@
         display: flex;
         padding: 12px;
         border-top: 1px solid var(--border-color);
-        background: var(--bg-card);
+        background: #fff;
       }
       #chatbot-input {
         flex: 1;
         border: 1px solid var(--border-color);
-        background: var(--bg);
-        color: var(--text);
+        background: #f9f9f9;
+        color: #1a1a1a;
         border-radius: 20px;
         padding: 8px 14px;
         outline: none;
         font-size: 13.5px;
       }
       #chatbot-send {
-        background: var(--primary);
+        background: #f26d21;
         color: #fff;
         border: none;
         border-radius: 50%;
@@ -1008,7 +1009,7 @@
         <button id="chatbot-close" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 18px;">&times;</button>
       </div>
       <div id="chatbot-body">
-        <div class="chat-msg sys">Chat history is saved locally.</div>
+        <div class="chat-msg bot" style="background: rgba(242,109,33,0.1); color: #c45510; font-weight:500;">👋 Hi! I'm your BharBike AI Assistant. Ask me anything about your platform — bookings, revenue, users, bikes, or recent activity!</div>
       </div>
       <form id="chatbot-input-area">
         <input type="text" id="chatbot-input" placeholder="Ask about recent data..." autocomplete="off" />
@@ -1031,9 +1032,10 @@
         // Load History
         let chatHistory = JSON.parse(localStorage.getItem("adminChatHistory") || "[]");
 
+        const WELCOME = '<div class="chat-msg bot" style="background:rgba(242,109,33,0.1);color:#c45510;font-weight:500;">👋 Hi! I\'m your BharBike AI Assistant. Ask me anything about your platform — bookings, revenue, users, bikes, or recent activity!</div>';
+
         const renderHistory = () => {
-          // Keep sys message
-          chatBody.innerHTML = '<div class="chat-msg sys">Chat history is saved locally.</div>';
+          chatBody.innerHTML = WELCOME;
           chatHistory.forEach(msg => {
             const div = document.createElement("div");
             div.className = `chat-msg ${msg.role === "user" ? "user" : "bot"}`;

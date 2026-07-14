@@ -3380,12 +3380,12 @@ Database tables and their EXACT columns (use these when writing queries):
 - orders: id, user_id, bike_id, amount, price, status, pickup_location, assigned_user_id, created_at
 - wallet_transactions: id, user_id, amount, type, title, status, created_at
 - wallet_balances: id, user_id, balance, currency, created_at
-- support_tickets: id, user_id, subject, status, created_at
-- hubs: id, name, location, status, created_at
-- maintenance: id, bike_id, status, description, cost, created_at
-- promo_codes: id, code, discount, max_uses, status, created_at
-- delivery_partners: id, user_id, status, created_at
-- rider_skipped_days: id, rider_name, bike_id, skipped_start_date, skipped_end_date, days_skipped, status
+- support_tickets: id, user_id, ticket_number, issue_type, description, status, created_at
+- hubs: id, name, address, latitude, longitude, status, created_at
+- maintenance: id, bike_id, status, issue_type, work_details, repair_cost, created_at
+- promo_codes: id, code, discount_type, discount_value, max_uses, is_active, created_at
+- delivery_partners: id, user_id, name, phone, city, status, created_at
+- rider_skipped_days: id, rider_name, bike_id, skipped_start_date, skipped_end_date, days_skipped, reason, status, created_at
 - earnings: id, userid, type, amount, created_at
 - admin_users: id, email, full_name, role, permissions, is_active, created_at, last_login
 - ticket_messages: id, ticket_id, sender_id, sender_type, message, created_at

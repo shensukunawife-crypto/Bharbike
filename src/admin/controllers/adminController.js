@@ -3369,20 +3369,21 @@ STRICT RULES — follow these always:
 8. Be ANALYTICAL: If the user asks for summaries, feel free to use SUM(), AVG(), or COUNT() in your SQL to give them smart insights.
 
 Database tables and their EXACT columns (use these when writing queries):
-- users: id, full_name, email, phone, role, wallet_balance, is_delivery_partner, created_at
-- rentals: id, user_id, bike_id, start_time, end_time, status, total_cost, created_at
-- bikes: id, brand, model, license_plate, status, battery_level, location, created_at
-- payments: id, user_id, amount, status, type, created_at  ← use "created_at" NOT "timestamp"
-- bookings: id, user_id, start_time, end_time, status, created_at
-- subscriptions: id, user_id, plan_id, status, start_date, end_date, created_at
-- kyc_documents: id, user_id, status, created_at
-- orders: id, user_id, bike_id, amount, total_amount, status, pickup_location, assigned_user_id, created_at
+- users: id, full_name, email, phone, is_delivery_partner, created_at
+- rentals: id, user_id, bike_id, start_time, end_time, status, price, duration, created_at
+- bikes: id, name, model, registration_number, status, battery, location, is_locked, created_at
+- payments: id, user_id, amount, status, razorpay_payment_id, created_at
+- user_subscriptions: id, user_id, plan_id, status, start_date, end_date, created_at
+- kyc_documents: id, user_id, type, status, created_at
+- orders: id, user_id, bike_id, amount, price, status, pickup_location, assigned_user_id, created_at
 - wallet_transactions: id, user_id, amount, type, title, status, created_at
+- wallet_balances: id, user_id, balance, currency, created_at
 - support_tickets: id, user_id, subject, status, created_at
 - hubs: id, name, location, status, created_at
 - maintenance: id, bike_id, status, description, cost, created_at
 - promo_codes: id, code, discount, max_uses, status, created_at
 - delivery_partners: id, user_id, status, created_at
+- rider_skipped_days: id, rider_name, bike_id, skipped_start_date, skipped_end_date, days_skipped, status
 
 IMPORTANT SQL rules (to match the admin dashboard perfectly):
 - NEVER use a semicolon (;) at the end of your queries.

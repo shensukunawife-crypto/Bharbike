@@ -3425,7 +3425,7 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
       }
     ];
 
-    let maxLoops = 4;
+    let maxLoops = 6; // Increased loops to let the AI think if it needs to make multiple small queries
     while (maxLoops > 0) {
       const chatCompletion = await groq.chat.completions.create({
         messages: currentMessages,
@@ -3460,11 +3460,16 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
             // Remove trailing semicolons which break the RPC
             sqlQuery = (args.query || "").replace(/;/g, '').trim();
 
-            console.log("[BharBot] Running query:", sqlQuery);
-
             if (!sqlQuery.toUpperCase().startsWith("SELECT")) {
               throw new Error("Only SELECT queries are allowed.");
             }
+            
+            // Hard limit: NEVER let the AI load massive data that breaks the chat context
+            if (!/LIMIT\s+\d+/i.test(sqlQuery)) {
+               sqlQuery += " LIMIT 10";
+            }
+
+            console.log("[BharBot] Running query:", sqlQuery);
 
             // Try exec_sql RPC
             const { data, error } = await supabase.rpc("exec_sql", { sql_query: sqlQuery });

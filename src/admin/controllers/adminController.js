@@ -3402,94 +3402,59 @@ IMPORTANT SQL rules (to match the admin dashboard perfectly):
       ...messages
     ];
 
-    const tools = [
-      {
-        type: "function",
-        function: {
-          name: "run_sql_query",
-          description: "Execute a raw SQL SELECT query against the PostgreSQL database to fetch historical or aggregated data.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: {
-                type: "string",
-                description: "The SQL SELECT query to run (e.g. SELECT COUNT(*) FROM users)"
-              }
-            },
-            required: ["query"]
-          }
-        }
-      }
-    ];
-
-    let maxLoops = 6; // Increased loops to let the AI think if it needs to make multiple small queries
+    let maxLoops = 6;
     while (maxLoops > 0) {
       const chatCompletion = await groq.chat.completions.create({
         messages: currentMessages,
-        model: "llama-3.3-70b-versatile",
-        tools: tools,
-        tool_choice: "auto"
+        model: "llama-3.3-70b-versatile"
       });
 
       const responseMessage = chatCompletion.choices[0].message;
+      const content = (responseMessage.content || "").trim();
 
-      // If AI returned a plain text answer, send it back
-      if (!responseMessage.tool_calls || responseMessage.tool_calls.length === 0) {
-        // Strip out hallucinated function call text if it exists
-        let cleanReply = responseMessage.content || "";
-        if (cleanReply.includes("function=run_sql_query")) {
-           cleanReply = cleanReply.replace(/function=run_sql_query>[^\n]*\n?/g, '').trim();
-        }
-        return res.json({ success: true, reply: cleanReply || "Sorry, I couldn't process that properly." });
+      // Check if the AI wants to run a SQL query via a markdown code block
+      const sqlMatch = content.match(/```sql\s*([\s\S]*?)\s*```/i);
+      if (!sqlMatch) {
+        // It's a plain text response, return it immediately
+        return res.json({ success: true, reply: content || "Sorry, I couldn't process that properly." });
       }
 
-      // Push AI's tool-call message into context
-      currentMessages.push(responseMessage);
+      // It's a SQL query! Extract and validate it
+      let sqlQuery = sqlMatch[1].replace(/;/g, '').trim();
 
-      // Execute each tool call
-      for (const toolCall of responseMessage.tool_calls) {
-        if (toolCall.function.name === "run_sql_query") {
-          let resultData;
-          let sqlQuery = "";
-
-          try {
-            const args = JSON.parse(toolCall.function.arguments);
-            // Remove trailing semicolons which break the RPC
-            sqlQuery = (args.query || "").replace(/;/g, '').trim();
-
-            if (!sqlQuery.toUpperCase().startsWith("SELECT")) {
-              throw new Error("Only SELECT queries are allowed.");
-            }
-            
-            // Hard limit: NEVER let the AI load massive data that breaks the chat context
-            if (!/LIMIT\s+\d+/i.test(sqlQuery)) {
-               sqlQuery += " LIMIT 10";
-            }
-
-            console.log("[BharBot] Running query:", sqlQuery);
-
-            // Try exec_sql RPC
-            const { data, error } = await supabase.rpc("exec_sql", { sql_query: sqlQuery });
-            if (error) throw error;
-            // The RPC might return { error: "..." } inside data when it fails
-            if (data && data.error) throw new Error(data.error);
-            
-            resultData = data;
-
-          } catch (sqlErr) {
-            console.error("[BharBot] Query error:", sqlErr.message, "| SQL:", sqlQuery);
-            // Give the AI a meaningful error so it can explain properly
-            resultData = { error: `Could not get data: ${sqlErr.message}. The SQL query failed.` };
-          }
-
-          currentMessages.push({
-            tool_call_id: toolCall.id,
-            role: "tool",
-            name: "run_sql_query",
-            content: JSON.stringify(resultData)
-          });
-        }
+      if (!sqlQuery.toUpperCase().startsWith("SELECT")) {
+        sqlQuery = "SELECT 1"; // Safe fallback
       }
+
+      // Hard limit: NEVER let the AI load massive data that breaks the chat context
+      if (!/LIMIT\s+\d+/i.test(sqlQuery)) {
+        sqlQuery += " LIMIT 10";
+      }
+
+      console.log("[BharBot] Running query:", sqlQuery);
+
+      let resultData;
+      try {
+        // Try exec_sql RPC
+        const { data, error } = await supabase.rpc("exec_sql", { sql_query: sqlQuery });
+        if (error) throw error;
+        // The RPC might return { error: "..." } inside data when it fails
+        if (data && data.error) throw new Error(data.error);
+        
+        resultData = data;
+
+      } catch (sqlErr) {
+        console.error("[BharBot] Query error:", sqlErr.message, "| SQL:", sqlQuery);
+        // Give the AI a meaningful error so it can explain properly
+        resultData = { error: `Could not get data: ${sqlErr.message}. The SQL query failed.` };
+      }
+
+      // Append assistant's SQL output and the user's data response
+      currentMessages.push({ role: "assistant", content: content });
+      currentMessages.push({
+        role: "user",
+        content: `Here is the query result:\n${JSON.stringify(resultData, null, 2)}\n\nNow, translate this data into a friendly English response for the user.`
+      });
 
       maxLoops--;
     }
@@ -3497,22 +3462,16 @@ IMPORTANT SQL rules (to match the admin dashboard perfectly):
     // If we exhausted loops, get a final response
     const finalCompletion = await groq.chat.completions.create({
       messages: currentMessages,
-      model: "llama-3.3-70b-versatile",
-      tools: tools,
-      tool_choice: "auto"
+      model: "llama-3.3-70b-versatile"
     });
     
     let reply = finalCompletion.choices[0]?.message?.content || "";
-    if (!reply && finalCompletion.choices[0]?.message?.tool_calls) {
-      reply = "I found some records, but I need a moment to process them. Is there a specific detail you are looking for?";
-    }
-    
     return res.json({ success: true, reply: reply || "Sorry, I couldn't process that properly." });
 
   } catch (err) {
     console.error("[admin.chatBot]", err);
-    // Graceful fallback so the client never sees raw JSON, but we append the error string so we know WHY it failed
-    const fallbackMessage = "I'm having a little trouble connecting to the database right now. (Reason: " + err.message + ") However, I can still see the recent activity on the dashboard! Let me know if you want me to summarize the latest alerts.";
+    // Graceful fallback so the client never sees scary JSON errors
+    const fallbackMessage = "I'm having a little trouble connecting to the database right now. However, I can still see the recent activity on the dashboard! Let me know if you want me to summarize the latest alerts.";
     return res.json({ success: true, reply: fallbackMessage });
   }
 }

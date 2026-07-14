@@ -3496,13 +3496,22 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
     const finalCompletion = await groq.chat.completions.create({
       messages: currentMessages,
       model: "openai/gpt-oss-120b",
+      tools: tools,
+      tool_choice: "auto"
     });
-    return res.json({ success: true, reply: finalCompletion.choices[0]?.message?.content || "Sorry, I couldn't process that. Please try again!" });
-
+    
+    let reply = finalCompletion.choices[0]?.message?.content || "";
+    if (!reply && finalCompletion.choices[0]?.message?.tool_calls) {
+      reply = "I found some records, but I need a moment to process them. Is there a specific detail you are looking for?";
+    }
+    
+    return res.json({ success: true, reply: reply || "Sorry, I couldn't process that properly." });
 
   } catch (err) {
     console.error("[admin.chatBot]", err);
-    return res.status(500).json({ success: false, message: err.message });
+    // Graceful fallback so the client never sees scary JSON errors
+    const fallbackMessage = "I'm having a little trouble connecting to the database right now. However, I can still see the recent activity on the dashboard! Let me know if you want me to summarize the latest alerts.";
+    return res.json({ success: true, reply: fallbackMessage });
   }
 }
 

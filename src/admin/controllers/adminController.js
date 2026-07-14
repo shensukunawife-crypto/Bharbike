@@ -3384,6 +3384,12 @@ Database tables and their EXACT columns (use these when writing queries):
 - promo_codes: id, code, discount, max_uses, status, created_at
 - delivery_partners: id, user_id, status, created_at
 - rider_skipped_days: id, rider_name, bike_id, skipped_start_date, skipped_end_date, days_skipped, status
+- earnings: id, userid, type, amount, created_at
+- admin_users: id, email, full_name, role, permissions, is_active, created_at, last_login
+- ticket_messages: id, ticket_id, sender_id, sender_type, message, created_at
+- bike_lock_logs: id, bike_id, user_id, rental_id, action, method, success, created_at
+- reward_points: id, user_id, points, cashback_value, created_at
+- subscription_billing: id, subscription_id, user_id, amount, status, payment_method, billing_date, paid_at, created_at
 
 IMPORTANT SQL rules (to match the admin dashboard perfectly):
 - NEVER use a semicolon (;) at the end of your queries.

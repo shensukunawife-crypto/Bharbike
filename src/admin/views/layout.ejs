@@ -510,14 +510,17 @@
 
           <div class="topbar-right">
             <!-- Speaker Toggle -->
-            <button id="speaker-toggle" class="icon-btn" title="Toggle AI Voice">
-              <svg id="icon-speaker-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              </svg>
-              <svg id="icon-speaker-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none; color: var(--text-muted);">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>
-              </svg>
-            </button>
+            <div style="display: flex; flex-direction: column; align-items: center; margin-right: 4px;">
+              <button id="speaker-toggle" class="icon-btn" title="Toggle AI Voice" style="margin-bottom: -2px;">
+                <svg id="icon-speaker-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+                <svg id="icon-speaker-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none; color: var(--text-muted);">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>
+                </svg>
+              </button>
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);">Bharbot</span>
+            </div>
             <!-- Dark Mode Toggle -->
             <button id="theme-toggle" class="icon-btn" title="Toggle dark mode">
               <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1216,7 +1219,7 @@
           if (!cleanText) return;
 
           const utterance = new SpeechSynthesisUtterance(cleanText);
-          utterance.rate = 1.0;
+          utterance.rate = 0.9; // Slowed down slightly
           utterance.pitch = 1.1;
           utterance.volume = 1.0; // Max volume
 
@@ -1262,7 +1265,24 @@
         let hasWelcomed = false;
         document.body.addEventListener("click", () => {
           if (!hasWelcomed) {
-            speakText("Welcome to Bhar Bike.");
+            let speechText = "Welcome to Bhar Bike. ";
+            if (window.allLogs && window.allLogs.length > 0) {
+              const tenHoursAgo = new Date(Date.now() - 10 * 60 * 60 * 1000);
+              const recent = window.allLogs.filter(log => new Date(log.created_at) > tenHoursAgo);
+              if (recent.length > 0) {
+                speechText += `You have ${recent.length} notifications from the last 10 hours. `;
+                const toRead = recent.slice(0, 3);
+                toRead.forEach((log, idx) => {
+                  speechText += `Notification ${idx + 1}: ${log.title || log.message}. `;
+                });
+                if (recent.length > 3) speechText += `And ${recent.length - 3} more.`;
+              } else {
+                speechText += "You have no new notifications in the last 10 hours.";
+              }
+            } else {
+              speechText += "You have no new notifications in the last 10 hours.";
+            }
+            speakText(speechText);
             hasWelcomed = true;
           }
         }, { once: true });

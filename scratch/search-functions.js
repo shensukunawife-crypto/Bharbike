@@ -1,20 +1,13 @@
 import fs from "fs";
-import path from "path";
 
-const files = [
-  "c:\\Users\\ronit\\Downloads\\Telegram Desktop\\BharBike (3)\\BharBike (2)\\BharBike\\BharBike\\bike rental system backend\\setup-database.sql",
-  "c:\\Users\\ronit\\Downloads\\Telegram Desktop\\BharBike (3)\\BharBike (2)\\BharBike\\BharBike\\bike rental system backend\\migrations\\create_wallet_system.sql"
-];
+const content = fs.readFileSync("./src/admin/controllers/adminController.js", "utf-8");
+const lines = content.split("\n");
 
-files.forEach(file => {
-  if (fs.existsSync(file)) {
-    console.log(`\n=== Functions in ${path.basename(file)} ===`);
-    const content = fs.readFileSync(file, "utf-8");
-    const lines = content.split("\n");
-    lines.forEach((line, index) => {
-      if (line.includes("CREATE FUNCTION") || line.includes("CREATE OR REPLACE FUNCTION")) {
-        console.log(`Line ${index + 1}: ${line.trim()}`);
-      }
-    });
+console.log("Searching for keywords in adminController.js...");
+lines.forEach((line, idx) => {
+  if (line.includes("ticket") || line.includes("Payment") || line.includes("approve") || line.includes("subscription")) {
+    if (line.includes("async ") || line.includes("function ")) {
+      console.log(`Line ${idx + 1}: ${line.trim()}`);
+    }
   }
 });

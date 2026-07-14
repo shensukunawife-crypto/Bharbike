@@ -3511,8 +3511,8 @@ IMPORTANT SQL rules (to match the admin dashboard perfectly):
 
   } catch (err) {
     console.error("[admin.chatBot]", err);
-    // Graceful fallback so the client never sees scary JSON errors
-    const fallbackMessage = "I'm having a little trouble connecting to the database right now. However, I can still see the recent activity on the dashboard! Let me know if you want me to summarize the latest alerts.";
+    // Graceful fallback so the client never sees raw JSON, but we append the error string so we know WHY it failed
+    const fallbackMessage = "I'm having a little trouble connecting to the database right now. (Reason: " + err.message + ") However, I can still see the recent activity on the dashboard! Let me know if you want me to summarize the latest alerts.";
     return res.json({ success: true, reply: fallbackMessage });
   }
 }

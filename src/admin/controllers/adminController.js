@@ -3371,12 +3371,12 @@ STRICT RULES — follow these always:
 10. AMBIGUOUS USERS: If you search for a user by name and find MULTIPLE people with the same name, DO NOT just blindly ask for more info. Proactively show the admin the list of users you found (including their phone number/email) and ask "Which one of these do you mean?".
 
 Database tables and their EXACT columns (use these when writing queries):
-- users: id, full_name, email, phone, is_delivery_partner, created_at
+- users: id, full_name, email, phone, is_delivery_partner, address, location, created_at
 - rentals: id, user_id, bike_id, start_time, end_time, status, price, duration, created_at
 - bikes: id, name, model, registration_number, status, battery, location, is_locked, created_at
 - payments: id, user_id, amount, status, razorpay_payment_id, created_at
 - user_subscriptions: id, user_id, plan_id, status, start_date, end_date, created_at
-- kyc_documents: id, user_id, type, status, created_at
+- kyc_documents: id, user_id, type, status, address, created_at
 - orders: id, user_id, bike_id, amount, price, status, pickup_location, assigned_user_id, created_at
 - wallet_transactions: id, user_id, amount, type, title, status, created_at
 - wallet_balances: id, user_id, balance, currency, created_at
@@ -3392,10 +3392,10 @@ Database tables and their EXACT columns (use these when writing queries):
 - bike_lock_logs: id, bike_id, user_id, rental_id, action, method, success, created_at
 - reward_points: id, user_id, points, cashback_value, created_at
 - subscription_billing: id, subscription_id, user_id, amount, status, payment_method, billing_date, paid_at, created_at
-- profiles: id, full_name, phone, email, is_prepaid, created_at
+- profiles: id, full_name, phone, email, is_prepaid, location, created_at
 - promo_uses: id, promo_id, user_id, created_at
 - vehicles: id, vehicle_number, status, name, registration_number, bike_id, created_at
-- addresses: id, user_id, name, city, pincode, is_default, created_at
+- addresses: id, user_id, name, address_line, city, pincode, is_default, created_at
 - payment_methods: id, user_id, type, provider, display_name, is_default, created_at
 - reward_transactions: id, user_id, points, type, description, created_at
 - subscription_plans: id, name, display_name, price, duration_days, is_active, created_at

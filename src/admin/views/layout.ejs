@@ -1266,12 +1266,27 @@
             let speechText = "Welcome to Bhar Bike. ";
             if (window.allLogs && window.allLogs.length > 0) {
               const tenHoursAgo = new Date(Date.now() - 10 * 60 * 60 * 1000);
-              const recent = window.allLogs.filter(log => new Date(log.created_at) > tenHoursAgo);
+              const recent = window.allLogs.filter(log => new Date(log.timestamp) > tenHoursAgo);
               if (recent.length > 0) {
                 speechText += `You have ${recent.length} notifications from the last 10 hours. `;
                 const toRead = recent.slice(0, 3);
                 toRead.forEach((log, idx) => {
-                  speechText += `Notification ${idx + 1}: ${log.title || log.message}. `;
+                  let msg = log.message || log.title || "";
+                  if (!msg) {
+                    const name = log.user_name || "Someone";
+                    switch(log.type) {
+                      case "subscription": msg = `${name} subscribed.`; break;
+                      case "support": msg = `${name} submitted a ticket.`; break;
+                      case "order": msg = `${name} placed an order.`; break;
+                      case "booking": msg = `${name} booked a ride.`; break;
+                      case "kyc": msg = `${name} uploaded KYC.`; break;
+                      case "payment": msg = `Payment received from ${name}.`; break;
+                      case "maintenance": msg = `Bike reported for maintenance.`; break;
+                      case "user": msg = `New user ${name} registered.`; break;
+                      default: msg = `New ${log.type} activity.`;
+                    }
+                  }
+                  speechText += `Notification ${idx + 1}: ${msg} `;
                 });
                 if (recent.length > 3) speechText += `And ${recent.length - 3} more.`;
               } else {

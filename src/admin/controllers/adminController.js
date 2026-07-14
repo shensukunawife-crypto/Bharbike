@@ -3347,7 +3347,7 @@ export async function getNotificationUsers(req, res) {
 
 export async function chatBot(req, res) {
   try {
-    const { messages, recentActivity } = req.body;
+    const { messages } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ success: false, message: "Invalid messages format" });
     }
@@ -3395,10 +3395,7 @@ IMPORTANT SQL rules (to match the admin dashboard perfectly):
 - For Expiry/Overdue Orders, use: WHERE end_time < NOW() AND status IN ('active', 'ongoing')
 - For Fleet Size (Total Bikes), count all rows in the bikes table without filters.
 - For Pending KYC, use: WHERE status = 'pending'
-- Only write SELECT queries. Never INSERT, UPDATE or DELETE.
-
-Here is the latest activity on BHAR BIKE right now:
-${JSON.stringify(recentActivity || [], null, 2)}`;
+- Only write SELECT queries. Never INSERT, UPDATE or DELETE.`;
 
     let currentMessages = [
       { role: "system", content: systemPrompt },

@@ -1168,15 +1168,14 @@
           }, 1500);
 
           try {
-            // Get latest logs (allLogs is available globally from fetchActivities)
-            const recentActivity = window.allLogs ? window.allLogs.slice(0, 20) : [];
+            // Only send the last 6 messages so the payload doesn't become massively slow over time
+            const recentHistory = chatHistory.slice(-6);
             
             const res = await fetch("/admin/chatbot", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                messages: chatHistory,
-                recentActivity: recentActivity
+                messages: recentHistory
               })
             });
             const data = await res.json();

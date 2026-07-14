@@ -3427,7 +3427,7 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
     while (maxLoops > 0) {
       const chatCompletion = await groq.chat.completions.create({
         messages: currentMessages,
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-120b",
         tools: tools,
         tool_choice: "auto"
       });
@@ -3493,7 +3493,7 @@ ${JSON.stringify(recentActivity || [], null, 2)}`;
     // If we exhausted loops, get a final response
     const finalCompletion = await groq.chat.completions.create({
       messages: currentMessages,
-      model: "llama-3.1-8b-instant",
+      model: "openai/gpt-oss-120b",
     });
     return res.json({ success: true, reply: finalCompletion.choices[0]?.message?.content || "Sorry, I couldn't process that. Please try again!" });
 

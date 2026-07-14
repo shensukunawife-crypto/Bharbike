@@ -260,9 +260,41 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       throw new Error("Subscription plan not found");
     }
 
+    // Smart Backdating Logic: Fetch previous subscription and check active rentals
+    let startDate = new Date();
+    try {
+      // 1. Fetch user's latest subscription
+      const { data: lastSub } = await supabase
+        .from("user_subscriptions")
+        .select("end_date")
+        .eq("user_id", userId)
+        .order("end_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastSub && lastSub.end_date) {
+        // 2. Check if the user has an active rental (did they keep the bike?)
+        const { data: activeRental } = await supabase
+          .from("rentals")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .is("end_time", null)
+          .limit(1)
+          .maybeSingle();
+
+        // If they have an active rental, continue from the previous subscription's end date
+        // to prevent loss of revenue for unpaid days.
+        if (activeRental) {
+          startDate = new Date(lastSub.end_date);
+        }
+      }
+    } catch (err) {
+      console.warn("[createSubscription] Smart backdating check failed, using current date:", err?.message);
+    }
+
     // Calculate end date (inclusive: 7-day plan = Days 1-7, so end = start + 6 days)
-    const startDate = new Date();
-    const endDate = new Date();
+    const endDate = new Date(startDate);
     if (plan.duration_days === 7) {
       // Weekly Plan: 7 days inclusive — ends at the exact same time of day on Day 7 (start + 6 days)
       const expireMs = startDate.getTime() + 6 * 24 * 60 * 60 * 1000;
@@ -271,13 +303,16 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       endDate.setDate(endDate.getDate() + plan.duration_days - 1);
     }
 
+    // Determine status: If the user paid so late that the new end date is STILL in the past, it's expired.
+    const subStatus = endDate > new Date() ? "active" : "expired";
+
     // Create or update subscription (upsert on user_id)
     const { data, error } = await supabase
       .from("user_subscriptions")
       .upsert({
         user_id: userId,
         plan_id: plan.id,
-        status: "active",
+        status: subStatus,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
         auto_renew: false,

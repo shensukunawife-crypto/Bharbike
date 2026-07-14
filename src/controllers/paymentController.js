@@ -616,18 +616,30 @@ export const verifyPayment = async (req, res) => {
                            plan_id?.toLowerCase().includes("year") ? 365 : 7;
           }
 
-          const startDate = new Date();
-          const endDate = new Date();
+          let startDate = new Date();
+          try {
+            const { data: lastSub } = await supabase.from("user_subscriptions").select("end_date").eq("user_id", user_id).order("end_date", { ascending: false }).limit(1).maybeSingle();
+            if (lastSub && lastSub.end_date) {
+              const { data: activeRental } = await supabase.from("rentals").select("id").eq("user_id", user_id).eq("status", "active").is("end_time", null).limit(1).maybeSingle();
+              if (activeRental) startDate = new Date(lastSub.end_date);
+            }
+          } catch (e) {
+            console.warn("[verifyPayment] fallback smart backdating failed:", e?.message);
+          }
+
+          const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + durationDays);
+          
+          const subStatus = endDate > new Date() ? "active" : "expired";
 
           const { data: subData, error: subError } = await supabase.from("user_subscriptions").upsert({
             user_id,
-            status: "active",
+            status: subStatus,
             start_date: startDate.toISOString(),
             end_date: endDate.toISOString(),
             plan_id: String(planUuid),
             auto_renew: false,
-            created_at: startDate.toISOString(),
+            created_at: new Date().toISOString(),
           }, { onConflict: "user_id" });
           if (subError) {
             console.warn("[verifyPayment] direct subscription insert failed:", subError.message);

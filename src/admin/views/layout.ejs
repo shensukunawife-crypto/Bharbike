@@ -864,6 +864,7 @@
             const data = await res.json();
             if (data && data.success && Array.isArray(data.logs)) {
               allLogs = data.logs;
+              window.allLogs = data.logs; // Expose globally for TTS and Chatbot
               renderList();
               
               // --- VOICE ASSISTANT TRIGGER ---

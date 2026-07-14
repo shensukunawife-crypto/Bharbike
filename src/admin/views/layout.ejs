@@ -1175,6 +1175,7 @@
             
             if (data.success) {
               chatHistory.push({ role: "assistant", content: data.reply });
+              speakText(data.reply);
             } else {
               chatHistory.push({ role: "assistant", content: "Error: " + data.message });
             }
@@ -1188,6 +1189,27 @@
           localStorage.setItem("adminChatHistory", JSON.stringify(chatHistory));
           renderHistory();
         });
+
+        // ── Text-to-Speech Helper ─────────────────────────────────
+        function speakText(text) {
+          if (!("speechSynthesis" in window)) return;
+          // Strip markdown for speech
+          const cleanText = text.replace(/[*#_`]/g, '').replace(/\n/g, ' ');
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          utterance.rate = 1.0;
+          utterance.pitch = 1.1; // Slightly friendly pitch
+          window.speechSynthesis.speak(utterance);
+        }
+
+        // Welcome greeting on first interaction (required by browser policies)
+        let hasWelcomed = false;
+        document.body.addEventListener("click", () => {
+          if (!hasWelcomed) {
+            speakText("Welcome to Bhar Bike.");
+            hasWelcomed = true;
+          }
+        }, { once: true });
+        
       });
     </script>
   </body>

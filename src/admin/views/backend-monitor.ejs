@@ -187,16 +187,29 @@
     
     <div class="brain-stats">
       <div class="brain-stat-box">
-        <p class="backend-label">Total Checks</p>
+        <p class="backend-label">⚡ Reactive Checks</p>
         <p class="backend-value"><%= stats.brain.totalChecks %></p>
+        <p class="backend-subtext">Since last restart</p>
       </div>
       <div class="brain-stat-box">
-        <p class="backend-label">Total Heals</p>
+        <p class="backend-label">🔧 Total Heals</p>
         <p class="backend-value status-green"><%= stats.brain.totalHeals %></p>
+        <p class="backend-subtext">Subscriptions fixed</p>
       </div>
       <div class="brain-stat-box">
-        <p class="backend-label">Last Check</p>
+        <p class="backend-label">🔍 Proactive Sweeps</p>
+        <p class="backend-value status-blue"><%= stats.brain.totalSweeps %></p>
+        <p class="backend-subtext">6-hour rounds run</p>
+      </div>
+      <div class="brain-stat-box">
+        <p class="backend-label">⏳ Next Sweep In</p>
+        <p class="backend-value"><%= stats.brain.minsUntilSweep %> mins</p>
+        <p class="backend-subtext"><%= new Date(stats.brain.nextSweepTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) %> IST</p>
+      </div>
+      <div class="brain-stat-box">
+        <p class="backend-label">🕐 Last Activity</p>
         <p class="backend-value"><%= stats.brain.lastCheckAgo !== null ? stats.brain.lastCheckAgo + ' mins ago' : 'Never' %></p>
+        <p class="backend-subtext">Most recent log entry</p>
       </div>
     </div>
 
@@ -215,17 +228,23 @@
         <tbody>
           <% if (stats.brain.logs && stats.brain.logs.length > 0) { %>
             <% stats.brain.logs.forEach(log => { %>
-              <tr>
+              <tr style="<%= log.action === 'SWEEP' ? 'background: #f0f9ff;' : '' %>">
                 <td><%= new Date(log.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true }) %></td>
                 <td>
-                  <strong><%= log.user_name || 'Unknown' %></strong>
-                  <br><span style="font-size: 0.75rem; color: #6b7280;">Paid: ₹<%= log.payment_amount || 0 %></span>
+                  <% if (log.action === 'SWEEP') { %>
+                    <span style="font-size: 0.85rem; color: #0284c7; font-weight: 600;">🔍 Auto-Sweep</span>
+                  <% } else { %>
+                    <strong><%= log.user_name || 'Unknown' %></strong>
+                    <br><span style="font-size: 0.75rem; color: #6b7280;">Paid: ₹<%= log.payment_amount || 0 %></span>
+                  <% } %>
                 </td>
                 <td>
                   <% if (log.action === 'HEALED') { %>
                     <span class="log-action-healed">HEALED</span>
                   <% } else if (log.action === 'HEALTHY') { %>
                     <span class="log-action-healthy">HEALTHY</span>
+                  <% } else if (log.action === 'SWEEP') { %>
+                    <span style="color: #0284c7; font-weight: 700;">SWEEP</span>
                   <% } else { %>
                     <span class="log-action-failed"><%= log.action %></span>
                   <% } %>

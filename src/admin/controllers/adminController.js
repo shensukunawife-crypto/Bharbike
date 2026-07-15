@@ -4904,10 +4904,18 @@ export async function backendMonitor(req, res) {
 
     const brainLogs = brainLogsRes.data || [];
     const brainHealCount = brainLogs.filter(l => l.action === "HEALED").length;
+    const brainSweepCount = brainLogs.filter(l => l.action === "SWEEP").length;
     const brainLastAction = brainLogs[0] || null;
     const brainLastCheckAgo = brainLastAction
       ? Math.round((Date.now() - new Date(brainLastAction.created_at).getTime()) / 60000)
       : null;
+
+    // Calculate next sweep time (every 6 hours: 0, 6, 12, 18 UTC)
+    const nowUtc = new Date();
+    const nextSweepHour = (Math.floor(nowUtc.getUTCHours() / 6) + 1) * 6;
+    const nextSweep = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), nextSweepHour % 24, 0, 0));
+    if (nextSweepHour >= 24) nextSweep.setUTCDate(nextSweep.getUTCDate() + 1);
+    const minsUntilSweep = Math.round((nextSweep.getTime() - Date.now()) / 60000);
 
     const stats = {
       status: dbError ? "Critical" : "Healthy",
@@ -4924,11 +4932,14 @@ export async function backendMonitor(req, res) {
       kycCount: kycCountErr ? `Error: ${kycCountErr.message}` : (kycCount || 0),
       profilesCount: profilesCount || 0,
       brain: {
-        isLive: true, // Brain fires on every payment approval — always live when server is up
+        isLive: true,
         startTime: brainStartTime,
-        trigger: "Fires automatically 3s after every admin payment approval",
+        trigger: "Reactive: 3s after payment approval | Proactive: Every 6 hours",
         totalHeals: brainHealCount,
-        totalChecks: brainLogs.length,
+        totalChecks: brainLogs.filter(l => l.action !== "SWEEP").length,
+        totalSweeps: brainSweepCount,
+        minsUntilSweep,
+        nextSweepTime: nextSweep.toISOString(),
         lastCheckAgo: brainLastCheckAgo,
         lastAction: brainLastAction,
         logs: brainLogs

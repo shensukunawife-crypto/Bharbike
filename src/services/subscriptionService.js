@@ -306,18 +306,35 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
     // Determine status: If the user paid so late that the new end date is STILL in the past, it's expired.
     const subStatus = endDate > new Date() ? "active" : "expired";
 
-    // Create or update subscription (upsert on user_id)
+    // Step 1: Expire the old active subscription (so we preserve history instead of overwriting it)
+    const { data: oldSub } = await supabase
+      .from("user_subscriptions")
+      .select("id, end_date")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (oldSub) {
+      await supabase
+        .from("user_subscriptions")
+        .update({ status: "expired", updated_at: new Date().toISOString() })
+        .eq("id", oldSub.id);
+      console.log(`[subscriptionService] Expired old subscription ${oldSub.id} before creating new one.`);
+    }
+
+    // Step 2: Insert a brand new subscription record (preserves full history)
     const { data, error } = await supabase
       .from("user_subscriptions")
-      .upsert({
+      .insert({
         user_id: userId,
         plan_id: plan.id,
         status: subStatus,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
         auto_renew: false,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }, { onConflict: "user_id" })
+      })
       .select("*")
       .single();
 

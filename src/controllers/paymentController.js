@@ -632,7 +632,14 @@ export const verifyPayment = async (req, res) => {
           
           const subStatus = endDate > new Date() ? "active" : "expired";
 
-          const { data: subData, error: subError } = await supabase.from("user_subscriptions").upsert({
+          // Expire old active subscription first to preserve history
+          const { data: oldActiveSub } = await supabase.from("user_subscriptions").select("id").eq("user_id", user_id).eq("status", "active").maybeSingle();
+          if (oldActiveSub) {
+            await supabase.from("user_subscriptions").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", oldActiveSub.id);
+          }
+
+          // Insert a fresh new subscription record
+          const { data: subData, error: subError } = await supabase.from("user_subscriptions").insert({
             user_id,
             status: subStatus,
             start_date: startDate.toISOString(),
@@ -640,7 +647,7 @@ export const verifyPayment = async (req, res) => {
             plan_id: String(planUuid),
             auto_renew: false,
             created_at: new Date().toISOString(),
-          }, { onConflict: "user_id" });
+          });
           if (subError) {
             console.warn("[verifyPayment] direct subscription insert failed:", subError.message);
           } else {

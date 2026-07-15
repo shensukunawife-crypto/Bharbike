@@ -90,17 +90,28 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
       // Calculate new end date (inclusive)
       const endDate = new Date(startDate.getTime() + (expectedDurationDays - 1) * 24 * 60 * 60 * 1000);
 
+      // Step 1: Expire any existing active/broken subscription
+      if (sub) {
+        await supabase
+          .from("user_subscriptions")
+          .update({ status: "expired", updated_at: new Date().toISOString() })
+          .eq("id", sub.id);
+        console.log(`[SubscriptionBrain] Expired old subscription ${sub.id} before healing.`);
+      }
+
+      // Step 2: Insert a fresh new subscription record (preserves history)
       const { error: upsertErr } = await supabase
         .from("user_subscriptions")
-        .upsert({
+        .insert({
           user_id: userId,
           plan_id: String(expectedPlanId),
           status: "active",
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           auto_renew: false,
+          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }, { onConflict: "user_id" });
+        });
 
       if (upsertErr) {
         console.error(`[SubscriptionBrain] FATAL: Failed to heal subscription!`, upsertErr);

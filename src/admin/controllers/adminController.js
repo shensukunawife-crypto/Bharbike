@@ -5939,6 +5939,10 @@ export async function editPayment(req, res) {
           }
           const { createSubscription } = await import("../../services/subscriptionService.js");
           await createSubscription(user_id, targetPlan, paymentId, finalAmount);
+          
+          // Trigger the self-healing brain system in the background to ensure the subscription actually went through
+          const { verifyAndHealSubscription } = await import("../../services/subscriptionBrain.js");
+          verifyAndHealSubscription(user_id, finalAmount).catch(console.error);
 
           // Also update billing record with the correct admin-selected amount
           if (adminAmount && adminAmount > 0) {

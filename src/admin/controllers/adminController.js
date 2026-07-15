@@ -5854,10 +5854,11 @@ export async function addPayment(req, res) {
     }
 
     const finalStatus = status || "success";
+    const finalAmount = Number(amount);
 
     const { data: newPayment, error } = await supabase.from("payments").insert([{
       user_id,
-      amount: Number(amount),
+      amount: finalAmount,
       status: finalStatus,
       razorpay_payment_id: razorpay_payment_id || "manual_cash",
       order_id: order_id || null
@@ -5865,11 +5866,25 @@ export async function addPayment(req, res) {
 
     if (error) throw error;
 
-    // If admin is logging a successful payment, activate the weekly subscription
+    // If admin is logging a successful payment, activate the subscription
     if (finalStatus === "success" && user_id) {
       try {
+        // Smart plan detection: look up plan by amount, fall back to weekly_plan
+        let targetPlan = "weekly_plan";
+        const { data: matchedPlan } = await supabase
+          .from("subscription_plans")
+          .select("name")
+          .eq("price", finalAmount)
+          .limit(1)
+          .maybeSingle();
+        if (matchedPlan?.name) targetPlan = matchedPlan.name;
+
         const { createSubscription } = await import("../../services/subscriptionService.js");
-        await createSubscription(user_id, "weekly_plan", newPayment?.id, Number(amount));
+        await createSubscription(user_id, targetPlan, newPayment?.id, finalAmount);
+
+        // Fire the Brain in the background to verify and heal if needed
+        const { verifyAndHealSubscription } = await import("../../services/subscriptionBrain.js");
+        verifyAndHealSubscription(user_id, finalAmount).catch(console.error);
       } catch (subErr) {
         console.warn("[addPayment] subscription activation failed:", subErr?.message);
       }

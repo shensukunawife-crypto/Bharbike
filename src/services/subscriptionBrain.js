@@ -13,6 +13,13 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
 
     console.log(`[SubscriptionBrain] Checking subscription health for user ${userId}...`);
 
+    // 1b. Verify the user actually exists — prevents garbage rows from bad/test data
+    const { data: userExists } = await supabase.from("users").select("id").eq("id", userId).maybeSingle();
+    if (!userExists) {
+      console.warn(`[SubscriptionBrain] Aborting — user ${userId} does not exist in users table.`);
+      return;
+    }
+
     // 2. Fetch ALL subscriptions for this user, ordered newest first
     const { data: allSubs } = await supabase
       .from("user_subscriptions")

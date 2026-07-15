@@ -5907,10 +5907,26 @@ export async function editPayment(req, res) {
         } else {
           // 3. Activate subscription with correct amount
           let targetPlan = razorpay_order_id;
+          
+          // If razorpay_order_id is just a screenshot URL or a combined string, we can't use it as a plan name
+          if (String(targetPlan).startsWith("http") || String(targetPlan).includes("|")) {
+            targetPlan = null;
+          }
+
           if (order_id) {
             const { data: ord } = await supabase.from("orders").select("plan_name").eq("id", order_id).maybeSingle();
             if (ord && ord.plan_name) {
               targetPlan = ord.plan_name;
+            }
+          }
+
+          // If still no valid plan (e.g. manual QR with missing order_id), guess from the amount
+          if (!targetPlan) {
+            const { data: matchedPlan } = await supabase.from("subscription_plans").select("name").eq("price", finalAmount).limit(1).maybeSingle();
+            if (matchedPlan && matchedPlan.name) {
+              targetPlan = matchedPlan.name;
+            } else {
+              targetPlan = "weekly"; // Safe fallback
             }
           }
           const { createSubscription } = await import("../../services/subscriptionService.js");

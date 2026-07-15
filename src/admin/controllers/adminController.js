@@ -5869,12 +5869,15 @@ export async function addPayment(req, res) {
     // If admin is logging a successful payment, activate the subscription
     if (finalStatus === "success" && user_id) {
       try {
-        // Smart plan detection: look up plan by amount, fall back to weekly_plan
-        let targetPlan = "weekly_plan";
+        // Always use the actual active subscription plan from DB.
+        // We do NOT match by amount because ₹3450 = ₹1950 subscription + ₹1500 registration fee (one-time).
+        // Matching ₹3450 as a plan price would find nothing.
+        let targetPlan = "weekly_plan"; // safe fallback
         const { data: matchedPlan } = await supabase
           .from("subscription_plans")
           .select("name")
-          .eq("price", finalAmount)
+          .eq("is_active", true)
+          .order("price", { ascending: true })
           .limit(1)
           .maybeSingle();
         if (matchedPlan?.name) targetPlan = matchedPlan.name;
@@ -5983,14 +5986,17 @@ export async function editPayment(req, res) {
             }
           }
 
-          // If still no valid plan (e.g. manual QR with missing order_id), guess from the amount
+          // Always use the actual active subscription plan from DB.
+          // Do NOT match by amount — ₹3450 = ₹1950 subscription + ₹1500 one-time registration fee.
           if (!targetPlan) {
-            const { data: matchedPlan } = await supabase.from("subscription_plans").select("name").eq("price", finalAmount).limit(1).maybeSingle();
-            if (matchedPlan && matchedPlan.name) {
-              targetPlan = matchedPlan.name;
-            } else {
-              targetPlan = "weekly"; // Safe fallback
-            }
+            const { data: matchedPlan } = await supabase
+              .from("subscription_plans")
+              .select("name")
+              .eq("is_active", true)
+              .order("price", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            targetPlan = matchedPlan?.name || "weekly_plan";
           }
           const { createSubscription } = await import("../../services/subscriptionService.js");
           await createSubscription(user_id, targetPlan, paymentId, finalAmount);

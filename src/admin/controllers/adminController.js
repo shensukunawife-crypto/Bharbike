@@ -4885,13 +4885,29 @@ export async function backendMonitor(req, res) {
     const [
       { error: dbError },
       { count: kycCount, error: kycCountErr },
-      { count: profilesCount }
+      { count: profilesCount },
+      brainLogsRes
     ] = await Promise.all([
       supabase.from("users").select("id").limit(1),
       supabase.from("kyc_documents").select("id", { count: "exact", head: true }),
-      supabase.from("users").select("id", { count: "exact", head: true })
+      supabase.from("users").select("id", { count: "exact", head: true }),
+      supabase.from("brain_activity_logs").select("*").order("created_at", { ascending: false }).limit(50).then(r => r, () => ({ data: [] }))
     ]);
     const dbLatency = Date.now() - start;
+
+    // Brain status — import BRAIN_START_TIME if available
+    let brainStartTime = null;
+    try {
+      const brainModule = await import("../../services/subscriptionBrain.js");
+      brainStartTime = brainModule.BRAIN_START_TIME || null;
+    } catch {}
+
+    const brainLogs = brainLogsRes.data || [];
+    const brainHealCount = brainLogs.filter(l => l.action === "HEALED").length;
+    const brainLastAction = brainLogs[0] || null;
+    const brainLastCheckAgo = brainLastAction
+      ? Math.round((Date.now() - new Date(brainLastAction.created_at).getTime()) / 60000)
+      : null;
 
     const stats = {
       status: dbError ? "Critical" : "Healthy",
@@ -4906,7 +4922,17 @@ export async function backendMonitor(req, res) {
       apiUrl: process.env.RENDER_EXTERNAL_URL || "Localhost",
       supabaseKeyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Service Role Key (RLS Bypassed)" : "Anon Key (Subject to RLS)",
       kycCount: kycCountErr ? `Error: ${kycCountErr.message}` : (kycCount || 0),
-      profilesCount: profilesCount || 0
+      profilesCount: profilesCount || 0,
+      brain: {
+        isLive: true, // Brain fires on every payment approval — always live when server is up
+        startTime: brainStartTime,
+        trigger: "Fires automatically 3s after every admin payment approval",
+        totalHeals: brainHealCount,
+        totalChecks: brainLogs.length,
+        lastCheckAgo: brainLastCheckAgo,
+        lastAction: brainLastAction,
+        logs: brainLogs
+      }
     };
 
     return renderPage(res, {
@@ -4920,6 +4946,7 @@ export async function backendMonitor(req, res) {
     return res.status(500).send("Unable to load backend monitor");
   }
 }
+
 
 export async function systemWorkflowPage(req, res) {
   return renderPage(res, {

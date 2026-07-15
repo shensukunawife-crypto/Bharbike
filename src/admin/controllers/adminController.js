@@ -1249,6 +1249,17 @@ export async function users(req, res) {
           // No subscription at all, but bike is manually assigned — show rental window
           subText = `Bike Assigned (till ${formatReadableDate(activeRental.end_time)})`;
         }
+        // Calculate Last Activity Date for sorting
+        const updatedDate = row.updated_at || row.updatedAt || joinedDate;
+        const activityDates = [new Date(joinedDate).getTime(), new Date(updatedDate).getTime()];
+        if (lastOrderAt) activityDates.push(new Date(lastOrderAt).getTime());
+        if (userSub && userSub.updated_at) activityDates.push(new Date(userSub.updated_at).getTime());
+        else if (userSub && userSub.created_at) activityDates.push(new Date(userSub.created_at).getTime());
+        if (userWallet && userWallet.updated_at) activityDates.push(new Date(userWallet.updated_at).getTime());
+        if (activeRental && activeRental.created_at) activityDates.push(new Date(activeRental.created_at).getTime());
+        
+        const lastActivityMs = Math.max(...activityDates.filter(d => !isNaN(d)));
+
         return {
           ...base,
           email:
@@ -1259,6 +1270,7 @@ export async function users(req, res) {
           totalOrders: userOrders.length,
           totalSpent,
           joinedDate,
+          lastActivityMs,
           lastOrderAt: lastOrderAt || "-",
           lastLogin: row.last_login || row.lastLogin || joinedDate,
           lastActive: row.is_online ? "Online now" : "Recently",
@@ -1293,11 +1305,7 @@ export async function users(req, res) {
         }
         return true;
       })
-      .sort(
-        (a, b) =>
-          new Date(b.joinedDate || now).getTime() -
-          new Date(a.joinedDate || now).getTime()
-      );
+      .sort((a, b) => (b.lastActivityMs || 0) - (a.lastActivityMs || 0));
 
     console.log("ADMIN USERS:", users);
 

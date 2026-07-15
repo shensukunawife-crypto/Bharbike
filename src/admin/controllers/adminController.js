@@ -1161,7 +1161,7 @@ export async function users(req, res) {
       getIdMappings(),
       supabase.from("users").select("*"),
       supabase.from("orders").select("*"),
-      supabase.from("user_subscriptions").select("*"),
+      supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
       supabase.from("wallet_balances").select("*"),
       supabase.from("subscription_plans").select("*"),
       supabase.from("rentals").select("*").eq("status", "ongoing"),
@@ -1204,7 +1204,9 @@ export async function users(req, res) {
               new Date(b.createdAt || b.created_at || now).getTime() -
               new Date(a.createdAt || a.created_at || now).getTime()
           )[0]?.createdAt;
-        const userSub = (subsData || []).find(s => String(s.user_id).toLowerCase() === String(base.id).toLowerCase());
+        // Always pick the most recent ACTIVE subscription; fall back to most recent of any status
+        const userSubsForUser = (subsData || []).filter(s => String(s.user_id).toLowerCase() === String(base.id).toLowerCase());
+        const userSub = userSubsForUser.find(s => s.status === 'active') || userSubsForUser[0] || null;
         const userWallet = (walletsData || []).find(w => String(w.user_id).toLowerCase() === String(base.id).toLowerCase());
         
         // Find assigned bike for this user

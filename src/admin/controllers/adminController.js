@@ -915,47 +915,7 @@ export async function dashboard(req, res) {
           };
         });
 
-        // Expiry Orders (Expired Rentals)
-        expiryOrders = expiredRentalsFiltered.map(r => {
-          const u = allUsers.find(user => user.id === r.user_id);
-          const b = bikes.find(bike => bike.id === r.bike_id);
-          
-          const endMs = new Date(r.end_time).getTime();
-          const diffMs = nowMs - endMs;
-          const hoursAgo = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
-          let timeLeftStr = `${hoursAgo} hours overdue`;
-          if (hoursAgo > 24) {
-            const daysAgo = Math.floor(hoursAgo / 24);
-            const remHours = hoursAgo % 24;
-            timeLeftStr = `${daysAgo}d ${remHours}h overdue`;
-          }
-
-          return {
-            id: r.id,
-            bikeId: r.bike_id,
-            userName: u ? u.full_name : "Unknown User",
-            userPhone: u ? u.phone : "—",
-            bikeCode: b ? b.bike_code : (r.bike_id || "—"),
-            status: r.status,
-            startTime: r.start_time ? new Date(r.start_time).toLocaleString("en-IN") : new Date(r.created_at || now).toLocaleString("en-IN"),
-            endDate: r.end_time ? new Date(r.end_time).toLocaleString("en-IN") : "—",
-            battery: b ? Number(b.battery || 0) : 0,
-            location: b ? b.location : "Offline / No GPS",
-            timeLeftStr
-          };
-        });
-
-        if (expiryOrders.length > 0) {
-          const allClearIndex = alerts.findIndex(a => a.title === "All Clear");
-          if (allClearIndex !== -1) {
-            alerts.splice(allClearIndex, 1);
-          }
-          alerts.push({
-            level: "warning",
-            title: "Expiry Orders",
-            detail: `${expiryOrders.length} rentals have expired and are overdue.`,
-          });
-        }
+        // Expiry Orders (Expired Rentals) removed as requested
 
         // Maintenance Bikes Given Details (with IDs for marking fixed)
         activeMaintenance = maintenanceTickets

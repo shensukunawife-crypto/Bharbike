@@ -789,8 +789,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
   var isAdminMaster = locals.admin && (locals.admin.role === 'admin' || locals.admin.role === 'master_admin' || (locals.admin.permissions && locals.admin.permissions.includes('*')));
   var canManageUsers = isAdminMaster || (locals.admin && locals.admin.permissions && locals.admin.permissions.includes('manage_users'));
   var canManagePayments = isAdminMaster || (locals.admin && locals.admin.permissions && (locals.admin.permissions.includes('manage_payments') || locals.admin.permissions.includes('manage_finance')));
+  var gridCols = (canManageUsers && canManagePayments) ? '1fr 1fr' : '1fr';
 %>
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+  <div style="display: grid; grid-template-columns: <%= gridCols %>; gap: 20px; align-items: start;">
     
     <% if (canManageUsers) { %>
     <!-- Left column: KYC Document Approvals -->

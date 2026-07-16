@@ -37,10 +37,11 @@ async function handleAction(url, method = "POST", body = null) {
   const data = await res.json().catch(() => ({ success: false, message: "Action failed" }));
   if (!res.ok || !data.success) {
     showToast(data.message || "Action failed", "error");
-    return;
+    return false;
   }
   showToast(data.message || "Success");
   setTimeout(() => window.location.reload(), 500);
+  return true;
 }
 
 document.addEventListener("click", (e) => {
@@ -108,13 +109,15 @@ document.querySelectorAll(".ajax-form").forEach((form) => {
       }
     });
 
-    await handleAction(form.dataset.url, "POST", payload);
+    const success = await handleAction(form.dataset.url, "POST", payload);
     if (submitBtn) {
       submitBtn.classList.remove("loading");
       submitBtn.textContent = originalText;
     }
-    const modal = form.closest(".modal");
-    if (modal) modal.classList.remove("show");
+    if (success) {
+      const modal = form.closest(".modal");
+      if (modal) modal.classList.remove("show");
+    }
   });
 });
 

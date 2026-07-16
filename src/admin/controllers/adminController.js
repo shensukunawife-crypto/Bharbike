@@ -3782,11 +3782,37 @@ export async function editUser(req, res) {
         updated_at: new Date().toISOString()
       };
       
-      const { data: subData, error: subErr } = await supabase
+      // Find existing active subscription
+      const { data: existingSub } = await supabase
         .from("user_subscriptions")
-        .upsert(subUpdates, { onConflict: "user_id" })
         .select("id")
-        .single();
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .maybeSingle();
+
+      let subData = null;
+      let subErr = null;
+
+      if (existingSub) {
+        // Update existing
+        const res = await supabase
+          .from("user_subscriptions")
+          .update(subUpdates)
+          .eq("id", existingSub.id)
+          .select("id")
+          .single();
+        subData = res.data;
+        subErr = res.error;
+      } else {
+        // Insert new
+        const res = await supabase
+          .from("user_subscriptions")
+          .insert([subUpdates])
+          .select("id")
+          .single();
+        subData = res.data;
+        subErr = res.error;
+      }
         
       if (subErr) {
         console.error("❌ [admin.editUser] failed to save subscription:", subErr.message);
@@ -3826,8 +3852,12 @@ export async function editUser(req, res) {
         }
       }
     } else if (sub_plan === "none") {
-      // If plan is set to "none", remove active subscription record
-      await supabase.from("user_subscriptions").delete().eq("user_id", userId);
+      // If plan is set to "none", cancel the active subscription record instead of deleting history
+      await supabase.from("user_subscriptions").update({ 
+        status: "cancelled", 
+        cancelled_at: new Date().toISOString(),
+        cancellation_reason: "Admin Override to None"
+      }).eq("user_id", userId).eq("status", "active");
     }
 
     // 3. Handle Wallet manual credits/debits

@@ -1,5 +1,8 @@
 import supabase from '../utils/supabaseClient.js';
 import { verifyAndHealSubscription } from '../services/subscriptionBrain.js';
+import * as rentalService from '../services/rentalService.js';
+import * as subscriptionService from '../services/subscriptionService.js';
+import * as iot from '../services/iotService.js';
 
 /**
  * Proactive Brain Sweep — runs every 6 hours.
@@ -89,6 +92,12 @@ export async function runBrainSweep() {
     console.log(`[BrainSweep] ====== Sweep complete: ${healthyCount} healthy, ${healedCount} healed ======`);
     await logSweepRun(uniquePayments.length, healthyCount, healedCount);
 
+    // 4. Sweep Active Rentals for Expired Subscriptions
+    await sweepActiveRentalsForExpiredSubscriptions();
+
+    // 5. Sweep Available Bikes to Ensure Lock Status
+    await sweepAvailableBikesLockStatus();
+
   } catch (err) {
     console.error('[BrainSweep] Critical sweep failure:', err);
   }
@@ -114,5 +123,71 @@ async function logSweepRun(totalChecked, healthy, healed) {
     });
   } catch (err) {
     console.warn('[BrainSweep] Could not log sweep run:', err?.message);
+  }
+}
+
+async function sweepActiveRentalsForExpiredSubscriptions() {
+  console.log('[BrainSweep] Checking active rentals for missing/expired subscriptions...');
+  const { data: activeRentals, error } = await supabase
+    .from('rentals')
+    .select('*')
+    .in('status', ['active', 'ongoing']);
+    
+  if (error) {
+    if (error.code === "PGRST205" || String(error.message).includes("public.rentals")) return;
+    console.error('[BrainSweep] Error fetching active rentals:', error);
+    return;
+  }
+  
+  if (!activeRentals || activeRentals.length === 0) return;
+  
+  let healedCount = 0;
+  for (const rental of activeRentals) {
+    const hasSub = await subscriptionService.hasActiveSubscription(rental.user_id);
+    if (!hasSub) {
+      console.log(`[BrainSweep] Found active rental ${rental.id} but user ${rental.user_id} has NO active subscription. Forcing lock/end...`);
+      try {
+        await rentalService.forceExpireActiveRentalForUser(rental.user_id);
+        healedCount++;
+      } catch (e) {
+        console.error(`[BrainSweep] Failed to end rental ${rental.id}:`, e.message);
+      }
+    }
+  }
+  
+  if (healedCount > 0) {
+    console.log(`[BrainSweep] Rental Sweep Complete: Force ended ${healedCount} invalid active rentals.`);
+  }
+}
+
+async function sweepAvailableBikesLockStatus() {
+  console.log('[BrainSweep] Checking available bikes for incorrect lock status...');
+  const { data: unlockedBikes, error } = await supabase
+    .from('bikes')
+    .select('id, name')
+    .eq('status', 'available')
+    .eq('is_locked', false);
+    
+  if (error) {
+    console.error('[BrainSweep] Error fetching bikes:', error);
+    return;
+  }
+  
+  if (!unlockedBikes || unlockedBikes.length === 0) return;
+  
+  let healedCount = 0;
+  for (const bike of unlockedBikes) {
+    console.log(`[BrainSweep] Bike ${bike.id} (${bike.name}) is 'available' but 'unlocked'. Forcing lock...`);
+    try {
+      await iot.lockBike(bike.id);
+      await supabase.from('bikes').update({ is_locked: true }).eq('id', bike.id);
+      healedCount++;
+    } catch (e) {
+      console.error(`[BrainSweep] Failed to lock bike ${bike.id}:`, e.message);
+    }
+  }
+  
+  if (healedCount > 0) {
+    console.log(`[BrainSweep] Bike Sweep Complete: Force locked ${healedCount} exposed bikes.`);
   }
 }

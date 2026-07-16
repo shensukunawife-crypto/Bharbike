@@ -620,7 +620,13 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
 </div>
 
 <% 
+  var isAdminMaster = locals.admin && (locals.admin.role === 'admin' || locals.admin.role === 'master_admin' || (locals.admin.permissions && locals.admin.permissions.includes('*')));
   var isSubAdmin = locals.admin && (locals.admin.role === 'sub_admin' || locals.admin.role === 'manager' || locals.admin.role === 'support');
+  var canManageBikes = isAdminMaster || (locals.admin && locals.admin.permissions && locals.admin.permissions.includes('manage_bikes'));
+  var canManageOrders = isAdminMaster || (locals.admin && locals.admin.permissions && locals.admin.permissions.includes('manage_orders'));
+  var canManageUsers = isAdminMaster || (locals.admin && locals.admin.permissions && locals.admin.permissions.includes('manage_users'));
+  var canManagePayments = isAdminMaster || (locals.admin && locals.admin.permissions && (locals.admin.permissions.includes('manage_payments') || locals.admin.permissions.includes('manage_finance')));
+  
   var activeTab = locals.activeTab || (isSubAdmin ? 'tab-approvals' : 'tab-analytics');
 %>
 
@@ -638,9 +644,11 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
       <span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-left: 4px;"><%= totalApprovals %></span>
     <% } %>
   </button>
+  <% if (canManageBikes || canManageOrders) { %>
   <button class="db-tab-btn <%= activeTab === 'tab-operations' ? 'active' : '' %>" data-tab="tab-operations" style="padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13.5px; border: none; background: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
     🚲 Fleet & Operations
   </button>
+  <% } %>
 </div>
 
 <!-- Tab 1: Analytics & Finance -->
@@ -786,9 +794,6 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
 <!-- Tab 2: Pending Approvals -->
 <div id="tab-approvals" class="db-tab-content <%= activeTab === 'tab-approvals' ? 'active' : '' %>">
 <% 
-  var isAdminMaster = locals.admin && (locals.admin.role === 'admin' || locals.admin.role === 'master_admin' || (locals.admin.permissions && locals.admin.permissions.includes('*')));
-  var canManageUsers = isAdminMaster || (locals.admin && locals.admin.permissions && locals.admin.permissions.includes('manage_users'));
-  var canManagePayments = isAdminMaster || (locals.admin && locals.admin.permissions && (locals.admin.permissions.includes('manage_payments') || locals.admin.permissions.includes('manage_finance')));
   var gridCols = (canManageUsers && canManagePayments) ? '1fr 1fr' : '1fr';
 %>
   <div style="display: grid; grid-template-columns: <%= gridCols %>; gap: 20px; align-items: start;">
@@ -902,9 +907,12 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
 </div>
 
 <!-- Tab 3: Fleet & Operations -->
+<% if (canManageBikes || canManageOrders) { %>
 <div id="tab-operations" class="db-tab-content <%= activeTab === 'tab-operations' ? 'active' : '' %>">
-  <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; align-items: start;">
+  <% var gridColsTab3 = (canManageBikes && canManageOrders) ? '1.6fr 1fr' : '1fr'; %>
+  <div style="display: grid; grid-template-columns: <%= gridColsTab3 %>; gap: 20px; align-items: start;">
     
+    <% if (canManageBikes) { %>
     <!-- Left column: Assigned Bikes (Active Rentals) -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
       <div class="db-main" style="margin-bottom: 0;">
@@ -972,7 +980,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
       </div>
 
     </div>
+    <% } %>
 
+    <% if (canManageOrders) { %>
     <!-- Right column: Maintenance and Expiring Subscriptions -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
       <!-- Bikes Under Maintenance -->
@@ -1048,8 +1058,10 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
 
 
     </div>
+    <% } %>
   </div>
 </div>
+<% } %>
     </div>
   </div>
 </div>

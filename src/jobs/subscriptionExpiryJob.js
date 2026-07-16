@@ -1,10 +1,21 @@
 import * as subscriptionService from "../services/subscriptionService.js";
+import * as rentalService from "../services/rentalService.js";
 
 export async function runSubscriptionExpirySweep() {
   console.log("[jobs] Starting subscription expiry sweep...");
   try {
     // Mark past subscriptions as expired
-    await subscriptionService.expireOldSubscriptions();
+    const expiredSubs = await subscriptionService.expireOldSubscriptions();
+
+    if (expiredSubs && expiredSubs.length > 0) {
+      for (const sub of expiredSubs) {
+        try {
+          await rentalService.forceExpireActiveRentalForUser(sub.user_id);
+        } catch (rentalErr) {
+          console.error(`[jobs] Error expiring rental for user ${sub.user_id}:`, rentalErr);
+        }
+      }
+    }
   } catch (e) {
     console.error("[jobs] Error expiring old subscriptions:", e);
   }

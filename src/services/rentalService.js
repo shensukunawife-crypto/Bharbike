@@ -311,3 +311,16 @@ export async function listBookingsForUser(userId) {
   }
   return data;
 }
+
+export async function forceExpireActiveRentalForUser(userId) {
+  try {
+    const activeRental = await getActiveRentalForUser(userId);
+    if (activeRental) {
+      await finalizeRental(activeRental.id, RentalStatus.expired);
+      console.log(`[rentalService] Force expired rental ${activeRental.id} for user ${userId} due to subscription expiry.`);
+    }
+  } catch (err) {
+    console.error(`[rentalService.forceExpireActiveRentalForUser] failed for user ${userId}:`, err.message);
+  }
+}
+

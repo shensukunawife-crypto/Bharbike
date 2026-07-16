@@ -1,0 +1,91 @@
+import { Groq } from "groq-sdk";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
+
+const systemPrompt = `You are BharBot, a friendly helper for the BHAR BIKE team.
+STRICT RULES — follow these always:
+1. ONLY talk about BHAR BIKE topics. If asked anything else, politely say you can only help with BHAR BIKE.
+2. Use simple, friendly English. NEVER say technical words like "database", "SQL", "query", "PostgreSQL", "API".
+3. If you ALREADY have the requested data in the chat history, answer immediately. ONLY use the run_sql_query tool if you need new or updated data that you don't already have. NEVER tell the user to check the dashboard themselves.
+4. After getting the data from the tool, explain the result in simple friendly English.
+5. Keep answers short and use bullet points for lists.
+6. All money is in Indian Rupees (₹). NEVER use $ or dollars. Format large numbers with commas (e.g., ₹21,000).
+7. Be ANALYTICAL. If the user asks for total revenue, SUM the amount. If they ask for average, AVG it. If they ask for a list of recent items, ALWAYS append LIMIT 10 to your SQL unless they ask for a specific number.
+
+IMPORTANT: 
+- For active rentals, checking status='active' in orders table is best.
+- HIDE TEST ACCOUNTS: Always exclude email LIKE '%@bharbike.com' and email LIKE 'test%' in queries.
+- For revenue, SUM(amount) in orders where status='completed'.
+
+DATABASE SCHEMA MAP:
+Table 'users': id, email, user_name, created_at, wallet_balance, kyc_status (pending, approved, rejected)
+Table 'orders': id, user_id, bike_id, start_time, end_time, amount, status (active, completed, cancelled), created_at
+Table 'bikes': id, name, location, status (available, maintenance, rented), created_at
+Table 'wallet_transactions': id, user_id, amount, type (credit, debit), created_at
+Table 'support_tickets': id, user_id, subject, message, status (open, closed), created_at
+`;
+
+async function test() {
+  try {
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: "tell me the date that we earned the most and how much" },
+        { role: "assistant", content: "Our best day for earnings was July 10, 2026, with total earnings of ₹11,300." },
+        { role: "user", content: "what about last month" },
+        {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id: "call_aB1cD",
+              type: "function",
+              function: {
+                name: "run_sql_query",
+                arguments: "{\"query\": \"SELECT SUM(amount) FROM orders\"}"
+              }
+            }
+          ]
+        },
+        {
+          role: "tool",
+          tool_call_id: "call_aB1cD",
+          name: "run_sql_query",
+          content: "[{\"sum\": 45000}]"
+        }
+      ],
+      model: "llama-3.3-70b-versatile",
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "run_sql_query",
+            description: "Execute a raw SQL SELECT query against the PostgreSQL database to fetch historical or aggregated data.",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The SQL SELECT query to run (e.g. SELECT COUNT(*) FROM users)"
+                }
+              },
+              required: ["query"]
+            }
+          }
+        }
+      ],
+      tool_choice: "auto"
+    });
+    console.log("Success on Loop 2!");
+    console.log(JSON.stringify(chatCompletion.choices[0].message, null, 2));
+  } catch (err) {
+    console.error("Error on Loop 2:", err.message);
+  }
+}
+
+test();

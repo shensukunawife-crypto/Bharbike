@@ -91,10 +91,10 @@ router.get("/earnings", requirePermission("manage_finance"), adminController.ear
 router.get("/earnings/export/excel", requirePermission("manage_finance"), adminController.exportEarningsExcel);
 router.get("/earnings/export/pdf", requirePermission("manage_finance"), adminController.exportEarningsPDF);
 router.get("/analytics", requirePermission("manage_finance"), adminController.analytics);
-router.get("/payments", requirePermission("manage_finance"), adminController.paymentsPage);
-router.post("/payments/add", requirePermission("manage_finance"), adminController.addPayment);
-router.post("/payments/:paymentId/edit", requirePermission("manage_finance"), adminController.editPayment);
-router.post("/payments/:paymentId/delete", requirePermission("manage_finance"), adminController.deletePayment);
+router.get("/payments", requirePermission("manage_payments"), adminController.paymentsPage);
+router.post("/payments/add", requirePermission("manage_payments"), adminController.addPayment);
+router.post("/payments/:paymentId/edit", requirePermission("manage_payments"), adminController.editPayment);
+router.post("/payments/:paymentId/delete", requirePermission("manage_payments"), adminController.deletePayment);
 router.post("/earnings/payout/:payoutId/release", requirePermission("manage_finance"), adminController.releasePayout);
 router.post("/promo/add", requirePermission("manage_finance"), adminController.addPromoCode);
 router.post("/promo/:promoId/toggle", requirePermission("manage_finance"), adminController.togglePromoCode);

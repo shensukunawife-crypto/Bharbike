@@ -107,7 +107,7 @@
       <a class="nav-link nav-link-sub <%= active === 'kyc-documents' ? 'active' : '' %>" href="/admin/kyc-documents" data-label="KYC Documents">
         <span class="nav-icon"><%- icons.kyc %></span><span style="flex:1;">KYC Documents</span><span class="sidebar-badge" id="badge-kyc" style="display:none;">0</span>
       </a>
-      <% if (_can('manage_finance')) { %>
+      <% if (_can('manage_payments') || _can('manage_finance')) { %>
       <a class="nav-link nav-link-sub <%= active === 'payments' ? 'active' : '' %>" href="/admin/payments" data-label="Payments">
         <span class="nav-icon"><%- icons.payments %></span><span style="flex:1;">Payments</span><span class="sidebar-badge" id="badge-payment" style="display:none;">0</span>
       </a>

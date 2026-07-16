@@ -83,13 +83,15 @@ export function requirePermission(permission) {
         return next();
       }
 
-      const isFinanceRequest = 
+      const isStrictFinance = 
         permission === "manage_finance" || 
         req.originalUrl.includes("earnings") || 
-        req.originalUrl.includes("analytics") || 
-        req.originalUrl.includes("payments");
+        req.originalUrl.includes("analytics");
+
+      const isPayments = req.originalUrl.includes("payments");
+      const hasPaymentsPerm = req.admin.permissions && req.admin.permissions.includes("manage_payments");
         
-      if (isFinanceRequest) {
+      if (isStrictFinance || (isPayments && !hasPaymentsPerm)) {
         if (req.method === "GET") {
           return res.status(403).render("layout", {
             BRAND_NAME,
@@ -98,13 +100,13 @@ export function requirePermission(permission) {
             title: "Access Denied",
             active: "dashboard",
             bodyView: "forbidden",
-            message: "Access Denied: Sub-admins are completely restricted from viewing financial status or configuring payments.",
+            message: "Access Denied: Sub-admins are restricted from viewing financial status or configuring payments without explicit permission.",
             locals: { admin: req.admin }
           });
         }
         return res.status(403).json({
           success: false,
-          message: "Forbidden: Sub-admins are not allowed to view financial status or manage payments."
+          message: "Forbidden: Sub-admins are not allowed to view financial status or manage payments without explicit permission."
         });
       }
     }

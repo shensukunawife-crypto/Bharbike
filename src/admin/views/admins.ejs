@@ -28,7 +28,7 @@
             <%= admin.is_active ? 'Active' : 'Blocked' %>
           </span>
         </td>
-        <td><%= admin.last_login ? new Date(admin.last_login).toLocaleString() : 'Never' %></td>
+        <td><%= admin.last_login ? new Date(admin.last_login).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Never' %></td>
         <td class="actions">
           <button
             type="button"
@@ -68,6 +68,7 @@
           <label><input type="checkbox" name="permissions[]" value="manage_users"> Manage Users</label>
           <label><input type="checkbox" name="permissions[]" value="manage_bikes"> Manage Bikes</label>
           <label><input type="checkbox" name="permissions[]" value="manage_orders"> Manage Orders</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_payments"> Manage Payments</label>
           <label><input type="checkbox" name="permissions[]" value="manage_finance"> Finance & Payouts</label>
           <label><input type="checkbox" name="permissions[]" value="manage_support"> Support Tickets</label>
           <label><input type="checkbox" name="permissions[]" value="manage_notifications"> Push Notifications</label>
@@ -100,6 +101,7 @@
           <label><input type="checkbox" name="permissions[]" value="manage_users" class="edit-perm"> Manage Users</label>
           <label><input type="checkbox" name="permissions[]" value="manage_bikes" class="edit-perm"> Manage Bikes</label>
           <label><input type="checkbox" name="permissions[]" value="manage_orders" class="edit-perm"> Manage Orders</label>
+          <label><input type="checkbox" name="permissions[]" value="manage_payments" class="edit-perm"> Manage Payments</label>
           <label><input type="checkbox" name="permissions[]" value="manage_finance" class="edit-perm"> Finance & Payouts</label>
           <label><input type="checkbox" name="permissions[]" value="manage_support" class="edit-perm"> Support Tickets</label>
           <label><input type="checkbox" name="permissions[]" value="manage_notifications" class="edit-perm"> Push Notifications</label>

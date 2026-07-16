@@ -785,8 +785,14 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
 
 <!-- Tab 2: Pending Approvals -->
 <div id="tab-approvals" class="db-tab-content <%= activeTab === 'tab-approvals' ? 'active' : '' %>">
+<% 
+  var isAdminMaster = locals.admin && (locals.admin.role === 'admin' || locals.admin.role === 'master_admin' || (locals.admin.permissions && locals.admin.permissions.includes('*')));
+  var canManageUsers = isAdminMaster || (locals.admin && locals.admin.permissions && locals.admin.permissions.includes('manage_users'));
+  var canManagePayments = isAdminMaster || (locals.admin && locals.admin.permissions && (locals.admin.permissions.includes('manage_payments') || locals.admin.permissions.includes('manage_finance')));
+%>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
     
+    <% if (canManageUsers) { %>
     <!-- Left column: KYC Document Approvals -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
       <div class="db-main" style="margin-bottom: 0;">
@@ -840,7 +846,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
         <% } %>
       </div>
     </div>
+    <% } %>
 
+    <% if (canManagePayments) { %>
     <!-- Right column: Pending manual payment verifications -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
       <div class="db-main" style="margin-bottom: 0;">
@@ -886,6 +894,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
         </table>
       </div>
     </div>
+    <% } %>
   </div>
 
 

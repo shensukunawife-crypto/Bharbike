@@ -44,15 +44,15 @@ export function startScheduledJobs() {
   });
   console.log("[jobs] Scheduled: subscription warning sweep (every hour)");
 
-  // Run proactive Brain sweep every 6 hours (catches any payments that the reactive Brain missed)
-  // Fires at: 12:00 AM, 6:00 AM, 12:00 PM, 6:00 PM IST
-  cron.schedule("0 */6 * * *", async () => {
+  // Run proactive Brain sweep every 2 hours (catches any payments that the reactive Brain missed)
+  // Fires at: 12:00 AM, 2:00 AM, 4:00 AM, 6:00 AM, 8:00 AM, etc IST
+  cron.schedule("0 */2 * * *", async () => {
     try {
       await runBrainSweep();
     } catch (e) {
       console.error("[jobs] Brain proactive sweep failed", e);
     }
   });
-  console.log("[jobs] Scheduled: proactive Brain subscription sweep (every 6 hours)");
+  console.log("[jobs] Scheduled: proactive Brain subscription sweep (every 2 hours)");
 }
 

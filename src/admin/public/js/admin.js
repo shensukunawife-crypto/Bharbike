@@ -175,7 +175,14 @@ document.querySelectorAll(".open-edit-user").forEach((btn) => {
     const subEndInput = document.getElementById("edit-user-sub-end");
     if (subEndInput) subEndInput.value = toLocalDate(btn.dataset.subEnd);
     const subPlanSelect = document.getElementById("edit-user-sub-plan");
-    if (subPlanSelect) subPlanSelect.value = btn.dataset.subPlan || "none";
+    if (subPlanSelect) {
+      let planVal = btn.dataset.subPlan;
+      if (planVal === "weekly" || planVal === "weekly_plan") planVal = "03780beb-890c-43e2-995b-076ee59ca780";
+      if (planVal === "monthly") planVal = "monthly_plan";
+      subPlanSelect.value = planVal || "none";
+      // Fallback if the value isn't in options
+      if (subPlanSelect.selectedIndex === -1) subPlanSelect.value = "none";
+    }
     form.dataset.url = `/admin/users/${btn.dataset.id}/edit`;
     const deleteBtn = document.getElementById("edit-user-delete-btn");
     if (deleteBtn) deleteBtn.dataset.url = `/admin/users/${btn.dataset.id}/delete`;

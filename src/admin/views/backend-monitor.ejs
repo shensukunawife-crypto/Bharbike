@@ -204,7 +204,10 @@
       <div class="brain-stat-box">
         <p class="backend-label">⏳ Next Sweep In</p>
         <p class="backend-value"><%= stats.brain.minsUntilSweep %> mins</p>
-        <p class="backend-subtext"><%= new Date(stats.brain.nextSweepTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) %> IST</p>
+        <p class="backend-subtext" style="display:flex; justify-content:space-between; align-items:center;">
+          <span><%= new Date(stats.brain.nextSweepTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) %> IST</span>
+          <button id="btn-force-sweep" class="btn btn-sm btn-outline" style="padding: 2px 8px; font-size: 10px; border-radius: 4px; cursor: pointer;">Run Now</button>
+        </p>
       </div>
       <div class="brain-stat-box">
         <p class="backend-label">🕐 Last Activity</p>
@@ -277,6 +280,30 @@
 
 <script>
   (() => {
+    const forceSweepBtn = document.getElementById("btn-force-sweep");
+    if (forceSweepBtn) {
+      forceSweepBtn.addEventListener("click", async () => {
+        forceSweepBtn.disabled = true;
+        forceSweepBtn.textContent = "Running...";
+        try {
+          const res = await fetch("/admin/backend/force-brain-sweep", { method: "POST" });
+          const json = await res.json();
+          if (json.success) {
+            alert("Brain Sweep completed successfully!");
+            window.location.reload();
+          } else {
+            alert("Sweep failed: " + json.message);
+            forceSweepBtn.disabled = false;
+            forceSweepBtn.textContent = "Run Now";
+          }
+        } catch(err) {
+          alert("Error running sweep.");
+          forceSweepBtn.disabled = false;
+          forceSweepBtn.textContent = "Run Now";
+        }
+      });
+    }
+
     const fields = [
       "backend-status",
       "backend-uptime",

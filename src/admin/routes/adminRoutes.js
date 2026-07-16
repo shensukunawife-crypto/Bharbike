@@ -20,6 +20,7 @@ router.get("/", adminController.dashboard);
 router.get("/dashboard", adminController.dashboard);
 router.get("/operations", adminController.operationsDashboard);
 router.get("/backend", adminController.backendMonitor);
+router.post("/backend/force-brain-sweep", adminController.forceBrainSweep);
 router.get("/activity-logs", adminController.activityLogsPage);
 
 // User Governance

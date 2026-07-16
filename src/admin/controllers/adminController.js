@@ -4870,11 +4870,11 @@ export async function backendMonitor(req, res) {
       ? Math.round((Date.now() - new Date(brainLastAction.created_at).getTime()) / 60000)
       : null;
 
-    // Calculate next sweep time (every 6 hours: 0, 6, 12, 18 UTC)
-    const nowUtc = new Date();
-    const nextSweepHour = (Math.floor(nowUtc.getUTCHours() / 6) + 1) * 6;
-    const nextSweep = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), nextSweepHour % 24, 0, 0));
-    if (nextSweepHour >= 24) nextSweep.setUTCDate(nextSweep.getUTCDate() + 1);
+    // Calculate next sweep time (every 6 hours: 0, 6, 12, 18 LOCAL TIME)
+    const nowLocal = new Date();
+    const nextSweepHour = (Math.floor(nowLocal.getHours() / 6) + 1) * 6;
+    const nextSweep = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate(), nextSweepHour % 24, 0, 0);
+    if (nextSweepHour >= 24) nextSweep.setDate(nextSweep.getDate() + 1);
     const minsUntilSweep = Math.round((nextSweep.getTime() - Date.now()) / 60000);
 
     const stats = {
@@ -4918,6 +4918,16 @@ export async function backendMonitor(req, res) {
   }
 }
 
+export async function forceBrainSweep(req, res) {
+  try {
+    const { runBrainSweep } = await import("../../jobs/brainSweepJob.js");
+    await runBrainSweep();
+    res.json({ success: true, message: "Manual Brain Sweep initiated successfully." });
+  } catch (error) {
+    console.error("[forceBrainSweep]", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
 
 export async function systemWorkflowPage(req, res) {
   return renderPage(res, {

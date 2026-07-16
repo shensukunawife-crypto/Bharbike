@@ -5,6 +5,9 @@ import "./config/env.js";
 import { assertEnv } from "./config/env.js";
 import app from "./app.js";
 
+// Force server to run in IST timezone globally
+process.env.TZ = "Asia/Kolkata";
+
 process.on("uncaughtException", (err) => console.error("UNCAUGHT:", err));
 process.on("unhandledRejection", (err) => console.error("UNHANDLED:", err));
 

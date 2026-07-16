@@ -224,7 +224,7 @@
       </div>
       <div class="form-group">
         <label>End Date (Optional Override)</label>
-        <input type="datetime-local" name="end_date" />
+        <input type="date" name="end_date" />
         <small class="muted-small">Leave blank to default to +30 days</small>
       </div>
       <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Assign Subscription</button>
@@ -250,7 +250,7 @@
       </div>
       <div class="form-group">
         <label>End Date</label>
-        <input type="datetime-local" name="end_date" id="edit-sub-end" required />
+        <input type="date" name="end_date" id="edit-sub-end" required />
       </div>
       <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Save Changes</button>
     </form>
@@ -284,10 +284,16 @@
   // ── Edit modal ──────────────────────────────────────────
   document.querySelectorAll('.open-edit-sub').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.getElementById('edit-subscription-form').dataset.url = '/admin/subscriptions/' + btn.dataset.id + '/edit';
-      document.getElementById('edit-sub-status').value = btn.dataset.status;
-      document.getElementById('edit-sub-end').value = btn.dataset.end;
-      document.getElementById('edit-subscription-modal').classList.add('show');
+      document.getElementById('edit-sub-form').dataset.url = '/admin/subscriptions/' + btn.dataset.id + '/edit';
+      const toLocalDate = (iso) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return "";
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().slice(0, 10);
+      };
+      document.getElementById('edit-sub-end').value = toLocalDate(btn.dataset.end);
+      document.getElementById('edit-sub-modal').classList.add('show');
     });
   });
 

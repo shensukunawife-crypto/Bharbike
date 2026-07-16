@@ -154,11 +154,11 @@
         </div>
         <div class="form-group">
           <label>Subscription Start Date</label>
-          <input type="datetime-local" name="sub_start" id="edit-user-sub-start" />
+          <input type="date" name="sub_start" id="edit-user-sub-start" />
         </div>
         <div class="form-group">
           <label>Subscription Expiry Date</label>
-          <input type="datetime-local" name="sub_end" id="edit-user-sub-end" />
+          <input type="date" name="sub_end" id="edit-user-sub-end" />
         </div>
         <% if (locals.admin && locals.admin.role === 'master_admin') { %>
         <div style="border-top: 1px solid var(--border); margin-top: 15px; padding-top: 15px; margin-bottom: 10px;">

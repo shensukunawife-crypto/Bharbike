@@ -162,10 +162,18 @@ document.querySelectorAll(".open-edit-user").forEach((btn) => {
     if (locationInput) locationInput.value = btn.dataset.location || "";
     const prepaidCb = document.getElementById("edit-user-is-prepaid");
     if (prepaidCb) prepaidCb.checked = btn.dataset.isPrepaid === "true";
+    const toLocalDate = (iso) => {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 10);
+    };
+    
     const subStartInput = document.getElementById("edit-user-sub-start");
-    if (subStartInput) subStartInput.value = btn.dataset.subStart || "";
+    if (subStartInput) subStartInput.value = toLocalDate(btn.dataset.subStart);
     const subEndInput = document.getElementById("edit-user-sub-end");
-    if (subEndInput) subEndInput.value = btn.dataset.subEnd || "";
+    if (subEndInput) subEndInput.value = toLocalDate(btn.dataset.subEnd);
     const subPlanSelect = document.getElementById("edit-user-sub-plan");
     if (subPlanSelect) subPlanSelect.value = btn.dataset.subPlan || "none";
     form.dataset.url = `/admin/users/${btn.dataset.id}/edit`;

@@ -213,9 +213,9 @@
       <input type="text" name="technicianName" placeholder="Technician Name" />
       <input type="number" name="repairCost" placeholder="Repair Cost" />
       
-      <div style="margin-bottom: 12px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time In (Date & Time)</label>
-        <input type="datetime-local" name="reportedDate" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      <div style="margin-bottom:20px;">
+        <label style="display:block; margin-bottom:5px; font-weight:600; font-size:13px;">Fixed Date (if completed)</label>
+        <input type="date" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
       </div>
       
       <div style="margin-bottom: 15px;">
@@ -281,7 +281,7 @@
 
         <div style="margin-bottom: 12px;">
           <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time In (Date & Time)</label>
-          <input type="datetime-local" name="reportedDate" id="maintenance-reported-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+          <input type="date" name="reportedDate" id="maintenance-reported-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
         </div>
 
         <div id="expected-date-group" style="margin-bottom: 15px;">
@@ -291,7 +291,7 @@
         
         <div id="fixed-datetime-group" style="margin-bottom: 15px; display:none;">
           <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time Out (Completion Date & Time)</label>
-          <input type="datetime-local" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+          <input type="date" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
         </div>
 
       </div>

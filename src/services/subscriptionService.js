@@ -274,18 +274,19 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
 
       if (lastSub && lastSub.end_date) {
         // 2. Check if the user has an active rental (did they keep the bike?)
-        const { data: activeRental } = await supabase
+        const { data: latestRental } = await supabase
           .from("rentals")
-          .select("id")
+          .select("id, status")
           .eq("user_id", userId)
-          .eq("status", "active")
-          .is("end_time", null)
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
+        const hasBike = latestRental && ["active", "ongoing", "expired"].includes(latestRental.status);
+
         // If they have an active rental, continue from the previous subscription's end date
         // to prevent loss of revenue for unpaid days.
-        if (activeRental) {
+        if (hasBike) {
           startDate = new Date(lastSub.end_date);
         }
       }

@@ -5776,7 +5776,7 @@ export async function bikeLockLogsPage(req, res) {
       users: log.user_id ? usersMap[log.user_id] : null
     }));
 
-    return res.render("layout", {
+    return renderPage(res, {
       title: "Bike Lock Logs",
       active: "lock-logs",
       bodyView: "lock-logs",

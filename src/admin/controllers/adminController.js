@@ -5745,6 +5745,31 @@ export async function saveSocials(req, res) {
   }
 }
 
+export async function bikeLockLogsPage(req, res) {
+  try {
+    const { data: logs, error } = await supabase
+      .from("bike_lock_logs")
+      .select(`
+        *,
+        bikes ( bike_code, name ),
+        users ( full_name, name, phone )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (error) throw error;
+
+    return res.render("lock-logs", {
+      title: "Bike Lock Logs",
+      active: "lock-logs",
+      logs: logs || []
+    });
+  } catch (error) {
+    console.error("[adminController.bikeLockLogsPage] failed", error);
+    return res.status(500).render("error", { message: "Failed to load bike lock logs", layout: false });
+  }
+}
+
 // ==========================================
 // SUBSCRIPTIONS MANAGEMENT
 // ==========================================

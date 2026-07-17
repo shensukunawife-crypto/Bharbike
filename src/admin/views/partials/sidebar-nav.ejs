@@ -1,6 +1,6 @@
 <%
   const gOperations = ['orders', 'bookings', 'delivery-partners'].includes(active);
-  const gVehicle    = ['bikes', 'maintenance', 'hubs'].includes(active);
+  const gVehicle    = ['bikes', 'lock-logs', 'maintenance', 'hubs'].includes(active);
   const gUsers      = ['users', 'kyc-documents', 'subscriptions', 'payments', 'skipped-days', 'subscription-brain'].includes(active);
   const gFinancial  = ['earnings', 'analytics'].includes(active);
   const gSystem     = ['system-workflow', 'backend-monitor', 'activity-logs', 'sql-editor'].includes(active);
@@ -76,6 +76,9 @@
     <div class="nav-group-panel">
       <a class="nav-link nav-link-sub <%= active === 'bikes' ? 'active' : '' %>" href="/admin/bikes" data-label="Bikes">
         <span class="nav-icon"><%- icons.bike %></span><span style="flex:1;">Bikes</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'lock-logs' ? 'active' : '' %>" href="/admin/lock-logs" data-label="Lock Logs">
+        <span class="nav-icon"><%- icons.monitor %></span><span style="flex:1;">Lock Logs</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'maintenance' ? 'active' : '' %>" href="/admin/maintenance" data-label="Maintenance">
         <span class="nav-icon"><%- icons.maintenance %></span><span style="flex:1;">Maintenance</span><span class="sidebar-badge" id="badge-maintenance" style="display:none;">0</span>

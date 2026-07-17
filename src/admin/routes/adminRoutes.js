@@ -49,6 +49,7 @@ router.post("/subscriptions/:subId/cancel", requirePermission("manage_users"), a
 
 // Vehicle & Fleet Control
 router.get("/bikes", requirePermission("manage_bikes"), adminController.bikes);
+router.get("/lock-logs", requirePermission("manage_bikes"), adminController.bikeLockLogsPage);
 router.get("/hubs", requirePermission("manage_bikes"), adminController.hubsPage);
 router.get("/bikes/export/excel", requirePermission("manage_bikes"), adminController.exportBikesExcel);
 router.get("/bikes/export/pdf", requirePermission("manage_bikes"), adminController.exportBikesPDF);

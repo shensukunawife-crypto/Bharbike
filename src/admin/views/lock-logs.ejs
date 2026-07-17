@@ -1,0 +1,323 @@
+<style>
+  .logs-shell {
+    animation: fadeInUp .35s ease;
+  }
+  .logs-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .logs-head-title h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .logs-head-title p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+  .logs-sync-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #059669;
+    font-weight: 600;
+    background: #ecfdf5;
+    padding: 6px 12px;
+    border-radius: 99px;
+    border: 1px solid #a7f3d0;
+  }
+  .logs-sync-dot {
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    animation: logsPulse 1.8s infinite;
+  }
+
+  /* Filter Controls */
+  .logs-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .logs-search-box {
+    position: relative;
+    flex: 1;
+    min-width: 260px;
+  }
+  .logs-search-input {
+    width: 100%;
+    padding: 10px 14px 10px 40px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #334155;
+    transition: all 0.2s ease;
+  }
+  .logs-search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  .logs-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+  }
+
+  /* Grid Layout for Logs */
+  .logs-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .log-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .log-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .log-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .log-icon-wrap.bg-lock { background: #fee2e2; color: #ef4444; }
+  .log-icon-wrap.bg-unlock { background: #dcfce3; color: #10b981; }
+
+  .log-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .log-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+    gap: 12px;
+  }
+  .log-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+  }
+  .log-time {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .log-desc {
+    font-size: 13px;
+    color: #475569;
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+  }
+  .log-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+  }
+  .meta-item i {
+    color: #94a3b8;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .status-badge.success {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+  }
+  .status-badge.failed {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: #fff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
+  }
+  .empty-state i {
+    font-size: 48px;
+    color: #94a3b8;
+    margin-bottom: 16px;
+  }
+  .empty-state h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #1e293b;
+  }
+  .empty-state p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes logsPulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+</style>
+
+<div class="logs-shell">
+  <div class="logs-head">
+    <div class="logs-head-title">
+      <h2>IoT Lock Logs</h2>
+      <p>Tracking all lock and unlock events across the fleet (Latest 500)</p>
+    </div>
+    <div class="logs-sync-badge">
+      <span class="logs-sync-dot"></span> Live Data
+    </div>
+  </div>
+
+  <div class="logs-controls">
+    <div class="logs-search-box">
+      <i class="fas fa-search logs-search-icon"></i>
+      <input type="text" id="logSearchInput" class="logs-search-input" placeholder="Search by bike code, action, or reason..." onkeyup="filterLogs()">
+    </div>
+  </div>
+
+  <% if (logs && logs.length > 0) { %>
+    <div class="logs-grid" id="logsGrid">
+      <% logs.forEach(log => { 
+          const isLock = log.action === 'lock';
+          const iconClass = isLock ? 'bg-lock' : 'bg-unlock';
+          const faIcon = isLock ? 'fa-lock' : 'fa-unlock';
+          
+          let triggerLabel = log.metadata?.triggered_by || 'Unknown';
+          if (triggerLabel === 'rental_finalization') triggerLabel = 'Rental Expiry / Completion';
+          if (triggerLabel === 'system_expiry') triggerLabel = 'System Forced Expiry';
+          if (triggerLabel === 'system_manual_fix') triggerLabel = 'Admin Manual Override';
+          
+          let riderName = 'N/A';
+          if (log.users) {
+            riderName = log.users.full_name || log.users.name || log.users.phone;
+          }
+      %>
+      <div class="log-card" data-search="<%= log.bikes?.bike_code || '' %> <%= log.action %> <%= triggerLabel %> <%= riderName %>">
+        <div class="log-icon-wrap <%= iconClass %>">
+          <i class="fas <%= faIcon %> fa-lg"></i>
+        </div>
+        
+        <div class="log-body">
+          <div class="log-title-row">
+            <h3 class="log-title">
+              Bike: <%= log.bikes?.bike_code || log.bike_id %> 
+              <span style="color: #94a3b8; font-weight: 400;">—</span> 
+              <span style="text-transform: capitalize;"><%= log.action %></span>
+            </h3>
+            <span class="log-time">
+              <%= new Date(log.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) %>
+            </span>
+          </div>
+
+          <p class="log-desc">
+            Triggered by: <strong><%= triggerLabel %></strong>
+            <% if (log.method) { %>
+              (Method: <code><%= log.method %></code>)
+            <% } %>
+          </p>
+
+          <div class="log-meta-grid">
+            <div class="meta-item">
+              <i class="fas fa-user"></i> 
+              Rider: <%= riderName %>
+            </div>
+            
+            <div class="meta-item">
+              <i class="fas fa-satellite-dish"></i> 
+              <span class="status-badge <%= log.success ? 'success' : 'failed' %>">
+                <%= log.success ? 'Success' : 'Failed' %>
+              </span>
+            </div>
+
+            <% if (log.error_message) { %>
+              <div class="meta-item" style="color: #dc2626; width: 100%;">
+                <i class="fas fa-exclamation-triangle" style="color: #dc2626;"></i>
+                IoT Error: <%= log.error_message %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <div class="empty-state">
+      <i class="fas fa-shield-alt"></i>
+      <h3>No Lock Logs Found</h3>
+      <p>Lock and unlock events will appear here.</p>
+    </div>
+  <% } %>
+</div>
+
+<script>
+function filterLogs() {
+  const input = document.getElementById('logSearchInput');
+  const filter = input.value.toLowerCase();
+  const cards = document.querySelectorAll('.log-card');
+  
+  cards.forEach(card => {
+    const searchData = card.getAttribute('data-search').toLowerCase();
+    if (searchData.includes(filter)) {
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+</script>

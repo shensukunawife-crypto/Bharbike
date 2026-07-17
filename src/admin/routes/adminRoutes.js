@@ -3,6 +3,7 @@ import multer from "multer";
 import * as adminController from "../controllers/adminController.js";
 import { adminLoginPage } from "../../controllers/adminAuthController.js";
 import { requireAdminAuth, requirePermission } from "../middleware/adminAuth.js";
+import { adminAuditMiddleware } from "../middleware/adminAuditMiddleware.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -15,6 +16,7 @@ router.get("/login", adminLoginPage);
 /** Docs UI — registered before auth middleware so Express stack always matches this path */
 router.get("/system-workflow", adminController.systemWorkflowPage);
 router.use(requireAdminAuth);
+router.use(adminAuditMiddleware);
 
 router.get("/", adminController.dashboard);
 router.get("/dashboard", adminController.dashboard);

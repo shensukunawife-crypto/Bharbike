@@ -2674,11 +2674,16 @@ export async function analytics(req, res) {
       console.error("[admin.analytics] fetch failed", orderError || bikesError || rentalError || walletError || billingErr || profilesErr);
     }
 
+    // Known test/junk account names to exclude from analytics earnings
+    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal"];
+
     // Build set of real user IDs (exclude test accounts)
     const realUserIds = new Set(
       (dbProfiles || []).filter(u => {
         const name = (u.full_name || "").toLowerCase();
-        return !name.includes("test");
+        if (name.includes("test")) return false;
+        if (EXCLUDED_NAMES.some(ex => name === ex)) return false;
+        return true;
       }).map(u => u.id)
     );
 
@@ -2736,14 +2741,8 @@ export async function analytics(req, res) {
       if (!firstCreditByUser[t.user_id]) firstCreditByUser[t.user_id] = t;
     });
 
-    // Adjust first credit of every user to include 1500 registration fee if not already included
-    realCreditsInPeriod.forEach(t => {
-      if (firstCreditByUser[t.user_id] === t) {
-        if (t.amount < 3000) {
-          t.amount += 1500;
-        }
-      }
-    });
+    // No artificial inflation — amounts are exactly what was paid
+    // (first credit per user is already tagged for pie chart breakdown)
 
     const totalRevenue = realCreditsInPeriod.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 

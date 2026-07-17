@@ -136,10 +136,10 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
           if (hasBike) {
             const prevEnd = new Date(mostRecentSub.end_date);
             if (prevEnd < now) {
-              // Bike still with user, backdate to previous end to avoid gap
-              startDate = prevEnd;
+              // Bike still with user, backdate to next day after previous end to avoid double billing a day
+              startDate = new Date(prevEnd.getTime() + 24 * 60 * 60 * 1000);
               backdated = true;
-              console.log(`[SubscriptionBrain] Backdating to previous end date: ${startDate.toISOString()} (user has active rental)`);
+              console.log(`[SubscriptionBrain] Backdating to next day after previous end date: ${startDate.toISOString()} (user has bike)`);
             }
           }
         }

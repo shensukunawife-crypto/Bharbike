@@ -284,10 +284,10 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
 
         const hasBike = latestRental && ["active", "ongoing", "expired"].includes(latestRental.status);
 
-        // If they have an active rental, continue from the previous subscription's end date
-        // to prevent loss of revenue for unpaid days.
+        // If they have an active rental, continue from the next day after the previous subscription's end date
+        // to prevent double-billing a day.
         if (hasBike) {
-          startDate = new Date(lastSub.end_date);
+          startDate = new Date(new Date(lastSub.end_date).getTime() + 24 * 60 * 60 * 1000);
         }
       }
     } catch (err) {

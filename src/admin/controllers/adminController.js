@@ -5257,32 +5257,59 @@ export async function adminLockBike(req, res) {
     // Call IoT service to send immobilizer request
     const iotResult = await iotService.lockBike(bikeId);
 
+    // Fetch bike info for logging
+    const { data: bikeInfo } = await supabase.from('bikes').select('bike_code, status').eq('id', bikeId).maybeSingle();
+
     // Update Supabase DB
     await supabase
-      .from("bikes")
+      .from('bikes')
       .update({ is_locked: true, last_ping_at: new Date().toISOString() })
-      .eq("id", bikeId);
+      .eq('id', bikeId);
+
+    // Find the active rental's user_id (needed for FK constraint)
+    const { data: activeRental } = await supabase
+      .from('rentals')
+      .select('id, user_id')
+      .eq('bike_id', bikeId)
+      .in('status', ['ongoing', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     // Log action to bike_lock_logs
-    try {
-      await supabase.from("bike_lock_logs").insert([
-        {
-          bike_id: bikeId,
-          user_id: req.user?.id || null,
-          action: "lock",
-          method: "admin_portal",
-          success: iotResult?.ok !== false,
-        },
-      ]);
-    } catch (_) {}
+    const adminName = req.admin?.name || req.admin?.email || req.admin?.username || 'Unknown Admin';
+    const logPayload = {
+      bike_id: Number(bikeId),
+      user_id: activeRental?.user_id || null,
+      rental_id: activeRental?.id || null,
+      action: 'lock',
+      method: 'app',
+      success: iotResult?.ok !== false,
+      error_message: iotResult?.ok === false ? (iotResult?.message || null) : null,
+      metadata: {
+        triggered_by: 'admin',
+        admin_name: adminName,
+        admin_id: req.admin?.admin_id || req.admin?.id || null,
+        admin_role: req.admin?.role || 'admin',
+        bike_code: bikeInfo?.bike_code || null,
+        iot_request_id: iotResult?.requestId || null
+      }
+    };
+
+    if (logPayload.user_id) {
+      const { error: logErr } = await supabase.from('bike_lock_logs').insert([logPayload]);
+      if (logErr) console.warn('[adminLockBike] lock log failed:', logErr.message);
+    } else {
+      console.warn('[adminLockBike] skipping bike_lock_logs insert — no active rental user_id for bike', bikeId);
+    }
 
     return res.json({
       success: true,
-      message: iotResult?.ok ? "Bike locked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`,
+      message: iotResult?.ok ? 'Bike locked successfully' : `IoT Action queued: ${iotResult?.message || 'Queued'}`,
       requestId: iotResult?.requestId || null
     });
   } catch (error) {
-    console.error("[adminLockBike] failed", error);
+    console.error('[adminLockBike] failed', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }
@@ -5295,38 +5322,65 @@ export async function adminUnlockBike(req, res) {
     let iotResult;
     try {
       iotResult = await iotService.unlockBike(bikeId);
-      console.log("[adminUnlockBike] IoT Result:", iotResult);
+      console.log('[adminUnlockBike] IoT Result:', iotResult);
     } catch (iotErr) {
-      console.warn("[adminUnlockBike] IoT call failed, continuing with DB update:", iotErr.message);
-      iotResult = { ok: false, message: iotErr.message || "IoT service error" };
+      console.warn('[adminUnlockBike] IoT call failed, continuing with DB update:', iotErr.message);
+      iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
     }
 
-    // Always update DB regardless of IoT result (same as adminLockBike)
+    // Fetch bike info for logging
+    const { data: bikeInfo } = await supabase.from('bikes').select('bike_code, status').eq('id', bikeId).maybeSingle();
+
+    // Always update DB regardless of IoT result
     await supabase
-      .from("bikes")
+      .from('bikes')
       .update({ is_locked: false, last_ping_at: new Date().toISOString() })
-      .eq("id", bikeId);
+      .eq('id', bikeId);
+
+    // Find the active rental's user_id (needed for FK constraint)
+    const { data: activeRental } = await supabase
+      .from('rentals')
+      .select('id, user_id')
+      .eq('bike_id', bikeId)
+      .in('status', ['ongoing', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     // Log action to bike_lock_logs
-    try {
-      await supabase.from("bike_lock_logs").insert([
-        {
-          bike_id: bikeId,
-          user_id: req.user?.id || null,
-          action: "unlock",
-          method: "admin_portal",
-          success: iotResult?.ok !== false,
-        },
-      ]);
-    } catch (_) {}
+    const adminName = req.admin?.name || req.admin?.email || req.admin?.username || 'Unknown Admin';
+    const logPayload = {
+      bike_id: Number(bikeId),
+      user_id: activeRental?.user_id || null,
+      rental_id: activeRental?.id || null,
+      action: 'unlock',
+      method: 'app',
+      success: iotResult?.ok !== false,
+      error_message: iotResult?.ok === false ? (iotResult?.message || null) : null,
+      metadata: {
+        triggered_by: 'admin',
+        admin_name: adminName,
+        admin_id: req.admin?.admin_id || req.admin?.id || null,
+        admin_role: req.admin?.role || 'admin',
+        bike_code: bikeInfo?.bike_code || null,
+        iot_request_id: iotResult?.requestId || null
+      }
+    };
+
+    if (logPayload.user_id) {
+      const { error: logErr } = await supabase.from('bike_lock_logs').insert([logPayload]);
+      if (logErr) console.warn('[adminUnlockBike] lock log failed:', logErr.message);
+    } else {
+      console.warn('[adminUnlockBike] skipping bike_lock_logs insert — no active rental user_id for bike', bikeId);
+    }
 
     return res.json({
       success: true,
-      message: iotResult?.ok ? "Bike unlocked successfully" : `IoT Action queued: ${iotResult?.message || "Queued"}`,
+      message: iotResult?.ok ? 'Bike unlocked successfully' : `IoT Action queued: ${iotResult?.message || 'Queued'}`,
       requestId: iotResult?.requestId || null
     });
   } catch (error) {
-    console.error("[adminUnlockBike] failed", error);
+    console.error('[adminUnlockBike] failed', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }

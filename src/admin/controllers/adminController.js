@@ -184,26 +184,8 @@ export async function ensureSettingsInitialized() {
 
 export const maintenanceTickets = [];
 
-const payoutQueue = [
-  {
-    id: "PO-1001",
-    transactionId: "TX-7901",
-    user: "Rohit Sharma",
-    amount: 820,
-    status: "pending",
-    createdAt: "2026-04-17",
-    paidAt: null,
-  },
-  {
-    id: "PO-1002",
-    transactionId: "TX-7902",
-    user: "Aman Verma",
-    amount: 640,
-    status: "paid",
-    createdAt: "2026-04-15",
-    paidAt: "2026-04-16",
-  },
-];
+// Payout queue is managed via real DB data — no hardcoded dummy entries
+const payoutQueue = [];
 
 const partnerState = {};
 
@@ -2161,20 +2143,25 @@ export async function earnings(req, res) {
       profileMap[p.id] = p.full_name || "BHAR BIKE Rider";
     });
 
+    // Known test/junk account names to exclude from earnings
+    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal"];
+
     const realUserIds = new Set(
       (dbProfiles || []).filter(u => {
         const name = (u.full_name || "").toLowerCase();
-        return !name.includes("test");
+        if (name.includes("test")) return false;
+        if (EXCLUDED_NAMES.some(ex => name === ex)) return false;
+        return true;
       }).map(u => u.id)
     );
 
-    // 1. Subscription Billing Revenue (paid bills)
+    // 1. Subscription Billing Revenue (paid bills only, real users only)
     const validBillings = safeData(billingData).filter(b => {
       const status = String(b.status || "").toLowerCase();
       return status === "paid" && b.user_id && realUserIds.has(b.user_id);
     });
 
-    // 2. Wallet Net Revenue (credits - debits per user) to capture unspent deposits
+    // 2. Wallet Net Revenue (credits - debits per user)
     const walletCreditsByUser = {};
     const walletDebitsByUser = {};
 
@@ -2191,18 +2178,21 @@ export async function earnings(req, res) {
       }
     });
 
-    // Merge into combined earnings array
+    // Merge billing into combined earnings array (sorted newest first for display)
     const allRealCredits = [
       ...validBillings.map(b => ({
         id: b.id,
         amount: Number(b.amount || 0),
         created_at: b.created_at,
-        title: `Subscription (${b.payment_method === 'admin_override' || b.payment_method === 'admin_manual_add' ? 'Admin Manual' : 'Online/QR'})`,
+        payment_method: b.payment_method,
+        title: b.payment_method === 'admin_override' || b.payment_method === 'admin_manual_add'
+          ? 'Subscription (Admin Manual)'
+          : 'Subscription (Online/QR)',
         user_id: b.user_id
       }))
     ];
 
-    // Add net unspent wallet balance per user if positive
+    // Add net positive wallet balance per user as a separate entry
     realUserIds.forEach(uid => {
       const cred = walletCreditsByUser[uid] || 0;
       const deb = walletDebitsByUser[uid] || 0;
@@ -2212,28 +2202,23 @@ export async function earnings(req, res) {
           id: `WLT-UNSPENT-${uid}`,
           amount: net,
           created_at: new Date(now).toISOString(),
-          title: "Wallet Deposit (Unspent)",
+          title: "Wallet Deposit",
           user_id: uid
         });
       }
     });
 
-    // Sort by date ascending to determine first credit (registration fee) per unique user
+    // Sort ascending to tag first-ever credit per user (used for pie chart)
     allRealCredits.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-    // First credit per user = registration fee
     const firstCreditByUser = {};
     allRealCredits.forEach(t => {
       if (!firstCreditByUser[t.user_id]) firstCreditByUser[t.user_id] = t.id;
     });
 
-    // Adjust first credit of every user to include 1500 registration fee if not already included
+    // Tag first billing per user as "New Registration" — no artificial amount inflation
     allRealCredits.forEach(t => {
       if (firstCreditByUser[t.user_id] === t.id) {
-        t.title = "Registration Fee + Plan";
-        if (t.amount < 3000) {
-          t.amount += 1500;
-        }
+        t.title = "New Registration — " + t.title;
       }
     });
 
@@ -2262,13 +2247,15 @@ export async function earnings(req, res) {
       .filter((item) => item.status === "paid")
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-    const transactions = filtered.slice(0, 20).map((item, index) => ({
+    // Sort newest first for transaction list display
+    const filteredNewestFirst = [...filtered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const transactions = filteredNewestFirst.slice(0, 20).map((item, index) => ({
       id: `TX-${2000 + index}`,
       user: profileMap[item.user_id] || "BHAR BIKE Rider",
-      type: firstCreditByUser[item.user_id] === item.id ? "Registration Fee" : (item.title || "Wallet Recharge"),
+      type: item.title || "Subscription",
       amount: Number(item.amount || 0),
       status: "Success",
-      date: (item.created_at || new Date().toISOString()).slice(0, 10),
+      date: new Date(item.created_at || now).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
     }));
 
     const payoutHistory = payoutQueue
@@ -2281,7 +2268,7 @@ export async function earnings(req, res) {
         paidAt: item.paidAt,
       }));
 
-    const recentActivity = transactions.slice(0, 5);
+    const recentActivity = transactions.slice(0, 5); // already sorted newest first
 
     // Group transactions by date for realistic, premium daily trend charts
     const dailyMap = {};

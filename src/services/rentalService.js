@@ -184,11 +184,34 @@ async function finalizeRental(rentalId, status) {
   }).eq("id", rental.bike_id);
   if (bikeUpdateErr) throw new AppError(`Failed to release bike: ${bikeUpdateErr.message}`, 500);
 
-  // Skip IoT lock if not configured (demo mode)
+  // Send IoT lock command
+  let iotResult;
   try {
-    await iot.lockBike(rental.bike_id);
+    iotResult = await iot.lockBike(rental.bike_id);
+    console.log(`[rentalService] IoT lock response for bike ${rental.bike_id}:`, iotResult);
   } catch (iotErr) {
-    console.log("[rentalService] IoT lock skipped (not configured):", iotErr.message);
+    console.warn(`[rentalService] IoT lock failed or skipped for bike ${rental.bike_id}:`, iotErr.message);
+    iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
+  }
+
+  // Log the lock action to bike_lock_logs
+  try {
+    await supabase.from("bike_lock_logs").insert([{
+      bike_id: rental.bike_id,
+      user_id: rental.user_id,
+      rental_id: rentalId,
+      action: "lock",
+      method: "app",
+      success: iotResult?.ok !== false,
+      error_message: iotResult?.ok === false ? (iotResult?.message || null) : null,
+      metadata: {
+        triggered_by: "rental_finalization",
+        status_reason: status,
+        iot_request_id: iotResult?.requestId || null
+      }
+    }]);
+  } catch (logErr) {
+    console.warn("[rentalService] Failed to insert lock log:", logErr.message);
   }
 
   // Deduct Wallet Balance (if no active subscription)

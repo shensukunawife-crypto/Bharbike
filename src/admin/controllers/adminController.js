@@ -1594,19 +1594,11 @@ export async function liveGpsPoller(req, res) {
     let autoFixed = false;
 
     if (ignition === "ON") {
-      // Bike engine is running — MUST be unlocked physically
-      lockState = "unlocked";
-      if (dbLocked) {
-        // CONFLICT: DB says locked but ignition is ON — auto-fix DB
-        await supabase
-          .from("bikes")
-          .update({ is_locked: false, last_ping_at: new Date().toISOString() })
-          .eq("id", bikeId);
-        autoFixed = true;
-        dbLocked = false;
-      }
+      // Bike key is turned on, but it might still be immobilized.
+      // Do NOT auto-fix the DB to unlocked because an immobilized bike can have ignition ON.
+      lockState = dbLocked ? "locked" : "unlocked";
     } else {
-      // Ignition is OFF or device is offline / not linked — return DB lock state
+      // Ignition is OFF or device is offline / not linked
       lockState = dbLocked ? "locked" : "unlocked";
     }
 

@@ -275,10 +275,11 @@
 
     <div class="logs-tabs">
       <button type="button" class="logs-tab active" data-filter="all">All Logs</button>
-      <button type="button" class="logs-tab" data-filter="booking,order">Bookings & Orders</button>
+      <button type="button" class="logs-tab" data-filter="booking,order">Bookings &amp; Orders</button>
       <button type="button" class="logs-tab" data-filter="payment">Payments</button>
       <button type="button" class="logs-tab" data-filter="kyc">KYC uploads</button>
       <button type="button" class="logs-tab" data-filter="subscription">Subscriptions</button>
+      <button type="button" class="logs-tab" data-filter="admin" style="color:#f59e0b;font-weight:700;">⚙️ Admin Actions</button>
     </div>
   </div>
 
@@ -286,10 +287,11 @@
     <table class="premium-table" id="logs-table">
       <thead>
         <tr>
-          <th>Rider Name</th>
+          <th>Rider / Target</th>
           <th>Type</th>
           <th>Action</th>
           <th>Details</th>
+          <th>Done By</th>
           <th>Time</th>
         </tr>
       </thead>
@@ -301,7 +303,7 @@
         <tr class="log-row" data-type="<%= item.type %>" data-id="<%= item.id %>">
           <td>
             <strong>
-              <% if (item.user_id) { %>
+              <% if (item.user_id && item.user_id !== 'system') { %>
               <a href="/admin/users/<%= item.user_id %>" style="color: inherit; text-decoration: none;" class="hover-underline">
                 <%= item.user_name || "User" %>
               </a>
@@ -309,16 +311,24 @@
               <%= item.user_name || "System" %>
               <% } %>
             </strong>
-            <div class="sub-note"><%= item.user_phone || "System Action" %></div>
+            <div class="sub-note"><%= item.user_phone || (item.type === 'admin' ? 'Affected User' : 'System Action') %></div>
           </td>
           <td>
-            <span class="badge-type badge-<%= item.type %>"><%= item.type %></span>
+            <span class="badge-type badge-<%= item.type %>"><%= item.type === 'admin' ? 'Admin' : item.type %></span>
           </td>
           <td>
             <strong><%= item.action %></strong>
           </td>
           <td>
             <div class="text-details"><%= item.details || "-" %></div>
+          </td>
+          <td>
+            <% if (item.type === 'admin' && item.admin_name) { %>
+            <span style="font-weight:600;color:#f59e0b;"><%= item.admin_name %></span>
+            <div class="sub-note" style="font-size:11px;"><%= item.admin_role %></div>
+            <% } else { %>
+            <span style="color:#888;">System</span>
+            <% } %>
           </td>
           <td class="timestamp-col" data-time="<%= item.timestamp %>">
             <%= item.timestamp %>

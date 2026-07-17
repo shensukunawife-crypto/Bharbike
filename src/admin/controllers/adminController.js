@@ -12,6 +12,7 @@ import { createUserNotification } from "../../services/notificationService.js";
 import { sendFcmPushToTokens, sendFcmPush } from "../../utils/firebaseAdmin.js";
 import * as walletService from "../../services/walletService.js";
 import Groq from "groq-sdk";
+import { logAdminAction } from "../../utils/adminAudit.js";
 
 function parseIST(dateStr) {
   if (!dateStr) return null;
@@ -1883,6 +1884,18 @@ export async function kycUpdateStatus(req, res) {
     }
 
     console.log(`[admin.kycUpdateStatus] doc ${docId} → ${status}`, data);
+
+    // Audit log
+    logAdminAction({
+      admin: req.admin,
+      action: `ADMIN_KYC_${status.toUpperCase()}`,
+      targetId: data?.user_id || null,
+      targetName: data?.user_id || "Unknown User",
+      detail: `KYC document (${data?.type || docId}) marked as ${status}${reason ? `: ${reason}` : ""}`,
+      oldStatus: "pending",
+      newStatus: status
+    });
+
     return res.json({ success: true, doc: data });
   } catch (err) {
     console.error("[admin.kycUpdateStatus] unexpected error", err);
@@ -4074,6 +4087,19 @@ export async function assignBike(req, res) {
     if (rentalError) throw rentalError;
 
     await supabase.from("bikes").update({ status: "in_use", is_locked: false }).eq("id", bikeId);
+
+    // Audit log
+    const { data: assignedUser } = await supabase.from("users").select("full_name, name").eq("id", user_id).maybeSingle();
+    logAdminAction({
+      admin: req.admin,
+      action: "ADMIN_BIKE_ASSIGNED",
+      targetId: user_id,
+      targetName: assignedUser?.full_name || assignedUser?.name || user_id,
+      detail: `Assigned bike ${bikeRow.bike_code} to user`,
+      oldStatus: "available",
+      newStatus: "in_use"
+    });
+
     return res.json({ success: true, message: "Bike assigned successfully" });
   } catch (error) {
     console.error("[admin.assignBike] failed", error);
@@ -4245,6 +4271,17 @@ export async function approvePartner(req, res) {
       "success"
     ).catch((err) => console.warn("[adminController.approvePartner] notification failed:", err?.message));
 
+    // Audit log
+    logAdminAction({
+      admin: req.admin,
+      action: "ADMIN_PARTNER_APPROVED",
+      targetId: userId,
+      targetName: userId,
+      detail: "Approved delivery partner application",
+      oldStatus: "pending",
+      newStatus: "approved"
+    });
+
     return res.json({ success: true, message: "Partner approved" });
   } catch (error) {
     console.error("[admin.approvePartner] failed", error);
@@ -4265,6 +4302,17 @@ export async function rejectPartner(req, res) {
       "We are sorry, but your delivery partner application could not be approved. Please review your submitted documents and try again.",
       "error"
     ).catch((err) => console.warn("[adminController.rejectPartner] notification failed:", err?.message));
+
+    // Audit log
+    logAdminAction({
+      admin: req.admin,
+      action: "ADMIN_PARTNER_REJECTED",
+      targetId: userId,
+      targetName: userId,
+      detail: "Rejected delivery partner application",
+      oldStatus: "pending",
+      newStatus: "rejected"
+    });
 
     return res.json({ success: true, message: "Partner rejected" });
   } catch (error) {
@@ -4986,7 +5034,8 @@ export async function activityLogsPage(req, res) {
       profilesRes,
       supportRes,
       paymentsRes,
-      maintenanceRes
+      maintenanceRes,
+      adminActionsRes
     ] = await Promise.all([
       supabase.from("orders").select("id, user_id, total_amount, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("rentals").select("id, user_id, bike_id, status, price, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
@@ -4996,8 +5045,41 @@ export async function activityLogsPage(req, res) {
       supabase.from("users").select("id, full_name, name, phone, email, created_at").then(r => r, e => ({ data: [] })),
       supabase.from("support_tickets").select("id, user_id, ticket_number, issue_type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
       supabase.from("payments").select("id, user_id, amount, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
-      supabase.from("maintenance").select("id, ticket_id, bike_code, issue_type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] }))
+      supabase.from("maintenance").select("id, ticket_id, bike_code, issue_type, status, created_at").order("created_at", { ascending: false }).limit(50).then(r => r, e => ({ data: [] })),
+      supabase.from("brain_activity_logs").select("*").like("action", "ADMIN_%").order("created_at", { ascending: false }).limit(100).then(r => r, e => ({ data: [] }))
     ]);
+
+    // Normalize Admin Actions
+    const normalizedAdminActions = safeData(adminActionsRes.data).map(a => {
+      let parsed = {};
+      try { parsed = JSON.parse(a.reason || '{}'); } catch(_) {}
+      const adminName = parsed.admin_name || 'Unknown Admin';
+      const adminRole = parsed.admin_role || 'admin';
+      const detail = parsed.detail || a.reason || a.action;
+      const actionLabel = {
+        ADMIN_BIKE_ASSIGNED: '🔑 Assigned bike to user',
+        ADMIN_BIKE_UNASSIGNED: '🔒 Unassigned bike from user',
+        ADMIN_KYC_VERIFIED: '✅ Approved KYC document',
+        ADMIN_KYC_REJECTED: '❌ Rejected KYC document',
+        ADMIN_KYC_PENDING: '⏳ Reset KYC to pending',
+        ADMIN_SUBSCRIPTION_EDITED: '✏️ Edited subscription',
+        ADMIN_SUBSCRIPTION_CANCELLED: '🚫 Cancelled subscription',
+        ADMIN_PARTNER_APPROVED: '✅ Approved delivery partner',
+        ADMIN_PARTNER_REJECTED: '❌ Rejected delivery partner',
+      }[a.action] || a.action.replace('ADMIN_', '').replace(/_/g, ' ');
+      return {
+        id: `admin_${a.id}`,
+        user_id: a.user_id,
+        user_name: a.user_name || 'N/A',
+        action: actionLabel,
+        type: 'admin',
+        timestamp: a.created_at,
+        details: detail,
+        admin_name: adminName,
+        admin_role: adminRole,
+        raw: { ref_id: a.id, category: 'Admin Action', by: `${adminName} (${adminRole})`, action: a.action, old_status: a.old_status, new_status: a.new_status, created_at: a.created_at }
+      };
+    });
 
     // Normalize Orders
     const normalizedOrders = safeData(ordersRes.data).map(o => ({
@@ -5116,7 +5198,8 @@ export async function activityLogsPage(req, res) {
       ...normalizedSupport,
       ...normalizedPayments,
       ...normalizedMaintenance,
-      ...normalizedUsers
+      ...normalizedUsers,
+      ...normalizedAdminActions
     ];
 
     logs = logs.map(item => {
@@ -5142,7 +5225,8 @@ export async function activityLogsPage(req, res) {
       subscriptions: logs.filter(l => l.type === 'subscription').length,
       support: logs.filter(l => l.type === 'support').length,
       maintenance: logs.filter(l => l.type === 'maintenance').length,
-      users: logs.filter(l => l.type === 'user').length
+      users: logs.filter(l => l.type === 'user').length,
+      admin: logs.filter(l => l.type === 'admin').length
     };
 
     if (req.query.ajax) {
@@ -5739,9 +5823,21 @@ export async function editSubscription(req, res) {
     if (end_date) updates.end_date = parseIST(end_date).toISOString();
     if (status) updates.status = status;
     
+    const { data: subBefore } = await supabase.from("user_subscriptions").select("user_id, status, end_date").eq("id", subId).maybeSingle();
     const { error } = await supabase.from("user_subscriptions").update(updates).eq("id", subId);
     if (error) throw error;
-    
+
+    // Audit log
+    logAdminAction({
+      admin: req.admin,
+      action: "ADMIN_SUBSCRIPTION_EDITED",
+      targetId: subBefore?.user_id || null,
+      targetName: subBefore?.user_id || "Unknown User",
+      detail: `Manually edited subscription — ${end_date ? `new end date: ${end_date}` : ""} ${status ? `status → ${status}` : ""}`.trim(),
+      oldStatus: subBefore?.status || null,
+      newStatus: status || subBefore?.status || null
+    });
+
     res.json({ success: true, message: "Subscription updated successfully" });
   } catch (error) {
     console.error("[adminController.editSubscription] failed", error);
@@ -5752,12 +5848,24 @@ export async function editSubscription(req, res) {
 export async function cancelSubscription(req, res) {
   try {
     const { subId } = req.params;
+    const { data: cancelledSub } = await supabase.from("user_subscriptions").select("user_id, status").eq("id", subId).maybeSingle();
     const { error } = await supabase.from("user_subscriptions").update({
       status: "cancelled",
       cancelled_at: new Date().toISOString()
     }).eq("id", subId);
     
     if (error) throw error;
+
+    // Audit log
+    logAdminAction({
+      admin: req.admin,
+      action: "ADMIN_SUBSCRIPTION_CANCELLED",
+      targetId: cancelledSub?.user_id || null,
+      targetName: cancelledSub?.user_id || "Unknown User",
+      detail: `Manually cancelled subscription ID: ${subId}`,
+      oldStatus: cancelledSub?.status || "active",
+      newStatus: "cancelled"
+    });
     res.json({ success: true, message: "Subscription cancelled successfully" });
   } catch (error) {
     console.error("[adminController.cancelSubscription] failed", error);

@@ -5751,18 +5751,35 @@ export async function bikeLockLogsPage(req, res) {
       .from("bike_lock_logs")
       .select(`
         *,
-        bikes ( bike_code, name ),
-        users ( full_name, name, phone )
+        bikes ( bike_code, name )
       `)
       .order("created_at", { ascending: false })
       .limit(500);
 
     if (error) throw error;
 
+    // Manually fetch users since there might be no foreign key constraint
+    const userIds = [...new Set((logs || []).map(l => l.user_id).filter(Boolean))];
+    let usersMap = {};
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from("users")
+        .select("id, full_name, name, phone")
+        .in("id", userIds);
+      if (usersData) {
+        usersData.forEach(u => { usersMap[u.id] = u; });
+      }
+    }
+
+    const populatedLogs = (logs || []).map(log => ({
+      ...log,
+      users: log.user_id ? usersMap[log.user_id] : null
+    }));
+
     return res.render("lock-logs", {
       title: "Bike Lock Logs",
       active: "lock-logs",
-      logs: logs || []
+      logs: populatedLogs
     });
   } catch (error) {
     console.error("[adminController.bikeLockLogsPage] failed", error);

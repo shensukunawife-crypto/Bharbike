@@ -4863,19 +4863,48 @@ export async function backendMonitor(req, res) {
     const [
       { error: dbError },
       { count: kycCount, error: kycCountErr },
-      { count: profilesCount },
-      brainLogsRes,
-      brainSweepRes
+      { count: profilesCount }
     ] = await Promise.all([
       supabase.from("users").select("id").limit(1),
       supabase.from("kyc_documents").select("id", { count: "exact", head: true }),
-      supabase.from("users").select("id", { count: "exact", head: true }),
+      supabase.from("users").select("id", { count: "exact", head: true })
+    ]);
+    const dbLatency = Date.now() - start;
+    const stats = {
+      status: dbError ? "Critical" : "Healthy",
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      nodeVersion: process.version,
+      platform: process.platform,
+      dbLatency,
+      dbStatus: dbError ? "Disconnected" : "Connected",
+      dbError: dbError?.message || null,
+      environment: process.env.NODE_ENV || "production",
+      apiUrl: process.env.RENDER_EXTERNAL_URL || "Localhost",
+      supabaseKeyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Service Role Key (RLS Bypassed)" : "Anon Key (Subject to RLS)",
+      kycCount: kycCountErr ? `Error: ${kycCountErr.message}` : (kycCount || 0),
+      profilesCount: profilesCount || 0
+    };
+
+    return renderPage(res, {
+      title: "Backend Monitor",
+      active: "backend-monitor",
+      bodyView: "backend-monitor",
+      stats,
+    });
+  } catch (error) {
+    console.error("[admin.backendMonitor] failed", error);
+    return res.status(500).send("Unable to load backend monitor");
+  }
+}
+
+export async function subscriptionBrainPage(req, res) {
+  try {
+    const [brainLogsRes, brainSweepRes] = await Promise.all([
       supabase.from("brain_activity_logs").select("*").order("created_at", { ascending: false }).limit(50).then(r => r, () => ({ data: [] })),
       supabase.from("brain_activity_logs").select("id", { count: "exact", head: true }).eq("action", "SWEEP")
     ]);
-    const dbLatency = Date.now() - start;
 
-    // Brain status — import BRAIN_START_TIME if available
     let brainStartTime = null;
     try {
       const brainModule = await import("../../services/subscriptionBrain.js");
@@ -4890,7 +4919,6 @@ export async function backendMonitor(req, res) {
       ? Math.round((Date.now() - new Date(brainLastAction.created_at).getTime()) / 60000)
       : null;
 
-    // Calculate next sweep time (every 2 hours: 0, 2, 4, 6, 8... LOCAL TIME)
     const nowLocal = new Date();
     const nextSweepHour = (Math.floor(nowLocal.getHours() / 2) + 1) * 2;
     const nextSweep = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate(), nextSweepHour % 24, 0, 0);
@@ -4898,19 +4926,6 @@ export async function backendMonitor(req, res) {
     const minsUntilSweep = Math.round((nextSweep.getTime() - Date.now()) / 60000);
 
     const stats = {
-      status: dbError ? "Critical" : "Healthy",
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      nodeVersion: process.version,
-      platform: process.platform,
-      dbLatency,
-      dbStatus: dbError ? "Disconnected" : "Connected",
-      dbError: dbError?.message || null,
-      environment: process.env.NODE_ENV || "production",
-      apiUrl: process.env.RENDER_EXTERNAL_URL || "Localhost",
-      supabaseKeyType: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Service Role Key (RLS Bypassed)" : "Anon Key (Subject to RLS)",
-      kycCount: kycCountErr ? `Error: ${kycCountErr.message}` : (kycCount || 0),
-      profilesCount: profilesCount || 0,
       brain: {
         isLive: true,
         startTime: brainStartTime,
@@ -4927,14 +4942,14 @@ export async function backendMonitor(req, res) {
     };
 
     return renderPage(res, {
-      title: "Backend Monitor",
-      active: "backend-monitor",
-      bodyView: "backend-monitor",
+      title: "Subscription Brain",
+      active: "subscription-brain",
+      bodyView: "subscription-brain",
       stats,
     });
   } catch (error) {
-    console.error("[admin.backendMonitor] failed", error);
-    return res.status(500).send("Unable to load backend monitor");
+    console.error("[admin.subscriptionBrainPage] failed", error);
+    return res.status(500).send("Unable to load Subscription Brain page");
   }
 }
 

@@ -123,16 +123,17 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
       try {
         const mostRecentSub = subs[0]; // newest record regardless of status
         if (mostRecentSub && mostRecentSub.end_date) {
-          const { data: activeRental } = await supabase
+          const { data: latestRental } = await supabase
             .from("rentals")
-            .select("id")
+            .select("id, status")
             .eq("user_id", userId)
-            .eq("status", "active")
-            .is("end_time", null)
+            .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
-          if (activeRental) {
+          const hasBike = latestRental && ["active", "ongoing", "expired"].includes(latestRental.status);
+
+          if (hasBike) {
             const prevEnd = new Date(mostRecentSub.end_date);
             if (prevEnd < now) {
               // Bike still with user, backdate to previous end to avoid gap

@@ -566,11 +566,16 @@ export async function dashboard(req, res) {
     const bikes = safeData(bikesData).map(normalizeBike);
     const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
+    // Known test/junk account names to exclude from dashboard earnings
+    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal"];
+
     // Build set of real (non-test) user IDs from profiles table
     const realUserIds = new Set(
       (allProfiles || []).filter(u => {
         const name = (u.full_name || "").toLowerCase();
-        return !name.includes("test");
+        if (name.includes("test")) return false;
+        if (EXCLUDED_NAMES.some(ex => name === ex)) return false;
+        return true;
       }).map(u => u.id)
     );
 
@@ -632,13 +637,10 @@ export async function dashboard(req, res) {
       }
     });
 
-    // Adjust first credit of every user to include 1500 registration fee if not already included
+    // Tag first billing per user as New Registration — no artificial amount inflation
     earnings.forEach(item => {
       if (firstCreditByUser[item.userId] === item) {
-        item.title = "Registration Fee + Plan";
-        if (item.amount < 3000) {
-          item.amount += 1500;
-        }
+        item.title = "New Registration — " + item.title;
       }
     });
 

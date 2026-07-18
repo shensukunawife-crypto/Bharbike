@@ -684,7 +684,7 @@
     // Set polling refresh for live messages every 2 seconds
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(() => {
-      if (activeTicketId === id) {
+      if (document.visibilityState === 'visible' && activeTicketId === id) {
         pollMessages(id);
       }
     }, 2000);

@@ -428,7 +428,11 @@ function updateLockUI(bikeId, lockState, autoFixed) {
   // Start first poll after 3 seconds, then every 10 seconds
   setTimeout(() => {
     runPollCycle();
-    setInterval(runPollCycle, 10000);
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        runPollCycle();
+      }
+    }, 60000);
   }, 3000);
 })();
 </script>

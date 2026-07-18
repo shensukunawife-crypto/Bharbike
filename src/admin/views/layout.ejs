@@ -991,7 +991,11 @@
 
           // Initial silent fetch to arm the badge
           fetchActivities();
-          setInterval(fetchActivities, 60000);
+          setInterval(() => {
+            if (document.visibilityState === 'visible') {
+              fetchActivities();
+            }
+          }, 60000);
         }
       })();
     </script>

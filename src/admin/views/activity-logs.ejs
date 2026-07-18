@@ -489,6 +489,10 @@
     };
 
     // Poll every 8 seconds
-    setInterval(pollLogs, 8000);
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        pollLogs();
+      }
+    }, 60000);
   })();
 </script>

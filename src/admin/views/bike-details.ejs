@@ -244,6 +244,10 @@ function closeMapModal() {
       })
       .catch(console.error);
   }
-  // Poll every 10 seconds
-  setInterval(pollLiveGPS, 10000);
+  // Poll every 30 seconds if visible
+  setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      pollLiveGPS();
+    }
+  }, 30000);
 </script>

@@ -620,8 +620,10 @@ export const verifyPayment = async (req, res) => {
           try {
             const { data: lastSub } = await supabase.from("user_subscriptions").select("end_date").eq("user_id", user_id).order("end_date", { ascending: false }).limit(1).maybeSingle();
             if (lastSub && lastSub.end_date) {
-              const { data: activeRental } = await supabase.from("rentals").select("id").eq("user_id", user_id).eq("status", "active").is("end_time", null).limit(1).maybeSingle();
-              if (activeRental) startDate = new Date(lastSub.end_date);
+              const lastEndDate = new Date(lastSub.end_date);
+              if (lastEndDate > startDate) {
+                startDate = lastEndDate;
+              }
             }
           } catch (e) {
             console.warn("[verifyPayment] fallback smart backdating failed:", e?.message);

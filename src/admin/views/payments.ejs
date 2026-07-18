@@ -718,6 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
             '<td><span class="code-badge" title="' + escapeHtml(p.id) + '">' +
             escapeHtml(p.shortId || '#' + String(p.id).substring(0, 8)) +
             "</span></td>" +
+            "<td><strong>" + escapeHtml(p.userName || '—') + "</strong></td>" +
             "<td><strong>" +
             escapeHtml(p.order_code) +
             '</strong><br/><span class="muted-small" title="' + escapeHtml(p.order_id || '') + '">' +
@@ -734,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
             '<td><span class="code-badge">' +
             escapeHtml(p.razorpay_payment_id) +
             "</span></td>" +
+            "<td>" +
             (() => {
               var displayQrId = "";
               var screenshotUrl = "";
@@ -757,6 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
               }
               return html;
             })() +
+            "</td>" +
             "<td>" +
             escapeHtml(created) +
             "</td>" +

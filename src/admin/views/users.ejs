@@ -117,7 +117,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3>Add User</h3>
-      <button class="modal-close" data-modal-close="add-user-modal">✕</button>
+      <button class="close-modal" data-modal-close="add-user-modal">✕</button>
     </div>
     <div class="modal-body">
       <form class="admin-form ajax-form" data-url="/admin/users/add">
@@ -136,7 +136,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3>Edit User</h3>
-      <button class="modal-close" data-modal-close="edit-user-modal">✕</button>
+      <button class="close-modal" data-modal-close="edit-user-modal">✕</button>
     </div>
     <div class="modal-body">
       <form class="admin-form ajax-form" id="edit-user-form" data-url="">
@@ -201,11 +201,11 @@
 </div>
 
 <!-- User Detail Modal -->
-<div class="modal" id="user-detail-modal" style="display:none;">
+<div class="modal" id="user-detail-modal">
   <div class="modal-content" style="max-width:820px;width:95%;">
     <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
       <h3 id="user-detail-title" style="margin:0;">User Detail</h3>
-      <button class="modal-close" data-modal-close="user-detail-modal">✕</button>
+      <button class="close-modal" data-modal-close="user-detail-modal">✕</button>
     </div>
     <div class="modal-body" style="padding:0;">
       <!-- Tabs -->
@@ -313,7 +313,7 @@
       firstTab.style.color = '#6366f1';
       firstTab.style.borderBottom = '2px solid #6366f1';
     }
-    document.getElementById('user-detail-modal').style.display = 'flex';
+    document.getElementById('user-detail-modal').classList.add('show');
 
     var token = localStorage.getItem('adminToken');
     fetch('/admin/api/users/' + uid + '/detail', {

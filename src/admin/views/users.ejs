@@ -200,6 +200,37 @@
   </div>
 </div>
 
+<!-- User Detail Modal -->
+<div class="modal" id="user-detail-modal" style="display:none;">
+  <div class="modal-content" style="max-width:820px;width:95%;">
+    <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <h3 id="user-detail-title" style="margin:0;">User Detail</h3>
+      <button class="modal-close" data-modal-close="user-detail-modal">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:2px solid var(--border);padding:0 20px;gap:4px;background:var(--bg-card);">
+        <button class="detail-tab active" data-tab="subs" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:#6366f1;border-bottom:2px solid #6366f1;margin-bottom:-2px;">📋 Subscriptions</button>
+        <button class="detail-tab" data-tab="pays" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--text-muted);">💳 Payments</button>
+        <button class="detail-tab" data-tab="skip" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--text-muted);">⏭ Skip Days</button>
+      </div>
+      <div id="detail-loading" style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</div>
+      <!-- Subscriptions Tab -->
+      <div id="detail-tab-subs" class="detail-tab-panel" style="display:none;padding:20px;max-height:420px;overflow-y:auto;">
+        <div id="detail-subs-content"></div>
+      </div>
+      <!-- Payments Tab -->
+      <div id="detail-tab-pays" class="detail-tab-panel" style="display:none;padding:20px;max-height:420px;overflow-y:auto;">
+        <div id="detail-pays-content"></div>
+      </div>
+      <!-- Skip Days Tab -->
+      <div id="detail-tab-skip" class="detail-tab-panel" style="display:none;padding:20px;max-height:420px;overflow-y:auto;">
+        <div id="detail-skip-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   // Pagination
@@ -278,8 +309,10 @@
       t.style.borderBottom = 'none';
     });
     var firstTab = document.querySelector('.detail-tab[data-tab="subs"]');
-    firstTab.style.color = '#6366f1';
-    firstTab.style.borderBottom = '2px solid #6366f1';
+    if (firstTab) {
+      firstTab.style.color = '#6366f1';
+      firstTab.style.borderBottom = '2px solid #6366f1';
+    }
     document.getElementById('user-detail-modal').style.display = 'flex';
 
     var token = localStorage.getItem('adminToken');
@@ -367,9 +400,9 @@
       // Show first tab content
       document.getElementById('detail-tab-subs').style.display = 'block';
     })
-    .catch(function() {
+    .catch(function(err) {
       document.getElementById('detail-loading').style.display = 'block';
-      document.getElementById('detail-loading').textContent = 'Error loading data.';
+      document.getElementById('detail-loading').textContent = 'Error loading data: ' + err.message;
     });
   });
 
@@ -390,5 +423,3 @@
   });
 })();
 </script>
-
-

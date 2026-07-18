@@ -28,6 +28,7 @@ router.get("/activity-logs", adminController.activityLogsPage);
 // User Governance
 router.get("/users", requirePermission("manage_users"), adminController.users);
 router.get("/users/:userId", requirePermission("manage_users"), adminController.userProfile);
+router.get("/api/users/:userId/detail", requirePermission("manage_users"), adminController.getUserDetail);
 router.get("/kyc-documents", requirePermission("manage_users"), adminController.kycDocumentsPage);
 router.post("/kyc-documents/:docId/status", requirePermission("manage_users"), adminController.kycUpdateStatus);
 router.post("/kyc-documents/user/:userId/delete", requirePermission("manage_users"), adminController.deleteUserKyc);

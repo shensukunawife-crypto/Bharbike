@@ -6430,3 +6430,78 @@ export async function assignBikeToUser(req, res) {
     return res.status(500).json({ success: false, message: err.message || "Unable to assign bike" });
   }
 }
+
+/** GET /admin/api/users/:userId/detail - Returns subscriptions, payments, skip days for a user */
+export async function getUserDetail(req, res) {
+  try {
+    const { userId } = req.params;
+
+    const [
+      { data: subsData },
+      { data: paymentsData },
+      { data: userData },
+      { data: skipData },
+    ] = await Promise.all([
+      // All subscription records newest first
+      supabase
+        .from("user_subscriptions")
+        .select("id, plan_id, status, start_date, end_date, created_at, auto_renew, cancelled_at, cancellation_reason")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false }),
+
+      // All payment records newest first
+      supabase
+        .from("payments")
+        .select("id, amount, status, razorpay_payment_id, razorpay_order_id, created_at, order_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false }),
+
+      // User basic info
+      supabase
+        .from("users")
+        .select("id, full_name, phone, email")
+        .eq("id", userId)
+        .maybeSingle(),
+
+      // Skip days — rider_skipped_days uses rider_name, so join by name
+      supabase
+        .from("rider_skipped_days")
+        .select("id, rider_name, bike_id, skipped_start_date, skipped_end_date, days_skipped, reason, status, created_at")
+        .order("created_at", { ascending: false }),
+    ]);
+
+    // Filter skip days by user name (rider_skipped_days doesn't have user_id)
+    const userName = userData?.full_name || "";
+    const skipDays = userName
+      ? (skipData || []).filter(s => s.rider_name?.toLowerCase() === userName.toLowerCase())
+      : [];
+
+    // Get plan names for subscriptions
+    const planIds = [...new Set((subsData || []).map(s => s.plan_id).filter(Boolean))];
+    let planMap = {};
+    if (planIds.length) {
+      const { data: plans } = await supabase
+        .from("subscription_plans")
+        .select("id, name, display_name, duration_days")
+        .in("id", planIds);
+      for (const p of (plans || [])) planMap[p.id] = p;
+    }
+
+    const subscriptions = (subsData || []).map(s => ({
+      ...s,
+      plan_name: planMap[s.plan_id]?.display_name || planMap[s.plan_id]?.name || "Unknown Plan",
+      duration_days: planMap[s.plan_id]?.duration_days || 7,
+    }));
+
+    return res.json({
+      success: true,
+      user: userData,
+      subscriptions,
+      payments: paymentsData || [],
+      skipDays,
+    });
+  } catch (err) {
+    console.error("[admin.getUserDetail]", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed to load user detail" });
+  }
+}

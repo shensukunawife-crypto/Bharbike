@@ -260,10 +260,14 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       throw new Error("Subscription plan not found");
     }
 
-    // Smart Backdating Logic: Fetch previous subscription and check active rentals
+    // 7-Day Grace Period Backdating Logic:
+    // - If the user renews within 7 days of their last subscription expiry → backdate:
+    //   new sub starts the day AFTER the old sub ended (they kept the bike, they pay for it).
+    // - If the user renews after 7+ days → fresh start from today.
+    // - Brand new users (no previous sub) → start from today.
     let startDate = new Date();
     try {
-      // 1. Fetch user's latest subscription
+      // 1. Fetch user's most recent subscription (by end_date)
       const { data: lastSub } = await supabase
         .from("user_subscriptions")
         .select("end_date")
@@ -273,36 +277,28 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
         .maybeSingle();
 
       if (lastSub && lastSub.end_date) {
-        // 2. Check if the user has an active rental (did they keep the bike?)
-        const { data: latestRental } = await supabase
-          .from("rentals")
-          .select("id, status")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const lastEndDate = new Date(lastSub.end_date);
+        const now = new Date();
+        const daysSinceExpiry = (now - lastEndDate) / (1000 * 60 * 60 * 24);
 
-        const hasBike = latestRental && ["active", "ongoing", "expired"].includes(latestRental.status);
-
-        // If they have an active rental, continue from the next day after the previous subscription's end date
-        // to prevent double-billing a day.
-        if (hasBike) {
-          startDate = new Date(new Date(lastSub.end_date).getTime() + 24 * 60 * 60 * 1000);
+        if (daysSinceExpiry <= 7) {
+          // Within 7-day grace window → backdate to next day after old sub ended
+          startDate = new Date(lastEndDate.getTime() + 24 * 60 * 60 * 1000);
+          console.log(`[createSubscription] Within 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Backdating start to ${startDate.toISOString()}`);
+        } else {
+          // Beyond 7 days → fresh start from today
+          startDate = now;
+          console.log(`[createSubscription] Beyond 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Fresh start from today.`);
         }
       }
     } catch (err) {
-      console.warn("[createSubscription] Smart backdating check failed, using current date:", err?.message);
+      console.warn("[createSubscription] Backdating check failed, using current date:", err?.message);
     }
 
-    // Calculate end date (inclusive: 7-day plan = Days 1-7, so end = start + 6 days)
-    const endDate = new Date(startDate);
-    if (plan.duration_days === 7) {
-      // Weekly Plan: 7 days inclusive — ends at the exact same time of day on Day 7 (start + 6 days)
-      const expireMs = startDate.getTime() + 6 * 24 * 60 * 60 * 1000;
-      endDate.setTime(expireMs);
-    } else {
-      endDate.setDate(endDate.getDate() + plan.duration_days - 1);
-    }
+    // Calculate end date (inclusive of both start and end day):
+    // e.g. 7-day plan starting July 11 → ends July 17 (11,12,13,14,15,16,17 = 7 days)
+    // So end = start + (duration_days - 1) days
+    const endDate = new Date(startDate.getTime() + (plan.duration_days - 1) * 24 * 60 * 60 * 1000);
 
     // Determine status: If the user paid so late that the new end date is STILL in the past, it's expired.
     const subStatus = endDate > new Date() ? "active" : "expired";

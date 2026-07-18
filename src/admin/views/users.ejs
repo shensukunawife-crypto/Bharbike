@@ -248,120 +248,147 @@
   }
 })();
 
+(function() {
   // ── User Detail Modal ──
   function fmtDate(d) {
     if (!d) return '—';
-    return new Date(d).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true, timeZone:'Asia/Kolkata' });
+    return new Date(d).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
   }
   function statusBadge(s) {
-    const clr = s==='active'?'#22c55e':s==='expired'?'#94a3b8':s==='cancelled'?'#ef4444':s==='success'?'#22c55e':s==='pending'?'#f59e0b':'#94a3b8';
+    var clr = s==='active'?'#22c55e':s==='expired'?'#94a3b8':s==='cancelled'?'#ef4444':s==='success'?'#22c55e':s==='pending'?'#f59e0b':'#94a3b8';
     return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;background:'+clr+'22;color:'+clr+';border:1px solid '+clr+'44;">'+s+'</span>';
   }
 
   document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.open-user-detail');
+    var btn = e.target.closest('.open-user-detail');
     if (!btn) return;
-    const uid = btn.dataset.id;
-    const name = btn.dataset.name || 'User';
+    var uid = btn.dataset.id;
+    var name = btn.dataset.name || 'User';
     document.getElementById('user-detail-title').textContent = '📂 ' + name + ' — Detail';
     document.getElementById('detail-loading').style.display = 'block';
-    ['subs','pays','skip'].forEach(t => {
+    ['subs','pays','skip'].forEach(function(t) {
       document.getElementById('detail-tab-' + t).style.display = 'none';
     });
-    document.querySelectorAll('.detail-tab').forEach(t => {
+    document.querySelectorAll('.detail-tab').forEach(function(t) {
       t.style.color = 'var(--text-muted)';
       t.style.borderBottom = 'none';
     });
-    const firstTab = document.querySelector('.detail-tab[data-tab="subs"]');
+    var firstTab = document.querySelector('.detail-tab[data-tab="subs"]');
     firstTab.style.color = '#6366f1';
     firstTab.style.borderBottom = '2px solid #6366f1';
     document.getElementById('user-detail-modal').style.display = 'flex';
 
-    const token = localStorage.getItem('adminToken');
-    fetch('/admin/api/users/' + uid + '/detail', { headers: { Authorization: 'Bearer ' + (token||'') } })
-      .then(r => r.json())
-      .then(json => {
-        document.getElementById('detail-loading').style.display = 'none';
-        if (!json.success) { document.getElementById('detail-loading').textContent = 'Failed to load.'; return; }
+    var token = localStorage.getItem('adminToken');
+    fetch('/admin/api/users/' + uid + '/detail', {
+      headers: { Authorization: 'Bearer ' + (token || '') }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+      document.getElementById('detail-loading').style.display = 'none';
+      if (!json.success) {
+        document.getElementById('detail-loading').style.display = 'block';
+        document.getElementById('detail-loading').textContent = 'Failed to load.';
+        return;
+      }
 
-        // Subscriptions
-        const subs = json.subscriptions || [];
-        document.getElementById('detail-subs-content').innerHTML = subs.length === 0
-          ? '<p style="color:var(--text-muted);text-align:center;padding:20px;">No subscriptions found.</p>'
-          : '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:var(--bg-sidebar);text-transform:uppercase;font-size:11px;color:var(--text-muted);">'+
-            '<th style="padding:10px 12px;text-align:left;">Plan</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Status</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Start Date</th>'+
-            '<th style="padding:10px 12px;text-align:left;">End Date</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Created At</th>'+
-            '</tr></thead><tbody>'+
-            subs.map(s =>
-              '<tr style="border-bottom:1px solid var(--border);">'+
-              '<td style="padding:10px 12px;font-weight:600;">'+s.plan_name+'</td>'+
-              '<td style="padding:10px 12px;">'+statusBadge(s.status)+'</td>'+
-              '<td style="padding:10px 12px;">'+fmtDate(s.start_date)+'</td>'+
-              '<td style="padding:10px 12px;">'+fmtDate(s.end_date)+'</td>'+
-              '<td style="padding:10px 12px;color:var(--text-muted);">'+fmtDate(s.created_at)+'</td>'+
-              '</tr>'
-            ).join('')+'</tbody></table>';
+      // ── Subscriptions ──
+      var subs = json.subscriptions || [];
+      document.getElementById('detail-subs-content').innerHTML = subs.length === 0
+        ? '<p style="color:var(--text-muted);text-align:center;padding:30px;">No subscriptions found.</p>'
+        : '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+          + '<thead><tr style="background:var(--bg-sidebar);text-transform:uppercase;font-size:11px;color:var(--text-muted);">'
+          + '<th style="padding:10px 12px;text-align:left;">Plan</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Status</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Start Date</th>'
+          + '<th style="padding:10px 12px;text-align:left;">End Date</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Created At</th>'
+          + '</tr></thead><tbody>'
+          + subs.map(function(s) {
+              return '<tr style="border-bottom:1px solid var(--border);">'
+                + '<td style="padding:10px 12px;font-weight:600;">' + (s.plan_name || '—') + '</td>'
+                + '<td style="padding:10px 12px;">' + statusBadge(s.status) + '</td>'
+                + '<td style="padding:10px 12px;">' + fmtDate(s.start_date) + '</td>'
+                + '<td style="padding:10px 12px;">' + fmtDate(s.end_date) + '</td>'
+                + '<td style="padding:10px 12px;color:var(--text-muted);">' + fmtDate(s.created_at) + '</td>'
+                + '</tr>';
+            }).join('')
+          + '</tbody></table>';
 
-        // Payments
-        const pays = json.payments || [];
-        document.getElementById('detail-pays-content').innerHTML = pays.length === 0
-          ? '<p style="color:var(--text-muted);text-align:center;padding:20px;">No payments found.</p>'
-          : '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:var(--bg-sidebar);text-transform:uppercase;font-size:11px;color:var(--text-muted);">'+
-            '<th style="padding:10px 12px;text-align:left;">Amount</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Status</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Payment ID</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Date & Time</th>'+
-            '</tr></thead><tbody>'+
-            pays.map(p =>
-              '<tr style="border-bottom:1px solid var(--border);">'+
-              '<td style="padding:10px 12px;font-weight:700;color:#22c55e;">₹'+Number(p.amount||0).toFixed(2)+'</td>'+
-              '<td style="padding:10px 12px;">'+statusBadge(p.status)+'</td>'+
-              '<td style="padding:10px 12px;"><span style="font-family:monospace;font-size:11px;background:var(--bg-sidebar);padding:3px 7px;border-radius:6px;">'+( p.razorpay_payment_id||'—')+'</span></td>'+
-              '<td style="padding:10px 12px;color:var(--text-muted);">'+fmtDate(p.created_at)+'</td>'+
-              '</tr>'
-            ).join('')+'</tbody></table>';
+      // ── Payments ──
+      var pays = json.payments || [];
+      document.getElementById('detail-pays-content').innerHTML = pays.length === 0
+        ? '<p style="color:var(--text-muted);text-align:center;padding:30px;">No payments found.</p>'
+        : '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+          + '<thead><tr style="background:var(--bg-sidebar);text-transform:uppercase;font-size:11px;color:var(--text-muted);">'
+          + '<th style="padding:10px 12px;text-align:left;">Amount</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Status</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Payment ID</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Date & Time</th>'
+          + '</tr></thead><tbody>'
+          + pays.map(function(p) {
+              return '<tr style="border-bottom:1px solid var(--border);">'
+                + '<td style="padding:10px 12px;font-weight:700;color:#22c55e;">₹' + Number(p.amount || 0).toFixed(2) + '</td>'
+                + '<td style="padding:10px 12px;">' + statusBadge(p.status) + '</td>'
+                + '<td style="padding:10px 12px;"><span style="font-family:monospace;font-size:11px;background:var(--bg-sidebar);padding:3px 7px;border-radius:6px;">' + (p.razorpay_payment_id || '—') + '</span></td>'
+                + '<td style="padding:10px 12px;color:var(--text-muted);">' + fmtDate(p.created_at) + '</td>'
+                + '</tr>';
+            }).join('')
+          + '</tbody></table>';
 
-        // Skip Days
-        const skips = json.skipDays || [];
-        document.getElementById('detail-skip-content').innerHTML = skips.length === 0
-          ? '<p style="color:var(--text-muted);text-align:center;padding:20px;">No skip day records found for this user.</p>'
-          : '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:var(--bg-sidebar);text-transform:uppercase;font-size:11px;color:var(--text-muted);">'+
-            '<th style="padding:10px 12px;text-align:left;">Bike</th>'+
-            '<th style="padding:10px 12px;text-align:left;">From</th>'+
-            '<th style="padding:10px 12px;text-align:left;">To</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Days</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Reason</th>'+
-            '<th style="padding:10px 12px;text-align:left;">Status</th>'+
-            '</tr></thead><tbody>'+
-            skips.map(sk =>
-              '<tr style="border-bottom:1px solid var(--border);">'+
-              '<td style="padding:10px 12px;font-weight:600;">'+( sk.bike_id||'—')+'</td>'+
-              '<td style="padding:10px 12px;">'+( sk.skipped_start_date||'—')+'</td>'+
-              '<td style="padding:10px 12px;">'+( sk.skipped_end_date||'—')+'</td>'+
-              '<td style="padding:10px 12px;font-weight:700;">'+( sk.days_skipped||0)+' day(s)</td>'+
-              '<td style="padding:10px 12px;color:var(--text-muted);">'+( sk.reason||'—')+'</td>'+
-              '<td style="padding:10px 12px;">'+statusBadge((sk.status||'').toLowerCase())+'</td>'+
-              '</tr>'
-            ).join('')+'</tbody></table>';
+      // ── Skip Days ──
+      var skips = json.skipDays || [];
+      document.getElementById('detail-skip-content').innerHTML = skips.length === 0
+        ? '<p style="color:var(--text-muted);text-align:center;padding:30px;">No skip day records found for this user.</p>'
+        : '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+          + '<thead><tr style="background:var(--bg-sidebar);text-transform:uppercase;font-size:11px;color:var(--text-muted);">'
+          + '<th style="padding:10px 12px;text-align:left;">Bike</th>'
+          + '<th style="padding:10px 12px;text-align:left;">From</th>'
+          + '<th style="padding:10px 12px;text-align:left;">To</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Days</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Reason</th>'
+          + '<th style="padding:10px 12px;text-align:left;">Status</th>'
+          + '</tr></thead><tbody>'
+          + skips.map(function(sk) {
+              return '<tr style="border-bottom:1px solid var(--border);">'
+                + '<td style="padding:10px 12px;font-weight:600;">' + (sk.bike_id || '—') + '</td>'
+                + '<td style="padding:10px 12px;">' + (sk.skipped_start_date || '—') + '</td>'
+                + '<td style="padding:10px 12px;">' + (sk.skipped_end_date || '—') + '</td>'
+                + '<td style="padding:10px 12px;font-weight:700;">' + (sk.days_skipped || 0) + ' day(s)</td>'
+                + '<td style="padding:10px 12px;color:var(--text-muted);">' + (sk.reason || '—') + '</td>'
+                + '<td style="padding:10px 12px;">' + statusBadge((sk.status || '').toLowerCase()) + '</td>'
+                + '</tr>';
+            }).join('')
+          + '</tbody></table>';
 
-        // Show first tab
-        document.getElementById('detail-tab-subs').style.display = 'block';
-      })
-      .catch(() => { document.getElementById('detail-loading').textContent = 'Error loading data.'; });
+      // Show first tab content
+      document.getElementById('detail-tab-subs').style.display = 'block';
+    })
+    .catch(function() {
+      document.getElementById('detail-loading').style.display = 'block';
+      document.getElementById('detail-loading').textContent = 'Error loading data.';
+    });
   });
 
   // Tab switching
-  document.querySelectorAll('.detail-tab').forEach(tab => {
+  document.querySelectorAll('.detail-tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
-      document.querySelectorAll('.detail-tab').forEach(t => { t.style.color='var(--text-muted)'; t.style.borderBottom='none'; });
-      document.querySelectorAll('.detail-tab-panel').forEach(p => p.style.display='none');
-      this.style.color='#6366f1';
-      this.style.borderBottom='2px solid #6366f1';
+      document.querySelectorAll('.detail-tab').forEach(function(t) {
+        t.style.color = 'var(--text-muted)';
+        t.style.borderBottom = 'none';
+      });
+      document.querySelectorAll('.detail-tab-panel').forEach(function(p) {
+        p.style.display = 'none';
+      });
+      this.style.color = '#6366f1';
+      this.style.borderBottom = '2px solid #6366f1';
       document.getElementById('detail-tab-' + this.dataset.tab).style.display = 'block';
     });
   });
 })();
 </script>
+
+

@@ -260,6 +260,51 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       throw new Error("Subscription plan not found");
     }
 
+    // === ABSORB PAYMENT LOGIC ===
+    // If the user already has an active subscription, and it is "unpaid" (no successful payments within 24h of its creation),
+    // we assume this payment is to clear the debt for that current active subscription.
+    // In that case, we DO NOT push the dates forward (we do not create a new subscription).
+    const { data: activeSub } = await supabase
+      .from("user_subscriptions")
+      .select("id, created_at, start_date, end_date")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (activeSub) {
+      const activeSubTime = new Date(activeSub.created_at).getTime();
+      let query = supabase.from("payments").select("id, created_at").eq("user_id", userId).eq("status", "success");
+      if (paymentId) {
+        query = query.neq("id", paymentId);
+      }
+      const { data: priorPayments } = await query;
+
+      let isUnpaid = true;
+      if (priorPayments && priorPayments.length > 0) {
+        for (const p of priorPayments) {
+          const pTime = new Date(p.created_at).getTime();
+          if (Math.abs(pTime - activeSubTime) < 24 * 60 * 60 * 1000) {
+            isUnpaid = false;
+            break;
+          }
+        }
+      }
+
+      if (isUnpaid) {
+        console.log(`[createSubscription] Active sub ${activeSub.id} appears unpaid. Absorbing payment ${paymentId} without pushing dates forward.`);
+        await supabase.from("user_subscriptions").update({ updated_at: new Date().toISOString() }).eq("id", activeSub.id);
+        
+        try {
+          const planObj = await getSubscriptionPlanById(planId);
+          return { ...activeSub, plan: planObj || { display_name: "Active Plan", price: null, duration_days: null }, _absorbed: true };
+        } catch {
+          return { ...activeSub, plan: { display_name: "Active Plan", price: null, duration_days: null }, _absorbed: true };
+        }
+      }
+    }
+    // =============================
+
+
     // 7-Day Grace Period Backdating Logic:
     // - If the user renews within 7 days of their last subscription expiry → backdate:
     //   new sub starts the day AFTER the old sub ended (they kept the bike, they pay for it).

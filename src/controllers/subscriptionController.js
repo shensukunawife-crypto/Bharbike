@@ -53,9 +53,11 @@ export const getActiveSubscription = async (req, res) => {
         if (rawSub) {
           const endDate = new Date(rawSub.end_date);
           const now = new Date();
-          // Calculate inclusive calendar days remaining
-          const endMidnight = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-          const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          // Calculate inclusive calendar days remaining in IST
+          const _endIST = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+          const _nowIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+          const endMidnight = new Date(_endIST.getFullYear(), _endIST.getMonth(), _endIST.getDate());
+          const nowMidnight = new Date(_nowIST.getFullYear(), _nowIST.getMonth(), _nowIST.getDate());
           const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
           const daysRemaining = Math.max(0, diffDays + 1);
           
@@ -92,11 +94,13 @@ export const getActiveSubscription = async (req, res) => {
       return res.json({ success: true, data: null, message: "No active subscription" });
     }
 
-    // Calculate inclusive calendar days remaining
+    // Calculate inclusive calendar days remaining in IST
     const endDate = new Date(subscription.end_date);
     const now = new Date();
-    const endMidnight = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const _endIST = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const _nowIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const endMidnight = new Date(_endIST.getFullYear(), _endIST.getMonth(), _endIST.getDate());
+    const nowMidnight = new Date(_nowIST.getFullYear(), _nowIST.getMonth(), _nowIST.getDate());
     const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
     const daysRemaining = Math.max(0, diffDays + 1);
 

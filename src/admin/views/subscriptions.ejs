@@ -281,20 +281,37 @@
 </style>
 
 <script>
-  // ── Edit modal ──────────────────────────────────────────
-  document.querySelectorAll('.open-edit-sub').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.getElementById('edit-sub-form').dataset.url = '/admin/subscriptions/' + btn.dataset.id + '/edit';
-      const toLocalDate = (iso) => {
-        if (!iso) return "";
-        const d = new Date(iso);
-        if (isNaN(d.getTime())) return "";
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        return d.toISOString().slice(0, 10);
-      };
-      document.getElementById('edit-sub-end').value = toLocalDate(btn.dataset.end);
-      document.getElementById('edit-sub-modal').classList.add('show');
-    });
+  // ── Edit modal (event delegation — safe against null) ───
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.open-edit-sub');
+    if (!btn) return;
+
+    const form  = document.getElementById('edit-subscription-form');
+    const input = document.getElementById('edit-sub-end');
+    const sel   = document.getElementById('edit-sub-status');
+    const modal = document.getElementById('edit-subscription-modal');
+
+    if (!form || !input || !modal) {
+      console.error('[Edit Sub] One or more modal elements not found in DOM');
+      return;
+    }
+
+    form.dataset.url = '/admin/subscriptions/' + btn.dataset.id + '/edit';
+
+    // Pre-fill status
+    if (sel) sel.value = btn.dataset.status || 'active';
+
+    // Pre-fill end date (convert UTC ISO → local date string for <input type="date">)
+    const toLocalDate = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 10);
+    };
+    input.value = toLocalDate(btn.dataset.end);
+
+    modal.classList.add('show');
   });
 
   // ── Detail modal ────────────────────────────────────────

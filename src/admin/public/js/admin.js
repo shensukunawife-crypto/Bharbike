@@ -581,9 +581,11 @@ async function loadMaintenanceSupportTickets() {
 loadMaintenanceSupportTickets();
 
 setInterval(() => {
-  loadSupportTickets();
-  loadMaintenanceSupportTickets();
-}, 10000);
+  if (document.visibilityState === 'visible') {
+    loadSupportTickets();
+    loadMaintenanceSupportTickets();
+  }
+}, 60000);
 
 function parseJsonScript(id) {
   const el = document.getElementById(id);

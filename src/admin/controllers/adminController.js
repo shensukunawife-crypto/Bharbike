@@ -1174,9 +1174,12 @@ export async function users(req, res) {
           if (!dateStr) return "";
           const d = new Date(dateStr);
           if (isNaN(d.getTime())) return "";
-          const day = String(d.getDate()).padStart(2, '0');
+          // Always display in IST (+05:30) so dates never shift by a day
+          const istOffset = 5.5 * 60 * 60 * 1000;
+          const istDate = new Date(d.getTime() + istOffset);
+          const day = String(istDate.getUTCDate()).padStart(2, '0');
           const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-          return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+          return `${day} ${monthNames[istDate.getUTCMonth()]} ${istDate.getUTCFullYear()}`;
         };
         let subText = "None / Inactive";
         if (userSub && userSub.status === "active") {

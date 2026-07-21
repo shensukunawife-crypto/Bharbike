@@ -1189,15 +1189,10 @@ export async function users(req, res) {
         } else if (userSub && userSub.status === "expired") {
           const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
           const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
-          // If bike is still assigned (active rental), show as "riding till rental end_time"
-          if (activeRental && activeRental.end_time && new Date(activeRental.end_time) > new Date()) {
-            subText = `${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(activeRental.end_time)})`;
-          } else {
-            subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
-          }
-        } else if (!userSub && activeRental && activeRental.end_time && new Date(activeRental.end_time) > new Date()) {
-          // No subscription at all, but bike is manually assigned — show rental window
-          subText = `Bike Assigned (till ${formatReadableDate(activeRental.end_time)})`;
+          subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
+        } else if (!userSub && activeRental) {
+          // No subscription at all, but bike is manually assigned
+          subText = `Bike Assigned`;
         }
         // Calculate Last Activity Date for sorting
         const updatedDate = row.updated_at || row.updatedAt || joinedDate;
@@ -3993,7 +3988,7 @@ export async function addBike(req, res) {
 export async function assignBike(req, res) {
   try {
     const { bikeId } = req.params;
-    const { user_id, duration_hours, duration_value, duration_unit = "hours" } = req.body;
+    const { user_id } = req.body;
 
     if (!user_id) {
       return res.status(400).json({ success: false, message: "User ID is required" });
@@ -4037,46 +4032,16 @@ export async function assignBike(req, res) {
 
 
     const startTime = new Date();
-    let endTime;
-    let durationHours;
 
-    // Always check user's active subscription first — rental should last till subscription end
-    const { data: activeSub } = await supabase
-      .from("user_subscriptions")
-      .select("end_date")
-      .eq("user_id", user_id)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (activeSub && activeSub.end_date) {
-      // Use subscription end date as the rental end time
-      endTime = new Date(activeSub.end_date);
-      const diffMs = endTime.getTime() - startTime.getTime();
-      durationHours = Math.max(24, Math.round(diffMs / (1000 * 60 * 60)));
-    } else if (duration_unit === "days") {
-      const days = Number(duration_value || 1);
-      durationHours = days * 24;
-      const now = new Date();
-      const istOffset = 5.5 * 60 * 60 * 1000;
-      const istTime = new Date(now.getTime() + istOffset);
-      istTime.setDate(istTime.getDate() + days);
-      istTime.setUTCHours(9, 0, 0, 0);
-      endTime = new Date(istTime.getTime() - istOffset);
-    } else {
-      durationHours = Number(duration_value || duration_hours || 24);
-      endTime = new Date(startTime.getTime() + durationHours * 60 * 60 * 1000);
-    }
-
-    const pricePerHour = Number(dashboardSettings.bikePricePerHour || 0);
-    const calculatedPrice = pricePerHour * Number(durationHours);
+    // No end_time or duration — bike stays assigned until admin manually removes it.
     const { error: rentalError } = await supabase.from("rentals").insert([{
       bike_id: bikeId,
       user_id,
-      duration: durationHours,
+      duration: null,
       start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
+      end_time: null,
       status: "ongoing",
-      price: calculatedPrice
+      price: 0
     }]);
 
     if (rentalError) throw rentalError;
@@ -6393,34 +6358,15 @@ export async function assignBikeToUser(req, res) {
     const { data: bike } = await supabase.from("bikes").select("id").eq("bike_code", bike_code).maybeSingle();
     if (!bike) return res.status(404).json({ success: false, message: "Bike code not found" });
     
-    // Query active subscription for this user to set correct end_time
-    const { data: activeSub } = await supabase
-      .from("user_subscriptions")
-      .select("end_date")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .maybeSingle();
-
     const startTime = new Date();
-    let endTime;
-    let durationHours = 24;
 
-    if (activeSub && activeSub.end_date) {
-      endTime = new Date(activeSub.end_date);
-      // Calculate duration in hours between now and subscription end_date
-      const diffMs = endTime.getTime() - startTime.getTime();
-      durationHours = Math.max(24, Math.round(diffMs / (1000 * 60 * 60)));
-    } else {
-      endTime = new Date(startTime.getTime() + 24 * 60 * 60 * 1000);
-    }
-    
-    // Start new rental
+    // No end_time or duration — bike stays assigned until admin manually removes it.
     const { error: rentalError } = await supabase.from("rentals").insert([{
       bike_id: bike.id,
       user_id: userId,
-      duration: durationHours,
+      duration: null,
       start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
+      end_time: null,
       status: "ongoing",
       price: 0
     }]);

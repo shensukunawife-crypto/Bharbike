@@ -6,6 +6,7 @@ import { createSubscription } from "../services/subscriptionService.js";
 import * as walletService from "../services/walletService.js";
 import supabase from "../utils/supabaseClient.js";
 import { createUserNotification } from "../services/notificationService.js";
+import { nowIST, addISTDays, toISTDateStr } from "../utils/istTime.js";
 
 /**
  * Creates a new Razorpay order using active keys from Supabase or ENV.
@@ -616,7 +617,8 @@ export const verifyPayment = async (req, res) => {
                            plan_id?.toLowerCase().includes("year") ? 365 : 7;
           }
 
-          let startDate = new Date();
+          // Use IST midnight for start/end so dates never shift due to UTC/IST boundary
+          let startDate = nowIST();
           try {
             const { data: lastSub } = await supabase.from("user_subscriptions").select("end_date").eq("user_id", user_id).order("end_date", { ascending: false }).limit(1).maybeSingle();
             if (lastSub && lastSub.end_date) {
@@ -629,8 +631,9 @@ export const verifyPayment = async (req, res) => {
             console.warn("[verifyPayment] fallback smart backdating failed:", e?.message);
           }
 
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + durationDays);
+          // end = start + durationDays IST calendar days
+          const endDate = addISTDays(startDate, durationDays);
+          console.log(`[verifyPayment] Sub dates IST: ${toISTDateStr(startDate)} to ${toISTDateStr(endDate)}`);
           
           const subStatus = endDate > new Date() ? "active" : "expired";
 

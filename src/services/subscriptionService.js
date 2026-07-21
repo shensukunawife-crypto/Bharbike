@@ -1,5 +1,6 @@
 import supabase from "../utils/supabaseClient.js";
 import { createUserNotification } from "./notificationService.js";
+import { nowIST, addISTDays, toISTDateStr } from "../utils/istTime.js";
 
 const MOCK_PLANS = [
   {
@@ -310,7 +311,8 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
     //   new sub starts the day AFTER the old sub ended (they kept the bike, they pay for it).
     // - If the user renews after 7+ days → fresh start from today.
     // - Brand new users (no previous sub) → start from today.
-    let startDate = new Date();
+    // All date math uses IST midnight to prevent UTC/IST day-shift bugs
+    let startDate = nowIST();
     try {
       // 1. Fetch user's most recent subscription (by end_date)
       const { data: lastSub } = await supabase
@@ -323,27 +325,27 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
 
       if (lastSub && lastSub.end_date) {
         const lastEndDate = new Date(lastSub.end_date);
-        const now = new Date();
+        const now = nowIST();
         const daysSinceExpiry = (now - lastEndDate) / (1000 * 60 * 60 * 24);
 
         if (daysSinceExpiry <= 7) {
-          // Within 7-day grace window → backdate to next day after old sub ended
-          startDate = new Date(lastEndDate.getTime() + 24 * 60 * 60 * 1000);
-          console.log(`[createSubscription] Within 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Backdating start to ${startDate.toISOString()}`);
+          // Within 7-day grace window → backdate to next IST day after old sub ended
+          startDate = addISTDays(lastEndDate, 1);
+          console.log(`[createSubscription] Within 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Backdating start to ${toISTDateStr(startDate)} IST`);
         } else {
-          // Beyond 7 days → fresh start from today
+          // Beyond 7 days → fresh start from today IST
           startDate = now;
-          console.log(`[createSubscription] Beyond 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Fresh start from today.`);
+          console.log(`[createSubscription] Beyond 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Fresh start from today IST: ${toISTDateStr(startDate)}`);
         }
       }
     } catch (err) {
-      console.warn("[createSubscription] Backdating check failed, using current date:", err?.message);
+      console.warn("[createSubscription] Backdating check failed, using current IST date:", err?.message);
     }
 
-    // Calculate end date (inclusive of both start and end day):
-    // e.g. 7-day plan starting July 11 → ends July 17 (11,12,13,14,15,16,17 = 7 days)
-    // So end = start + (duration_days - 1) days
-    const endDate = new Date(startDate.getTime() + (plan.duration_days - 1) * 24 * 60 * 60 * 1000);
+    // Calculate end date (inclusive of both start and end day) in IST:
+    // e.g. 7-day plan starting July 11 IST → ends July 17 IST (11,12,13,14,15,16,17 = 7 days)
+    // So end = start + (duration_days - 1) IST calendar days
+    const endDate = addISTDays(startDate, plan.duration_days - 1);
 
     // Determine status: If the user paid so late that the new end date is STILL in the past, it's expired.
     const subStatus = endDate > new Date() ? "active" : "expired";

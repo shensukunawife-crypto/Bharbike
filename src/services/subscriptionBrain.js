@@ -1,4 +1,5 @@
 import supabase from '../utils/supabaseClient.js';
+import { nowIST, addISTDays, toISTDateStr } from '../utils/istTime.js';
 
 // Track when the Brain service started (for monitor uptime display)
 export const BRAIN_START_TIME = new Date();
@@ -117,7 +118,7 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
 
       // Smart Backdating: Same logic as createSubscription —
       // If the user still has an active rental (kept the bike), start from the previous sub's end date
-      let startDate = new Date();
+      let startDate = nowIST(); // IST midnight of today
       let backdated = false;
 
       try {
@@ -136,19 +137,19 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
           if (hasBike) {
             const prevEnd = new Date(mostRecentSub.end_date);
             if (prevEnd < now) {
-              // Bike still with user, backdate to next day after previous end to avoid double billing a day
-              startDate = new Date(prevEnd.getTime() + 24 * 60 * 60 * 1000);
+              // Bike still with user — backdate to next IST day after previous end to avoid double billing
+              startDate = addISTDays(prevEnd, 1);
               backdated = true;
-              console.log(`[SubscriptionBrain] Backdating to next day after previous end date: ${startDate.toISOString()} (user has bike)`);
+              console.log(`[SubscriptionBrain] Backdating to next IST day after previous end: ${toISTDateStr(startDate)} IST (user has bike)`);
             }
           }
         }
       } catch (err) {
-        console.warn("[SubscriptionBrain] Backdate check failed, using now:", err?.message);
+        console.warn("[SubscriptionBrain] Backdate check failed, using today IST:", err?.message);
       }
 
-      // Calculate correct end date (inclusive: 7-day plan = start + 6 days)
-      const endDate = new Date(startDate.getTime() + (expectedDurationDays - 1) * 24 * 60 * 60 * 1000);
+      // Calculate correct end date in IST (inclusive: 7-day plan = start + 6 IST calendar days)
+      const endDate = addISTDays(startDate, expectedDurationDays - 1);
 
       // Record old state for logging
       const oldStatus = latestActive?.status || subs[0]?.status || null;

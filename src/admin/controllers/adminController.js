@@ -13,6 +13,8 @@ import { sendFcmPushToTokens, sendFcmPush } from "../../utils/firebaseAdmin.js";
 import * as walletService from "../../services/walletService.js";
 import Groq from "groq-sdk";
 import { logAdminAction } from "../../utils/adminAudit.js";
+import { nowIST, addISTDays } from "../../utils/istTime.js";
+
 
 function parseIST(dateStr) {
   if (!dateStr) return null;
@@ -3761,8 +3763,8 @@ export async function editUser(req, res) {
 
     // 2. Handle Subscription Override updates
     if (sub_plan && sub_plan !== "none") {
-      const startIso = sub_start ? parseIST(sub_start).toISOString() : new Date().toISOString();
-      const endIso = sub_end ? parseIST(sub_end).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const startIso = sub_start ? parseIST(sub_start).toISOString() : nowIST().toISOString();
+      const endIso = sub_end ? parseIST(sub_end).toISOString() : addISTDays(nowIST(), 7).toISOString();
       
       const subUpdates = {
         user_id: userId,
@@ -5815,7 +5817,7 @@ export async function addSubscription(req, res) {
     const { user_id, plan_id, end_date } = req.body;
     if (!user_id || !plan_id) return res.status(400).json({ success: false, message: "User ID and Plan ID are required" });
 
-    const expiry = end_date ? parseIST(end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const expiry = end_date ? parseIST(end_date) : addISTDays(nowIST(), 30);
     
     // Check user exists
     const { data: user } = await supabase.from("users").select("id").eq("id", user_id).maybeSingle();

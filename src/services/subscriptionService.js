@@ -342,10 +342,10 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       console.warn("[createSubscription] Backdating check failed, using current IST date:", err?.message);
     }
 
-    // Calculate end date (inclusive of both start and end day) in IST:
-    // e.g. 7-day plan starting July 11 IST → ends July 17 IST (11,12,13,14,15,16,17 = 7 days)
-    // So end = start + (duration_days - 1) IST calendar days
-    const endDate = addISTDays(startDate, plan.duration_days - 1);
+    // Calculate end date to give the FULL duration of days in IST:
+    // e.g. 7-day plan starting July 11 IST → gets 11,12,13,14,15,16,17. Expires July 18 00:00 IST.
+    // So end = start + duration_days IST calendar days
+    const endDate = addISTDays(startDate, plan.duration_days);
 
     // Determine status: If the user paid so late that the new end date is STILL in the past, it's expired.
     const subStatus = endDate > new Date() ? "active" : "expired";

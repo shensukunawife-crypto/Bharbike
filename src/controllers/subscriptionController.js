@@ -82,6 +82,7 @@ export const getActiveSubscription = async (req, res) => {
             success: true,
             data: {
               ...rawSub,
+              end_date: rawSub.end_date ? new Date(new Date(rawSub.end_date).getTime() - 1000).toISOString() : rawSub.end_date,
               plan: planInfo,
               days_remaining: daysRemaining,
             },
@@ -108,6 +109,7 @@ export const getActiveSubscription = async (req, res) => {
       success: true,
       data: {
         ...subscription,
+        end_date: subscription.end_date ? new Date(new Date(subscription.end_date).getTime() - 1000).toISOString() : subscription.end_date,
         days_remaining: daysRemaining,
       },
     });
@@ -133,7 +135,11 @@ export const getSubscriptionHistory = async (req, res) => {
     }
 
     const subscriptions = await subscriptionService.getUserSubscriptions(userId);
-    return res.json({ success: true, data: subscriptions });
+    const adjustedSubs = subscriptions.map(sub => ({
+      ...sub,
+      end_date: sub.end_date ? new Date(new Date(sub.end_date).getTime() - 1000).toISOString() : sub.end_date
+    }));
+    return res.json({ success: true, data: adjustedSubs });
   } catch (error) {
     console.error("[subscriptionController.getSubscriptionHistory]", error);
     return res.status(500).json({

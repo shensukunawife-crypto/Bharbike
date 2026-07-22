@@ -148,7 +148,7 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
         console.warn("[SubscriptionBrain] Backdate check failed, using today IST:", err?.message);
       }
 
-      // Calculate correct end date in IST (inclusive: 7-day plan = start + 6 IST calendar days)
+      // Calculate correct end date in IST (inclusive boundary: 7-day plan = start + 6 IST calendar days)
       const endDate = addISTDays(startDate, expectedDurationDays - 1);
 
       // Record old state for logging

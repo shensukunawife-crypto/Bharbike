@@ -1257,73 +1257,103 @@ export async function users(req, res) {
       })
       .sort((a, b) => (b.lastActivityMs || 0) - (a.lastActivityMs || 0));
 
-    // Deduplicate users: If multiple records exist for the same person (by full_name or phone),
-    // keep only the record with the most complete information (phone, address, active sub, etc.)
+    // Multi-Property Cluster Deduplication:
+    // Groups user records if they share the same valid Email, same Phone number, or same Full Name.
     const computeInfoScore = (u) => {
       let score = 0;
-      if (u.phone && String(u.phone).trim() && u.phone !== "null") score += 20;
+      if (u.phone && String(u.phone).trim() && u.phone !== "null" && u.phone !== "N/A") score += 20;
       if (u.location && String(u.location).trim() && u.location !== "None" && u.location !== "N/A") score += 15;
       if (u.subscriptionText && !u.subscriptionText.includes("None / Inactive")) score += 15;
       if (u.assignedBikeCode && u.assignedBikeCode !== "-") score += 15;
       if (u.totalOrders > 0) score += 10 + u.totalOrders;
       if (u.walletBalance > 0) score += 5;
-      if (u.email && !u.email.endsWith("@app.local")) score += 5;
+      if (u.email && !u.email.endsWith("@app.local")) score += 10;
       if (u.image_url) score += 5;
       score += (u.lastActivityMs || 0) / 1000000000000;
       return score;
     };
 
-    const deduplicatedUserMap = new Map();
-    users.forEach(u => {
-      const normName = (u.full_name || "").trim().toLowerCase();
-      const normPhone = (u.phone || "").replace(/\D/g, "");
-      const phoneKey = normPhone.length >= 10 ? normPhone.slice(-10) : normPhone;
-      
-      const key = normName ? `name:${normName}` : (phoneKey ? `phone:${phoneKey}` : `id:${u.id}`);
-      
-      if (!deduplicatedUserMap.has(key)) {
-        deduplicatedUserMap.set(key, u);
-      } else {
-        const existing = deduplicatedUserMap.get(key);
-        let winner = existing;
-        let loser = u;
-        if (computeInfoScore(u) > computeInfoScore(existing)) {
-          winner = { ...u };
-          loser = { ...existing };
-        } else {
-          winner = { ...existing };
-          loser = { ...u };
-        }
+    const getNormEmail = (u) => {
+      const email = (u.email || "").trim().toLowerCase();
+      return email && !email.endsWith("@app.local") ? email : null;
+    };
 
-        // Merge active subscription if winner doesn't have one but loser does
+    const getNormPhone = (u) => {
+      const raw = (u.phone || "").replace(/\D/g, "");
+      return raw.length >= 10 ? raw.slice(-10) : null;
+    };
+
+    const getNormName = (u) => {
+      const name = (u.full_name || u.name || "").trim().toLowerCase();
+      return name && name !== "user" && name.length > 2 ? name : null;
+    };
+
+    const clusters = [];
+    users.forEach(u => {
+      const email = getNormEmail(u);
+      const phone = getNormPhone(u);
+      const name = getNormName(u);
+
+      const matchingClusters = clusters.filter(cluster => 
+        cluster.some(item => {
+          const itemEmail = getNormEmail(item);
+          const itemPhone = getNormPhone(item);
+          const itemName = getNormName(item);
+
+          if (email && itemEmail && email === itemEmail) return true;
+          if (phone && itemPhone && phone === itemPhone) return true;
+          if (name && itemName && name === itemName) return true;
+          return false;
+        })
+      );
+
+      if (matchingClusters.length === 0) {
+        clusters.push([u]);
+      } else if (matchingClusters.length === 1) {
+        matchingClusters[0].push(u);
+      } else {
+        const merged = [u];
+        matchingClusters.forEach(c => {
+          merged.push(...c);
+          const idx = clusters.indexOf(c);
+          if (idx !== -1) clusters.splice(idx, 1);
+        });
+        clusters.push(merged);
+      }
+    });
+
+    const deduplicatedUsers = clusters.map(cluster => {
+      cluster.sort((a, b) => computeInfoScore(b) - computeInfoScore(a));
+      const winner = { ...cluster[0] };
+      
+      for (let i = 1; i < cluster.length; i++) {
+        const loser = cluster[i];
+
         if ((!winner.subscriptionText || winner.subscriptionText.includes("None / Inactive")) && loser.subscriptionText && !loser.subscriptionText.includes("None / Inactive")) {
           winner.subscriptionText = loser.subscriptionText;
           winner.subscription = loser.subscription;
         }
-
-        // Merge assigned bike code if winner doesn't have one
         if ((!winner.assignedBikeCode || winner.assignedBikeCode === "-") && loser.assignedBikeCode && loser.assignedBikeCode !== "-") {
           winner.assignedBikeCode = loser.assignedBikeCode;
         }
-
-        // Merge phone & location if missing on winner
-        if ((!winner.phone || winner.phone === "null") && loser.phone && loser.phone !== "null") {
+        if ((!winner.phone || winner.phone === "null" || winner.phone === "N/A") && loser.phone && loser.phone !== "null" && loser.phone !== "N/A") {
           winner.phone = loser.phone;
         }
         if ((!winner.location || winner.location === "None" || winner.location === "N/A") && loser.location && loser.location !== "None" && loser.location !== "N/A") {
           winner.location = loser.location;
         }
+        if ((!winner.email || winner.email.endsWith("@app.local")) && loser.email && !loser.email.endsWith("@app.local")) {
+          winner.email = loser.email;
+        }
 
-        // Combine orders and take max wallet balance
         winner.totalOrders = (winner.totalOrders || 0) + (loser.totalOrders || 0);
         winner.totalSpent = (winner.totalSpent || 0) + (loser.totalSpent || 0);
         winner.walletBalance = Math.max(winner.walletBalance || 0, loser.walletBalance || 0);
-
-        deduplicatedUserMap.set(key, winner);
       }
+      return winner;
     });
 
-    const finalUsers = Array.from(deduplicatedUserMap.values())
+    const finalUsers = deduplicatedUsers
       .sort((a, b) => (b.lastActivityMs || 0) - (a.lastActivityMs || 0));
 
     console.log(`ADMIN USERS: ${users.length} raw -> ${finalUsers.length} deduplicated`);

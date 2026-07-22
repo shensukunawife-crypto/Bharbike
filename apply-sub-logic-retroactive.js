@@ -2,10 +2,7 @@ import supabase from "./src/utils/supabaseClient.js";
 
 async function applyRetroactiveSubscriptionLogic() {
   console.log("Fetching subscription plans...");
-  const { data: plans, error: planErr } = await supabase.from("subscription_plans").select("*");
-  if (planErr) {
-    console.warn("Could not fetch subscription plans, assuming default 7 days.");
-  }
+  const { data: plans } = await supabase.from("subscription_plans").select("*");
   const planMap = {};
   if (plans) {
     plans.forEach(p => {
@@ -32,7 +29,6 @@ async function applyRetroactiveSubscriptionLogic() {
     return;
   }
 
-  // Group by user_id
   const subsByUser = {};
   for (const sub of subs) {
     if (!subsByUser[sub.user_id]) subsByUser[sub.user_id] = [];
@@ -47,23 +43,27 @@ async function applyRetroactiveSubscriptionLogic() {
     for (let i = 0; i < userSubs.length; i++) {
       const sub = userSubs[i];
       let newStartDate = new Date(sub.start_date);
-      let durationDays = planMap[sub.plan_id] || 7; // default 7
+      let durationDays = planMap[sub.plan_id] || 7;
       
       const paidDate = new Date(sub.created_at);
 
       if (lastEndDate) {
         const daysSinceExpiry = (paidDate - lastEndDate) / (1000 * 60 * 60 * 24);
         
-        if (daysSinceExpiry <= 7) {
+        if (daysSinceExpiry > 0 && daysSinceExpiry <= 7) {
           // Backdate to next day after previous expiry
           newStartDate = new Date(lastEndDate.getTime() + 24 * 60 * 60 * 1000);
+        } else if (daysSinceExpiry <= 0) {
+          // If they made a payment while they already have an active subscription
+          // do NOT stack into the future. They only pay for the current week.
+          // Start it from the date they paid.
+          newStartDate = new Date(paidDate.getTime());
         } else {
           // Fresh start from paid date
           newStartDate = new Date(paidDate.getTime());
         }
       }
 
-      // Ensure start date doesn't have time parts that mess up day math
       newStartDate.setHours(0, 0, 0, 0);
 
       // End date is inclusive: start_date + (duration - 1)
@@ -85,7 +85,7 @@ async function applyRetroactiveSubscriptionLogic() {
     }
   }
 
-  console.log(`Found ${updates.length} subscriptions that need updating.`);
+  console.log(`Found ${updates.length} subscriptions that need updating to prevent future stacking.`);
   
   if (updates.length > 0) {
     let successCount = 0;

@@ -328,14 +328,14 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
         const now = nowIST();
         const daysSinceExpiry = (now - lastEndDate) / (1000 * 60 * 60 * 24);
 
-        if (daysSinceExpiry <= 7) {
+        if (daysSinceExpiry >= 0 && daysSinceExpiry <= 7) {
           // Within 7-day grace window → backdate to next IST day after old sub ended
           startDate = addISTDays(lastEndDate, 1);
           console.log(`[createSubscription] Within 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Backdating start to ${toISTDateStr(startDate)} IST`);
         } else {
-          // Beyond 7 days → fresh start from today IST
+          // Beyond 7 days OR active in the future → fresh start from today IST (prevent future stacking)
           startDate = now;
-          console.log(`[createSubscription] Beyond 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Fresh start from today IST: ${toISTDateStr(startDate)}`);
+          console.log(`[createSubscription] Beyond 7-day grace period or future active (${daysSinceExpiry.toFixed(1)} days). Fresh start from today IST: ${toISTDateStr(startDate)}`);
         }
       }
     } catch (err) {

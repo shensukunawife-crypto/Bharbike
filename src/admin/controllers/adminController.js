@@ -1285,9 +1285,41 @@ export async function users(req, res) {
         deduplicatedUserMap.set(key, u);
       } else {
         const existing = deduplicatedUserMap.get(key);
+        let winner = existing;
+        let loser = u;
         if (computeInfoScore(u) > computeInfoScore(existing)) {
-          deduplicatedUserMap.set(key, u);
+          winner = { ...u };
+          loser = { ...existing };
+        } else {
+          winner = { ...existing };
+          loser = { ...u };
         }
+
+        // Merge active subscription if winner doesn't have one but loser does
+        if ((!winner.subscriptionText || winner.subscriptionText.includes("None / Inactive")) && loser.subscriptionText && !loser.subscriptionText.includes("None / Inactive")) {
+          winner.subscriptionText = loser.subscriptionText;
+          winner.subscription = loser.subscription;
+        }
+
+        // Merge assigned bike code if winner doesn't have one
+        if ((!winner.assignedBikeCode || winner.assignedBikeCode === "-") && loser.assignedBikeCode && loser.assignedBikeCode !== "-") {
+          winner.assignedBikeCode = loser.assignedBikeCode;
+        }
+
+        // Merge phone & location if missing on winner
+        if ((!winner.phone || winner.phone === "null") && loser.phone && loser.phone !== "null") {
+          winner.phone = loser.phone;
+        }
+        if ((!winner.location || winner.location === "None" || winner.location === "N/A") && loser.location && loser.location !== "None" && loser.location !== "N/A") {
+          winner.location = loser.location;
+        }
+
+        // Combine orders and take max wallet balance
+        winner.totalOrders = (winner.totalOrders || 0) + (loser.totalOrders || 0);
+        winner.totalSpent = (winner.totalSpent || 0) + (loser.totalSpent || 0);
+        winner.walletBalance = Math.max(winner.walletBalance || 0, loser.walletBalance || 0);
+
+        deduplicatedUserMap.set(key, winner);
       }
     });
 

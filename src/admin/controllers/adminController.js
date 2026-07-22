@@ -1257,22 +1257,59 @@ export async function users(req, res) {
       })
       .sort((a, b) => (b.lastActivityMs || 0) - (a.lastActivityMs || 0));
 
-    console.log("ADMIN USERS:", users);
+    // Deduplicate users: If multiple records exist for the same person (by full_name or phone),
+    // keep only the record with the most complete information (phone, address, active sub, etc.)
+    const computeInfoScore = (u) => {
+      let score = 0;
+      if (u.phone && String(u.phone).trim() && u.phone !== "null") score += 20;
+      if (u.location && String(u.location).trim() && u.location !== "None" && u.location !== "N/A") score += 15;
+      if (u.subscriptionText && !u.subscriptionText.includes("None / Inactive")) score += 15;
+      if (u.assignedBikeCode && u.assignedBikeCode !== "-") score += 15;
+      if (u.totalOrders > 0) score += 10 + u.totalOrders;
+      if (u.walletBalance > 0) score += 5;
+      if (u.email && !u.email.endsWith("@app.local")) score += 5;
+      if (u.image_url) score += 5;
+      score += (u.lastActivityMs || 0) / 1000000000000;
+      return score;
+    };
+
+    const deduplicatedUserMap = new Map();
+    users.forEach(u => {
+      const normName = (u.full_name || "").trim().toLowerCase();
+      const normPhone = (u.phone || "").replace(/\D/g, "");
+      const phoneKey = normPhone.length >= 10 ? normPhone.slice(-10) : normPhone;
+      
+      const key = normName ? `name:${normName}` : (phoneKey ? `phone:${phoneKey}` : `id:${u.id}`);
+      
+      if (!deduplicatedUserMap.has(key)) {
+        deduplicatedUserMap.set(key, u);
+      } else {
+        const existing = deduplicatedUserMap.get(key);
+        if (computeInfoScore(u) > computeInfoScore(existing)) {
+          deduplicatedUserMap.set(key, u);
+        }
+      }
+    });
+
+    const finalUsers = Array.from(deduplicatedUserMap.values())
+      .sort((a, b) => (b.lastActivityMs || 0) - (a.lastActivityMs || 0));
+
+    console.log(`ADMIN USERS: ${users.length} raw -> ${finalUsers.length} deduplicated`);
 
     const stats = {
-      total: users.length,
-      active: users.filter((u) => !u.isBlocked).length,
-      newToday: users.filter(
+      total: finalUsers.length,
+      active: finalUsers.filter((u) => !u.isBlocked).length,
+      newToday: finalUsers.filter(
         (u) => new Date(u.joinedDate || now).getTime() >= todayStart.getTime()
       ).length,
-      blocked: users.filter((u) => u.isBlocked).length,
+      blocked: finalUsers.filter((u) => u.isBlocked).length,
     };
 
     return renderPage(res, {
       title: "Users",
       active: "users",
       bodyView: "users",
-      users,
+      users: finalUsers,
       stats,
       filters: {
         search,

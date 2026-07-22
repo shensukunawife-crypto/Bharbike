@@ -570,7 +570,7 @@ export async function dashboard(req, res) {
     const orders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
     // Known test/junk account names to exclude from dashboard earnings
-    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal"];
+    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal", "chandrapal"];
 
     // Build set of real (non-test) user IDs from profiles table
     const realUserIds = new Set(
@@ -833,7 +833,8 @@ export async function dashboard(req, res) {
           .map(s => {
             const u = allUsers.find(user => user.id === s.user_id);
             const p = allPlans.find(plan => plan.id === s.plan_id);
-            const hoursLeft = Math.max(0, Math.ceil((new Date(s.end_date).getTime() - nowMs) / (1000 * 60 * 60)));
+            const actualEndMs = new Date(s.end_date).getTime();
+            const hoursLeft = Math.max(0, Math.ceil((actualEndMs - nowMs) / (1000 * 60 * 60)));
             let timeLeftStr = `${hoursLeft} hours left`;
             if (hoursLeft > 24) {
               const daysLeft = Math.floor(hoursLeft / 24);
@@ -1187,11 +1188,13 @@ export async function users(req, res) {
         if (userSub && userSub.status === "active") {
           const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
           const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
-          subText = `${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
+          const displayEndMs = userSub.end_date ? new Date(userSub.end_date).getTime() - 1 : Date.now();
+          subText = `${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(new Date(displayEndMs))})`;
         } else if (userSub && userSub.status === "expired") {
           const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
           const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
-          subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(userSub.end_date)})`;
+          const displayEndMs = userSub.end_date ? new Date(userSub.end_date).getTime() - 1 : Date.now();
+          subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(new Date(displayEndMs))})`;
         } else if (!userSub && activeRental) {
           // No subscription at all, but bike is manually assigned
           subText = `Bike Assigned`;
@@ -2151,7 +2154,7 @@ export async function earnings(req, res) {
     });
 
     // Known test/junk account names to exclude from earnings
-    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal"];
+    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal", "chandrapal"];
 
     const realUserIds = new Set(
       (dbProfiles || []).filter(u => {
@@ -2680,7 +2683,7 @@ export async function analytics(req, res) {
     }
 
     // Known test/junk account names to exclude from analytics earnings
-    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal"];
+    const EXCLUDED_NAMES = ["ksbrif", "udita", "chandrapal singh", "chadrapal", "chandrapal"];
 
     // Build set of real user IDs (exclude test accounts)
     const realUserIds = new Set(
@@ -3764,7 +3767,7 @@ export async function editUser(req, res) {
     // 2. Handle Subscription Override updates
     if (sub_plan && sub_plan !== "none") {
       const startIso = sub_start ? parseIST(sub_start).toISOString() : nowIST().toISOString();
-      const endIso = sub_end ? parseIST(sub_end).toISOString() : addISTDays(nowIST(), 7).toISOString();
+      const endIso = sub_end ? parseIST(sub_end).toISOString() : addISTDays(nowIST(), 7).toISOString(); // 7 days exclusive midnight = add 7
       
       const subUpdates = {
         user_id: userId,

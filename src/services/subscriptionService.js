@@ -342,10 +342,11 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       console.warn("[createSubscription] Backdating check failed, using current IST date:", err?.message);
     }
 
-    // Calculate end date to give the FULL duration of days in IST:
-    // e.g. 7-day plan starting July 11 IST → gets 11,12,13,14,15,16,17. Ends July 17.
-    // So end = start + (duration_days - 1) IST calendar days
-    const endDate = addISTDays(startDate, plan.duration_days - 1);
+    // Calculate end date: user gets the FULL last riding day until 11 PM IST.
+    // e.g. 7-day plan starting July 23 IST → last day is July 29 → expires at 11:00 PM IST on July 29.
+    // Last day midnight IST = start + (duration_days - 1) days, then add 23 hours for 11 PM IST.
+    const lastDayMidnightIST = addISTDays(startDate, plan.duration_days - 1);
+    const endDate = new Date(lastDayMidnightIST.getTime() + 23 * 60 * 60 * 1000); // 11 PM IST of last day
 
     // Determine status: If the user paid so late that the new end date is STILL in the past, it's expired.
     const subStatus = endDate > new Date() ? "active" : "expired";

@@ -1188,12 +1188,14 @@ export async function users(req, res) {
         if (userSub && userSub.status === "active") {
           const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
           const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
-          const displayEndMs = userSub.end_date ? new Date(userSub.end_date).getTime() - 1 : Date.now();
+          // end_date is 11 PM IST of the last riding day — display it directly
+          const displayEndMs = userSub.end_date ? new Date(userSub.end_date).getTime() : Date.now();
           subText = `${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(new Date(displayEndMs))})`;
         } else if (userSub && userSub.status === "expired") {
           const plan = (plansData || []).find(p => p.id === userSub.plan_id || p.name === userSub.plan_id);
           const planName = plan ? plan.display_name : (String(userSub.plan_id).charAt(0).toUpperCase() + String(userSub.plan_id).slice(1));
-          const displayEndMs = userSub.end_date ? new Date(userSub.end_date).getTime() - 1 : Date.now();
+          // end_date is 11 PM IST of the last riding day — display it directly
+          const displayEndMs = userSub.end_date ? new Date(userSub.end_date).getTime() : Date.now();
           subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(new Date(displayEndMs))})`;
         } else if (!userSub && activeRental) {
           // No subscription at all, but bike is manually assigned

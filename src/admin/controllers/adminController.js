@@ -1123,8 +1123,7 @@ export async function users(req, res) {
     const statusFilter = (req.query.status || "all").toLowerCase();
     const dateFilter = req.query.date || "";
     const now = Date.now();
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const midnightIstUnix = new Date(nowIST().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() - (5.5 * 3600 * 1000);
     const allOrders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
     const users = safeData(usersData)
@@ -1364,7 +1363,7 @@ export async function users(req, res) {
       total: finalUsers.length,
       active: finalUsers.filter((u) => !u.isBlocked).length,
       newToday: finalUsers.filter(
-        (u) => new Date(u.joinedDate || now).getTime() >= todayStart.getTime()
+        (u) => new Date(u.joinedDate || now).getTime() >= midnightIstUnix
       ).length,
       blocked: finalUsers.filter((u) => u.isBlocked).length,
     };
@@ -2266,6 +2265,7 @@ export async function earnings(req, res) {
   try {
     const filter = req.query.filter || "weekly";
     const now = Date.now();
+    const midnightIstUnix = new Date(nowIST().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() - (5.5 * 3600 * 1000);
     const days = filter === "today" ? 1 : filter === "monthly" ? 30 : 7;
 
     // ── Fetch payments, wallet credits, and profiles ──
@@ -2379,10 +2379,8 @@ export async function earnings(req, res) {
     const rental = registrationInPeriod + rechargesInPeriod; // total cash in
     const delivery = 0; // delivery via separate flow
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
     const todayEarnings = filtered
-      .filter(t => new Date(t.created_at || now).getTime() >= todayStart.getTime())
+      .filter(t => new Date(t.created_at || now).getTime() >= midnightIstUnix)
       .reduce((s, t) => s + Number(t.amount || 0), 0);
     const pendingPayout = payoutQueue
       .filter((item) => item.status === "pending")
@@ -3890,6 +3888,9 @@ export async function editUser(req, res) {
     }
     
     const profileUpdates = { ...updates };
+    
+    // Remove fields that do not belong to the respective tables
+    delete updates.is_prepaid;
     delete profileUpdates.address;
 
     // 1. Update basic profile info

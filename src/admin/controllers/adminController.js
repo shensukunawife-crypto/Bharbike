@@ -1501,13 +1501,23 @@ export async function bikes(req, res) {
         if (bike.last_lock_request_id) {
           try {
             const statusResult = await getLockUnlockStatus(bike.last_lock_request_id);
-            if (statusResult.ok && statusResult.status === "success") {
-              const realLockState = !statusResult.mobilize;
-              // If the DB is out of sync with the confirmed IoT state, update the DB and the current bike object
-              if (bike.is_locked !== realLockState) {
+            if (statusResult.ok) {
+              if (statusResult.status === "success") {
+                const realLockState = !statusResult.mobilize;
                 bike.is_locked = realLockState;
-                await supabase.from("bikes").update({ is_locked: realLockState }).eq("id", bike.id);
+                await supabase
+                  .from("bikes")
+                  .update({ is_locked: realLockState, last_lock_request_id: null })
+                  .eq("id", bike.id);
+              } else if (statusResult.status === "failed") {
+                // If the IoT request permanently failed, just clear the pending request ID
+                // so we don't keep polling it. The DB retains its last known good state.
+                await supabase
+                  .from("bikes")
+                  .update({ last_lock_request_id: null })
+                  .eq("id", bike.id);
               }
+              // If status is "pending", we do nothing, so it checks again next time
             }
           } catch (e) {
             console.error(`[admin.bikes] Failed to fetch lock status for bike ${bike.id}:`, e.message);

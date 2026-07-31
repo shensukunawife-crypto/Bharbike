@@ -1493,6 +1493,29 @@ export async function bikes(req, res) {
       }
       return bike;
     });
+
+    // Check confirmed lock state for bikes that have a recent lock request ID
+    const { getLockUnlockStatus } = await import("../../services/iotService.js");
+    await Promise.all(
+      allBikes.map(async (bike) => {
+        if (bike.last_lock_request_id) {
+          try {
+            const statusResult = await getLockUnlockStatus(bike.last_lock_request_id);
+            if (statusResult.ok && statusResult.status === "success") {
+              const realLockState = !statusResult.mobilize;
+              // If the DB is out of sync with the confirmed IoT state, update the DB and the current bike object
+              if (bike.is_locked !== realLockState) {
+                bike.is_locked = realLockState;
+                await supabase.from("bikes").update({ is_locked: realLockState }).eq("id", bike.id);
+              }
+            }
+          } catch (e) {
+            console.error(`[admin.bikes] Failed to fetch lock status for bike ${bike.id}:`, e.message);
+          }
+        }
+      })
+    );
+
     const search = (req.query.search || "").trim().toLowerCase();
     const statusFilter = (req.query.status || "all").toLowerCase();
     const lowBatteryOnly = req.query.lowBattery === "true";
@@ -5327,9 +5350,14 @@ export async function adminLockBike(req, res) {
     const { data: bikeInfo } = await supabase.from('bikes').select('bike_code, status').eq('id', bikeId).maybeSingle();
 
     // Update Supabase DB
+    const updateData = { is_locked: true, last_ping_at: new Date().toISOString() };
+    if (iotResult?.requestId) {
+      updateData.last_lock_request_id = iotResult.requestId;
+    }
+    
     await supabase
       .from('bikes')
-      .update({ is_locked: true, last_ping_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', bikeId);
 
     // Find the active rental's user_id (needed for FK constraint)
@@ -5398,9 +5426,14 @@ export async function adminUnlockBike(req, res) {
     const { data: bikeInfo } = await supabase.from('bikes').select('bike_code, status').eq('id', bikeId).maybeSingle();
 
     // Always update DB regardless of IoT result
+    const updateData = { is_locked: false, last_ping_at: new Date().toISOString() };
+    if (iotResult?.requestId) {
+      updateData.last_lock_request_id = iotResult.requestId;
+    }
+    
     await supabase
       .from('bikes')
-      .update({ is_locked: false, last_ping_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', bikeId);
 
     // Find the active rental's user_id (needed for FK constraint)

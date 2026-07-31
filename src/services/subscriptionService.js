@@ -385,6 +385,18 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
 
     if (!error && data) {
       try {
+        const { data: userProfile } = await supabase.from("users").select("full_name").eq("id", userId).maybeSingle();
+        if (userProfile && userProfile.full_name) {
+          await supabase.from("rider_skipped_days")
+            .update({ status: "Inactive" })
+            .eq("rider_name", userProfile.full_name)
+            .eq("status", "Active");
+        }
+      } catch (e) {
+        console.error("[subscriptionService] failed to clear skipped days on rejoin:", e);
+      }
+      
+      try {
         const plan = await getSubscriptionPlanById(data.plan_id);
         data.plan = plan || { display_name: "Active Plan", price: null, duration_days: null };
       } catch { data.plan = { display_name: "Active Plan", price: null, duration_days: null }; }

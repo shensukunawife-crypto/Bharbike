@@ -2656,7 +2656,7 @@ export async function exportBikesExcel(req, res) {
     const fleetRows = filtered.map((bike) => [
       bike.bike_code,
       bike.statusLabel,
-      bike.is_locked !== false ? "Locked 🔒" : "Unlocked 🔓",
+      bike.is_locked === true ? "Locked 🔒" : "Unlocked 🔓",
       bike.usage,
       Number(bike.battery || 0),
       bike.location,

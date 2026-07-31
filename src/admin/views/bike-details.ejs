@@ -55,8 +55,8 @@
         <span class="stat-icon">🔒</span>
         <span class="stat-label">Smart Lock</span>
       </div>
-      <strong class="stat-value" style="color: <%= bike.is_locked !== false ? '#f87171' : '#4ade80' %>; font-size: 24px;">
-        <%= bike.is_locked !== false ? "Locked 🔒" : "Unlocked 🔓" %>
+      <strong class="stat-value" style="color: <%= bike.is_locked === true ? '#f87171' : '#4ade80' %>; font-size: 24px;">
+        <%= bike.is_locked === true ? "Locked 🔒" : "Unlocked 🔓" %>
       </strong>
     </div>
     <div style="display: flex; gap: 8px; margin-top: 12px;">

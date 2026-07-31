@@ -404,7 +404,7 @@
                 <span class="status-badge <%= bike.status %>"><%= bike.statusLabel %></span>
               </td>
               <td>
-                <span style="font-weight: 500;"><%= bike.is_locked !== false ? "Locked" : "Unlocked" %></span>
+                <span style="font-weight: 500;"><%= bike.is_locked === true ? "Locked" : "Unlocked" %></span>
               </td>
               <td><%= bike.usage %></td>
               <td>

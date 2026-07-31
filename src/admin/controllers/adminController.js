@@ -887,7 +887,7 @@ export async function dashboard(req, res) {
         }
 
         // Assigned Bikes to Who and all details (with IDs for IoT/cancel actions)
-        assignedBikes = activeRentalsFiltered.map(r => {
+        assignedBikes = activeRentals.map(r => {
           const u = allUsers.find(user => user.id === r.user_id);
           const b = bikes.find(bike => bike.id === r.bike_id);
           return {

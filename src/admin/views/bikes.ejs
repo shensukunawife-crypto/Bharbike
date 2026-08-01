@@ -81,7 +81,7 @@
         </td>
         <td class="location-cell" style="font-size: 13px; max-width: 150px;"><%= bike.location %></td>
         <td class="actions">
-          <div style="display: flex; flex-wrap: wrap; gap: 6px; min-width: 220px; max-width: 280px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; max-width: 260px;">
             <a class="btn btn-ghost" href="/admin/bikes/<%= bike.id %>" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;">👁️ View</a>
             <button class="btn btn-gold" onclick="openAssignModal('<%= bike.id %>', '<%= bike.bike_code %>')" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;">👤 Assign</button>
             <button

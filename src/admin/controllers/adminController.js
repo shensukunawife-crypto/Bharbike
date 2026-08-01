@@ -800,7 +800,7 @@ export async function dashboard(req, res) {
         ] = await Promise.all([
           supabase.from("users").select("id, full_name, phone"),
           supabase.from("profiles").select("id, full_name, phone"),
-          supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
+          supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
           supabase.from("subscription_plans").select("id, name"),
           supabase.from("rentals").select("*").in("status", ["active", "ongoing", "expired"]).order("created_at", { ascending: false }),
           supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending").order("created_at", { ascending: false }),
@@ -867,47 +867,42 @@ export async function dashboard(req, res) {
           return !isExpired;
         });
 
-        const rawExpired = activeRentals.filter(r => {
-          const isExpired = r.status === "expired" || (r.end_time && new Date(r.end_time) <= now);
-          return isExpired;
-        });
+        // Map expired subscriptions based on user_subscriptions table (matching Users Page logic)
+        const subsByUser = {};
+        for (const s of (allSubsData || [])) {
+          if (!subsByUser[s.user_id]) subsByUser[s.user_id] = [];
+          subsByUser[s.user_id].push(s);
+        }
 
-        // Collect active bike IDs and active user IDs to hide stale/ghost expired rentals
-        const activeBikeIds = new Set(activeRentalsFiltered.map(r => r.bike_id).filter(Boolean));
-        const activeUserIds = new Set(activeRentalsFiltered.map(r => r.user_id).filter(Boolean));
-
-        // Filter to unique users only, taking the most recent expired rental first
-        const expiredRentalsFiltered = [];
-        const seenUsers = new Set();
-        rawExpired.sort((a, b) => new Date(b.end_time || 0) - new Date(a.end_time || 0));
-        for (const r of rawExpired) {
-          // Hide this expired rental if the bike is already reassigned to an active rental
-          if (r.bike_id && activeBikeIds.has(r.bike_id)) continue;
-          
-          // Hide this expired rental if the user already has a newer active rental
-          if (r.user_id && activeUserIds.has(r.user_id)) continue;
-
-          if (r.user_id) {
-            if (!seenUsers.has(r.user_id)) {
-              seenUsers.add(r.user_id);
-              expiredRentalsFiltered.push(r);
-            }
-          } else {
-            expiredRentalsFiltered.push(r);
+        const expiredUsersList = [];
+        for (const [uid, list] of Object.entries(subsByUser)) {
+          const userSub = list.find(s => s.status === 'active') || list[0];
+          if (userSub && userSub.status === 'expired') {
+            expiredUsersList.push({ uid, sub: userSub });
           }
         }
 
-        // Map the expired rentals to the UI format
-        expiryOrders = expiredRentalsFiltered.map(r => {
-          const u = allUsers.find(user => user.id === r.user_id);
-          const b = bikes.find(bike => bike.id === r.bike_id);
+        expiryOrders = expiredUsersList.map(({ uid, sub }) => {
+          const u = allUsers.find(user => user.id === uid);
+          // Does the user have a bike currently marked as in_use?
+          const activeRental = activeRentals.find(r => r.user_id === uid && (r.status === "ongoing" || r.status === "active" || r.status === "expired"));
+          let assignedBikeCode = "None";
+          let bikeId = null;
+          if (activeRental) {
+             const b = bikes.find(bike => bike.id === activeRental.bike_id);
+             if (b && b.status === "in_use") {
+               assignedBikeCode = b.bike_code || b.code || "Bike";
+               bikeId = b.id;
+             }
+          }
+
           return {
-            id: r.id,
-            bikeId: r.bike_id,
-            bikeCode: b ? (b.bike_code || b.code || r.bike_id) : (r.bike_id || "Unknown"),
+            id: sub.id,
+            bikeId: bikeId,
+            bikeCode: assignedBikeCode,
             userName: u ? u.full_name : "Unknown User",
             userPhone: u ? u.phone : "—",
-            endDate: new Date(r.end_time).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute:"2-digit" }),
+            endDate: new Date(sub.end_date || sub.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute:"2-digit" }),
           };
         });
 

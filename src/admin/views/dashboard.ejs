@@ -1062,8 +1062,8 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
       <div class="db-main" style="margin-top: 20px; margin-bottom: 0;">
         <div class="db-main-head" style="padding: 20px 24px;">
           <div>
-            <p class="db-main-title" style="font-size: 16px;">🛑 Expired Subscriptions (In Fleet)</p>
-            <p class="db-main-sub">Expired but bike not returned yet</p>
+            <h2 class="db-main-title"><span style="color: #ef4444; font-size: 14px; margin-right: 6px;">🔴</span> All Expired Subscriptions</h2>
+            <p class="db-main-sub">Users whose subscriptions have run out</p>
           </div>
           <span class="pay-badge pay-badge-failed" style="font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 9999px;"><%= (expiryOrders || []).length %> Expired</span>
         </div>

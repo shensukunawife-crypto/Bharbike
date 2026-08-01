@@ -922,6 +922,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
           <div>
             <p class="db-main-title" style="font-size: 16px;">🚲 Assigned Bikes (Active Rentals)</p>
             <p class="db-main-sub">Current active riders and assignments</p>
+            <div style="margin-top: 10px;">
+              <input type="text" class="table-search-input" placeholder="Search..." onkeyup="filterDashboardTable(this)" style="padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; width: 100%; max-width: 300px; outline: none;">
+            </div>
           </div>
           <span class="pay-badge pay-badge-success" style="font-size: 12px; font-weight: bold; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 9999px;"><%= (assignedBikes || []).length %> Active</span>
         </div>
@@ -993,6 +996,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
           <div>
             <p class="db-main-title" style="font-size: 16px;">🔧 Bikes Under Maintenance</p>
             <p class="db-main-sub">Bikes currently in repair/maintenance state</p>
+            <div style="margin-top: 10px;">
+              <input type="text" class="table-search-input" placeholder="Search..." onkeyup="filterDashboardTable(this)" style="padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; width: 100%; max-width: 300px; outline: none;">
+            </div>
           </div>
           <span class="pay-badge pay-badge-failed" style="font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 9999px;"><%= (activeMaintenance || []).length %> in Repair</span>
         </div>
@@ -1031,6 +1037,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
           <div>
             <p class="db-main-title" style="font-size: 16px;">⏳ Expiring Subscriptions (Next 48h)</p>
             <p class="db-main-sub">Whose 2 days are left</p>
+            <div style="margin-top: 10px;">
+              <input type="text" class="table-search-input" placeholder="Search..." onkeyup="filterDashboardTable(this)" style="padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; width: 100%; max-width: 300px; outline: none;">
+            </div>
           </div>
           <span class="pay-badge pay-badge-pending" style="font-size: 12px; font-weight: bold; background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 9999px;"><%= (expiringSubs || []).length %> Expiring</span>
         </div>
@@ -1064,6 +1073,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
           <div>
             <h2 class="db-main-title"><span style="color: #ef4444; font-size: 14px; margin-right: 6px;">🔴</span> All Expired Subscriptions</h2>
             <p class="db-main-sub">Users whose subscriptions have run out</p>
+            <div style="margin-top: 10px;">
+              <input type="text" class="table-search-input" placeholder="Search..." onkeyup="filterDashboardTable(this)" style="padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; width: 100%; max-width: 300px; outline: none;">
+            </div>
           </div>
           <span class="pay-badge pay-badge-failed" style="font-size: 12px; font-weight: bold; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 9999px;"><%= (expiryOrders || []).length %> Expired</span>
         </div>
@@ -1423,4 +1435,17 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
     });
   })();
 })();
+
+function filterDashboardTable(input) {
+  const filter = input.value.toLowerCase();
+  const table = input.closest('.db-main').querySelector('.db-table');
+  if (!table) return;
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    // Skip empty state rows
+    if (row.querySelector('td[colspan]')) return;
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(filter) ? '' : 'none';
+  });
+}
 </script>

@@ -886,6 +886,20 @@ export async function dashboard(req, res) {
           }
         }
 
+        // Map the expired rentals to the UI format
+        expiryOrders = expiredRentalsFiltered.map(r => {
+          const u = allUsers.find(user => user.id === r.user_id);
+          const b = bikes.find(bike => bike.id === r.bike_id);
+          return {
+            id: r.id,
+            bikeId: r.bike_id,
+            bikeCode: b ? b.code : "Unknown",
+            userName: u ? u.full_name : "Unknown User",
+            userPhone: u ? u.phone : "—",
+            endDate: new Date(r.end_time).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute:"2-digit" }),
+          };
+        });
+
         // Assigned Bikes to Who and all details (with IDs for IoT/cancel actions)
         assignedBikes = activeRentals.map(r => {
           const u = allUsers.find(user => user.id === r.user_id);

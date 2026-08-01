@@ -877,7 +877,8 @@ export async function dashboard(req, res) {
         const expiredUsersList = [];
         for (const [uid, list] of Object.entries(subsByUser)) {
           const userSub = list.find(s => s.status === 'active') || list[0];
-          if (userSub && userSub.status === 'expired') {
+          const userExists = (allUsersData || []).some(u => String(u.id) === String(uid));
+          if (userExists && userSub && userSub.status === 'expired') {
             expiredUsersList.push({ uid, sub: userSub });
           }
         }

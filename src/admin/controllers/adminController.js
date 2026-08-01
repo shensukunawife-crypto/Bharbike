@@ -1128,7 +1128,7 @@ export async function users(req, res) {
       supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
       supabase.from("wallet_balances").select("*"),
       supabase.from("subscription_plans").select("*"),
-      supabase.from("rentals").select("*").in("status", ["ongoing", "active", "expired"]),
+      supabase.from("rentals").select("*").in("status", ["ongoing", "active", "expired"]).order("created_at", { ascending: false }),
       supabase.from("bikes").select("*")
     ]);
     if (usersError || ordersError || subsError || walletsError || rentalsError || bikesError) {
@@ -1488,7 +1488,7 @@ export async function bikes(req, res) {
     ] = await Promise.all([
       supabase.from("bikes").select("*"),
       supabase.from("users").select("id, full_name, phone, email").order("created_at", { ascending: false }),
-      supabase.from("rentals").select("*").in("status", ["ongoing", "active", "expired"])
+      supabase.from("rentals").select("*").in("status", ["ongoing", "active", "expired"]).order("created_at", { ascending: false })
     ]);
     
     if (bikesError) console.error("[admin.bikes] bikes fetch failed", bikesError);
@@ -1497,11 +1497,17 @@ export async function bikes(req, res) {
 
     const allBikes = safeData(bikesData).map((b) => {
       const bike = normalizeBike(b);
-      const activeRental = safeData(rentalsData).find(r => r.bike_id === bike.id);
+      // Find the most recent rental for this bike where the user actually exists
+      const activeRental = safeData(rentalsData).find(r => {
+        if (r.bike_id !== bike.id) return false;
+        const rider = safeData(usersData).find(u => u.id === r.user_id);
+        return !!rider;
+      });
+      
       if (activeRental) {
         const rider = safeData(usersData).find(u => u.id === activeRental.user_id);
-        bike.riderName = rider ? (rider.full_name || rider.name || "Unknown") : "Unknown";
-        bike.riderPhone = rider ? (rider.phone || "") : "";
+        bike.riderName = rider.full_name || rider.name || "Unknown";
+        bike.riderPhone = rider.phone || "";
       } else {
         bike.riderName = "-";
         bike.riderPhone = "";

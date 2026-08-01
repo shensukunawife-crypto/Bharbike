@@ -1488,7 +1488,7 @@ export async function bikes(req, res) {
     ] = await Promise.all([
       supabase.from("bikes").select("*"),
       supabase.from("users").select("id, full_name, phone, email").order("created_at", { ascending: false }),
-      supabase.from("rentals").select("*").eq("status", "ongoing")
+      supabase.from("rentals").select("*").in("status", ["ongoing", "active", "expired"])
     ]);
     
     if (bikesError) console.error("[admin.bikes] bikes fetch failed", bikesError);

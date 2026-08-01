@@ -881,7 +881,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
             <% } else { %>
               <% pendingPayments.forEach(function(pay) { %>
               <tr>
-                <td><strong><%= pay.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= pay.userPhone %></span></td>
+                <td><strong><%= pay.userName %></strong><br/><span style="font-size:11px; color:var(--text-muted);"><%= pay.userPhone %> • <%= pay.createdAt %></span></td>
                 <td>
                   <strong>₹<%= pay.amount %></strong><br/>
                   <span style="font-size:11px; color:var(--text-muted);">UTR: <%= pay.utr %></span>

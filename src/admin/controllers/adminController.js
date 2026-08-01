@@ -966,7 +966,27 @@ export async function dashboard(req, res) {
         }, []);
 
         // Pending Payment Verifications mapping
-        pendingPayments = pendingPaymentsDocs.map(p => {
+        // Deduplicate spam clicks: if same user has multiple pending, keep one (prefer one with receipt/UTR, else newest)
+        const userPaymentsMap = new Map();
+        pendingPaymentsDocs.forEach(p => {
+          const hasProof = (p.razorpay_payment_id && p.razorpay_payment_id.length > 3) || 
+                           (p.razorpay_order_id && p.razorpay_order_id.startsWith("http"));
+          
+          if (!userPaymentsMap.has(p.user_id)) {
+            userPaymentsMap.set(p.user_id, { ...p, _hasProof: hasProof });
+          } else {
+            const existing = userPaymentsMap.get(p.user_id);
+            if (hasProof && !existing._hasProof) {
+              userPaymentsMap.set(p.user_id, { ...p, _hasProof: hasProof });
+            } else if (hasProof === existing._hasProof) {
+              if (new Date(p.created_at) > new Date(existing.created_at)) {
+                userPaymentsMap.set(p.user_id, { ...p, _hasProof: hasProof });
+              }
+            }
+          }
+        });
+
+        pendingPayments = Array.from(userPaymentsMap.values()).map(p => {
           const u = allUsers.find(user => user.id === p.user_id);
           return {
             id: p.id,
@@ -975,9 +995,10 @@ export async function dashboard(req, res) {
             amount: p.amount,
             utr: p.razorpay_payment_id || "—",
             screenshotUrl: (p.razorpay_order_id && p.razorpay_order_id.startsWith("http")) ? p.razorpay_order_id : null,
-            createdAt: p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—"
+            createdAt: p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—",
+            createdAtRaw: p.created_at || 0
           };
-        });
+        }).sort((a, b) => new Date(b.createdAtRaw) - new Date(a.createdAtRaw));
       } catch (subAdminErr) {
         console.error("[adminController.dashboard] failed to load sub-admin data", subAdminErr);
       }

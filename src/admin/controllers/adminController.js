@@ -1489,7 +1489,7 @@ export async function bikes(req, res) {
       { data: usersData, error: usersError },
       { data: rentalsData, error: rentalsError }
     ] = await Promise.all([
-      supabase.from("bikes").select("*"),
+      supabase.from("bikes").select("*").order("created_at", { ascending: false }),
       supabase.from("users").select("id, full_name, phone, email").order("created_at", { ascending: false }),
       supabase.from("rentals").select("*").in("status", ["ongoing", "active", "expired"]).order("created_at", { ascending: false })
     ]);

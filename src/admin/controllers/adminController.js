@@ -1151,6 +1151,7 @@ export async function users(req, res) {
 
     const search = (req.query.search || "").trim().toLowerCase();
     const statusFilter = (req.query.status || "all").toLowerCase();
+    const subFilter = (req.query.subFilter || "all").toLowerCase();
     const dateFilter = req.query.date || "";
     const now = Date.now();
     const midnightIstUnix = new Date(nowIST().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() - (5.5 * 3600 * 1000);
@@ -1281,6 +1282,12 @@ export async function users(req, res) {
           if (statusFilter === "active" && user.isBlocked) return false;
           if (statusFilter === "blocked" && !user.isBlocked) return false;
         }
+        if (subFilter !== "all") {
+          const text = user.subscriptionText || "";
+          if (subFilter === "active" && (text.startsWith("Expired:") || text === "None / Inactive")) return false;
+          if (subFilter === "expired" && !text.startsWith("Expired:")) return false;
+          if (subFilter === "inactive" && text !== "None / Inactive") return false;
+        }
         if (dateFilter && String(user.joinedDate).slice(0, 10) !== dateFilter) {
           return false;
         }
@@ -1403,10 +1410,12 @@ export async function users(req, res) {
       active: "users",
       bodyView: "users",
       users: finalUsers,
+      subFilter,
       stats,
       filters: {
         search,
         status: statusFilter,
+        subFilter,
         date: dateFilter,
       },
     });

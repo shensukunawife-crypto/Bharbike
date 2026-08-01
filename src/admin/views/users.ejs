@@ -33,9 +33,17 @@
 
 <!-- Table -->
 <div class="orders-table-card">
-  <div class="orders-table-head">
+  <div class="orders-table-head" style="display: flex; align-items: center; justify-content: space-between;">
     <span class="orders-table-title">Users</span>
-    <span class="orders-table-meta" id="users-count-info"><%= users.length %> users</span>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <select id="subFilter" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; outline: none; cursor: pointer; background: white;" onchange="const url = new URL(window.location.href); url.searchParams.set('subFilter', this.value); window.location.href = url.toString();">
+        <option value="all" <%= (!locals.subFilter || locals.subFilter === 'all') ? 'selected' : '' %>>All Subscriptions</option>
+        <option value="active" <%= locals.subFilter === 'active' ? 'selected' : '' %>>Active</option>
+        <option value="expired" <%= locals.subFilter === 'expired' ? 'selected' : '' %>>Expired</option>
+        <option value="inactive" <%= locals.subFilter === 'inactive' ? 'selected' : '' %>>None / Inactive</option>
+      </select>
+      <span class="orders-table-meta" id="users-count-info"><%= users.length %> users</span>
+    </div>
   </div>
   <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;">

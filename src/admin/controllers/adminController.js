@@ -937,19 +937,22 @@ export async function dashboard(req, res) {
           });
 
         // Pending KYC list mapping
-        pendingKycList = pendingKycDocs.map(doc => {
+        pendingKycList = pendingKycDocs.reduce((acc, doc) => {
           const u = allUsers.find(user => user.id === doc.user_id);
-          return {
-            id: doc.id,
-            userId: doc.user_id,
-            userName: u ? u.full_name : "Unknown User",
-            userPhone: u ? u.phone : "—",
-            type: doc.type,
-            fileUrl: doc.file_url,
-            status: doc.status,
-            createdAt: doc.created_at ? new Date(doc.created_at).toLocaleString("en-IN") : "—"
-          };
-        });
+          if (u) {
+            acc.push({
+              id: doc.id,
+              userId: doc.user_id,
+              userName: u.full_name || "Unknown",
+              userPhone: u.phone || "—",
+              type: doc.type,
+              fileUrl: doc.file_url,
+              status: doc.status,
+              createdAt: doc.created_at ? new Date(doc.created_at).toLocaleString("en-IN") : "—"
+            });
+          }
+          return acc;
+        }, []);
 
         // Pending Payment Verifications mapping
         pendingPayments = pendingPaymentsDocs.map(p => {
@@ -1905,8 +1908,12 @@ export async function kycDocumentsPage(req, res) {
       const byUser = new Map();
       for (const doc of safeData(kycData)) {
         const uid = String(doc.user_id);
+        const userObj = userMap.get(uid);
+        
+        // Skip document if user has been deleted
+        if (!userObj) continue;
+
         if (!byUser.has(uid)) {
-          const userObj = userMap.get(uid) || {};
           byUser.set(uid, { 
             id: uid, 
             user_name: userObj.full_name || userObj.name || userObj.phone || "User", 

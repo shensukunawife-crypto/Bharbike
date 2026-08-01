@@ -786,7 +786,8 @@ export async function dashboard(req, res) {
           { data: allPlansData, error: pErr },
           { data: activeRentalsData, error: rErr },
           { data: pendingKycDocsData, error: kErr },
-          { data: pendingPaymentsDocsData, error: payErr }
+          { data: pendingPaymentsDocsData, error: payErr },
+          { data: maintenanceTicketsData, error: maintErr }
         ] = await Promise.all([
           supabase.from("users").select("id, full_name, phone"),
           supabase.from("profiles").select("id, full_name, phone"),
@@ -794,7 +795,8 @@ export async function dashboard(req, res) {
           supabase.from("subscription_plans").select("id, name"),
           supabase.from("rentals").select("*").in("status", ["active", "ongoing", "expired"]),
           supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending"),
-          supabase.from("payments").select("*").eq("status", "pending").order("created_at", { ascending: false })
+          supabase.from("payments").select("*").eq("status", "pending").order("created_at", { ascending: false }),
+          supabase.from("maintenance").select("*").in("status", ["under_repair", "in_progress"])
         ]);
 
         const usersMap = {};
@@ -920,17 +922,17 @@ export async function dashboard(req, res) {
         // Expiry Orders (Expired Rentals) removed as requested
 
         // Maintenance Bikes Given Details (with IDs for marking fixed)
-        activeMaintenance = maintenanceTickets
-          .filter(t => t.status === "under_repair" || t.status === "in_progress")
+        const maintenanceTicketsDB = safeData(maintenanceTicketsData);
+        activeMaintenance = maintenanceTicketsDB
           .map(t => {
             return {
-              id: t.id,
-              bikeId: t.bikeId,
-              bikeCode: t.bikeCode,
-              issueType: t.issueType,
-              reportedDate: t.reportedDate,
-              workDetails: t.workDetails || "—",
-              technicianName: t.technicianName || "Unassigned"
+              id: t.id || t.ticket_id,
+              bikeId: t.bike_id,
+              bikeCode: t.bike_code || "Unknown",
+              issueType: t.issue_type || "Other",
+              reportedDate: t.reported_date || String(t.created_at).slice(0, 10),
+              workDetails: t.description || t.work_details || "—",
+              technicianName: t.technician_name || "Unassigned"
             };
           });
 

@@ -793,7 +793,7 @@ export async function dashboard(req, res) {
           supabase.from("profiles").select("id, full_name, phone"),
           supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
           supabase.from("subscription_plans").select("id, name"),
-          supabase.from("rentals").select("*").in("status", ["active", "ongoing", "expired"]),
+          supabase.from("rentals").select("*").in("status", ["active", "ongoing", "expired"]).order("created_at", { ascending: false }),
           supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending").order("created_at", { ascending: false }),
           supabase.from("payments").select("*").eq("status", "pending").order("created_at", { ascending: false }),
           supabase.from("maintenance").select("*").in("status", ["under_repair", "in_progress"])
@@ -903,14 +903,25 @@ export async function dashboard(req, res) {
         });
 
         // Assigned Bikes to Who and all details (with IDs for IoT/cancel actions)
-        assignedBikes = activeRentals.map(r => {
-          const u = allUsers.find(user => user.id === r.user_id);
+        const uniqueRecentRentals = [];
+        const seenBikeIds = new Set();
+        for (const r of activeRentals) {
+          if (!seenBikeIds.has(r.bike_id)) {
+            const u = allUsers.find(user => user.id === r.user_id);
+            if (u) {
+              uniqueRecentRentals.push({ r, u });
+            }
+            seenBikeIds.add(r.bike_id);
+          }
+        }
+
+        assignedBikes = uniqueRecentRentals.map(({ r, u }) => {
           const b = bikes.find(bike => bike.id === r.bike_id);
           return {
             id: r.id,
             bikeId: r.bike_id,
-            userName: u ? u.full_name : "Unknown User",
-            userPhone: u ? u.phone : "—",
+            userName: u.full_name,
+            userPhone: u.phone,
             bikeCode: b ? b.bike_code : (r.bike_id || "—"),
             status: r.status,
             startTime: r.start_time ? new Date(r.start_time).toLocaleString("en-IN") : new Date(r.created_at || now).toLocaleString("en-IN"),

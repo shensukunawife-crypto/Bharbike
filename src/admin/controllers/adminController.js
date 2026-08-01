@@ -1222,7 +1222,10 @@ export async function users(req, res) {
         let assignedBikeCode = "-";
         if (activeRental) {
           const bike = (bikesData || []).find(b => b.id === activeRental.bike_id);
-          assignedBikeCode = bike ? (bike.bike_code || "Bike") : "Bike";
+          // Only show as assigned if the physical bike hasn't been returned/reassigned
+          if (bike && bike.status === "in_use") {
+            assignedBikeCode = bike.bike_code || "Bike";
+          }
         }
 
         const formatDateTimeLocal = (dateStr) => {

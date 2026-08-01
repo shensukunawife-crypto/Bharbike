@@ -794,7 +794,7 @@ export async function dashboard(req, res) {
           supabase.from("user_subscriptions").select("*").in("status", ["active", "cancelled"]),
           supabase.from("subscription_plans").select("id, name"),
           supabase.from("rentals").select("*").in("status", ["active", "ongoing", "expired"]),
-          supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending"),
+          supabase.from("kyc_documents").select("id, user_id, type, file_url, status, created_at").eq("status", "pending").order("created_at", { ascending: false }),
           supabase.from("payments").select("*").eq("status", "pending").order("created_at", { ascending: false }),
           supabase.from("maintenance").select("*").in("status", ["under_repair", "in_progress"])
         ]);

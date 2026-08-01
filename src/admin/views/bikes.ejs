@@ -89,9 +89,9 @@
               class="bike-lock-toggle btn btn-ghost"
               data-bike-id="<%= bike.id %>"
               data-locked="<%= bike.is_locked === true ? 'true' : 'false' %>"
-              style="padding: 4px 8px; font-size: 11px; border-color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; color: <%= bike.is_locked === true ? '#ef4444' : '#10b981' %>; font-weight: 600; white-space: nowrap;"
+              style="padding: 4px 8px; font-size: 11px; border-color: <%= bike.is_locked === true ? '#10b981' : '#ef4444' %>; color: <%= bike.is_locked === true ? '#10b981' : '#ef4444' %>; font-weight: 600; white-space: nowrap;"
             >
-              <%= bike.is_locked === true ? '🔒 Lock' : '🔓 Unlock' %>
+              <%= bike.is_locked === true ? '🔓 Unlock' : '⚡ Lock' %>
             </button>
             <button class="btn btn-ghost check-status-btn" data-id="<%= bike.id %>" style="padding: 4px 8px; font-size: 11px; border: 1px solid var(--accent); color: var(--accent); font-weight: 600; white-space: nowrap;">🔍 Check</button>
             <button class="btn btn-ghost admin-action" data-url="/admin/bikes/<%= bike.id %>/maintenance" data-method="POST" style="padding: 4px 8px; font-size: 11px; white-space: nowrap;">🔧 Maint.</button>
@@ -313,18 +313,18 @@ function updateLockUI(bikeId, lockState, autoFixed) {
     badge.className   = 'badge danger';
     badge.textContent = '🔒 Locked';
     btn.setAttribute('data-locked', 'true');
-    btn.innerHTML          = '🔒 Lock';
-    btn.style.borderColor  = '#ef4444';
-    btn.style.color        = '#ef4444';
+    btn.innerHTML          = '🔓 Unlock';
+    btn.style.borderColor  = '#10b981';
+    btn.style.color        = '#10b981';
   } else if (lockState === 'unlocked') {
     badge.className   = 'badge success';
     badge.style.background = '';
     badge.style.color      = '';
     badge.textContent = autoFixed ? '🔓 Auto-Fixed' : '🔓 Unlocked';
     btn.setAttribute('data-locked', 'false');
-    btn.innerHTML          = '🔓 Unlock';
-    btn.style.borderColor  = '#10b981';
-    btn.style.color        = '#10b981';
+    btn.innerHTML          = '⚡ Lock';
+    btn.style.borderColor  = '#ef4444';
+    btn.style.color        = '#ef4444';
     if (autoFixed) {
       // Flash green to signal auto-correction happened
       badge.style.background = '#bbf7d0';

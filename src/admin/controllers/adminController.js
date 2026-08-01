@@ -524,10 +524,19 @@ function renderPage(res, data) {
 export async function dashboard(req, res) {
   try {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfWeek = new Date(startOfToday);
-    startOfWeek.setDate(startOfWeek.getDate() - 6);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Accurate IST boundaries
+    const midnightIstUnix = new Date(nowIST().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() - (5.5 * 3600 * 1000);
+    const startOfToday = new Date(midnightIstUnix);
+    
+    // Rolling 7-days for weekly
+    const startOfWeek = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
+    
+    // Start of current month in IST
+    const istDate = nowIST();
+    const istYear = istDate.getFullYear();
+    const istMonth = String(istDate.getMonth() + 1).padStart(2, '0');
+    const startOfMonth = new Date(new Date(`${istYear}-${istMonth}-01T00:00:00Z`).getTime() - (5.5 * 3600 * 1000));
 
     const [
       mappings,
@@ -2445,10 +2454,21 @@ export async function earnings(req, res) {
       }
     });
 
-    // Filter to selected time window
+    // Filter to selected time window (using exact IST calendar boundaries to perfectly sync with dashboard)
     const filtered = allRealCredits.filter(t => {
       const created = new Date(t.created_at || now).getTime();
-      return now - created <= days * 24 * 60 * 60 * 1000;
+      if (filter === "today") {
+        return created >= midnightIstUnix;
+      } else if (filter === "weekly") {
+        return created >= midnightIstUnix - (6 * 24 * 60 * 60 * 1000);
+      } else if (filter === "monthly") {
+        const istDate = nowIST();
+        const istYear = istDate.getFullYear();
+        const istMonth = String(istDate.getMonth() + 1).padStart(2, '0');
+        const startOfMonthUnix = new Date(`${istYear}-${istMonth}-01T00:00:00Z`).getTime() - (5.5 * 3600 * 1000);
+        return created >= startOfMonthUnix;
+      }
+      return true; // default all
     });
 
     const registrationInPeriod = filtered.filter(t => firstCreditByUser[t.user_id] === t.id)
@@ -6333,6 +6353,15 @@ export async function editPayment(req, res) {
       const { user_id, razorpay_order_id, razorpay_payment_id, order_id } = oldPayment;
       
       if (user_id) {
+        // Auto-reject any duplicate pending payments for this user with the same amount to prevent dashboard spam
+        await supabase
+          .from("payments")
+          .update({ status: "failed" })
+          .eq("user_id", user_id)
+          .eq("status", "pending")
+          .eq("amount", oldPayment.amount)
+          .neq("id", paymentId);
+
         const { createUserNotification } = await import("../../services/notificationService.js");
         
         let isWallet = (razorpay_order_id === "wallet");

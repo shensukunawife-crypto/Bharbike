@@ -1128,7 +1128,7 @@ export async function users(req, res) {
       supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
       supabase.from("wallet_balances").select("*"),
       supabase.from("subscription_plans").select("*"),
-      supabase.from("rentals").select("*").eq("status", "ongoing"),
+      supabase.from("rentals").select("*").in("status", ["ongoing", "active", "expired"]),
       supabase.from("bikes").select("*")
     ]);
     if (usersError || ordersError || subsError || walletsError || rentalsError || bikesError) {

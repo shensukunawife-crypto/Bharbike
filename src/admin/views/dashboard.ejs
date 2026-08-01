@@ -593,7 +593,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
     <div>
       <p class="db-stat-label">Active Rentals</p>
       <p class="db-stat-value"><%= stats.activeRentalsCount || 0 %></p>
-      <p class="db-stat-sub">Currently ongoing</p>
+      <p class="db-stat-sub">Assigned to riders</p>
     </div>
   </div>
   <% if (locals.admin && (locals.admin.role === 'sub_admin' || locals.admin.role === 'manager' || locals.admin.role === 'support')) { %>

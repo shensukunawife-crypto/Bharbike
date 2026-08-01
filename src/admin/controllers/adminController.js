@@ -998,7 +998,7 @@ export async function dashboard(req, res) {
       stats: {
         usersCount: usersCount ?? 0,
         bikesCount: bikesCount ?? 0,
-        activeRentalsCount: activeRentalsCount ?? 0,
+        activeRentalsCount: assignedBikes.length,
         totalEarnings,
         pendingKycCount: pendingKycCount ?? 0,
       },

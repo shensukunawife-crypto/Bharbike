@@ -893,7 +893,7 @@ export async function dashboard(req, res) {
           return {
             id: r.id,
             bikeId: r.bike_id,
-            bikeCode: b ? b.code : "Unknown",
+            bikeCode: b ? (b.bike_code || b.code || r.bike_id) : (r.bike_id || "Unknown"),
             userName: u ? u.full_name : "Unknown User",
             userPhone: u ? u.phone : "—",
             endDate: new Date(r.end_time).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute:"2-digit" }),

@@ -1518,6 +1518,15 @@ export async function bikes(req, res) {
       return bike;
     });
 
+    // Sort bikes: Assigned first, Unassigned last (maintaining created_at desc order otherwise)
+    allBikes.sort((a, b) => {
+      const aAssigned = a.riderName !== "-";
+      const bAssigned = b.riderName !== "-";
+      if (aAssigned && !bAssigned) return -1;
+      if (!aAssigned && bAssigned) return 1;
+      return 0;
+    });
+
     // Check confirmed lock state for bikes that have a recent lock request ID
     const { getLockUnlockStatus } = await import("../../services/iotService.js");
     await Promise.all(

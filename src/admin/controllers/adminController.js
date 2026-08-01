@@ -526,17 +526,17 @@ export async function dashboard(req, res) {
     const now = new Date();
     
     // Accurate IST boundaries
-    const midnightIstUnix = new Date(nowIST().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() - (5.5 * 3600 * 1000);
+    const midnightIstUnix = nowIST().getTime();
     const startOfToday = new Date(midnightIstUnix);
     
     // Rolling 7-days for weekly
-    const startOfWeek = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
+    const startOfWeek = new Date(midnightIstUnix - (6 * 24 * 60 * 60 * 1000));
     
     // Start of current month in IST
-    const istDate = nowIST();
-    const istYear = istDate.getFullYear();
-    const istMonth = String(istDate.getMonth() + 1).padStart(2, '0');
-    const startOfMonth = new Date(new Date(`${istYear}-${istMonth}-01T00:00:00Z`).getTime() - (5.5 * 3600 * 1000));
+    const istDateStr = new Date(now.getTime() + (5.5 * 3600 * 1000)).toISOString().slice(0, 10);
+    const istYear = istDateStr.slice(0, 4);
+    const istMonth = istDateStr.slice(5, 7);
+    const startOfMonth = new Date(`${istYear}-${istMonth}-01T00:00:00+05:30`);
 
     const [
       mappings,
@@ -1184,7 +1184,7 @@ export async function users(req, res) {
     const subFilter = (req.query.subFilter || "all").toLowerCase();
     const dateFilter = req.query.date || "";
     const now = Date.now();
-    const midnightIstUnix = new Date(nowIST().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() - (5.5 * 3600 * 1000);
+    const midnightIstUnix = nowIST().getTime();
     const allOrders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
     const users = safeData(usersData)
@@ -2353,7 +2353,7 @@ export async function earnings(req, res) {
   try {
     const filter = req.query.filter || "weekly";
     const now = Date.now();
-    const midnightIstUnix = new Date(nowIST().toISOString().slice(0, 10) + 'T00:00:00Z').getTime() - (5.5 * 3600 * 1000);
+    const midnightIstUnix = nowIST().getTime();
     const days = filter === "today" ? 1 : filter === "monthly" ? 30 : 7;
 
     // ── Fetch payments, wallet credits, and profiles ──
@@ -2462,10 +2462,10 @@ export async function earnings(req, res) {
       } else if (filter === "weekly") {
         return created >= midnightIstUnix - (6 * 24 * 60 * 60 * 1000);
       } else if (filter === "monthly") {
-        const istDate = nowIST();
-        const istYear = istDate.getFullYear();
-        const istMonth = String(istDate.getMonth() + 1).padStart(2, '0');
-        const startOfMonthUnix = new Date(`${istYear}-${istMonth}-01T00:00:00Z`).getTime() - (5.5 * 3600 * 1000);
+        const istDateStr = new Date(now.getTime() + (5.5 * 3600 * 1000)).toISOString().slice(0, 10);
+        const istYear = istDateStr.slice(0, 4);
+        const istMonth = istDateStr.slice(5, 7);
+        const startOfMonthUnix = new Date(`${istYear}-${istMonth}-01T00:00:00+05:30`).getTime();
         return created >= startOfMonthUnix;
       }
       return true; // default all

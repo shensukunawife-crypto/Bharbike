@@ -178,10 +178,12 @@ async function finalizeRental(rentalId, status) {
   }).eq("id", rentalId);
   if (rentUpdateErr) throw new AppError(`Failed to end rental: ${rentUpdateErr.message}`, 500);
 
-  const { error: bikeUpdateErr } = await supabase.from("bikes").update({ 
-    status: BikeStatus.available,
-    is_locked: true 
-  }).eq("id", rental.bike_id);
+  const bikeUpdatePayload = { is_locked: true };
+  if (status !== 'expired') {
+    bikeUpdatePayload.status = BikeStatus.available;
+  }
+
+  const { error: bikeUpdateErr } = await supabase.from("bikes").update(bikeUpdatePayload).eq("id", rental.bike_id);
   if (bikeUpdateErr) throw new AppError(`Failed to release bike: ${bikeUpdateErr.message}`, 500);
 
   // Send IoT lock command

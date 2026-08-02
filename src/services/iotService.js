@@ -42,36 +42,26 @@ async function getLocoNavId(bikeId) {
   }
 }
 
+const SELF_HOSTED_IOT_URL = process.env.SELF_HOSTED_IOT_URL || "https://iotserver-33zq.onrender.com";
+
 /**
  * LOCK (Immobilize) a bike
  */
 export async function lockBike(bikeId) {
-  console.log(`[IoT] Attempting to LOCK bike_id=${bikeId}`);
-  const loconavUuid = await getLocoNavId(bikeId);
-  
-  if (!loconavUuid) {
-    console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}. Lock aborted.`);
-    return { ok: false, message: "Device not linked" };
-  }
-
+  console.log(`[IoT] Attempting to LOCK bike_id=${bikeId} via Self-Hosted Server`);
   try {
+    const loconavUuid = await getLocoNavId(bikeId);
     const response = await axios.post(
-      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-      { value: "IMMOBILIZE" },
-      {
-        headers: {
-          'User-Authentication': LOCONAV_TOKEN,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
-      }
+      `${SELF_HOSTED_IOT_URL}/api/lock`,
+      { bikeId, imei: loconavUuid || null },
+      { timeout: 10000 }
     );
 
-    console.log(`[IoT] Lock response:`, response.data);
-    return { ok: true, bikeId, action: "lock", requestId: response.data?.data?.id };
+    console.log(`[IoT] Lock response from Self-Hosted Server:`, response.data);
+    return { ok: true, bikeId, action: "lock", requestId: response.data?.requestId || "self-hosted-lock" };
   } catch (error) {
-    console.error(`[IoT] Lock failed for ${loconavUuid}:`, error.response?.data || error.message);
-    return { ok: false, message: error.response?.data?.message || "API connection failed" };
+    console.error(`[IoT] Lock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
+    return { ok: false, message: error.response?.data?.error || error.message || "IoT server error" };
   }
 }
 
@@ -79,32 +69,20 @@ export async function lockBike(bikeId) {
  * UNLOCK (Mobilize) a bike
  */
 export async function unlockBike(bikeId) {
-  console.log(`[IoT] Attempting to UNLOCK bike_id=${bikeId}`);
-  const loconavUuid = await getLocoNavId(bikeId);
-  
-  if (!loconavUuid) {
-    console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}. Unlock aborted.`);
-    return { ok: false, message: "Device not linked" };
-  }
-
+  console.log(`[IoT] Attempting to UNLOCK bike_id=${bikeId} via Self-Hosted Server`);
   try {
+    const loconavUuid = await getLocoNavId(bikeId);
     const response = await axios.post(
-      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-      { value: "MOBILIZE" },
-      {
-        headers: {
-          'User-Authentication': LOCONAV_TOKEN,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
-      }
+      `${SELF_HOSTED_IOT_URL}/api/unlock`,
+      { bikeId, imei: loconavUuid || null },
+      { timeout: 10000 }
     );
 
-    console.log(`[IoT] Unlock response:`, response.data);
-    return { ok: true, bikeId, action: "unlock", requestId: response.data?.data?.id };
+    console.log(`[IoT] Unlock response from Self-Hosted Server:`, response.data);
+    return { ok: true, bikeId, action: "unlock", requestId: response.data?.requestId || "self-hosted-unlock" };
   } catch (error) {
-    console.error(`[IoT] Unlock failed for ${loconavUuid}:`, error.response?.data || error.message);
-    return { ok: false, message: error.response?.data?.message || "API connection failed" };
+    console.error(`[IoT] Unlock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
+    return { ok: false, message: error.response?.data?.error || error.message || "IoT server error" };
   }
 }
 
@@ -113,117 +91,38 @@ export async function unlockBike(bikeId) {
  * Get current health (Battery, Location)
  */
 export async function getBikeHealth(bikeId) {
-  console.log(`[IoT] Fetching health for bike_id=${bikeId}`);
-  const loconavUuid = await getLocoNavId(bikeId);
-  
-  if (!loconavUuid) {
-    return {
-      bikeId,
-      batteryPct: 85, // Default/Mock if not linked
-      motorOk: true,
-      lastPingAt: new Date().toISOString(),
-    };
-  }
-
+  console.log(`[IoT] Fetching live health & GPS telemetry for bike_id=${bikeId}`);
   try {
-    const makeRequest = () => axios.post(
-      `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
-      {
-        vehicleIds: [loconavUuid],
-        sensors: ["gps", "vehicleBatteryLevel"]
-      },
-      {
-        headers: {
-          'User-Authentication': LOCONAV_TOKEN,
-          'Content-Type': 'application/json'
-        },
-        timeout: 5000
-      }
-    );
+    const { data: bike } = await supabase
+      .from('bikes')
+      .select('id, battery, last_lat, last_lng, location, is_locked, last_ping_at, last_gps_updated_at')
+      .eq('id', bikeId)
+      .maybeSingle();
 
-    let response;
-    let attempt = 0;
-    let delay = 10000; // Start with 10s
-    const maxRetries = 3; // Total 4 attempts (10s, 20s, 40s backoff)
-
-    while (attempt <= maxRetries) {
-      try {
-        response = await makeRequest();
-        
-        const vehicleData = response.data?.data?.values?.[0] || {};
-        const coords = vehicleData.gps?.currentLocationCoordinates || {};
-        const hasGps = coords.lat?.value && coords.long?.value;
-
-        if (!hasGps && attempt < maxRetries) {
-          attempt++;
-          console.warn(`[LocoNav Retry] Attempt ${attempt} succeeded but NO GPS DATA for bike ${bikeId}. Retrying in ${delay / 1000}s...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          delay *= 2; // Double the delay (20s, then 40s)
-          continue;
-        }
-
-        break; // Success with GPS, or max retries reached
-      } catch (error) {
-        const isRateLimit = error.response?.status === 429;
-        const isServerError = error.response?.status >= 500;
-        const isNetworkError = !error.response; // Timeout or connection drop
-        const shouldRetry = isRateLimit || isServerError || isNetworkError;
-
-        if (attempt < maxRetries && shouldRetry) {
-          attempt++;
-          console.warn(`[LocoNav Retry] Attempt ${attempt} failed for bike ${bikeId} (status: ${error.response?.status || 'network'}). Retrying in ${delay / 1000}s...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          delay *= 2; // Double the delay (20s, then 40s)
-        } else {
-          throw error;
-        }
-      }
-    }
-
-    if (response && response.status === 200 && response.data?.data?.values?.length > 0) {
-      const vehicleData = response.data.data.values[0];
-      const gps = vehicleData.gps || {};
-      const coords = gps.currentLocationCoordinates || {};
-      
-      // Calculate battery percentage from real voltage if available
-      let batteryPct;
-      const batteryData = vehicleData.vehicleBatteryLevel;
-      if (batteryData && typeof batteryData.value === 'number') {
-        const voltage = batteryData.value;
-        // Standard 12V Battery: empty at 11.0V and full at 12.8V
-        let calculatedPct = Math.round(((voltage - 11.0) / 1.8) * 100);
-        batteryPct = Math.max(0, Math.min(100, calculatedPct));
-        console.log(`[IoT] Parsed physical battery voltage for bike ${bikeId}: ${voltage}V -> ${batteryPct}%`);
-      } else {
-        const charSum = String(bikeId || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-        batteryPct = 65 + (charSum % 21);
-      }
-
-      const pingDate = coords.lat?.timestamp ? new Date(coords.lat.timestamp * 1000) : new Date();
-
-      // Map LocoNav telemetry to our internal format
+    if (bike) {
+      const batteryPct = bike.battery ? parseInt(bike.battery) : 85;
       return {
         bikeId,
-        batteryPct,
-        lat: coords.lat?.value || null,
-        lng: coords.long?.value || null,
-        speed: gps.speed?.value ?? null,           // km/h
-        ignition: gps.ignition?.value || null,     // "ON" or "OFF"
-        movementStatus: gps.movement?.movementStatus || null, // "MOVING", "STOPPED"
-        motorOk: gps.ignition?.value !== "OFF",
-        lastPingAt: pingDate.toISOString(),
+        batteryPct: Math.min(100, Math.max(0, batteryPct)),
+        lat: bike.last_lat || null,
+        lng: bike.last_lng || null,
+        location: bike.location || null,
+        speed: 0, // Calculated or streamed
+        ignition: bike.is_locked ? "OFF" : "ON",
+        movementStatus: bike.last_lat ? "ACTIVE" : "STOPPED",
+        motorOk: true,
+        isLocked: bike.is_locked === true,
+        lastPingAt: bike.last_ping_at || bike.last_gps_updated_at || new Date().toISOString(),
       };
     }
   } catch (error) {
-    console.error(`[IoT] getBikeHealth failed for ${loconavUuid}:`, error.message);
+    console.error(`[IoT] getBikeHealth failed for bike_id=${bikeId}:`, error.message);
   }
 
-  // Fallback to mock data if API call fails
-  const fallbackSum = String(bikeId || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const fallbackBattery = 65 + (fallbackSum % 21);
+  // Fallback
   return {
     bikeId,
-    batteryPct: fallbackBattery,
+    batteryPct: 85,
     motorOk: true,
     lastPingAt: new Date().toISOString(),
   };

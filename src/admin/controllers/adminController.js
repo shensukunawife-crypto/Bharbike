@@ -5484,7 +5484,7 @@ export async function adminLockBike(req, res) {
     const logPayload = {
       bike_id: Number(bikeId),
       user_id: activeRental?.user_id || null,
-      rental_id: activeRental?.id || null,
+      // rental_id: activeRental?.id || null, // Omitted due to UUID vs BIGINT type mismatch
       action: 'lock',
       method: 'app',
       success: iotResult?.ok !== false,
@@ -5560,7 +5560,7 @@ export async function adminUnlockBike(req, res) {
     const logPayload = {
       bike_id: Number(bikeId),
       user_id: activeRental?.user_id || null,
-      rental_id: activeRental?.id || null,
+      // rental_id: activeRental?.id || null, // Omitted due to UUID vs BIGINT type mismatch
       action: 'unlock',
       method: 'app',
       success: iotResult?.ok !== false,

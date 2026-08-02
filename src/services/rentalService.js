@@ -199,7 +199,7 @@ async function finalizeRental(rentalId, status) {
     await supabase.from("bike_lock_logs").insert([{
       bike_id: rental.bike_id,
       user_id: rental.user_id,
-      rental_id: rentalId,
+      // rental_id: rentalId, // Omitted due to UUID vs BIGINT type mismatch
       action: "lock",
       method: "app",
       success: iotResult?.ok !== false,

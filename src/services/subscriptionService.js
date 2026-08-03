@@ -1,6 +1,7 @@
 import supabase from "../utils/supabaseClient.js";
 import { createUserNotification } from "./notificationService.js";
 import { nowIST, addISTDays, toISTDateStr } from "../utils/istTime.js";
+import { reactivateRentalOnPlanRenewal } from "./rentalService.js";
 
 const MOCK_PLANS = [
   {
@@ -442,6 +443,11 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
       `Your ${plan.display_name} subscription has been activated! Enjoy unlimited rides and premium modules.`,
       "success"
     ).catch((err) => console.warn("[subscriptionService.createSubscription] notification failed:", err?.message));
+
+    // Auto-reactivate rental if user still has the bike physically (non-blocking)
+    reactivateRentalOnPlanRenewal(userId, data.end_date)
+      .then(rentalId => { if (rentalId) console.log(`[subscriptionService] Auto-reactivated rental ${rentalId} for user ${userId} on plan renewal`); })
+      .catch(err => console.warn(`[subscriptionService] Rental reactivation skipped:`, err?.message));
 
     return data;
   } catch (error) {

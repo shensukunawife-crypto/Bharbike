@@ -178,8 +178,19 @@ async function finalizeRental(rentalId, status) {
   }).eq("id", rentalId);
   if (rentUpdateErr) throw new AppError(`Failed to end rental: ${rentUpdateErr.message}`, 500);
 
+  // When a rental EXPIRES: keep the bike marked as in_use and store the user_id on the bike
+  // so the user still sees their assigned bike in the app.
+  // The bike is ONLY freed back to 'available' when:
+  //   1. The user manually ends the ride (status = 'ended')
+  //   2. An admin forcibly returns the bike from the admin panel
   const bikeUpdatePayload = { is_locked: true };
-  if (status !== 'expired') {
+  if (status === 'expired') {
+    // Keep bike in_use — just lock it. User still sees it as overdue.
+    // The rental record (with status=expired) is the link between user and bike.
+    // Admin must manually return the bike to free it.
+    bikeUpdatePayload.status = BikeStatus.in_use;
+  } else {
+    // Normal end — release bike back to fleet
     bikeUpdatePayload.status = BikeStatus.available;
   }
 
@@ -302,6 +313,27 @@ export async function expireRentalsPastEnd() {
   const results = [];
   for (const r of due) {
     try {
+      // Check if user has an active subscription — if yes, extend rental to match
+      // instead of expiring it. The subscription end_date is the real deadline.
+      const { data: activeSub } = await supabase
+        .from("user_subscriptions")
+        .select("end_date")
+        .eq("user_id", r.user_id)
+        .eq("status", "active")
+        .gt("end_date", now.toISOString())
+        .maybeSingle();
+
+      if (activeSub && activeSub.end_date) {
+        // Extend rental end_time to subscription end_date
+        await supabase.from("rentals").update({
+          end_time: activeSub.end_date,
+          updated_at: new Date().toISOString()
+        }).eq("id", r.id);
+        console.log(`[rentalService] Extended rental ${r.id} to subscription end ${activeSub.end_date} (user has active plan)`);
+        continue; // Skip expiry for this rental
+      }
+
+      // No active subscription — expire the rental normally
       results.push(await finalizeRental(r.id, RentalStatus.expired));
     } catch (e) {
       console.error("[rental expiry]", r.id, e.message);
@@ -310,16 +342,64 @@ export async function expireRentalsPastEnd() {
   return results;
 }
 
+/**
+ * Reactivate an expired rental when a user's plan is renewed and they still
+ * physically hold the bike (bike status = in_use).
+ * Call this whenever a new subscription is created for a user.
+ */
+export async function reactivateRentalOnPlanRenewal(userId, newSubEndDate) {
+  try {
+    // Find their most recent expired rental where bike is still in_use
+    const { data: expiredRental } = await supabase
+      .from("rentals")
+      .select("*, bikes(id, status)")
+      .eq("user_id", userId)
+      .eq("status", RentalStatus.expired)
+      .order("created_at", { ascending: false })
+      .maybeSingle();
+
+    if (!expiredRental) return null; // No expired rental to reactivate
+    if (!expiredRental.bikes || expiredRental.bikes.status !== BikeStatus.in_use) return null; // Bike was returned already
+
+    // Reactivate the rental with the new subscription end date
+    const { error } = await supabase.from("rentals").update({
+      status: RentalStatus.ongoing,
+      end_time: newSubEndDate,
+      updated_at: new Date().toISOString()
+    }).eq("id", expiredRental.id);
+
+    if (error) {
+      console.error(`[rentalService.reactivateRentalOnPlanRenewal] failed for user ${userId}:`, error.message);
+      return null;
+    }
+
+    console.log(`[rentalService] Reactivated rental ${expiredRental.id} for user ${userId} — plan renewed, bike ${expiredRental.bikes.id} stays in_use until ${newSubEndDate}`);
+    return expiredRental.id;
+  } catch (err) {
+    console.error(`[rentalService.reactivateRentalOnPlanRenewal] unexpected error for user ${userId}:`, err.message);
+    return null;
+  }
+}
+
 export async function getActiveRentalForUser(userId) {
+  // Returns active/ongoing rentals AND expired rentals (where user still holds the bike)
+  // This ensures users always see their assigned bike even if the subscription ran out
   const { data, error } = await supabase
     .from("rentals")
     .select("*, bikes(*)")
     .eq("user_id", userId)
-    .in("status", [RentalStatus.active, RentalStatus.ongoing])
+    .in("status", [RentalStatus.active, RentalStatus.ongoing, RentalStatus.expired])
+    .order("created_at", { ascending: false })
     .maybeSingle();
   if (error) {
     console.error("[rentalService.getActiveRentalForUser] failed", error);
     throw new AppError("Unable to fetch active rental", 500);
+  }
+  // Only return the expired rental if the bike is still physically assigned (in_use)
+  if (data && data.status === RentalStatus.expired) {
+    if (!data.bikes || data.bikes.status !== BikeStatus.in_use) {
+      return null; // Admin already returned the bike, don't show overdue card
+    }
   }
   return data ?? null;
 }

@@ -4081,12 +4081,35 @@ export async function editUser(req, res) {
         }
       }
     } else if (sub_plan === "none") {
-      // If plan is set to "none", cancel the active subscription record instead of deleting history
+      // Cancel the active subscription
       await supabase.from("user_subscriptions").update({ 
         status: "cancelled", 
         cancelled_at: new Date().toISOString(),
-        cancellation_reason: "Admin Override to None"
+        cancellation_reason: "Admin Override to None / Inactive"
       }).eq("user_id", userId).eq("status", "active");
+
+      // Also expire any ongoing/active rental and free the bike
+      const { data: activeRentals } = await supabase
+        .from("rentals")
+        .select("id, bike_id")
+        .eq("user_id", userId)
+        .in("status", ["ongoing", "active", "expired"]);
+
+      if (activeRentals && activeRentals.length > 0) {
+        // Expire all rentals for this user
+        await supabase.from("rentals").update({
+          status: "cancelled",
+          end_time: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq("user_id", userId).in("status", ["ongoing", "active", "expired"]);
+
+        // Free all associated bikes back to available
+        const bikeIds = [...new Set(activeRentals.map(r => r.bike_id).filter(Boolean))];
+        if (bikeIds.length > 0) {
+          await supabase.from("bikes").update({ status: "available", is_locked: true }).in("id", bikeIds);
+        }
+        console.log(`[admin.editUser] Cancelled ${activeRentals.length} rental(s) and freed ${bikeIds.length} bike(s) for user ${userId} on None/Inactive override`);
+      }
     }
 
     // 3. Handle Wallet manual credits/debits

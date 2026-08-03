@@ -1256,6 +1256,8 @@ export async function users(req, res) {
           // end_date is 11 PM IST of the last riding day — display it directly
           const displayEndMs = userSub.end_date ? new Date(userSub.end_date).getTime() : Date.now();
           subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(new Date(displayEndMs))})`;
+        } else if (userSub && userSub.status === "cancelled") {
+          subText = "None / Inactive"; // Admin explicitly set to none — treat as inactive
         } else if (!userSub && activeRental) {
           // No subscription at all, but bike is manually assigned
           subText = `Bike Assigned`;
@@ -4081,12 +4083,12 @@ export async function editUser(req, res) {
         }
       }
     } else if (sub_plan === "none") {
-      // Cancel the active subscription
+      // Cancel ALL non-cancelled subscriptions (active AND expired) so admin panel shows None/Inactive
       await supabase.from("user_subscriptions").update({ 
         status: "cancelled", 
         cancelled_at: new Date().toISOString(),
         cancellation_reason: "Admin Override to None / Inactive"
-      }).eq("user_id", userId).eq("status", "active");
+      }).eq("user_id", userId).in("status", ["active", "expired"]);
 
       // Also expire any ongoing/active rental and free the bike
       const { data: activeRentals } = await supabase

@@ -761,10 +761,12 @@ export async function updateAutoRenew(userId, subscriptionId, autoRenew) {
 export async function expireOldSubscriptions() {
   try {
     // 1. Fetch all potentially expired subscriptions (where end_date is in the past)
+    // NOTE: Only target 'active' status — never touch 'cancelled' subscriptions.
+    // Cancelled = admin explicitly deactivated the user. Cron must never overwrite this.
     const { data: activeSubs, error: fetchErr } = await supabase
       .from("user_subscriptions")
       .select("id, user_id, end_date")
-      .in("status", ["active", "cancelled"])
+      .eq("status", "active")
       .lt("end_date", new Date().toISOString());
 
     if (fetchErr) throw fetchErr;

@@ -361,6 +361,8 @@ export async function reactivateRentalOnPlanRenewal(userId, newSubEndDate) {
     if (!expiredRental) return null; // No expired rental to reactivate
     if (!expiredRental.bikes || expiredRental.bikes.status !== BikeStatus.in_use) return null; // Bike was returned already
 
+    const bikeId = expiredRental.bikes.id;
+
     // Reactivate the rental with the new subscription end date
     const { error } = await supabase.from("rentals").update({
       status: RentalStatus.ongoing,
@@ -373,7 +375,37 @@ export async function reactivateRentalOnPlanRenewal(userId, newSubEndDate) {
       return null;
     }
 
-    console.log(`[rentalService] Reactivated rental ${expiredRental.id} for user ${userId} — plan renewed, bike ${expiredRental.bikes.id} stays in_use until ${newSubEndDate}`);
+    // Physically unlock the bike via IoT — user paid, they get access back
+    let iotResult = { ok: false, message: "not attempted" };
+    try {
+      iotResult = await iot.unlockBike(bikeId);
+      console.log(`[rentalService] IoT unlock on plan renewal for bike ${bikeId}:`, iotResult);
+    } catch (iotErr) {
+      console.warn(`[rentalService] IoT unlock failed on plan renewal for bike ${bikeId}:`, iotErr.message);
+      iotResult = { ok: false, message: iotErr.message };
+    }
+
+    // Log the unlock to bike_lock_logs
+    try {
+      await supabase.from("bike_lock_logs").insert([{
+        bike_id: bikeId,
+        user_id: userId,
+        action: "unlock",
+        method: "app",
+        success: iotResult?.ok !== false,
+        error_message: iotResult?.ok === false ? (iotResult?.message || null) : null,
+        metadata: {
+          triggered_by: "plan_renewal",
+          rental_id: expiredRental.id,
+          new_sub_end: newSubEndDate,
+          iot_request_id: iotResult?.requestId || null
+        }
+      }]);
+    } catch (logErr) {
+      console.warn("[rentalService] Failed to insert unlock log on renewal:", logErr.message);
+    }
+
+    console.log(`[rentalService] Reactivated rental ${expiredRental.id} for user ${userId} — plan renewed, bike ${bikeId} unlocked until ${newSubEndDate}`);
     return expiredRental.id;
   } catch (err) {
     console.error(`[rentalService.reactivateRentalOnPlanRenewal] unexpected error for user ${userId}:`, err.message);

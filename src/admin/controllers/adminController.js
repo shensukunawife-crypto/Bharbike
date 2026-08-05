@@ -5524,12 +5524,9 @@ export async function adminLockBike(req, res) {
       }
     };
 
-    if (logPayload.user_id) {
-      const { error: logErr } = await supabase.from('bike_lock_logs').insert([logPayload]);
-      if (logErr) console.warn('[adminLockBike] lock log failed:', logErr.message);
-    } else {
-      console.warn('[adminLockBike] skipping bike_lock_logs insert — no active rental user_id for bike', bikeId);
-    }
+    // Always log — even if no active rental user_id (admin acting on unrented bike)
+    const { error: logErr } = await supabase.from('bike_lock_logs').insert([logPayload]);
+    if (logErr) console.warn('[adminLockBike] lock log failed:', logErr.message);
 
     return res.json({
       success: true,
@@ -5600,12 +5597,9 @@ export async function adminUnlockBike(req, res) {
       }
     };
 
-    if (logPayload.user_id) {
-      const { error: logErr } = await supabase.from('bike_lock_logs').insert([logPayload]);
-      if (logErr) console.warn('[adminUnlockBike] lock log failed:', logErr.message);
-    } else {
-      console.warn('[adminUnlockBike] skipping bike_lock_logs insert — no active rental user_id for bike', bikeId);
-    }
+    // Always log — even if no active rental user_id (admin acting on unrented bike)
+    const { error: logErr } = await supabase.from('bike_lock_logs').insert([logPayload]);
+    if (logErr) console.warn('[adminUnlockBike] lock log failed:', logErr.message);
 
     return res.json({
       success: true,

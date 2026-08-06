@@ -150,7 +150,13 @@
                 <% if (log.action === 'SWEEP') { %>
                   <span style="font-size: 0.85rem; color: #0284c7; font-weight: 600;">🔍 Auto-Sweep</span>
                 <% } else if (log.action && log.action.startsWith('ADMIN_')) { %>
-                  <span style="font-size: 0.85rem; color: #ef4444; font-weight: 600;">🛡️ Admin Action</span>
+                  <% const targetName = (stats.brain.userMap && stats.brain.userMap[log.user_id]) || null; %>
+                  <% if (targetName) { %>
+                    <strong><%= targetName %></strong>
+                    <br><span style="font-size: 0.72rem; color: #ef4444; font-weight: 600;">🛡️ Target User</span>
+                  <% } else { %>
+                    <span style="font-size: 0.85rem; color: #ef4444; font-weight: 600;">🛡️ System / Admin</span>
+                  <% } %>
                 <% } else { %>
                   <strong><%= log.user_name || 'N/A' %></strong>
                   <br><span style="font-size: 0.75rem; color: #6b7280;">Paid: ₹<%= log.payment_amount || 0 %></span>
@@ -173,6 +179,7 @@
               <td style="font-size: 0.85rem; line-height: 1.4;">
                 <% 
                   let reasonText = log.reason || '-';
+                  const targetUser = (stats.brain.userMap && stats.brain.userMap[log.user_id]) || null;
                   try {
                     if (reasonText.startsWith('{') && reasonText.includes('"_admin"')) {
                       const adminData = JSON.parse(reasonText);
@@ -180,14 +187,21 @@
                       const adminRole = adminData.admin_role ? `(${adminData.admin_role})` : '';
                       let detailText = adminData.detail || '';
                       
-                      // Remove ugly UUIDs from URLs
-                      detailText = detailText.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/[User]');
-                      
-                      reasonText = `<strong>By:</strong> ${adminName} <span style="color: #6b7280; font-size: 0.75rem;">${adminRole}</span><br>
-                                    <span style="color: #374151;">${detailText}</span>`;
+                      // Strip raw URL if we have a clean action label
+                      let actionLabel = detailText.split(' — URL:')[0] || detailText;
+
+                      if (targetUser) {
+                        reasonText = `<strong>${actionLabel}</strong> for <span style="color: #0284c7; font-weight: 600;">${targetUser}</span><br>
+                                      <span style="color: #6b7280; font-size: 0.75rem;">Done by: ${adminName} ${adminRole}</span>`;
+                      } else {
+                        // Strip raw UUID if target user name is not found
+                        detailText = detailText.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '');
+                        reasonText = `<strong>${detailText}</strong><br>
+                                      <span style="color: #6b7280; font-size: 0.75rem;">Done by: ${adminName} ${adminRole}</span>`;
+                      }
                     }
                   } catch(e) {
-                    // fallback to raw text if parse fails
+                    // fallback to raw text
                   }
                 %>
                 <%- reasonText %>

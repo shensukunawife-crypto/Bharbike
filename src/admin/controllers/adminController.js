@@ -5214,6 +5214,23 @@ export async function subscriptionBrainPage(req, res) {
     } catch {}
 
     const brainLogs = brainLogsRes.data || [];
+
+    // Resolve target user names for logs where user_id is a UUID
+    const userIds = [...new Set(brainLogs.map(l => l.user_id).filter(id => id && id.length > 20 && id !== 'system' && id !== 'SWEEP'))];
+    const userMap = {};
+    if (userIds.length > 0) {
+      try {
+        const { data: usersData } = await supabase.from("users").select("id, full_name, name, phone, email").in("id", userIds);
+        if (usersData) {
+          usersData.forEach(u => {
+            userMap[u.id] = u.full_name || u.name || u.phone || u.email || 'User';
+          });
+        }
+      } catch (err) {
+        console.warn("[subscriptionBrainPage] Failed to fetch target users:", err.message);
+      }
+    }
+
     const brainHealCount = brainLogs.filter(l => l.action === "HEALED").length;
     const brainSweepCount = brainSweepRes?.count || 0;
     const brainLastAction = brainLogs[0] || null;
@@ -5239,7 +5256,8 @@ export async function subscriptionBrainPage(req, res) {
         nextSweepTime: nextSweep.toISOString(),
         lastCheckAgo: brainLastCheckAgo,
         lastAction: brainLastAction,
-        logs: brainLogs
+        logs: brainLogs,
+        userMap
       }
     };
 

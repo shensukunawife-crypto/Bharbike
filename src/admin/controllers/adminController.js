@@ -1259,9 +1259,9 @@ export async function users(req, res) {
           if (!dateStr) return "";
           const d = new Date(dateStr);
           if (isNaN(d.getTime())) return "";
-          const offset = d.getTimezoneOffset();
-          const adjusted = new Date(d.getTime() - (offset * 60 * 1000));
-          return adjusted.toISOString().slice(0, 16);
+          const istOffset = 330; // IST = UTC+5:30 = 330 minutes
+          const istMs = d.getTime() + istOffset * 60 * 1000;
+          return new Date(istMs).toISOString().slice(0, 16);
         };
         const formatReadableDate = (dateStr) => {
           if (!dateStr) return "";

@@ -167,7 +167,7 @@ export async function getUserActiveSubscription(userId) {
         plan:subscription_plans(*)
       `)
       .eq("user_id", userId)
-      .in("status", ["active", "cancelled"])
+      .neq("status", "cancelled")
       .order("end_date", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -179,7 +179,7 @@ export async function getUserActiveSubscription(userId) {
         .from("user_subscriptions")
         .select("*")
         .eq("user_id", userId)
-        .in("status", ["active", "cancelled"])
+        .neq("status", "cancelled")
         .order("end_date", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -822,7 +822,7 @@ export async function sendSubscriptionExpiryWarnings() {
     const { data: subs, error } = await supabase
       .from("user_subscriptions")
       .select("*")
-      .in("status", ["active", "cancelled"])
+      .neq("status", "cancelled")
       .lte("end_date", targetMax)
       .gt("end_date", now.toISOString());
 

@@ -1,6 +1,7 @@
 import supabase from "../utils/supabaseClient.js";
 import { getIdMappings } from "../admin/controllers/adminController.js";
 import { logAdminAction as fileLogAdminAction } from "../utils/auditLogger.js";
+import { addISTDays } from "../utils/istTime.js";
 
 async function findProfileByName(riderName) {
   const name = riderName.trim();
@@ -83,17 +84,9 @@ async function syncSubscriptionForSkippedDays(riderName, targetEndDate = null, d
     }
 
     let currentEnd = new Date(subscription.end_date);
-    let newEnd = new Date(currentEnd);
+    const numDays = parseInt(days || 0);
+    let newEnd = addISTDays(currentEnd, isAddition ? numDays : -numDays);
     const now = new Date();
-
-    if (isAddition) {
-      // Add the skipped days to their current end date regardless of expiration
-      newEnd.setDate(newEnd.getDate() + parseInt(days || 0));
-    } else {
-      // Deactivating/deleting an entry
-      // Subtract the skipped days
-      newEnd.setDate(newEnd.getDate() - parseInt(days));
-    }
 
     // Determine status based on new end date vs now
     const updatedStatus = newEnd > now ? "active" : "expired";

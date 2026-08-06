@@ -96,9 +96,9 @@
                 data-currency="<%= s.plan_currency || 'INR' %>"
                 data-duration="<%= s.plan_duration || '' %>"
                 data-status="<%= displayStatus %>"
-                data-start="<%= s.start_date ? String(s.start_date).replace('T',' ').slice(0,19) : '' %>"
-                data-end="<%= s.end_date ? String(s.end_date).replace('T',' ').slice(0,19) : '' %>"
-                data-created="<%= s.created_at ? String(s.created_at).replace('T',' ').slice(0,19) : '' %>"
+                data-start="<%= s.start_date ? toIST(s.start_date) : '' %>"
+                data-end="<%= s.end_date ? toIST(s.end_date) : '' %>"
+                data-created="<%= s.created_at ? toIST(s.created_at) : '' %>"
               >Detail</button>
 
               <!-- Edit button -->

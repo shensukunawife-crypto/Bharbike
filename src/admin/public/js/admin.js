@@ -166,8 +166,9 @@ document.querySelectorAll(".open-edit-user").forEach((btn) => {
       if (!iso) return "";
       const d = new Date(iso);
       if (isNaN(d.getTime())) return "";
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-      return d.toISOString().slice(0, 10);
+      const istOffset = 330; // IST = UTC+5:30 = 330 minutes
+      const istMs = d.getTime() + istOffset * 60 * 1000;
+      return new Date(istMs).toISOString().slice(0, 10);
     };
     
     const subStartInput = document.getElementById("edit-user-sub-start");

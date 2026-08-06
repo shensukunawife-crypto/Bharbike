@@ -76,7 +76,7 @@
       </div>
       <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
         <span style="color: #6b7280; font-weight: 500; font-size: 15px;">Joined Date</span>
-        <strong style="text-align: right; font-size: 15px;"><%= String(user.joinedDate).slice(0, 10) %></strong>
+        <strong style="text-align: right; font-size: 15px;"><%= toISTDate(user.joinedDate) %></strong>
       </div>
     </div>
   </div>

@@ -1,4 +1,4 @@
-﻿<style>
+<style>
   .status-green { color: #22c55e; }
   .status-blue { color: #3b82f6; }
   .status-orange { color: #f59e0b; }
@@ -149,8 +149,10 @@
               <td>
                 <% if (log.action === 'SWEEP') { %>
                   <span style="font-size: 0.85rem; color: #0284c7; font-weight: 600;">🔍 Auto-Sweep</span>
+                <% } else if (log.action && log.action.startsWith('ADMIN_')) { %>
+                  <span style="font-size: 0.85rem; color: #ef4444; font-weight: 600;">🛡️ Admin Action</span>
                 <% } else { %>
-                  <strong><%= log.user_name || 'Unknown' %></strong>
+                  <strong><%= log.user_name || 'N/A' %></strong>
                   <br><span style="font-size: 0.75rem; color: #6b7280;">Paid: ₹<%= log.payment_amount || 0 %></span>
                 <% } %>
               </td>
@@ -162,13 +164,34 @@
                 <% } else if (log.action === 'SWEEP') { %>
                   <span style="color: #0284c7; font-weight: 700;">SWEEP</span>
                 <% } else { %>
-                  <span class="log-action-failed"><%= log.action %></span>
+                  <span class="log-action-failed" style="font-size: 0.75rem;"><%= log.action %></span>
                 <% } %>
                 <% if (log.backdated) { %>
                   <span class="badge-backdated">BACKDATED</span>
                 <% } %>
               </td>
-              <td><%= log.reason || '-' %></td>
+              <td style="font-size: 0.85rem; line-height: 1.4;">
+                <% 
+                  let reasonText = log.reason || '-';
+                  try {
+                    if (reasonText.startsWith('{') && reasonText.includes('"_admin"')) {
+                      const adminData = JSON.parse(reasonText);
+                      const adminName = adminData.admin_name || 'Unknown Admin';
+                      const adminRole = adminData.admin_role ? `(${adminData.admin_role})` : '';
+                      let detailText = adminData.detail || '';
+                      
+                      // Remove ugly UUIDs from URLs
+                      detailText = detailText.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/[User]');
+                      
+                      reasonText = `<strong>By:</strong> ${adminName} <span style="color: #6b7280; font-size: 0.75rem;">${adminRole}</span><br>
+                                    <span style="color: #374151;">${detailText}</span>`;
+                    }
+                  } catch(e) {
+                    // fallback to raw text if parse fails
+                  }
+                %>
+                <%- reasonText %>
+              </td>
               <td style="font-size: 0.8rem; color: #4b5563;">
                 <% if (log.old_status || log.new_status) { %>
                   Status: <%= log.old_status || 'null' %> ➝ <%= log.new_status || 'null' %><br>

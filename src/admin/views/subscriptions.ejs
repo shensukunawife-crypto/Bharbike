@@ -301,13 +301,15 @@
     // Pre-fill status
     if (sel) sel.value = btn.dataset.status || 'active';
 
-    // Pre-fill end date (convert UTC ISO → local date string for <input type="date">)
+    // Pre-fill end date — always convert UTC → IST (Asia/Kolkata +05:30)
     const toLocalDate = (iso) => {
       if (!iso) return '';
       const d = new Date(iso);
       if (isNaN(d.getTime())) return '';
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-      return d.toISOString().slice(0, 10);
+      // Always use IST (+05:30 = +330 minutes) regardless of browser timezone
+      const istOffset = 330; // IST is UTC+5:30 = 330 minutes
+      const istMs = d.getTime() + istOffset * 60 * 1000;
+      return new Date(istMs).toISOString().slice(0, 10);
     };
     input.value = toLocalDate(btn.dataset.end);
 

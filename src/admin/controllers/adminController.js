@@ -508,6 +508,34 @@ async function loadAdminPaymentsData(req, mappings) {
   return { paymentsList: filtered, payStats, payFilter, allPaymentsCount: allPayments.length };
 }
 
+// ── IST Date Helpers (passed to every EJS page) ──────────────────────────────
+function toIST(dateStr) {
+  if (!dateStr) return "—";
+  try {
+    return new Date(dateStr).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch { return String(dateStr); }
+}
+
+function toISTDate(dateStr) {
+  if (!dateStr) return "—";
+  try {
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch { return String(dateStr); }
+}
+
 function renderPage(res, data) {
   const isServiceRoleConfigured = supabase.isServiceRole !== false;
   const isProduction = process.env.NODE_ENV === "production";
@@ -517,6 +545,8 @@ function renderPage(res, data) {
     formatBrand,
     isServiceRoleConfigured,
     isProduction,
+    toIST,
+    toISTDate,
     ...data,
   });
 }
@@ -2464,7 +2494,7 @@ export async function earnings(req, res) {
       } else if (filter === "weekly") {
         return created >= midnightIstUnix - (6 * 24 * 60 * 60 * 1000);
       } else if (filter === "monthly") {
-        const istDateStr = new Date(now.getTime() + (5.5 * 3600 * 1000)).toISOString().slice(0, 10);
+        const istDateStr = new Date(now + (5.5 * 3600 * 1000)).toISOString().slice(0, 10);
         const istYear = istDateStr.slice(0, 4);
         const istMonth = istDateStr.slice(5, 7);
         const startOfMonthUnix = new Date(`${istYear}-${istMonth}-01T00:00:00+05:30`).getTime();

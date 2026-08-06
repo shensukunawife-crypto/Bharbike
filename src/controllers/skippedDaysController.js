@@ -1,5 +1,6 @@
 import supabase from "../utils/supabaseClient.js";
 import { getIdMappings } from "../admin/controllers/adminController.js";
+import { logAdminAction as fileLogAdminAction } from "../utils/auditLogger.js";
 
 async function findProfileByName(riderName) {
   const name = riderName.trim();
@@ -141,6 +142,9 @@ export async function addSkippedDay(req, res) {
       console.log("INSERT ERROR:", error);
       return res.status(500).json(error);
     }
+    
+    // IP Audit Log
+    fileLogAdminAction(req, "ADMIN_ADD_SKIPPED_DAY", row.rider_name, { days_skipped: row.days_skipped, status: row.status });
 
     // Sync subscription if status is Active
     if (row.status === "Active") {

@@ -1,0 +1,115 @@
+<style>
+  .logs-shell {
+    animation: fadeInUp .35s ease;
+    padding: 24px;
+  }
+  .logs-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .logs-head-title h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .logs-head-title p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+  .log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .log-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    font-size: 13px;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .log-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .log-table tr:hover {
+    background-color: #f8fafc;
+  }
+  .badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+  }
+  .badge.assign { background: #10b981; }
+  .badge.cancel { background: #ef4444; }
+  .badge.skipped { background: #f59e0b; }
+  .badge.default { background: #64748b; }
+</style>
+
+<div class="logs-shell">
+  <div class="logs-head">
+    <div class="logs-head-title">
+      <h2>Admin IP Logs</h2>
+      <p>Forensic IP logs of all Admin modifications (Bypasses Supabase)</p>
+    </div>
+  </div>
+
+  <table class="log-table">
+    <thead>
+      <tr>
+        <th>Date & Time</th>
+        <th>Admin Account ID</th>
+        <th>Action Taken</th>
+        <th>Target User ID</th>
+        <th>IP Address</th>
+        <th>Device / User-Agent</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (logs && logs.length > 0) { %>
+        <% logs.forEach(log => { %>
+          <% 
+             let badgeClass = 'default';
+             if (log.action === 'ADMIN_ASSIGN_PLAN') badgeClass = 'assign';
+             if (log.action === 'ADMIN_CANCEL_PLAN') badgeClass = 'cancel';
+             if (log.action === 'ADMIN_ADD_SKIPPED_DAY') badgeClass = 'skipped';
+             
+             // Format date
+             const dt = new Date(log.timestamp);
+             const formattedTime = dt.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+          %>
+          <tr>
+            <td style="white-space: nowrap;"><%= formattedTime %></td>
+            <td style="font-family: monospace; font-size: 12px;"><%= log.admin_id %></td>
+            <td><span class="badge <%= badgeClass %>"><%= log.action %></span></td>
+            <td style="font-family: monospace; font-size: 12px;"><%= log.target_user_id %></td>
+            <td style="font-weight: 600; color: #dc2626;"><%= log.ip_address %></td>
+            <td style="font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= log.user_agent %>">
+              <%= log.user_agent %>
+            </td>
+          </tr>
+        <% }) %>
+      <% } else { %>
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">No admin IP logs recorded yet.</td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>

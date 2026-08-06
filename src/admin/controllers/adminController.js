@@ -13,6 +13,7 @@ import { sendFcmPushToTokens, sendFcmPush } from "../../utils/firebaseAdmin.js";
 import * as walletService from "../../services/walletService.js";
 import Groq from "groq-sdk";
 import { logAdminAction } from "../../utils/adminAudit.js";
+import { logAdminAction as fileLogAdminAction } from "../../utils/auditLogger.js";
 import { nowIST, addISTDays } from "../../utils/istTime.js";
 
 
@@ -5224,6 +5225,32 @@ export async function subscriptionBrainPage(req, res) {
   }
 }
 
+export async function ipLogsPage(req, res) {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const LOG_FILE_PATH = path.join(process.cwd(), 'admin_audit_logs.json');
+    let logs = [];
+    if (fs.existsSync(LOG_FILE_PATH)) {
+      try {
+        const fileData = fs.readFileSync(LOG_FILE_PATH, 'utf8');
+        logs = JSON.parse(fileData);
+      } catch (e) {
+        console.error("Failed to parse admin_audit_logs.json", e);
+      }
+    }
+    return renderPage(res, {
+      title: "Admin IP Logs",
+      active: "ip-logs",
+      bodyView: "ip-logs",
+      logs
+    });
+  } catch (error) {
+    console.error("[admin.ipLogsPage] failed", error);
+    return res.status(500).send("Unable to load IP Logs page");
+  }
+}
+
 export async function forceBrainSweep(req, res) {
   try {
     const { runBrainSweep } = await import("../../jobs/brainSweepJob.js");
@@ -6098,6 +6125,9 @@ export async function addSubscription(req, res) {
     }]).select("id").single();
 
     if (error) throw error;
+    
+    // File IP audit log
+    fileLogAdminAction(req, "ADMIN_ASSIGN_PLAN", user_id, { plan_id });
 
     if (subData?.id) {
       try {
@@ -6181,6 +6211,7 @@ export async function cancelSubscription(req, res) {
     if (error) throw error;
 
     // Audit log
+    fileLogAdminAction(req, "ADMIN_CANCEL_PLAN", cancelledSub?.user_id || "Unknown", { subId });
     logAdminAction({
       admin: req.admin,
       action: "ADMIN_SUBSCRIPTION_CANCELLED",

@@ -79,6 +79,7 @@ router.get("/delivery-partners", requirePermission("manage_orders"), adminContro
 router.get("/delivery-partners/:partnerId", requirePermission("manage_orders"), adminController.deliveryPartnerProfile);
 router.get("/skipped-days", requirePermission("manage_orders"), adminController.skippedDaysPage);
 router.get("/subscription-brain", requirePermission("manage_orders"), adminController.subscriptionBrainPage);
+router.get("/ip-logs", requirePermission("manage_orders"), adminController.ipLogsPage);
 router.post("/orders/:orderId/accept", requirePermission("manage_orders"), adminController.acceptOrder);
 router.post("/orders/:orderId/reject", requirePermission("manage_orders"), adminController.rejectOrder);
 router.post("/orders/:orderId/assign", requirePermission("manage_orders"), adminController.assignOrder);

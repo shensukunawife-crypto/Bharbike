@@ -6157,7 +6157,16 @@ export async function addSubscription(req, res) {
     const { user_id, plan_id, end_date } = req.body;
     if (!user_id || !plan_id) return res.status(400).json({ success: false, message: "User ID and Plan ID are required" });
 
-    const expiry = end_date ? parseIST(end_date) : addISTDays(nowIST(), 30);
+    // Fetch plan details to get duration
+    const { data: planInfo } = await supabase
+      .from("subscription_plans")
+      .select("duration_days, price")
+      .eq("id", plan_id)
+      .maybeSingle();
+
+    const duration = planInfo?.duration_days || 7;
+    const startIst = nowIST();
+    const expiry = end_date ? parseIST(end_date) : addISTDays(startIst, duration);
     
     // Check user exists
     const { data: user } = await supabase.from("users").select("id").eq("id", user_id).maybeSingle();
@@ -6167,7 +6176,7 @@ export async function addSubscription(req, res) {
       user_id,
       plan_id,
       status: "active",
-      start_date: new Date().toISOString(),
+      start_date: startIst.toISOString(),
       end_date: expiry.toISOString(),
       auto_renew: false
     }]).select("id").single();

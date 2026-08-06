@@ -171,10 +171,27 @@ document.querySelectorAll(".open-edit-user").forEach((btn) => {
       return new Date(istMs).toISOString().slice(0, 10);
     };
     
+    const getTodayISTStr = () => {
+      const istMs = Date.now() + 330 * 60 * 1000;
+      return new Date(istMs).toISOString().slice(0, 10);
+    };
+
     const subStartInput = document.getElementById("edit-user-sub-start");
-    if (subStartInput) subStartInput.value = toLocalDate(btn.dataset.subStart);
     const subEndInput = document.getElementById("edit-user-sub-end");
-    if (subEndInput) subEndInput.value = toLocalDate(btn.dataset.subEnd);
+    
+    const existingStart = toLocalDate(btn.dataset.subStart);
+    const existingEnd = toLocalDate(btn.dataset.subEnd);
+    const todayStr = getTodayISTStr();
+
+    // If the plan is expired or inactive (end date is in past or missing), default start date to TODAY IST
+    const isExpiredOrNone = !existingEnd || existingEnd < todayStr;
+
+    if (subStartInput) {
+      subStartInput.value = isExpiredOrNone ? todayStr : existingStart;
+    }
+    if (subEndInput) {
+      subEndInput.value = isExpiredOrNone ? "" : existingEnd;
+    }
     const subPlanSelect = document.getElementById("edit-user-sub-plan");
     if (subPlanSelect) {
       let planVal = btn.dataset.subPlan;

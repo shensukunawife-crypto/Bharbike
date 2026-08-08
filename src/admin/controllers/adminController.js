@@ -31,6 +31,23 @@ function parseIST(dateStr) {
   return new Date(dateStr);
 }
 
+/**
+ * Parses an end date string from admin forms (e.g. YYYY-MM-DD) into 11:00 PM IST (23:00 IST).
+ * This ensures selecting "08 Aug" in admin forms gives full riding access through Aug 8 until 11 PM IST,
+ * rather than expiring at 00:00 AM midnight at the start of Aug 8.
+ */
+function parseISTEndOfDay(dateStr) {
+  if (!dateStr) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return new Date(dateStr + "T23:00:00+05:30");
+  }
+  const dt = parseIST(dateStr);
+  if (dt && dt.getUTCHours() === 18 && dt.getUTCMinutes() === 30) {
+    return new Date(dt.getTime() + 23 * 60 * 60 * 1000);
+  }
+  return dt;
+}
+
 const dashboardSettings = {
   companyName: "BHAR BIKE",
   supportEmail: "support@bikeadmin.pro",
@@ -4033,7 +4050,7 @@ export async function editUser(req, res) {
     // 2. Handle Subscription Override updates
     if (sub_plan && sub_plan !== "none") {
       const startIso = sub_start ? parseIST(sub_start).toISOString() : nowIST().toISOString();
-      const endIso = sub_end ? parseIST(sub_end).toISOString() : addISTDays(nowIST(), 7).toISOString(); // 7 days exclusive midnight = add 7
+      const endIso = sub_end ? parseISTEndOfDay(sub_end).toISOString() : addISTDays(nowIST(), 7).toISOString();
       
       const subUpdates = {
         user_id: userId,
@@ -6170,7 +6187,7 @@ export async function addSubscription(req, res) {
     // last day midnight IST = start + (duration - 1) days, then +23h for 11 PM IST
     const lastDayMidnightIST = addISTDays(startIst, duration - 1);
     const defaultExpiry = new Date(lastDayMidnightIST.getTime() + 23 * 60 * 60 * 1000);
-    const expiry = end_date ? parseIST(end_date) : defaultExpiry;
+    const expiry = end_date ? parseISTEndOfDay(end_date) : defaultExpiry;
     
     // Check user exists
     const { data: user } = await supabase.from("users").select("id").eq("id", user_id).maybeSingle();
@@ -6235,7 +6252,7 @@ export async function editSubscription(req, res) {
     const { end_date, status } = req.body;
     
     const updates = {};
-    if (end_date) updates.end_date = parseIST(end_date).toISOString();
+    if (end_date) updates.end_date = parseISTEndOfDay(end_date).toISOString();
     if (status) updates.status = status;
     
     const { data: subBefore } = await supabase.from("user_subscriptions").select("user_id, status, end_date").eq("id", subId).maybeSingle();

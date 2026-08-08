@@ -59,6 +59,10 @@
   .badge.assign { background: #10b981; }
   .badge.cancel { background: #ef4444; }
   .badge.skipped { background: #f59e0b; }
+  .badge.edit-user { background: #3b82f6; }
+  .badge.edit-payment { background: #8b5cf6; }
+  .badge.kyc { background: #06b6d4; }
+  .badge.maintenance { background: #f97316; }
   .badge.default { background: #64748b; }
 </style>
 
@@ -66,7 +70,7 @@
   <div class="logs-head">
     <div class="logs-head-title">
       <h2>Admin IP Logs</h2>
-      <p>Forensic IP logs of all Admin modifications (Bypasses Supabase)</p>
+      <p>Forensic audit logs of all Admin actions, modifications & security events</p>
     </div>
   </div>
 
@@ -74,11 +78,11 @@
     <thead>
       <tr>
         <th>Date & Time</th>
-        <th>Admin Account ID</th>
+        <th>Admin Account</th>
         <th>Action Taken</th>
-        <th>Target User ID</th>
+        <th>Target Rider / Details</th>
         <th>IP Address</th>
-        <th>Device / User-Agent</th>
+        <th>Details / Device</th>
       </tr>
     </thead>
     <tbody>
@@ -86,9 +90,14 @@
         <% logs.forEach(log => { %>
           <% 
              let badgeClass = 'default';
-             if (log.action === 'ADMIN_ASSIGN_PLAN') badgeClass = 'assign';
-             if (log.action === 'ADMIN_CANCEL_PLAN') badgeClass = 'cancel';
-             if (log.action === 'ADMIN_ADD_SKIPPED_DAY') badgeClass = 'skipped';
+             const act = String(log.action || '').toUpperCase();
+             if (act.includes('ASSIGN')) badgeClass = 'assign';
+             if (act.includes('CANCEL') || act.includes('DELETE')) badgeClass = 'cancel';
+             if (act.includes('SKIPPED')) badgeClass = 'skipped';
+             if (act.includes('USER_PROFILE') || act.includes('EDIT_USER')) badgeClass = 'edit-user';
+             if (act.includes('PAYMENT')) badgeClass = 'edit-payment';
+             if (act.includes('KYC')) badgeClass = 'kyc';
+             if (act.includes('MAINTENANCE') || act.includes('UNLOCK')) badgeClass = 'maintenance';
              
              // Format date
              const dt = new Date(log.timestamp);

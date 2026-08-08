@@ -1,6 +1,7 @@
 import supabase from "../config/supabase.js";
 import { AppError } from "../utils/AppError.js";
 import { createUserNotification } from "./notificationService.js";
+import { nowIST, addISTDays } from "../utils/istTime.js";
 
 export async function applyForDelivery(userId, partnerData = {}) {
   if (!userId) {
@@ -131,8 +132,7 @@ export async function getDeliveryStatus(userId) {
 export async function getPartnerDashboard(userId) {
   if (!userId) throw new AppError("user_id is required", 400);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = nowIST();
 
   // Get partner info + online status
   const { data: partner } = await supabase
@@ -179,10 +179,8 @@ export async function getPartnerDashboard(userId) {
     (sum, e) => sum + Number(e.amount || 0), 0
   );
 
-  // This week's earnings
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 6);
-  weekStart.setHours(0, 0, 0, 0);
+  // This week's earnings (last 7 IST days)
+  const weekStart = addISTDays(nowIST(), -6);
   const weekEarnings = (earningsRows || [])
     .filter(e => new Date(e.created_at) >= weekStart)
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);

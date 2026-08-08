@@ -2770,7 +2770,7 @@ export async function exportEarningsPDF(req, res) {
       },
       financeCards: {
         todayEarnings: filtered
-          .filter((item) => new Date(item.createdAt || item.created_at || now).getTime() >= new Date().setHours(0,0,0,0))
+          .filter((item) => new Date(item.createdAt || item.created_at || now).getTime() >= nowIST().getTime())
           .reduce((sum, item) => sum + Number(item.amount || 0), 0),
         pendingPayout,
         totalPaidAmount,

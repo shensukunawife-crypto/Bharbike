@@ -85,7 +85,9 @@ async function syncSubscriptionForSkippedDays(riderName, targetEndDate = null, d
 
     let currentEnd = new Date(subscription.end_date);
     const numDays = parseInt(days || 0);
-    let newEnd = addISTDays(currentEnd, isAddition ? numDays : -numDays);
+    // Add/subtract exact 24-hour days to preserve 11:00 PM IST time boundary
+    const dayShiftMs = (isAddition ? numDays : -numDays) * 24 * 60 * 60 * 1000;
+    let newEnd = new Date(currentEnd.getTime() + dayShiftMs);
     const now = new Date();
 
     // Determine status based on new end date vs now

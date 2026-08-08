@@ -149,20 +149,6 @@ export const createOrder = async (req, res) => {
 
     if (config.provider === 'manual_qr') {
       const mockOrderId = `ORD-QR-${Date.now()}`;
-      try {
-        await supabase.from("payments").insert([
-          {
-            user_id: user_id || null,
-            order_id: appOrderId,
-            razorpay_order_id: mockOrderId,
-            amount: Number(normalizedAmount),
-            status: "pending",
-          },
-        ]);
-      } catch (paymentInsertError) {
-        console.warn("[createOrder] manual_qr payments insert skipped:", paymentInsertError?.message);
-      }
-
       return res.status(200).json({
         success: true,
         id: mockOrderId,
@@ -176,6 +162,7 @@ export const createOrder = async (req, res) => {
         provider: "manual_qr",
         plan_id: plan_id || plan_name || null,
       });
+    }
     }
 
     let pgOrderId, pgResponse;
@@ -279,6 +266,9 @@ export const verifyPayment = async (req, res) => {
     if (payment_method === "manual_qr") {
       if (!razorpay_payment_id) {
         return res.status(400).json({ success: false, message: "Reference ID (UTR) is required for verification." });
+      }
+      if (!razorpay_order_id || !String(razorpay_order_id).includes("http")) {
+        return res.status(400).json({ success: false, message: "Payment screenshot is required for verification." });
       }
 
       // Check if user exists in database to prevent foreign key violation

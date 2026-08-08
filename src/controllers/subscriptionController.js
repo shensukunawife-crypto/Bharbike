@@ -78,10 +78,12 @@ export const getActiveSubscription = async (req, res) => {
             }
           } catch { /* plan table may not exist yet */ }
 
+          const isPastEnd = endDate < now;
           return res.json({
             success: true,
             data: {
               ...rawSub,
+              status: isPastEnd ? "expired" : rawSub.status,
               end_date: rawSub.end_date ? new Date(new Date(rawSub.end_date).getTime() - 1000).toISOString() : rawSub.end_date,
               plan: planInfo,
               days_remaining: daysRemaining,
@@ -104,11 +106,13 @@ export const getActiveSubscription = async (req, res) => {
     const nowMidnight = new Date(_nowIST.getFullYear(), _nowIST.getMonth(), _nowIST.getDate());
     const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
     const daysRemaining = Math.max(0, diffDays + 1);
+    const isPastEnd = endDate < now;
 
     return res.json({
       success: true,
       data: {
         ...subscription,
+        status: isPastEnd ? "expired" : subscription.status,
         end_date: subscription.end_date ? new Date(new Date(subscription.end_date).getTime() - 1000).toISOString() : subscription.end_date,
         days_remaining: daysRemaining,
       },

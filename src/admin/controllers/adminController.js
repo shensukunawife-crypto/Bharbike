@@ -4195,6 +4195,9 @@ export async function editUser(req, res) {
       }
     }
 
+    // Log to file audit log as well
+    fileLogAdminAction(req, "ADMIN_EDITED_USER_PROFILE", userId, { email, phone, sub_plan });
+
     return res.json({ success: true, message: "User updated successfully" });
   } catch (error) {
     console.error("[admin.editUser] failed", error);
@@ -5295,41 +5298,79 @@ export async function ipLogsPage(req, res) {
     const fs = await import('fs');
     const path = await import('path');
     const LOG_FILE_PATH = path.join(process.cwd(), 'admin_audit_logs.json');
-    let logs = [];
+
+    // 1. Fetch file logs
+    let fileLogs = [];
     if (fs.existsSync(LOG_FILE_PATH)) {
       try {
         const fileData = fs.readFileSync(LOG_FILE_PATH, 'utf8');
-        logs = JSON.parse(fileData);
+        fileLogs = JSON.parse(fileData);
       } catch (e) {
         console.error("Failed to parse admin_audit_logs.json", e);
       }
     }
 
-    // Fetch user & admin name mappings for clean human-readable IP log display
+    // 2. Fetch database audit logs & user/admin mappings
+    let dbLogs = [];
     let userMap = new Map();
     let adminMap = new Map();
     try {
-      const [{ data: users }, { data: admins }] = await Promise.all([
+      const [{ data: logsData }, { data: users }, { data: admins }] = await Promise.all([
+        supabase.from("brain_activity_logs").select("*").order("created_at", { ascending: false }).limit(200),
         supabase.from("users").select("id, full_name, phone, email"),
         supabase.from("admins").select("id, email, username, full_name").catch(() => ({ data: [] }))
       ]);
+      dbLogs = logsData || [];
       userMap = new Map((users || []).map(u => [u.id, u.full_name || u.phone || u.email || u.id]));
       adminMap = new Map((admins || []).map(a => [a.id, a.full_name || a.username || a.email || a.id]));
     } catch (e) {
-      console.warn("[ipLogsPage] user/admin name mapping fetch failed:", e?.message);
+      console.warn("[ipLogsPage] DB logs/mappings fetch failed:", e?.message);
     }
 
-    const enrichedLogs = (logs || []).map(log => ({
+    // Format DB logs for display
+    const dbFormattedLogs = (dbLogs || [])
+      .filter(l => l.action && l.action.startsWith("ADMIN_"))
+      .map(l => {
+        let adminName = "Admin System";
+        let detail = "";
+        if (l.reason && l.reason.startsWith("{")) {
+          try {
+            const parsed = JSON.parse(l.reason);
+            if (parsed._admin) {
+              adminName = parsed.admin_name || adminName;
+              detail = parsed.detail || "";
+            }
+          } catch {}
+        }
+        const targetName = userMap.get(l.user_id) || l.user_name || l.user_id || "N/A";
+
+        return {
+          timestamp: l.created_at,
+          admin_id: adminName,
+          admin_name: adminName,
+          action: l.action,
+          target_user_id: targetName,
+          target_user_name: targetName,
+          ip_address: "Logged",
+          user_agent: detail || "Admin Action"
+        };
+      });
+
+    // Format file logs
+    const enrichedFileLogs = (fileLogs || []).map(log => ({
       ...log,
       admin_name: adminMap.get(log.admin_id) || (log.admin_id && log.admin_id.length > 20 ? "Admin System" : (log.admin_id || "Admin System")),
       target_user_name: userMap.get(log.target_user_id) || log.target_user_id || "N/A"
     }));
 
+    // Combine & sort newest first
+    const allLogs = [...dbFormattedLogs, ...enrichedFileLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
     return renderPage(res, {
       title: "Admin IP Logs",
       active: "ip-logs",
       bodyView: "ip-logs",
-      logs: enrichedLogs
+      logs: allLogs
     });
   } catch (error) {
     console.error("[admin.ipLogsPage] failed", error);

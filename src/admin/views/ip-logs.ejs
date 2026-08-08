@@ -96,9 +96,9 @@
           %>
           <tr>
             <td style="white-space: nowrap;"><%= formattedTime %></td>
-            <td style="font-family: monospace; font-size: 12px;"><%= log.admin_id %></td>
+            <td style="font-weight: 600; color: #0f172a;"><%= log.admin_name || log.admin_id %></td>
             <td><span class="badge <%= badgeClass %>"><%= log.action %></span></td>
-            <td style="font-family: monospace; font-size: 12px;"><%= log.target_user_id %></td>
+            <td style="font-weight: 600; color: #2563eb;"><%= log.target_user_name || log.target_user_id %></td>
             <td style="font-weight: 600; color: #dc2626;"><%= log.ip_address %></td>
             <td style="font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= log.user_agent %>">
               <%= log.user_agent %>

@@ -5304,11 +5304,32 @@ export async function ipLogsPage(req, res) {
         console.error("Failed to parse admin_audit_logs.json", e);
       }
     }
+
+    // Fetch user & admin name mappings for clean human-readable IP log display
+    let userMap = new Map();
+    let adminMap = new Map();
+    try {
+      const [{ data: users }, { data: admins }] = await Promise.all([
+        supabase.from("users").select("id, full_name, phone, email"),
+        supabase.from("admins").select("id, email, username, full_name").catch(() => ({ data: [] }))
+      ]);
+      userMap = new Map((users || []).map(u => [u.id, u.full_name || u.phone || u.email || u.id]));
+      adminMap = new Map((admins || []).map(a => [a.id, a.full_name || a.username || a.email || a.id]));
+    } catch (e) {
+      console.warn("[ipLogsPage] user/admin name mapping fetch failed:", e?.message);
+    }
+
+    const enrichedLogs = (logs || []).map(log => ({
+      ...log,
+      admin_name: adminMap.get(log.admin_id) || (log.admin_id && log.admin_id.length > 20 ? "Admin System" : (log.admin_id || "Admin System")),
+      target_user_name: userMap.get(log.target_user_id) || log.target_user_id || "N/A"
+    }));
+
     return renderPage(res, {
       title: "Admin IP Logs",
       active: "ip-logs",
       bodyView: "ip-logs",
-      logs
+      logs: enrichedLogs
     });
   } catch (error) {
     console.error("[admin.ipLogsPage] failed", error);

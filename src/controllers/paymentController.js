@@ -124,7 +124,22 @@ export const createOrder = async (req, res) => {
       return res.status(500).json({ success: false, message: "Payment gateway is not configured on this server." });
     }
 
-    console.log(`[createOrder] Real ${config.provider} Mode Active (${config.mode})`);
+    if (config.provider === 'manual_qr') {
+      const mockOrderId = `ORD-QR-${Date.now()}`;
+      return res.status(200).json({
+        success: true,
+        id: mockOrderId,
+        order_id: mockOrderId,
+        key_id: config.key_id || "enviroluxbiodiesel@sbi",
+        key_secret: config.key_secret || "ENVIROLUX BIODIESEL PRIVATE L",
+        amount: Math.round(normalizedAmount * 100),
+        currency: currency || "INR",
+        app_order_id: mockOrderId,
+        payment_method: "manual_qr",
+        provider: "manual_qr",
+        plan_id: plan_id || plan_name || null,
+      });
+    }
 
     // 1. Create order record in app database first (pending)
     const { data: appOrder, error: appOrderError } = await supabase
@@ -145,24 +160,6 @@ export const createOrder = async (req, res) => {
     if (appOrderError || !appOrderId) {
       console.error("[createOrder] database order insert failed:", appOrderError);
       return res.status(500).json({ success: false, message: "Failed to create order. Please try again." });
-    }
-
-    if (config.provider === 'manual_qr') {
-      const mockOrderId = `ORD-QR-${Date.now()}`;
-      return res.status(200).json({
-        success: true,
-        id: mockOrderId,
-        order_id: mockOrderId,
-        key_id: config.key_id || "enviroluxbiodiesel@sbi",
-        key_secret: config.key_secret || "ENVIROLUX BIODIESEL PRIVATE L",
-        amount: Math.round(normalizedAmount * 100),
-        currency: currency || "INR",
-        app_order_id: appOrderId,
-        payment_method: "manual_qr",
-        provider: "manual_qr",
-        plan_id: plan_id || plan_name || null,
-      });
-    }
     }
 
     let pgOrderId, pgResponse;

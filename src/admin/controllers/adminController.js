@@ -6166,7 +6166,11 @@ export async function addSubscription(req, res) {
 
     const duration = planInfo?.duration_days || 7;
     const startIst = nowIST();
-    const expiry = end_date ? parseIST(end_date) : addISTDays(startIst, duration);
+    // end_date = 11 PM IST of the last riding day (same formula as app flow):
+    // last day midnight IST = start + (duration - 1) days, then +23h for 11 PM IST
+    const lastDayMidnightIST = addISTDays(startIst, duration - 1);
+    const defaultExpiry = new Date(lastDayMidnightIST.getTime() + 23 * 60 * 60 * 1000);
+    const expiry = end_date ? parseIST(end_date) : defaultExpiry;
     
     // Check user exists
     const { data: user } = await supabase.from("users").select("id").eq("id", user_id).maybeSingle();

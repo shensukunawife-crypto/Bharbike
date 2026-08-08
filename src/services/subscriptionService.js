@@ -25,18 +25,22 @@ function isDatabaseError(error) {
 }
 
 /**
- * Helper to check if a subscription is past its grace period
- * Grace period ends at 9:30 AM IST (04:00 UTC) on the day AFTER the end_date.
+ * Helper to check if a subscription is past its grace period.
+ * Grace period ends at 9:30 AM IST on the day AFTER the end_date (IST calendar day).
+ *
+ * Uses addISTDays() to advance by 1 IST calendar day — never raw UTC setDate()
+ * which shifts the day boundary incorrectly when the server runs in UTC.
  */
 export function hasPassedGracePeriod(endDateStr) {
   if (!endDateStr) return true;
   const end = new Date(endDateStr);
   const now = new Date();
-  
-  // The grace expiration is 9:30 AM IST (04:00 UTC) on the day AFTER the end date.
-  const graceExp = new Date(end);
-  graceExp.setDate(graceExp.getDate() + 1);
-  graceExp.setUTCHours(4, 0, 0, 0); // 9:30 AM IST
+
+  // Advance by 1 IST calendar day (IST midnight of the day after end_date)
+  const nextISTDay = addISTDays(end, 1); // IST midnight of next day
+
+  // Grace expires at 9:30 AM IST = IST midnight + 9h30m
+  const graceExp = new Date(nextISTDay.getTime() + (9 * 60 + 30) * 60 * 1000);
 
   return now > graceExp;
 }

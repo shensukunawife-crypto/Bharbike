@@ -258,7 +258,7 @@ export async function getUserSubscriptions(userId) {
 /**
  * Create a new subscription for user
  */
-export async function createSubscription(userId, planId, paymentId = null, paidAmount = null) {
+export async function createSubscription(userId, planId, paymentId = null, paidAmount = null, overrideStartDate = null) {
   try {
     // Get plan details
     const plan = await getSubscriptionPlanById(planId);
@@ -311,40 +311,52 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
     // =============================
 
 
-    // 7-Day Grace Period Backdating Logic:
-    // - If the user renews within 7 days of their last subscription expiry → backdate:
-    //   new sub starts the day AFTER the old sub ended (they kept the bike, they pay for it).
-    // - If the user renews after 7+ days → fresh start from today.
-    // - Brand new users (no previous sub) → start from today.
-    // All date math uses IST midnight to prevent UTC/IST day-shift bugs
+    // New Subscription Start Date Logic:
+    // 1. If user has an active subscription, new plan starts the day AFTER current one ends.
+    // 2. If user is within 7 days of expiry of last sub, backdate to day after expiry.
+    // 3. Otherwise, start today.
     let startDate = nowIST();
     try {
-      // 1. Fetch user's most recent subscription (by end_date)
-      const { data: lastSub } = await supabase
+      const { data: activeOrRecentSub } = await supabase
         .from("user_subscriptions")
         .select("end_date")
         .eq("user_id", userId)
+        .in("status", ["active", "expired"])
         .order("end_date", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (lastSub && lastSub.end_date) {
-        const lastEndDate = new Date(lastSub.end_date);
+      if (activeOrRecentSub && activeOrRecentSub.end_date) {
+        const lastEndDate = new Date(activeOrRecentSub.end_date);
         const now = nowIST();
-        const daysSinceExpiry = (now - lastEndDate) / (1000 * 60 * 60 * 24);
-
-        if (daysSinceExpiry >= 0 && daysSinceExpiry <= 7) {
-          // Within 7-day grace window → backdate to next IST day after old sub ended
+        
+        // If still active or within 7 day grace period
+        if (lastEndDate >= now || (now - lastEndDate) / (1000 * 60 * 60 * 24) <= 7) {
           startDate = addISTDays(lastEndDate, 1);
-          console.log(`[createSubscription] Within 7-day grace period (${daysSinceExpiry.toFixed(1)} days). Backdating start to ${toISTDateStr(startDate)} IST`);
+          console.log(`[createSubscription] Extending subscription. Starting on ${toISTDateStr(startDate)} IST`);
         } else {
-          // Beyond 7 days OR active in the future → fresh start from today IST (prevent future stacking)
-          startDate = now;
-          console.log(`[createSubscription] Beyond 7-day grace period or future active (${daysSinceExpiry.toFixed(1)} days). Fresh start from today IST: ${toISTDateStr(startDate)}`);
+          // Beyond grace — fresh start.
+          // If admin passed a payment date override, backdate to that date (max 30 days back, not future).
+          if (overrideStartDate) {
+            const overrideMs = new Date(overrideStartDate).getTime();
+            const thirtyDaysAgoMs = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+            if (overrideMs >= thirtyDaysAgoMs && overrideMs <= now.getTime()) {
+              // Use IST midnight of the payment date
+              const payIST = new Date(overrideMs + 5.5 * 60 * 60 * 1000);
+              payIST.setUTCHours(0, 0, 0, 0);
+              startDate = new Date(payIST.getTime() - 5.5 * 60 * 60 * 1000); // back to UTC for storage
+              console.log(`[createSubscription] Backdating fresh start to payment date: ${toISTDateStr(startDate)} IST`);
+            } else {
+              startDate = now;
+              console.log(`[createSubscription] Override date out of range, using today: ${toISTDateStr(startDate)} IST`);
+            }
+          } else {
+            startDate = now;
+          }
         }
       }
     } catch (err) {
-      console.warn("[createSubscription] Backdating check failed, using current IST date:", err?.message);
+      console.warn("[createSubscription] Date calculation failed, using current IST date:", err?.message);
     }
 
     // Calculate end date: user gets the FULL last riding day until 11 PM IST.

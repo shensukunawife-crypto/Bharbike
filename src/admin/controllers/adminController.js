@@ -6491,7 +6491,9 @@ export async function addPayment(req, res) {
         if (matchedPlan?.name) targetPlan = matchedPlan.name;
 
         const { createSubscription } = await import("../../services/subscriptionService.js");
-        await createSubscription(user_id, targetPlan, newPayment?.id, finalAmount);
+        // Backdate subscription to payment's created_at so user gets days from when they paid, not when admin approved
+        const paymentCreatedAt = newPayment?.created_at || null;
+        await createSubscription(user_id, targetPlan, newPayment?.id, finalAmount, paymentCreatedAt);
 
         // Fire the Brain in the background to verify and heal if needed
         const { verifyAndHealSubscription } = await import("../../services/subscriptionBrain.js");
@@ -6616,7 +6618,9 @@ export async function editPayment(req, res) {
             targetPlan = matchedPlan?.name || "weekly_plan";
           }
           const { createSubscription } = await import("../../services/subscriptionService.js");
-          await createSubscription(user_id, targetPlan, paymentId, finalAmount);
+          // Backdate to when user originally submitted the payment (not when admin approved it)
+          const paymentCreatedAt = oldPayment?.created_at || null;
+          await createSubscription(user_id, targetPlan, paymentId, finalAmount, paymentCreatedAt);
           
           // Trigger the self-healing brain system in the background to ensure the subscription actually went through
           const { verifyAndHealSubscription } = await import("../../services/subscriptionBrain.js");

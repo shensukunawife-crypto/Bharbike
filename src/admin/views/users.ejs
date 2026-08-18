@@ -233,21 +233,26 @@
     <div class="modal-body" style="padding:0;">
       <!-- Tabs -->
       <div style="display:flex;border-bottom:2px solid var(--border);padding:0 20px;gap:4px;background:var(--bg-card);">
-        <button class="detail-tab active" data-tab="subs" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:#6366f1;border-bottom:2px solid #6366f1;margin-bottom:-2px;">📋 Subscriptions</button>
-        <button class="detail-tab" data-tab="pays" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--text-muted);">💳 Payments</button>
-        <button class="detail-tab" data-tab="skip" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--text-muted);">⏭ Skip Days</button>
+        <button class="detail-tab active" data-tab="status" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:#6366f1;border-bottom:2px solid #6366f1;margin-bottom:-2px;">📊 Status</button>
+        <button class="detail-tab" data-tab="subs" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--text-muted);margin-bottom:-2px;">📋 Subscriptions</button>
+        <button class="detail-tab" data-tab="pays" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--text-muted);margin-bottom:-2px;">💳 Payments</button>
+        <button class="detail-tab" data-tab="skip" style="padding:12px 18px;border:none;background:none;cursor:pointer;font-weight:600;font-size:13px;color:var(--text-muted);margin-bottom:-2px;">⏭ Skip Days</button>
       </div>
       <div id="detail-loading" style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</div>
+      <!-- Status Tab -->
+      <div id="detail-tab-status" class="detail-tab-panel" style="display:none;padding:20px;max-height:450px;overflow-y:auto;">
+        <div id="detail-status-content"></div>
+      </div>
       <!-- Subscriptions Tab -->
-      <div id="detail-tab-subs" class="detail-tab-panel" style="display:none;padding:20px;max-height:420px;overflow-y:auto;">
+      <div id="detail-tab-subs" class="detail-tab-panel" style="display:none;padding:20px;max-height:450px;overflow-y:auto;">
         <div id="detail-subs-content"></div>
       </div>
       <!-- Payments Tab -->
-      <div id="detail-tab-pays" class="detail-tab-panel" style="display:none;padding:20px;max-height:420px;overflow-y:auto;">
+      <div id="detail-tab-pays" class="detail-tab-panel" style="display:none;padding:20px;max-height:450px;overflow-y:auto;">
         <div id="detail-pays-content"></div>
       </div>
       <!-- Skip Days Tab -->
-      <div id="detail-tab-skip" class="detail-tab-panel" style="display:none;padding:20px;max-height:420px;overflow-y:auto;">
+      <div id="detail-tab-skip" class="detail-tab-panel" style="display:none;padding:20px;max-height:450px;overflow-y:auto;">
         <div id="detail-skip-content"></div>
       </div>
     </div>
@@ -324,14 +329,15 @@
     var name = btn.dataset.name || 'User';
     document.getElementById('user-detail-title').textContent = '📂 ' + name + ' — Detail';
     document.getElementById('detail-loading').style.display = 'block';
-    ['subs','pays','skip'].forEach(function(t) {
-      document.getElementById('detail-tab-' + t).style.display = 'none';
+    ['status','subs','pays','skip'].forEach(function(t) {
+      var el = document.getElementById('detail-tab-' + t);
+      if (el) el.style.display = 'none';
     });
     document.querySelectorAll('.detail-tab').forEach(function(t) {
       t.style.color = 'var(--text-muted)';
       t.style.borderBottom = 'none';
     });
-    var firstTab = document.querySelector('.detail-tab[data-tab="subs"]');
+    var firstTab = document.querySelector('.detail-tab[data-tab="status"]');
     if (firstTab) {
       firstTab.style.color = '#6366f1';
       firstTab.style.borderBottom = '2px solid #6366f1';
@@ -347,12 +353,118 @@
       document.getElementById('detail-loading').style.display = 'none';
       if (!json.success) {
         document.getElementById('detail-loading').style.display = 'block';
-        document.getElementById('detail-loading').textContent = 'Failed to load.';
+        document.getElementById('detail-loading').textContent = 'Failed to load user details.';
         return;
       }
 
-      // ── Subscriptions ──
+      var summary = json.summary || {};
       var subs = json.subscriptions || [];
+      var pays = json.payments || [];
+      var skips = json.skipDays || [];
+
+      // Dynamic Real-time Calculations (client-side matching current IST)
+      var now = new Date();
+      var targetSub = summary.activeSub || subs[0] || null;
+      var isActive = false;
+      var daysLeft = 0;
+      var daysElapsed = 0;
+      var expiredAgo = 0;
+      var percentUsed = 0;
+
+      if (targetSub) {
+        var end = new Date(targetSub.end_date);
+        var start = new Date(targetSub.start_date);
+        isActive = (end >= now) && (targetSub.status === 'active');
+        var msPerDay = 24 * 60 * 60 * 1000;
+
+        if (isActive) {
+          var remainingMs = end.getTime() - now.getTime();
+          daysLeft = Math.max(0, Math.ceil(remainingMs / msPerDay));
+          daysElapsed = Math.max(0, Math.floor((now.getTime() - start.getTime()) / msPerDay));
+          var totalDuration = Math.max(1, end.getTime() - start.getTime());
+          percentUsed = Math.min(100, Math.max(0, Math.round(((now.getTime() - start.getTime()) / totalDuration) * 100)));
+        } else {
+          expiredAgo = Math.max(0, Math.floor((now.getTime() - end.getTime()) / msPerDay));
+          percentUsed = 100;
+        }
+      }
+
+      // ── 1. Status Tab Rendering ──
+      var statusHtml = '';
+      if (!targetSub) {
+        // No subscription
+        statusHtml = '<div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:30px;text-align:center;">'
+          + '<div style="font-size:36px;margin-bottom:8px;">⚪</div>'
+          + '<div style="font-size:16px;font-weight:700;color:#64748b;margin-bottom:6px;">No Active Subscription</div>'
+          + '<div style="font-size:13px;color:var(--text-muted);">This user has not activated or purchased any subscription plans yet.</div>'
+          + '</div>';
+      } else if (isActive) {
+        // Active Subscription
+        statusHtml = '<div style="background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);border:1px solid #86efac;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(34,197,94,0.08);">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">'
+          + '  <div>'
+          + '    <span style="background:#22c55e;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🟢 ACTIVE SUBSCRIPTION</span>'
+          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#14532d;">' + (targetSub.plan_name || 'Weekly Plan') + '</h3>'
+          + '    <div style="font-size:12px;color:#166534;">Valid from ' + fmtDate(targetSub.start_date) + ' to ' + fmtDate(targetSub.end_date) + '</div>'
+          + '  </div>'
+          + '  <div style="text-align:right;">'
+          + '    <div style="font-size:26px;font-weight:800;color:#15803d;line-height:1;">' + daysLeft + ' <span style="font-size:14px;font-weight:600;">Day' + (daysLeft === 1 ? '' : 's') + ' Left</span></div>'
+          + '    <div style="font-size:11.5px;color:#166534;margin-top:4px;">Day ' + (daysElapsed + 1) + ' of ' + (targetSub.duration_days || 7) + '</div>'
+          + '  </div>'
+          + '</div>'
+          + '<div style="background:#bbf7d0;border-radius:6px;height:8px;overflow:hidden;margin-top:14px;">'
+          + '  <div style="background:#22c55e;height:100%;width:' + percentUsed + '%;border-radius:6px;transition:width 0.4s ease;"></div>'
+          + '</div>'
+          + '<div style="display:flex;justify-content:space-between;font-size:11px;color:#166534;margin-top:6px;">'
+          + '  <span>' + percentUsed + '% of plan duration completed</span>'
+          + '  <span>Auto-Renew: ' + (targetSub.auto_renew ? '✅ Yes' : '❌ No') + '</span>'
+          + '</div>'
+          + '</div>';
+      } else {
+        // Expired Subscription
+        statusHtml = '<div style="background:linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%);border:1px solid #fca5a5;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(239,68,68,0.08);">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">'
+          + '  <div>'
+          + '    <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🔴 EXPIRED PLAN</span>'
+          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7f1d1d;">' + (targetSub.plan_name || 'Weekly Plan') + '</h3>'
+          + '    <div style="font-size:12px;color:#991b1b;">Ended on ' + fmtDate(targetSub.end_date) + '</div>'
+          + '  </div>'
+          + '  <div style="text-align:right;">'
+          + '    <div style="font-size:24px;font-weight:800;color:#b91c1c;line-height:1;">' + expiredAgo + ' <span style="font-size:14px;font-weight:600;">Day' + (expiredAgo === 1 ? '' : 's') + ' Ago</span></div>'
+          + '    <div style="font-size:11.5px;color:#991b1b;margin-top:4px;font-weight:600;">⚠️ Renewal Required</div>'
+          + '  </div>'
+          + '</div>'
+          + '</div>';
+      }
+
+      // Quick KPI Stats Grid
+      var bikeInfo = summary.assignedBike;
+      statusHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;margin-top:12px;">'
+        + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+        + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">🚲 Assigned Bike</div>'
+        + '    <div style="font-size:15px;font-weight:700;color:var(--text-main);">' + (bikeInfo ? (bikeInfo.bike_code || 'Bike #' + bikeInfo.id) : '<span style="color:var(--text-muted);font-weight:400;">None Assigned</span>') + '</div>'
+        + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + (bikeInfo ? (bikeInfo.is_locked ? '🔒 Locked' : '🔓 Unlocked') : 'No active bike') + '</div>'
+        + '  </div>'
+        + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+        + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">📊 Subscriptions</div>'
+        + '    <div style="font-size:15px;font-weight:700;color:var(--text-main);">' + (summary.totalSubscriptionsCount || subs.length) + ' Plans</div>'
+        + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + (summary.totalDaysSubscribed || (subs.length * 7)) + ' total subscribed days</div>'
+        + '  </div>'
+        + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+        + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">💰 Total Paid</div>'
+        + '    <div style="font-size:15px;font-weight:700;color:#22c55e;">₹' + Number(summary.totalAmountPaid || 0).toLocaleString('en-IN') + '</div>'
+        + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Across ' + pays.filter(function(p){return p.status==='success';}).length + ' payments</div>'
+        + '  </div>'
+        + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+        + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">⏭ Skip Days</div>'
+        + '    <div style="font-size:15px;font-weight:700;color:var(--text-main);">' + skips.length + ' Recorded</div>'
+        + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + skips.reduce(function(a,b){return a + Number(b.days_skipped||0);},0) + ' days adjusted</div>'
+        + '  </div>'
+        + '</div>';
+
+      document.getElementById('detail-status-content').innerHTML = statusHtml;
+
+      // ── 2. Subscriptions Tab ──
       document.getElementById('detail-subs-content').innerHTML = subs.length === 0
         ? '<p style="color:var(--text-muted);text-align:center;padding:30px;">No subscriptions found.</p>'
         : '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
@@ -374,8 +486,7 @@
             }).join('')
           + '</tbody></table>';
 
-      // ── Payments ──
-      var pays = json.payments || [];
+      // ── 3. Payments Tab ──
       document.getElementById('detail-pays-content').innerHTML = pays.length === 0
         ? '<p style="color:var(--text-muted);text-align:center;padding:30px;">No payments found.</p>'
         : '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
@@ -395,8 +506,7 @@
             }).join('')
           + '</tbody></table>';
 
-      // ── Skip Days ──
-      var skips = json.skipDays || [];
+      // ── 4. Skip Days Tab ──
       document.getElementById('detail-skip-content').innerHTML = skips.length === 0
         ? '<p style="color:var(--text-muted);text-align:center;padding:30px;">No skip day records found for this user.</p>'
         : '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
@@ -420,8 +530,8 @@
             }).join('')
           + '</tbody></table>';
 
-      // Show first tab content
-      document.getElementById('detail-tab-subs').style.display = 'block';
+      // Show default tab (Status)
+      document.getElementById('detail-tab-status').style.display = 'block';
     })
     .catch(function(err) {
       document.getElementById('detail-loading').style.display = 'block';
@@ -441,7 +551,8 @@
       });
       this.style.color = '#6366f1';
       this.style.borderBottom = '2px solid #6366f1';
-      document.getElementById('detail-tab-' + this.dataset.tab).style.display = 'block';
+      var panel = document.getElementById('detail-tab-' + this.dataset.tab);
+      if (panel) panel.style.display = 'block';
     });
   });
 })();

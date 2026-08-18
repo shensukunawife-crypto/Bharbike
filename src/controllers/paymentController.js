@@ -604,15 +604,22 @@ export const verifyPayment = async (req, res) => {
                            plan_id?.toLowerCase().includes("year") ? 365 : 7;
           }
 
-          // Use IST midnight for start/end so dates never shift due to UTC/IST boundary
+          // Start date logic (same as subscriptionService):
+          // - Early payment (plan still active) → stack from day after current plan ends
+          // - Within 7-day grace → backdate to day after expiry
+          // - Beyond 7 days → fresh start from today
           let startDate = nowIST();
           try {
-            const { data: lastSub } = await supabase.from("user_subscriptions").select("end_date").eq("user_id", user_id).order("end_date", { ascending: false }).limit(1).maybeSingle();
+            const { data: lastSub } = await supabase.from("user_subscriptions").select("end_date").eq("user_id", user_id).in("status", ["active","expired"]).order("end_date", { ascending: false }).limit(1).maybeSingle();
             if (lastSub && lastSub.end_date) {
               const lastEndDate = new Date(lastSub.end_date);
-              if (lastEndDate > startDate) {
-                startDate = lastEndDate;
+              const now = nowIST();
+              const daysSince = (now - lastEndDate) / (1000 * 60 * 60 * 24);
+              if (lastEndDate >= now || daysSince <= 7) {
+                // Plan still active OR within 7-day grace → continue from day after last plan ended
+                startDate = addISTDays(lastEndDate, 1);
               }
+              // else: beyond 7 days → keep fresh start from today (startDate already = nowIST())
             }
           } catch (e) {
             console.warn("[verifyPayment] fallback smart backdating failed:", e?.message);

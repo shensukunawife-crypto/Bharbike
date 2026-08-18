@@ -14,7 +14,9 @@ const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN;
  */
 async function getLocoNavId(bikeId) {
   try {
-    // Check if bikeId is already a UUID (from bikes table) or we need to find the mapping
+    if (!bikeId) return null;
+
+    // 1. Check if bikeId is already mapped in vehicles table
     const { data: vehicle, error } = await supabase
       .from("vehicles")
       .select("vehicle_uuid")
@@ -22,18 +24,32 @@ async function getLocoNavId(bikeId) {
       .maybeSingle();
 
     if (error) throw error;
-    
-    // If found in mapping, return the LocoNav UUID
     if (vehicle?.vehicle_uuid) return vehicle.vehicle_uuid;
 
-    // Fallback: Check if the bikeId itself is stored in vehicle_uuid (rare but possible during migration)
+    // 2. Check if the bikeId itself is stored as vehicle_uuid
     const { data: directVehicle } = await supabase
       .from("vehicles")
       .select("vehicle_uuid")
-      .eq("vehicle_uuid", bikeId)
+      .eq("vehicle_uuid", String(bikeId))
       .maybeSingle();
       
     if (directVehicle?.vehicle_uuid) return directVehicle.vehicle_uuid;
+
+    // 3. Fallback: Find bike_code from bikes table, then match vehicle by name/number
+    const { data: bike } = await supabase
+      .from("bikes")
+      .select("bike_code")
+      .eq("id", bikeId)
+      .maybeSingle();
+
+    if (bike?.bike_code) {
+      const { data: vehicleByCode } = await supabase
+        .from("vehicles")
+        .select("vehicle_uuid")
+        .ilike("name", `%${bike.bike_code}%`)
+        .maybeSingle();
+      if (vehicleByCode?.vehicle_uuid) return vehicleByCode.vehicle_uuid;
+    }
 
     return null;
   } catch (error) {
@@ -42,47 +58,117 @@ async function getLocoNavId(bikeId) {
   }
 }
 
-const SELF_HOSTED_IOT_URL = process.env.SELF_HOSTED_IOT_URL || "https://iotserver-33zq.onrender.com";
-
 /**
- * LOCK (Immobilize) a bike
+ * LOCK (Immobilize) a bike via LocoNav API
+ * POST https://app.loconav.sensorise.net/integration/api/v1/vehicles/{vehicleUuid}/immobilizer_requests
+ * Body: { "value": "IMMOBILIZE" }
  */
 export async function lockBike(bikeId) {
-  console.log(`[IoT] Attempting to LOCK bike_id=${bikeId} via Self-Hosted Server`);
+  console.log(`[IoT] Attempting to LOCK (IMMOBILIZE) bike_id=${bikeId} via LocoNav API`);
   try {
     const loconavUuid = await getLocoNavId(bikeId);
+    if (!loconavUuid) {
+      console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}`);
+      return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
+    }
+
     const response = await axios.post(
-      `${SELF_HOSTED_IOT_URL}/api/lock`,
-      { bikeId, imei: loconavUuid || null },
-      { timeout: 10000 }
+      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+      { value: "IMMOBILIZE" },
+      {
+        headers: {
+          "User-Authentication": LOCONAV_TOKEN,
+          "Content-Type": "application/json"
+        },
+        timeout: 15000
+      }
     );
 
-    console.log(`[IoT] Lock response from Self-Hosted Server:`, response.data);
-    return { ok: true, bikeId, action: "lock", requestId: response.data?.requestId || "self-hosted-lock" };
+    console.log(`[IoT] Lock (IMMOBILIZE) response for bike ${bikeId}:`, response.data);
+    if (response.data?.data?.errors) {
+      const errTxt = typeof response.data.data.errors === 'string' 
+        ? response.data.data.errors 
+        : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
+      return {
+        ok: false,
+        message: errTxt,
+        bikeId,
+        action: "lock"
+      };
+    }
+    const requestId = response.data?.data?.id || null;
+    return {
+      ok: true,
+      bikeId,
+      action: "lock",
+      requestId: requestId ? String(requestId) : "loconav-lock",
+      data: response.data?.data
+    };
   } catch (error) {
     console.error(`[IoT] Lock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
-    return { ok: false, message: error.response?.data?.error || error.message || "IoT server error" };
+    const errMsg =
+      error.response?.data?.data?.errors?.[0]?.message ||
+      error.response?.data?.message ||
+      error.message ||
+      "LocoNav API error";
+    return { ok: false, message: errMsg };
   }
 }
 
 /**
- * UNLOCK (Mobilize) a bike
+ * UNLOCK (Mobilize) a bike via LocoNav API
+ * POST https://app.loconav.sensorise.net/integration/api/v1/vehicles/{vehicleUuid}/immobilizer_requests
+ * Body: { "value": "MOBILIZE" }
  */
 export async function unlockBike(bikeId) {
-  console.log(`[IoT] Attempting to UNLOCK bike_id=${bikeId} via Self-Hosted Server`);
+  console.log(`[IoT] Attempting to UNLOCK (MOBILIZE) bike_id=${bikeId} via LocoNav API`);
   try {
     const loconavUuid = await getLocoNavId(bikeId);
+    if (!loconavUuid) {
+      console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}`);
+      return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
+    }
+
     const response = await axios.post(
-      `${SELF_HOSTED_IOT_URL}/api/unlock`,
-      { bikeId, imei: loconavUuid || null },
-      { timeout: 10000 }
+      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+      { value: "MOBILIZE" },
+      {
+        headers: {
+          "User-Authentication": LOCONAV_TOKEN,
+          "Content-Type": "application/json"
+        },
+        timeout: 15000
+      }
     );
 
-    console.log(`[IoT] Unlock response from Self-Hosted Server:`, response.data);
-    return { ok: true, bikeId, action: "unlock", requestId: response.data?.requestId || "self-hosted-unlock" };
+    console.log(`[IoT] Unlock (MOBILIZE) response for bike ${bikeId}:`, response.data);
+    if (response.data?.data?.errors) {
+      const errTxt = typeof response.data.data.errors === 'string' 
+        ? response.data.data.errors 
+        : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
+      return {
+        ok: false,
+        message: errTxt,
+        bikeId,
+        action: "unlock"
+      };
+    }
+    const requestId = response.data?.data?.id || null;
+    return {
+      ok: true,
+      bikeId,
+      action: "unlock",
+      requestId: requestId ? String(requestId) : "loconav-unlock",
+      data: response.data?.data
+    };
   } catch (error) {
     console.error(`[IoT] Unlock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
-    return { ok: false, message: error.response?.data?.error || error.message || "IoT server error" };
+    const errMsg =
+      error.response?.data?.data?.errors?.[0]?.message ||
+      error.response?.data?.message ||
+      error.message ||
+      "LocoNav API error";
+    return { ok: false, message: errMsg };
   }
 }
 

@@ -6841,6 +6841,7 @@ export async function getUserDetail(req, res) {
       { data: paymentsData },
       { data: userData },
       { data: skipData },
+      { data: rentalData },
     ] = await Promise.all([
       // All subscription records newest first
       supabase
@@ -6859,7 +6860,7 @@ export async function getUserDetail(req, res) {
       // User basic info
       supabase
         .from("users")
-        .select("id, full_name, phone, email")
+        .select("id, full_name, phone, email, created_at")
         .eq("id", userId)
         .maybeSingle(),
 
@@ -6868,6 +6869,16 @@ export async function getUserDetail(req, res) {
         .from("rider_skipped_days")
         .select("id, rider_name, bike_id, skipped_start_date, skipped_end_date, days_skipped, reason, status, created_at")
         .order("created_at", { ascending: false }),
+
+      // Active rental / assigned bike
+      supabase
+        .from("rentals")
+        .select("id, bike_id, status, start_time, end_time, bikes(id, bike_code, name, is_locked, status, battery, location)")
+        .eq("user_id", userId)
+        .in("status", ["ongoing", "active"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     // Filter skip days by user name (rider_skipped_days doesn't have user_id)
@@ -6889,13 +6900,73 @@ export async function getUserDetail(req, res) {
 
     const subscriptions = (subsData || []).map(s => ({
       ...s,
-      plan_name: planMap[s.plan_id]?.display_name || planMap[s.plan_id]?.name || "Unknown Plan",
+      plan_name: planMap[s.plan_id]?.display_name || planMap[s.plan_id]?.name || "Weekly Plan",
       duration_days: planMap[s.plan_id]?.duration_days || 7,
     }));
+
+    // Comprehensive Status & Day Counter Calculation
+    const now = new Date();
+    const latestSub = subscriptions[0] || null;
+    const activeSub = subscriptions.find(s => s.status === "active" && new Date(s.end_date) >= now) || (latestSub?.status === "active" ? latestSub : null);
+    const targetSub = activeSub || latestSub;
+
+    let subStatus = "none";
+    let daysRemaining = 0;
+    let daysElapsed = 0;
+    let expiredDaysAgo = 0;
+    let totalPlanDays = targetSub?.duration_days || 7;
+    let percentUsed = 0;
+
+    if (targetSub) {
+      const end = new Date(targetSub.end_date);
+      const start = new Date(targetSub.start_date);
+      const isActuallyActive = end >= now && targetSub.status === "active";
+      subStatus = isActuallyActive ? "active" : "expired";
+
+      const msPerDay = 24 * 60 * 60 * 1000;
+      if (isActuallyActive) {
+        daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / msPerDay));
+        daysElapsed = Math.max(0, Math.floor((now.getTime() - start.getTime()) / msPerDay));
+        const totalDurationMs = Math.max(1, end.getTime() - start.getTime());
+        percentUsed = Math.min(100, Math.max(0, Math.round(((now.getTime() - start.getTime()) / totalDurationMs) * 100)));
+      } else {
+        expiredDaysAgo = Math.max(0, Math.floor((now.getTime() - end.getTime()) / msPerDay));
+        percentUsed = 100;
+      }
+    }
+
+    const totalDaysSubscribed = subscriptions.reduce((sum, s) => sum + (s.duration_days || 7), 0);
+    const totalAmountPaid = (paymentsData || [])
+      .filter(p => p.status === "success")
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const summary = {
+      hasSubscription: Boolean(targetSub),
+      status: subStatus, // "active" | "expired" | "none"
+      activeSub: targetSub || null,
+      daysRemaining,
+      daysElapsed,
+      expiredDaysAgo,
+      totalPlanDays,
+      percentUsed,
+      totalSubscriptionsCount: subscriptions.length,
+      totalDaysSubscribed,
+      totalAmountPaid,
+      assignedBike: rentalData?.bikes ? {
+        id: rentalData.bikes.id,
+        bike_code: rentalData.bikes.bike_code,
+        name: rentalData.bikes.name,
+        is_locked: rentalData.bikes.is_locked,
+        status: rentalData.bikes.status,
+        battery: rentalData.bikes.battery,
+        location: rentalData.bikes.location
+      } : null
+    };
 
     return res.json({
       success: true,
       user: userData,
+      summary,
       subscriptions,
       payments: paymentsData || [],
       skipDays,

@@ -365,40 +365,36 @@
       // Dynamic Real-time Calculations (client-side matching current IST)
       var now = new Date();
       var targetSub = summary.activeSub || subs[0] || null;
-      var isActive = false;
-      var daysLeft = 0;
-      var daysElapsed = 0;
-      var expiredAgo = 0;
-      var percentUsed = 0;
-
-      if (targetSub) {
-        var end = new Date(targetSub.end_date);
-        var start = new Date(targetSub.start_date);
-        isActive = (end >= now) && (targetSub.status === 'active');
-        var msPerDay = 24 * 60 * 60 * 1000;
-
-        if (isActive) {
-          var remainingMs = end.getTime() - now.getTime();
-          daysLeft = Math.max(0, Math.ceil(remainingMs / msPerDay));
-          daysElapsed = Math.max(0, Math.floor((now.getTime() - start.getTime()) / msPerDay));
-          var totalDuration = Math.max(1, end.getTime() - start.getTime());
-          percentUsed = Math.min(100, Math.max(0, Math.round(((now.getTime() - start.getTime()) / totalDuration) * 100)));
-        } else {
-          expiredAgo = Math.max(0, Math.floor((now.getTime() - end.getTime()) / msPerDay));
-          percentUsed = 100;
-        }
-      }
+      var isActive = Boolean(summary.isUserActive);
+      var isBlocked = Boolean(summary.isBlocked);
+      var daysLeft = summary.daysRemaining || 0;
+      var daysElapsed = summary.daysElapsed || 0;
+      var daysSinceInactive = summary.daysSinceInactive || 0;
+      var inactiveReason = summary.inactiveReason || '';
+      var inactiveDate = summary.inactiveDate ? fmtDate(summary.inactiveDate) : '—';
+      var percentUsed = summary.percentUsed || 0;
 
       // ── 1. Status Tab Rendering ──
       var statusHtml = '';
-      if (!targetSub) {
-        // No subscription
-        statusHtml = '<div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:30px;text-align:center;">'
-          + '<div style="font-size:36px;margin-bottom:8px;">⚪</div>'
-          + '<div style="font-size:16px;font-weight:700;color:#64748b;margin-bottom:6px;">No Active Subscription</div>'
-          + '<div style="font-size:13px;color:var(--text-muted);">This user has not activated or purchased any subscription plans yet.</div>'
+      if (isBlocked) {
+        // Explicitly Blocked / Inactive Account
+        statusHtml = '<div style="background:linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);border:1.5px solid #ef4444;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(239,68,68,0.1);">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:10px;">'
+          + '  <div>'
+          + '    <span style="background:#dc2626;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🚫 BLOCKED / INACTIVE USER</span>'
+          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#991b1b;">Account Marked Inactive</h3>'
+          + '    <div style="font-size:12px;color:#7f1d1d;">Marked inactive on ' + inactiveDate + '</div>'
+          + '  </div>'
+          + '  <div style="text-align:right;">'
+          + '    <div style="font-size:26px;font-weight:800;color:#dc2626;line-height:1;">' + daysSinceInactive + ' <span style="font-size:14px;font-weight:600;">Days Inactive</span></div>'
+          + '    <div style="font-size:11.5px;color:#991b1b;margin-top:4px;font-weight:600;">⚠️ Rider is completely blocked</div>'
+          + '  </div>'
+          + '</div>'
+          + '<div style="font-size:12px;color:#7f1d1d;background:#fecaca;padding:8px 12px;border-radius:8px;margin-top:10px;">'
+          + '  <strong>Reason:</strong> ' + inactiveReason
+          + '</div>'
           + '</div>';
-      } else if (isActive) {
+      } else if (isActive && targetSub) {
         // Active Subscription
         statusHtml = '<div style="background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);border:1px solid #86efac;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(34,197,94,0.08);">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">'
@@ -420,26 +416,60 @@
           + '  <span>Auto-Renew: ' + (targetSub.auto_renew ? '✅ Yes' : '❌ No') + '</span>'
           + '</div>'
           + '</div>';
-      } else {
-        // Expired Subscription
-        statusHtml = '<div style="background:linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%);border:1px solid #fca5a5;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(239,68,68,0.08);">'
+      } else if (targetSub && targetSub.status === 'cancelled') {
+        // Cancelled / Overridden to Inactive
+        statusHtml = '<div style="background:linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%);border:1.5px solid #f87171;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(239,68,68,0.08);">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">'
           + '  <div>'
-          + '    <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🔴 EXPIRED PLAN</span>'
-          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7f1d1d;">' + (targetSub.plan_name || 'Weekly Plan') + '</h3>'
-          + '    <div style="font-size:12px;color:#991b1b;">Ended on ' + fmtDate(targetSub.end_date) + '</div>'
+          + '    <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🔴 MARKED INACTIVE</span>'
+          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7f1d1d;">Subscription Cancelled / Inactive</h3>'
+          + '    <div style="font-size:12px;color:#991b1b;">Cancelled on ' + inactiveDate + '</div>'
           + '  </div>'
           + '  <div style="text-align:right;">'
-          + '    <div style="font-size:24px;font-weight:800;color:#b91c1c;line-height:1;">' + expiredAgo + ' <span style="font-size:14px;font-weight:600;">Day' + (expiredAgo === 1 ? '' : 's') + ' Ago</span></div>'
-          + '    <div style="font-size:11.5px;color:#991b1b;margin-top:4px;font-weight:600;">⚠️ Renewal Required</div>'
+          + '    <div style="font-size:26px;font-weight:800;color:#dc2626;line-height:1;">' + daysSinceInactive + ' <span style="font-size:14px;font-weight:600;">Days Inactive</span></div>'
+          + '    <div style="font-size:11.5px;color:#991b1b;margin-top:4px;font-weight:600;">⚠️ Override to Inactive</div>'
           + '  </div>'
           + '</div>'
+          + '<div style="font-size:12px;color:#7f1d1d;background:#fee2e2;padding:8px 12px;border-radius:8px;margin-top:8px;">'
+          + '  <strong>Reason:</strong> ' + (inactiveReason || 'Admin Override')
+          + '</div>'
+          + '</div>';
+      } else if (targetSub) {
+        // Expired Subscription (Inactive due to Expiry)
+        statusHtml = '<div style="background:linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);border:1.5px solid #fb923c;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(249,115,22,0.08);">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">'
+          + '  <div>'
+          + '    <span style="background:#ea580c;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">⏳ INACTIVE (EXPIRED)</span>'
+          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7c2d12;">' + (targetSub.plan_name || 'Weekly Plan') + '</h3>'
+          + '    <div style="font-size:12px;color:#9a3412;">Plan expired on ' + fmtDate(targetSub.end_date) + '</div>'
+          + '  </div>'
+          + '  <div style="text-align:right;">'
+          + '    <div style="font-size:26px;font-weight:800;color:#c2410c;line-height:1;">' + daysSinceInactive + ' <span style="font-size:14px;font-weight:600;">Days Inactive</span></div>'
+          + '    <div style="font-size:11.5px;color:#9a3412;margin-top:4px;font-weight:600;">⚠️ Plan Expired (' + daysSinceInactive + 'd ago)</div>'
+          + '  </div>'
+          + '</div>'
+          + '<div style="font-size:12px;color:#9a3412;background:#fed7aa;padding:8px 12px;border-radius:8px;margin-top:8px;">'
+          + '  <strong>Status:</strong> Inactive due to expired subscription plan. A payment / plan renewal is required.'
+          + '</div>'
+          + '</div>';
+      } else {
+        // No subscription ever
+        statusHtml = '<div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;padding:24px;text-align:center;margin-bottom:16px;">'
+          + '<div style="font-size:32px;margin-bottom:6px;">⚪</div>'
+          + '<div style="font-size:16px;font-weight:700;color:#475569;margin-bottom:4px;">Inactive — No Subscription Plan</div>'
+          + '<div style="font-size:22px;font-weight:800;color:#64748b;margin:6px 0;">' + daysSinceInactive + ' Days Inactive</div>'
+          + '<div style="font-size:12px;color:var(--text-muted);">Registered on ' + inactiveDate + '. User has never purchased or activated a plan.</div>'
           + '</div>';
       }
 
       // Quick KPI Stats Grid
       var bikeInfo = summary.assignedBike;
       statusHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;margin-top:12px;">'
+        + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
+        + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">⏱ Status Duration</div>'
+        + '    <div style="font-size:15px;font-weight:700;color:' + (isActive ? '#22c55e' : '#ef4444') + ';">' + (isActive ? daysLeft + ' Days Remaining' : daysSinceInactive + ' Days Inactive') + '</div>'
+        + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + (isActive ? 'Active Plan' : 'Inactive Status') + '</div>'
+        + '  </div>'
         + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
         + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">🚲 Assigned Bike</div>'
         + '    <div style="font-size:15px;font-weight:700;color:var(--text-main);">' + (bikeInfo ? (bikeInfo.bike_code || 'Bike #' + bikeInfo.id) : '<span style="color:var(--text-muted);font-weight:400;">None Assigned</span>') + '</div>'
@@ -454,11 +484,6 @@
         + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">💰 Total Paid</div>'
         + '    <div style="font-size:15px;font-weight:700;color:#22c55e;">₹' + Number(summary.totalAmountPaid || 0).toLocaleString('en-IN') + '</div>'
         + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Across ' + pays.filter(function(p){return p.status==='success';}).length + ' payments</div>'
-        + '  </div>'
-        + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
-        + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">⏭ Skip Days</div>'
-        + '    <div style="font-size:15px;font-weight:700;color:var(--text-main);">' + skips.length + ' Recorded</div>'
-        + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + skips.reduce(function(a,b){return a + Number(b.days_skipped||0);},0) + ' days adjusted</div>'
         + '  </div>'
         + '</div>';
 

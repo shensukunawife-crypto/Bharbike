@@ -6904,35 +6904,73 @@ export async function getUserDetail(req, res) {
       duration_days: planMap[s.plan_id]?.duration_days || 7,
     }));
 
-    // Comprehensive Status & Day Counter Calculation
+    // Comprehensive Status & Inactivity Day Counter Calculation
     const now = new Date();
     const latestSub = subscriptions[0] || null;
     const activeSub = subscriptions.find(s => s.status === "active" && new Date(s.end_date) >= now) || (latestSub?.status === "active" ? latestSub : null);
     const targetSub = activeSub || latestSub;
 
+    const isBlocked = userData?.is_blocked === true || userData?.status === "blocked" || userData?.status === "inactive";
     let subStatus = "none";
+    let isUserActive = false;
     let daysRemaining = 0;
     let daysElapsed = 0;
     let expiredDaysAgo = 0;
+    let daysSinceInactive = 0;
+    let inactiveDate = null;
+    let inactiveReason = "";
     let totalPlanDays = targetSub?.duration_days || 7;
     let percentUsed = 0;
 
-    if (targetSub) {
+    function getISTDayDiff(d1, d2) {
+      if (!d1 || !d2) return 0;
+      const s1 = new Date(new Date(d1).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      const s2 = new Date(new Date(d2).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      s1.setHours(0,0,0,0);
+      s2.setHours(0,0,0,0);
+      return Math.round((s1.getTime() - s2.getTime()) / (24 * 60 * 60 * 1000));
+    }
+
+    if (isBlocked) {
+      isUserActive = false;
+      subStatus = "inactive";
+      inactiveReason = "Account Marked Blocked / Inactive by Admin";
+      inactiveDate = userData?.updated_at ? new Date(userData.updated_at) : new Date(userData?.created_at || now);
+      daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+    } else if (targetSub) {
       const end = new Date(targetSub.end_date);
       const start = new Date(targetSub.start_date);
       const isActuallyActive = end >= now && targetSub.status === "active";
-      subStatus = isActuallyActive ? "active" : "expired";
 
-      const msPerDay = 24 * 60 * 60 * 1000;
       if (isActuallyActive) {
-        daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / msPerDay));
-        daysElapsed = Math.max(0, Math.floor((now.getTime() - start.getTime()) / msPerDay));
+        isUserActive = true;
+        subStatus = "active";
+        daysRemaining = Math.max(0, getISTDayDiff(end, now));
+        daysElapsed = Math.max(0, getISTDayDiff(now, start));
         const totalDurationMs = Math.max(1, end.getTime() - start.getTime());
         percentUsed = Math.min(100, Math.max(0, Math.round(((now.getTime() - start.getTime()) / totalDurationMs) * 100)));
+      } else if (targetSub.status === "cancelled") {
+        isUserActive = false;
+        subStatus = "inactive";
+        inactiveReason = targetSub.cancellation_reason || "Subscription Cancelled / Marked Inactive by Admin";
+        inactiveDate = targetSub.cancelled_at ? new Date(targetSub.cancelled_at) : new Date(targetSub.updated_at || targetSub.created_at);
+        daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+        percentUsed = 100;
       } else {
-        expiredDaysAgo = Math.max(0, Math.floor((now.getTime() - end.getTime()) / msPerDay));
+        isUserActive = false;
+        subStatus = "expired";
+        inactiveReason = "Subscription Plan Expired (No Active Plan)";
+        inactiveDate = end;
+        expiredDaysAgo = Math.max(0, getISTDayDiff(now, end));
+        daysSinceInactive = expiredDaysAgo;
         percentUsed = 100;
       }
+    } else {
+      isUserActive = false;
+      subStatus = "none";
+      inactiveReason = "No Subscription Ever Activated";
+      inactiveDate = userData?.created_at ? new Date(userData.created_at) : now;
+      daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
     }
 
     const totalDaysSubscribed = subscriptions.reduce((sum, s) => sum + (s.duration_days || 7), 0);
@@ -6942,11 +6980,16 @@ export async function getUserDetail(req, res) {
 
     const summary = {
       hasSubscription: Boolean(targetSub),
-      status: subStatus, // "active" | "expired" | "none"
+      status: subStatus, // "active" | "expired" | "inactive" | "none"
+      isUserActive,
+      isBlocked,
       activeSub: targetSub || null,
       daysRemaining,
       daysElapsed,
       expiredDaysAgo,
+      daysSinceInactive,
+      inactiveDate: inactiveDate ? inactiveDate.toISOString() : null,
+      inactiveReason,
       totalPlanDays,
       percentUsed,
       totalSubscriptionsCount: subscriptions.length,

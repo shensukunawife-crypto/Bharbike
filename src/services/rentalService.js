@@ -11,7 +11,7 @@ import * as iot from "./iotService.js";
 import * as earningsService from "./earningsService.js";
 import { createUserNotification } from "./notificationService.js";
 import { getWalletBalance, deductMoney } from "./walletService.js";
-import { hasActiveSubscription } from "./subscriptionService.js";
+import { hasActiveSubscription, hasPassedGracePeriod } from "./subscriptionService.js";
 
 const PLAN_MS = {
   [RentalPlan.daily]: 24 * 60 * 60 * 1000,
@@ -313,27 +313,35 @@ export async function expireRentalsPastEnd() {
   const results = [];
   for (const r of due) {
     try {
-      // Check if user has an active subscription — if yes, extend rental to match
-      // instead of expiring it. The subscription end_date is the real deadline.
-      const { data: activeSub } = await supabase
+      // 1. Check if user has an active or recent subscription
+      const { data: latestSub } = await supabase
         .from("user_subscriptions")
-        .select("end_date")
+        .select("end_date, status")
         .eq("user_id", r.user_id)
-        .eq("status", "active")
-        .gt("end_date", now.toISOString())
+        .order("end_date", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (activeSub && activeSub.end_date) {
-        // Extend rental end_time to subscription end_date
-        await supabase.from("rentals").update({
-          end_time: activeSub.end_date,
-          updated_at: new Date().toISOString()
-        }).eq("id", r.id);
-        console.log(`[rentalService] Extended rental ${r.id} to subscription end ${activeSub.end_date} (user has active plan)`);
-        continue; // Skip expiry for this rental
+      if (latestSub && latestSub.end_date) {
+        // If user has an active subscription in progress, extend the rental end_time
+        if (latestSub.status === "active" && new Date(latestSub.end_date) > now) {
+          await supabase.from("rentals").update({
+            end_time: latestSub.end_date,
+            updated_at: new Date().toISOString()
+          }).eq("id", r.id);
+          console.log(`[rentalService] Extended rental ${r.id} to subscription end ${latestSub.end_date} (user has active plan)`);
+          continue;
+        }
+
+        // Check if user is still within the 9:30 AM IST next-day grace period!
+        // Grace period allows riders to finish their night and renew until 9:30 AM next morning.
+        if (!hasPassedGracePeriod(latestSub.end_date)) {
+          // Still in grace period — do NOT expire rental or lock the bike yet!
+          continue;
+        }
       }
 
-      // No active subscription — expire the rental normally
+      // Past 9:30 AM grace period (or no subscription) — expire the rental and lock the bike
       results.push(await finalizeRental(r.id, RentalStatus.expired));
     } catch (e) {
       console.error("[rental expiry]", r.id, e.message);

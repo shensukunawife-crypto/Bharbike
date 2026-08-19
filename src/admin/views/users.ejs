@@ -377,6 +377,8 @@
       // Inactive money calculation: ₹1,950 / 7 = ₹278.57 / day
       var dailyRate = summary.dailyRate || 278.57;
       var overdueAmount = summary.overdueAmount || (!isActive && daysSinceInactive > 0 ? Number((daysSinceInactive * (1950 / 7)).toFixed(2)) : 0);
+      var planExpiredDateFormatted = summary.planExpiredDate ? fmtDate(summary.planExpiredDate) : '—';
+      var markedInactiveDateFormatted = summary.markedInactiveDate ? fmtDate(summary.markedInactiveDate) : inactiveDate;
 
       // Money dues banner HTML (shown for all inactive riders regardless of bike assignment)
       var moneyDuesBanner = (!isActive && daysSinceInactive > 0)
@@ -384,6 +386,7 @@
           + '  <div>'
           + '    <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;">💰 CALCULATED INACTIVE DUES TO PAY</div>'
           + '    <div style="font-size:12.5px;color:#78350f;margin-top:2px;">Rate: <strong>₹278.57 / day</strong> (₹1,950 / 7-day rate) × <strong>' + daysSinceInactive + ' Inactive Day' + (daysSinceInactive === 1 ? '' : 's') + '</strong></div>'
+          + '    <div style="font-size:11px;color:#92400e;margin-top:2px;">📅 Counted from Plan Expiry (<strong>' + planExpiredDateFormatted + '</strong>) ➔ Marked Inactive (<strong>' + markedInactiveDateFormatted + '</strong>)</div>'
           + '  </div>'
           + '  <div style="text-align:right;">'
           + '    <div style="font-size:24px;font-weight:800;color:#92400e;line-height:1;">₹' + Number(overdueAmount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</div>'
@@ -401,7 +404,7 @@
           + '  <div>'
           + '    <span style="background:#dc2626;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🚫 BLOCKED / INACTIVE USER</span>'
           + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#991b1b;">Account Marked Inactive</h3>'
-          + '    <div style="font-size:12px;color:#7f1d1d;">Marked inactive on ' + inactiveDate + '</div>'
+          + '    <div style="font-size:12px;color:#7f1d1d;">Marked inactive on ' + markedInactiveDateFormatted + '</div>'
           + '  </div>'
           + '  <div style="text-align:right;">'
           + '    <div style="font-size:26px;font-weight:800;color:#dc2626;line-height:1;">' + daysSinceInactive + ' <span style="font-size:14px;font-weight:600;">Days Inactive</span></div>'
@@ -442,11 +445,11 @@
           + '  <div>'
           + '    <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🔴 MARKED INACTIVE</span>'
           + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7f1d1d;">Subscription Cancelled / Inactive</h3>'
-          + '    <div style="font-size:12px;color:#991b1b;">Cancelled on ' + inactiveDate + '</div>'
+          + '    <div style="font-size:12px;color:#991b1b;">Plan Expired: <strong>' + planExpiredDateFormatted + '</strong> | Marked Inactive: <strong>' + markedInactiveDateFormatted + '</strong></div>'
           + '  </div>'
           + '  <div style="text-align:right;">'
           + '    <div style="font-size:26px;font-weight:800;color:#dc2626;line-height:1;">' + daysSinceInactive + ' <span style="font-size:14px;font-weight:600;">Days Inactive</span></div>'
-          + '    <div style="font-size:11.5px;color:#991b1b;margin-top:4px;font-weight:600;">⚠️ Override to Inactive</div>'
+          + '    <div style="font-size:11.5px;color:#991b1b;margin-top:4px;font-weight:600;">⚠️ Counted from Plan Expiry to Admin Inactive</div>'
           + '  </div>'
           + '</div>'
           + '<div style="font-size:12px;color:#7f1d1d;background:#fee2e2;padding:8px 12px;border-radius:8px;margin-top:8px;">'

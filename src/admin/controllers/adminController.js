@@ -6931,12 +6931,25 @@ export async function getUserDetail(req, res) {
       return Math.round((s1.getTime() - s2.getTime()) / (24 * 60 * 60 * 1000));
     }
 
+    let planExpiredDateStr = null;
+    let markedInactiveDateStr = null;
+
     if (isBlocked) {
       isUserActive = false;
       subStatus = "inactive";
       inactiveReason = "Account Marked Blocked / Inactive by Admin";
       inactiveDate = userData?.updated_at ? new Date(userData.updated_at) : new Date(userData?.created_at || now);
-      daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+      markedInactiveDateStr = inactiveDate.toISOString();
+      
+      // If user had a subscription, count from its expiration date to the date admin marked them inactive/blocked
+      if (targetSub?.end_date) {
+        const planExpiredDate = new Date(targetSub.end_date);
+        planExpiredDateStr = planExpiredDate.toISOString();
+        const diff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+        daysSinceInactive = diff > 0 ? diff : Math.max(0, getISTDayDiff(now, inactiveDate));
+      } else {
+        daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+      }
     } else if (targetSub) {
       const end = new Date(targetSub.end_date);
       const start = new Date(targetSub.start_date);
@@ -6954,13 +6967,22 @@ export async function getUserDetail(req, res) {
         subStatus = "inactive";
         inactiveReason = targetSub.cancellation_reason || "Subscription Cancelled / Marked Inactive by Admin";
         inactiveDate = targetSub.cancelled_at ? new Date(targetSub.cancelled_at) : new Date(targetSub.updated_at || targetSub.created_at);
-        daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+        markedInactiveDateStr = inactiveDate.toISOString();
+
+        // Count from when subscription expired (end_date) till when admin marked inactive (inactiveDate)
+        const planExpiredDate = new Date(targetSub.end_date);
+        planExpiredDateStr = planExpiredDate.toISOString();
+        const daysFromExpiryToInactive = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+        
+        // If inactiveDate is after planExpiredDate, count that exact interval; otherwise count days since marked inactive
+        daysSinceInactive = daysFromExpiryToInactive > 0 ? daysFromExpiryToInactive : Math.max(0, getISTDayDiff(now, inactiveDate));
         percentUsed = 100;
       } else {
         isUserActive = false;
         subStatus = "expired";
         inactiveReason = "Subscription Plan Expired (No Active Plan)";
         inactiveDate = end;
+        planExpiredDateStr = end.toISOString();
         expiredDaysAgo = Math.max(0, getISTDayDiff(now, end));
         daysSinceInactive = 0; // Expired is not marked None/Inactive
         percentUsed = 100;
@@ -6970,6 +6992,7 @@ export async function getUserDetail(req, res) {
       subStatus = "none";
       inactiveReason = "No Subscription Ever Activated";
       inactiveDate = userData?.created_at ? new Date(userData.created_at) : now;
+      markedInactiveDateStr = inactiveDate.toISOString();
       daysSinceInactive = 0;
     }
 
@@ -6995,6 +7018,8 @@ export async function getUserDetail(req, res) {
       expiredDaysAgo,
       daysSinceInactive,
       inactiveDate: inactiveDate ? inactiveDate.toISOString() : null,
+      planExpiredDate: planExpiredDateStr,
+      markedInactiveDate: markedInactiveDateStr,
       inactiveReason,
       dailyRate,
       overdueAmount,

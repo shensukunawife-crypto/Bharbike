@@ -50,7 +50,7 @@ function getDemoProfile(id) {
 export const getUserById = async (req, res) => {
   const id = req.params.id;
 
-  // Demo OTP users have non-UUID IDs like "demo-919325296264"
+  // Demo OTP users have non-UUID IDs like "demo-9191679 69692"
   // Supabase profiles table requires UUID, so return mock data for demo users
   if (DEMO_ID_RE.test(id)) {
     return res.json(shapePublicUser(getDemoProfile(id)));

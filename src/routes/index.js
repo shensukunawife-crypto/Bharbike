@@ -2,7 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import axios from "axios";
 
-/** Demo OTP users have non-UUID IDs like "demo-919325296264" — Supabase rejects these. */
+/** Demo OTP users have non-UUID IDs like "demo-9191679 69692" — Supabase rejects these. */
 const isDemoUser = (id) => /^demo-/i.test(String(id || ""));
 
 import authRoutes from "./auth.routes.js";

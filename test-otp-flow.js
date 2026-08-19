@@ -7,7 +7,7 @@ async function runOtpVerificationTest() {
   console.log("🧪 STARTING PROGRAMMATIC OTP VERIFICATION TEST");
   console.log("==================================================");
 
-  const testPhone = "+919325296264";
+  const testPhone = "+91 91679 69692";
   const dummyIp = "127.0.0.1";
 
   // 1. Request OTP (this will trigger Exotel sending)

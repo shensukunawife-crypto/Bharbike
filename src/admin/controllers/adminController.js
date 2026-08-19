@@ -6941,12 +6941,12 @@ export async function getUserDetail(req, res) {
       inactiveDate = userData?.updated_at ? new Date(userData.updated_at) : new Date(userData?.created_at || now);
       markedInactiveDateStr = inactiveDate.toISOString();
       
-      // If user had a subscription, count from its expiration date to the date admin marked them inactive/blocked
+      // If user had a subscription, count from its expiration date to the date admin marked them inactive/blocked (minus 1 day next-morning return grace)
       if (targetSub?.end_date) {
         const planExpiredDate = new Date(targetSub.end_date);
         planExpiredDateStr = planExpiredDate.toISOString();
-        const diff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
-        daysSinceInactive = diff > 0 ? diff : Math.max(0, getISTDayDiff(now, inactiveDate));
+        const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+        daysSinceInactive = Math.max(0, rawDiff - 1);
       } else {
         daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
       }
@@ -6970,12 +6970,11 @@ export async function getUserDetail(req, res) {
         markedInactiveDateStr = inactiveDate.toISOString();
 
         // Count from when subscription expired (end_date) till when admin marked inactive (inactiveDate)
+        // E.g. Plan 10-16, returned 18th -> 17th is held unpaid -> exactly 1 Day Pending (rawDiff 2 - 1 = 1)
         const planExpiredDate = new Date(targetSub.end_date);
         planExpiredDateStr = planExpiredDate.toISOString();
-        const daysFromExpiryToInactive = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
-        
-        // If inactiveDate is after planExpiredDate, count that exact interval; otherwise count days since marked inactive
-        daysSinceInactive = daysFromExpiryToInactive > 0 ? daysFromExpiryToInactive : Math.max(0, getISTDayDiff(now, inactiveDate));
+        const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+        daysSinceInactive = Math.max(0, rawDiff - 1);
         percentUsed = 100;
       } else {
         isUserActive = false;

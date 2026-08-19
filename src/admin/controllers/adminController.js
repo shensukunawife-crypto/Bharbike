@@ -6860,7 +6860,7 @@ export async function getUserDetail(req, res) {
       // User basic info
       supabase
         .from("users")
-        .select("id, full_name, phone, email, created_at")
+        .select("id, full_name, phone, email, created_at, is_blocked, status, updated_at")
         .eq("id", userId)
         .maybeSingle(),
 

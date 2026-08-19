@@ -6962,7 +6962,7 @@ export async function getUserDetail(req, res) {
         inactiveReason = "Subscription Plan Expired (No Active Plan)";
         inactiveDate = end;
         expiredDaysAgo = Math.max(0, getISTDayDiff(now, end));
-        daysSinceInactive = expiredDaysAgo;
+        daysSinceInactive = 0; // Expired is not marked None/Inactive
         percentUsed = 100;
       }
     } else {
@@ -6970,7 +6970,7 @@ export async function getUserDetail(req, res) {
       subStatus = "none";
       inactiveReason = "No Subscription Ever Activated";
       inactiveDate = userData?.created_at ? new Date(userData.created_at) : now;
-      daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+      daysSinceInactive = 0;
     }
 
     const totalDaysSubscribed = subscriptions.reduce((sum, s) => sum + (s.duration_days || 7), 0);
@@ -6978,9 +6978,9 @@ export async function getUserDetail(req, res) {
       .filter(p => p.status === "success")
       .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-    // Money calculation for inactive users: ₹1,950 / 7 days = ₹278.57 per day
+    // Money calculation ONLY for users explicitly marked None / Inactive: ₹1,950 / 7 days = ₹278.57 per day
     const dailyRate = 278.57;
-    const overdueAmount = (!isUserActive && daysSinceInactive > 0)
+    const overdueAmount = (subStatus === "inactive" && daysSinceInactive > 0)
       ? Number((daysSinceInactive * (1950 / 7)).toFixed(2))
       : 0;
 

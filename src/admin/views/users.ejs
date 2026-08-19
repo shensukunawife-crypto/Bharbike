@@ -374,6 +374,24 @@
       var inactiveDate = summary.inactiveDate ? fmtDate(summary.inactiveDate) : '—';
       var percentUsed = summary.percentUsed || 0;
 
+      // Inactive money calculation: ₹1,950 / 7 = ₹278.57 / day
+      var dailyRate = summary.dailyRate || 278.57;
+      var overdueAmount = summary.overdueAmount || (!isActive && daysSinceInactive > 0 ? Number((daysSinceInactive * (1950 / 7)).toFixed(2)) : 0);
+
+      // Money dues banner HTML (shown for all inactive riders regardless of bike assignment)
+      var moneyDuesBanner = (!isActive && daysSinceInactive > 0)
+        ? '<div style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);border:1.5px solid #f59e0b;border-radius:10px;padding:14px 18px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;box-shadow:0 2px 6px rgba(245,158,11,0.12);">'
+          + '  <div>'
+          + '    <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;">💰 CALCULATED INACTIVE DUES TO PAY</div>'
+          + '    <div style="font-size:12.5px;color:#78350f;margin-top:2px;">Rate: <strong>₹278.57 / day</strong> (₹1,950 / 7-day rate) × <strong>' + daysSinceInactive + ' Inactive Day' + (daysSinceInactive === 1 ? '' : 's') + '</strong></div>'
+          + '  </div>'
+          + '  <div style="text-align:right;">'
+          + '    <div style="font-size:24px;font-weight:800;color:#92400e;line-height:1;">₹' + Number(overdueAmount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</div>'
+          + '    <div style="font-size:11px;color:#78350f;margin-top:3px;font-weight:600;">Amount to Collect</div>'
+          + '  </div>'
+          + '</div>'
+        : '';
+
       // ── 1. Status Tab Rendering ──
       var statusHtml = '';
       if (isBlocked) {
@@ -393,6 +411,7 @@
           + '<div style="font-size:12px;color:#7f1d1d;background:#fecaca;padding:8px 12px;border-radius:8px;margin-top:10px;">'
           + '  <strong>Reason:</strong> ' + inactiveReason
           + '</div>'
+          + moneyDuesBanner
           + '</div>';
       } else if (isActive && targetSub) {
         // Active Subscription
@@ -433,6 +452,7 @@
           + '<div style="font-size:12px;color:#7f1d1d;background:#fee2e2;padding:8px 12px;border-radius:8px;margin-top:8px;">'
           + '  <strong>Reason:</strong> ' + (inactiveReason || 'Admin Override')
           + '</div>'
+          + moneyDuesBanner
           + '</div>';
       } else if (targetSub) {
         // Expired Subscription (Inactive due to Expiry)
@@ -451,6 +471,7 @@
           + '<div style="font-size:12px;color:#9a3412;background:#fed7aa;padding:8px 12px;border-radius:8px;margin-top:8px;">'
           + '  <strong>Status:</strong> Inactive due to expired subscription plan. A payment / plan renewal is required.'
           + '</div>'
+          + moneyDuesBanner
           + '</div>';
       } else {
         // No subscription ever
@@ -459,6 +480,7 @@
           + '<div style="font-size:16px;font-weight:700;color:#475569;margin-bottom:4px;">Inactive — No Subscription Plan</div>'
           + '<div style="font-size:22px;font-weight:800;color:#64748b;margin:6px 0;">' + daysSinceInactive + ' Days Inactive</div>'
           + '<div style="font-size:12px;color:var(--text-muted);">Registered on ' + inactiveDate + '. User has never purchased or activated a plan.</div>'
+          + moneyDuesBanner
           + '</div>';
       }
 
@@ -469,6 +491,11 @@
         + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">⏱ Status Duration</div>'
         + '    <div style="font-size:15px;font-weight:700;color:' + (isActive ? '#22c55e' : '#ef4444') + ';">' + (isActive ? daysLeft + ' Days Remaining' : daysSinceInactive + ' Days Inactive') + '</div>'
         + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + (isActive ? 'Active Plan' : 'Inactive Status') + '</div>'
+        + '  </div>'
+        + '  <div style="background:var(--bg-card);border:1.5px solid ' + (!isActive && overdueAmount > 0 ? '#f59e0b' : 'var(--border)') + ';border-radius:10px;padding:14px;">'
+        + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">💰 Overdue Dues</div>'
+        + '    <div style="font-size:15px;font-weight:700;color:' + (!isActive && overdueAmount > 0 ? '#d97706' : '#22c55e') + ';">' + (!isActive && overdueAmount > 0 ? '₹' + Number(overdueAmount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '₹0.00 (No Dues)') + '</div>'
+        + '    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + (!isActive && daysSinceInactive > 0 ? daysSinceInactive + 'd × ₹278.57/day' : 'Account active') + '</div>'
         + '  </div>'
         + '  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px;">'
         + '    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">🚲 Assigned Bike</div>'

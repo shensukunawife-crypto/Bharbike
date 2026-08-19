@@ -6978,6 +6978,12 @@ export async function getUserDetail(req, res) {
       .filter(p => p.status === "success")
       .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
+    // Money calculation for inactive users: ₹1,950 / 7 days = ₹278.57 per day
+    const dailyRate = 278.57;
+    const overdueAmount = (!isUserActive && daysSinceInactive > 0)
+      ? Number((daysSinceInactive * (1950 / 7)).toFixed(2))
+      : 0;
+
     const summary = {
       hasSubscription: Boolean(targetSub),
       status: subStatus, // "active" | "expired" | "inactive" | "none"
@@ -6990,6 +6996,8 @@ export async function getUserDetail(req, res) {
       daysSinceInactive,
       inactiveDate: inactiveDate ? inactiveDate.toISOString() : null,
       inactiveReason,
+      dailyRate,
+      overdueAmount,
       totalPlanDays,
       percentUsed,
       totalSubscriptionsCount: subscriptions.length,

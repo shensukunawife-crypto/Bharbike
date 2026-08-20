@@ -15,6 +15,7 @@ import Groq from "groq-sdk";
 import { logAdminAction } from "../../utils/adminAudit.js";
 import { logAdminAction as fileLogAdminAction } from "../../utils/auditLogger.js";
 import { nowIST, addISTDays } from "../../utils/istTime.js";
+import { getPendingLockPool, runLockPoolSweep } from "../../jobs/lockPoolJob.js";
 
 
 function parseIST(dateStr) {
@@ -6136,14 +6137,23 @@ export async function saveSocials(req, res) {
 
 export async function bikeLockLogsPage(req, res) {
   try {
-    const { data: logs, error } = await supabase
-      .from("bike_lock_logs")
-      .select(`
-        *,
-        bikes ( bike_code, name )
-      `)
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const [
+      { data: logs, error },
+      pendingPool
+    ] = await Promise.all([
+      supabase
+        .from("bike_lock_logs")
+        .select(`
+          *,
+          bikes ( bike_code, name )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(500),
+      getPendingLockPool().catch(err => {
+        console.warn("[bikeLockLogsPage] pendingPool error:", err.message);
+        return [];
+      })
+    ]);
 
     if (error) throw error;
 
@@ -6166,14 +6176,26 @@ export async function bikeLockLogsPage(req, res) {
     }));
 
     return renderPage(res, {
-      title: "Bike Lock Logs",
+      title: "Bike Lock Logs & Lock Pool",
       active: "lock-logs",
       bodyView: "lock-logs",
-      logs: populatedLogs
+      logs: populatedLogs,
+      pendingPool: pendingPool || []
     });
   } catch (error) {
     console.error("[adminController.bikeLockLogsPage] failed", error);
     return res.status(500).render("error", { message: "Failed to load bike lock logs", layout: false });
+  }
+}
+
+export async function forceRetryLockPool(req, res) {
+  try {
+    console.log("[admin.forceRetryLockPool] Admin triggered manual lock pool retry sweep");
+    const result = await runLockPoolSweep();
+    return res.json({ success: true, message: `Lock pool sweep executed: ${result.locked} bike(s) locked.`, result });
+  } catch (err) {
+    console.error("[admin.forceRetryLockPool] failed:", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed to execute lock pool sweep" });
   }
 }
 

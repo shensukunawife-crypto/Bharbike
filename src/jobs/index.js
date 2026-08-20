@@ -3,6 +3,7 @@ import { runRentalExpirySweep } from "./rentalExpiryJob.js";
 import { runGpsRefreshJob } from "./gpsRefreshJob.js";
 import { runSubscriptionExpirySweep, runSubscriptionWarningSweep } from "./subscriptionExpiryJob.js";
 import { runBrainSweep } from "./brainSweepJob.js";
+import { runLockPoolSweep } from "./lockPoolJob.js";
 
 export function startScheduledJobs() {
   cron.schedule("* * * * *", async () => {
@@ -54,5 +55,15 @@ export function startScheduledJobs() {
     }
   });
   console.log("[jobs] Scheduled: proactive Brain subscription sweep (every 2 hours)");
+
+  // Run Pending Lock Pool sweep every 3 minutes (monitors offline expired bikes and locks on wake/motion)
+  cron.schedule("*/3 * * * *", async () => {
+    try {
+      await runLockPoolSweep();
+    } catch (e) {
+      console.error("[jobs] Lock pool sweep failed", e);
+    }
+  });
+  console.log("[jobs] Scheduled: Pending Lock Pool smart retry sweep (every 3 minutes)");
 }
 

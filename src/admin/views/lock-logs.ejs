@@ -44,6 +44,100 @@
     animation: logsPulse 1.8s infinite;
   }
 
+  /* KPI Cards Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .kpi-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: 0.5px;
+  }
+  .kpi-value {
+    font-size: 24px;
+    font-weight: 800;
+    margin-top: 4px;
+    line-height: 1.1;
+  }
+
+  /* Pending Pool Section */
+  .pool-section {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1.5px solid #f59e0b;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);
+  }
+  .pool-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .pool-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #92400e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+  .pool-badge {
+    background: #f59e0b;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .btn-retry-sweep {
+    background: #d97706;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+  .btn-retry-sweep:hover {
+    background: #b45309;
+    transform: translateY(-1px);
+  }
+  .pool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .pool-card {
+    background: #fff;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
   /* Filter Controls */
   .logs-controls {
     display: flex;
@@ -186,21 +280,6 @@
     border: 1px dashed #cbd5e1;
     border-radius: 16px;
   }
-  .empty-state i {
-    font-size: 48px;
-    color: #94a3b8;
-    margin-bottom: 16px;
-  }
-  .empty-state h3 {
-    margin: 0 0 8px;
-    font-size: 18px;
-    color: #1e293b;
-  }
-  .empty-state p {
-    margin: 0;
-    color: #64748b;
-    font-size: 14px;
-  }
 
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(10px); }
@@ -216,30 +295,105 @@
 <div class="logs-shell">
   <div class="logs-head">
     <div class="logs-head-title">
-      <h2>IoT Lock Logs</h2>
-      <p>Tracking all lock and unlock events across the fleet (Latest 500)</p>
+      <h2>IoT Lock Logs & Pending Lock Pool</h2>
+      <p>Real-time audit trail of all LocoNav hardware commands and smart auto-retries</p>
     </div>
     <div class="logs-sync-badge">
-      <span class="logs-sync-dot"></span> Live Data
+      <span class="logs-sync-dot"></span> Live Sync Active
     </div>
+  </div>
+
+  <% 
+    const pool = pendingPool || [];
+    const logList = logs || [];
+    const successLocks = logList.filter(l => l.action === 'lock' && l.success).length;
+    const successUnlocks = logList.filter(l => l.action === 'unlock' && l.success).length;
+  %>
+
+  <!-- KPI Overview Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Events Logged</div>
+      <div class="kpi-value" style="color:#0f172a;"><%= logList.length %></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Successful Locks (Hardware)</div>
+      <div class="kpi-value" style="color:#16a34a;"><%= successLocks %></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Successful Unlocks</div>
+      <div class="kpi-value" style="color:#2563eb;"><%= successUnlocks %></div>
+    </div>
+    <div class="kpi-card" style="border-color:#f59e0b; background:#fffbeb;">
+      <div class="kpi-label" style="color:#92400e;">Pending Lock Pool (Sleeping)</div>
+      <div class="kpi-value" style="color:#d97706;"><%= pool.length %></div>
+    </div>
+  </div>
+
+  <!-- 🎯 Pending Lock Pool Section -->
+  <div class="pool-section">
+    <div class="pool-header">
+      <div>
+        <h3 class="pool-title">
+          <span>🎯 Pending Lock Pool</span>
+          <span class="pool-badge"><%= pool.length %> Waiting</span>
+        </h3>
+        <div style="font-size:12.5px;color:#78350f;margin-top:2px;">
+          Bikes held by expired/inactive riders waiting in sleeping state. The backend auto-polls every 3 minutes and <strong>instantly fires the lock command the moment the bike turns ON or moves</strong>.
+        </div>
+      </div>
+      <div>
+        <button id="btnRetrySweep" class="btn-retry-sweep" onclick="triggerManualSweep()">
+          <i class="fas fa-sync-alt" id="retryIcon"></i> Run Smart Retry Sweep Now
+        </button>
+      </div>
+    </div>
+
+    <% if (pool.length > 0) { %>
+      <div class="pool-grid">
+        <% pool.forEach(pb => { %>
+          <div class="pool-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <strong style="font-size:15px;color:#0f172a;"><%= pb.bikeCode %></strong>
+              <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;">
+                💤 ASLEEP / OFFLINE
+              </span>
+            </div>
+            <div style="font-size:12px;color:#475569;margin-bottom:4px;">
+              <i class="fas fa-user" style="color:#94a3b8;width:14px;"></i> Rider: <strong><%= pb.userName %></strong> (<%= pb.userPhone %>)
+            </div>
+            <div style="font-size:11.5px;color:#b45309;background:#fef3c7;padding:6px 8px;border-radius:6px;margin-top:6px;">
+              <i class="fas fa-satellite-dish"></i> Status: <%= pb.lastError %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#166534;font-size:13px;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-check-circle" style="color:#22c55e;font-size:16px;"></i>
+        <strong>Lock Pool is Clean!</strong> All expired bikes across the fleet have been successfully immobilized on the hardware level.
+      </div>
+    <% } %>
   </div>
 
   <div class="logs-controls">
     <div class="logs-search-box">
       <i class="fas fa-search logs-search-icon"></i>
-      <input type="text" id="logSearchInput" class="logs-search-input" placeholder="Search by bike code, action, or reason..." onkeyup="filterLogs()">
+      <input type="text" id="logSearchInput" class="logs-search-input" placeholder="Search by bike code, rider, action, or request ID..." onkeyup="filterLogs()">
     </div>
   </div>
 
-  <% if (logs && logs.length > 0) { %>
+  <% if (logList.length > 0) { %>
     <div class="logs-grid" id="logsGrid">
-      <% logs.forEach(log => { 
+      <% logList.forEach(log => { 
           const isLock = log.action === 'lock';
           const iconClass = isLock ? 'bg-lock' : 'bg-unlock';
           const faIcon = isLock ? 'fa-lock' : 'fa-unlock';
           
           let triggerLabel = log.metadata?.triggered_by || 'Unknown';
-          if (triggerLabel === 'rental_finalization') triggerLabel = 'Rental Expiry / Completion';
+          if (triggerLabel === 'rental_finalization') triggerLabel = 'Rental Expiry (Auto)';
+          if (triggerLabel === 'lock_pool_wakeup_retry') triggerLabel = '⚡ Smart Wakeup Retry';
+          if (triggerLabel === 'plan_renewal') triggerLabel = 'Plan Renewal Unlock';
           if (triggerLabel === 'system_expiry') triggerLabel = 'System Forced Expiry';
           if (triggerLabel === 'system_manual_fix') triggerLabel = 'Admin Manual Override';
           
@@ -247,8 +401,9 @@
           if (log.users) {
             riderName = log.users.full_name || log.users.name || log.users.phone;
           }
+          const reqId = log.metadata?.iot_request_id;
       %>
-      <div class="log-card" data-search="<%= log.bikes?.bike_code || '' %> <%= log.action %> <%= triggerLabel %> <%= riderName %>">
+      <div class="log-card" data-search="<%= log.bikes?.bike_code || '' %> <%= log.action %> <%= triggerLabel %> <%= riderName %> <%= reqId || '' %>">
         <div class="log-icon-wrap <%= iconClass %>">
           <i class="fas <%= faIcon %> fa-lg"></i>
         </div>
@@ -269,6 +424,9 @@
             Triggered by: <strong><%= triggerLabel %></strong>
             <% if (log.method) { %>
               (Method: <code><%= log.method %></code>)
+            <% } %>
+            <% if (reqId) { %>
+              | LocoNav Req ID: <code style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700;">#<%= reqId %></code>
             <% } %>
           </p>
 
@@ -319,5 +477,28 @@ function filterLogs() {
       card.style.display = 'none';
     }
   });
+}
+
+async function triggerManualSweep() {
+  const btn = document.getElementById('btnRetrySweep');
+  const icon = document.getElementById('retryIcon');
+  btn.disabled = true;
+  icon.classList.add('fa-spin');
+
+  try {
+    const res = await fetch('/admin/api/lock-pool/retry', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      window.location.reload();
+    } else {
+      alert('Error: ' + (data.message || 'Sweep failed'));
+    }
+  } catch(e) {
+    alert('Failed to connect: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove('fa-spin');
+  }
 }
 </script>

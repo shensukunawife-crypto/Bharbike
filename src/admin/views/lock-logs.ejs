@@ -390,17 +390,19 @@
           const faIcon = isLock ? 'fa-lock' : 'fa-unlock';
           
           let triggerLabel = log.metadata?.triggered_by || 'Unknown';
-          if (triggerLabel === 'rental_finalization') triggerLabel = 'Rental Expiry (Auto)';
-          if (triggerLabel === 'lock_pool_wakeup_retry') triggerLabel = 'Smart Wakeup Retry (Auto)';
-          if (triggerLabel === 'plan_renewal') triggerLabel = 'Plan Renewal Unlock';
+          if (triggerLabel === 'rental_finalization') triggerLabel = 'Rental Expiry (Auto Lock @ 09:30 AM)';
+          if (triggerLabel === 'lock_pool_wakeup_retry') triggerLabel = 'Smart Wakeup Retry (Auto Lock)';
+          if (triggerLabel === 'plan_renewal') triggerLabel = 'Plan Renewal (Auto Unlock)';
+          if (triggerLabel === 'loconav_portal_manual_click') triggerLabel = 'External LocoNav Portal Override (Manual Click)';
           if (triggerLabel === 'system_expiry') triggerLabel = 'System Forced Expiry';
-          if (triggerLabel === 'system_manual_fix') triggerLabel = 'Admin Manual Override';
+          if (triggerLabel === 'system_manual_fix') triggerLabel = 'BharBike Admin Manual Override';
           
           let riderName = 'N/A';
           if (log.users) {
             riderName = log.users.full_name || log.users.name || log.users.phone;
           }
           const reqId = log.metadata?.iot_request_id;
+          const actorEmail = log.metadata?.creator_email;
       %>
       <div class="log-card" data-search="<%= log.bikes?.bike_code || '' %> <%= log.action %> <%= triggerLabel %> <%= riderName %> <%= reqId || '' %>">
         <div class="log-icon-wrap <%= iconClass %>">
@@ -421,7 +423,11 @@
 
           <p class="log-desc">
             Triggered by: <strong><%= triggerLabel %></strong>
-            <% if (log.method) { %>
+            <% if (log.method === 'loconav_portal') { %>
+              <span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;margin-left:6px;">
+                External Portal Action <% if (actorEmail) { %>(<%= actorEmail %>)<% } %>
+              </span>
+            <% } else if (log.method) { %>
               (Method: <code><%= log.method %></code>)
             <% } %>
             <% if (reqId) { %>

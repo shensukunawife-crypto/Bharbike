@@ -53,9 +53,14 @@ import {
   isMissingTicketNumberColumnError,
   isUniqueViolation,
 } from "../utils/ticketNumber.js";
+import { handleLoconavWebhook } from "../controllers/iotWebhookController.js";
 
 const api = Router();
 api.get("/health", (req, res) => res.json({ status: "ok" }));
+
+// LocoNav & IoT Webhook Listeners (Captures real-time portal mobilizations / immobilizations)
+api.post("/iot/webhook", handleLoconavWebhook);
+api.post("/loconav/webhook", handleLoconavWebhook);
 
 api.get("/ads", async (req, res) => {
   try {

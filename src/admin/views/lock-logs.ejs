@@ -267,6 +267,11 @@
     color: #059669;
     border: 1px solid #a7f3d0;
   }
+  .status-badge.pending-pool {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+  }
   .status-badge.failed {
     background: #fef2f2;
     color: #dc2626;
@@ -443,9 +448,15 @@
             
             <div class="meta-item">
               <i class="fas fa-satellite-dish"></i> 
-              <span class="status-badge <%= log.success ? 'success' : 'failed' %>">
-                <%= log.success ? 'Success' : 'Failed' %>
-              </span>
+              <% if (log.is_in_pending_pool) { %>
+                <span class="status-badge pending-pool">
+                  Device Asleep (In Retry Pool)
+                </span>
+              <% } else { %>
+                <span class="status-badge <%= log.success ? 'success' : 'failed' %>">
+                  <%= log.success ? 'Success' : 'Failed' %>
+                </span>
+              <% } %>
             </div>
 
             <% if (log.error_message) { %>

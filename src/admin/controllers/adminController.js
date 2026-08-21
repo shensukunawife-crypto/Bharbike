@@ -6170,10 +6170,17 @@ export async function bikeLockLogsPage(req, res) {
       }
     }
 
-    const populatedLogs = (logs || []).map(log => ({
-      ...log,
-      users: log.user_id ? usersMap[log.user_id] : null
-    }));
+    const poolBikeCodes = new Set((pendingPool || []).map(p => p.bikeCode));
+
+    const populatedLogs = (logs || []).map(log => {
+      const bikeCode = log.bikes?.bike_code;
+      const isInPool = log.action === 'lock' && bikeCode && poolBikeCodes.has(bikeCode);
+      return {
+        ...log,
+        users: log.user_id ? usersMap[log.user_id] : null,
+        is_in_pending_pool: isInPool
+      };
+    });
 
     return renderPage(res, {
       title: "Bike Lock Logs & Lock Pool",

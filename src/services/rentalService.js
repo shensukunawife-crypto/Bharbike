@@ -80,7 +80,7 @@ export async function startRental(userId, plan) {
   // 3. Atomic Bike Claim (Race Condition Protection)
   const { data: claimedBike, error: claimError } = await supabase
     .from("bikes")
-    .update({ status: BikeStatus.in_use })
+    .update({ status: BikeStatus.in_use, is_locked: false })
     .eq("id", bike.id)
     .eq("status", BikeStatus.available)
     .select()
@@ -435,6 +435,16 @@ export async function reactivateRentalOnPlanRenewal(userId, newSubEndDate) {
     } catch (iotErr) {
       console.warn(`[rentalService] IoT unlock failed on plan renewal for bike ${bikeId}:`, iotErr.message);
       iotResult = { ok: false, message: iotErr.message };
+    }
+
+    // Update bike is_locked status in DB
+    try {
+      await supabase
+        .from("bikes")
+        .update({ is_locked: false, status: BikeStatus.in_use })
+        .eq("id", bikeId);
+    } catch (bErr) {
+      console.warn("[rentalService] Failed to update bike is_locked to false on renewal:", bErr.message);
     }
 
     // Log the unlock to bike_lock_logs

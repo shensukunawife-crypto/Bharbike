@@ -197,17 +197,43 @@ async function finalizeRental(rentalId, status) {
   const { error: bikeUpdateErr } = await supabase.from("bikes").update(bikeUpdatePayload).eq("id", rental.bike_id);
   if (bikeUpdateErr) throw new AppError(`Failed to release bike: ${bikeUpdateErr.message}`, 500);
 
-  // Send IoT lock command
+  // ── 2-Phase IoT Lock Protocol (LocoNav requirement) ──────────────────────
+  // Phase 1: Check if device is currently online before sending any command.
+  // If offline, LocoNav cannot deliver the command to hardware — skip and let
+  // the Lock Pool retry when the device wakes up (every 3 min sweep).
   let iotResult;
+  let deviceOnlineStatus = { online: false, reason: 'check_not_run' };
+
   try {
-    iotResult = await iot.lockBike(rental.bike_id);
-    console.log(`[rentalService] IoT lock response for bike ${rental.bike_id}:`, iotResult);
-  } catch (iotErr) {
-    console.warn(`[rentalService] IoT lock failed or skipped for bike ${rental.bike_id}:`, iotErr.message);
-    iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
+    deviceOnlineStatus = await iot.checkDeviceOnline(rental.bike_id);
+    console.log(`[rentalService] Phase 1 — device online check for bike ${rental.bike_id}:`, deviceOnlineStatus);
+  } catch (statusErr) {
+    console.warn(`[rentalService] Device online check threw for bike ${rental.bike_id}:`, statusErr.message);
+    deviceOnlineStatus = { online: false, reason: 'check_api_error', error: statusErr.message };
+  }
+
+  if (deviceOnlineStatus.online) {
+    // Phase 2: Device is confirmed online — fire the lock command
+    try {
+      iotResult = await iot.lockBike(rental.bike_id);
+      console.log(`[rentalService] Phase 2 — IoT lock response for bike ${rental.bike_id}:`, iotResult);
+    } catch (iotErr) {
+      console.warn(`[rentalService] IoT lock failed for bike ${rental.bike_id}:`, iotErr.message);
+      iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
+    }
+  } else {
+    // Device is OFFLINE — skip lock command entirely.
+    // Lock Pool sweep (runs every 3 min) will retry the moment the device comes online.
+    console.log(`[rentalService] Bike ${rental.bike_id} is OFFLINE (reason: ${deviceOnlineStatus.reason}) — lock command skipped. Lock Pool will retry on wakeup.`);
+    iotResult = {
+      ok: false,
+      message: `Device offline — queued for wakeup retry (${deviceOnlineStatus.reason || 'no_recent_data'})`
+    };
   }
 
   // Log the lock action to bike_lock_logs
+  // success: true  → device was online and LocoNav accepted the command
+  // success: false → device was offline (pool will retry) OR lock API returned an error
   try {
     await supabase.from("bike_lock_logs").insert([{
       bike_id: rental.bike_id,
@@ -220,7 +246,8 @@ async function finalizeRental(rentalId, status) {
       metadata: {
         triggered_by: "rental_finalization",
         status_reason: status,
-        iot_request_id: iotResult?.requestId || null
+        iot_request_id: iotResult?.requestId || null,
+        device_online_check: deviceOnlineStatus
       }
     }]);
   } catch (logErr) {
@@ -383,8 +410,25 @@ export async function reactivateRentalOnPlanRenewal(userId, newSubEndDate) {
       return null;
     }
 
-    // Physically unlock the bike via IoT — user paid, they get access back
-    let iotResult = { ok: false, message: "not attempted" };
+    // Physically unlock the bike via IoT — user paid, they get access back.
+    // Note: We always send the unlock command regardless of device online status.
+    // Unlike lock (where we skip offline), unlock is sent so LocoNav queues it for
+    // immediate delivery the moment the device reconnects.
+    let iotResult = { ok: false, message: 'not attempted' };
+    let deviceOnlineStatus = { online: false, reason: 'check_not_run' };
+
+    try {
+      deviceOnlineStatus = await iot.checkDeviceOnline(bikeId);
+      console.log(`[rentalService] Device online check before renewal unlock, bike ${bikeId}:`, deviceOnlineStatus);
+    } catch (statusErr) {
+      console.warn(`[rentalService] Device online check threw for bike ${bikeId} (unlock):`, statusErr.message);
+      deviceOnlineStatus = { online: false, reason: 'check_api_error' };
+    }
+
+    if (!deviceOnlineStatus.online) {
+      console.log(`[rentalService] Bike ${bikeId} is OFFLINE during plan renewal — unlock command will be queued by LocoNav for delivery on reconnect.`);
+    }
+
     try {
       iotResult = await iot.unlockBike(bikeId);
       console.log(`[rentalService] IoT unlock on plan renewal for bike ${bikeId}:`, iotResult);
@@ -406,7 +450,8 @@ export async function reactivateRentalOnPlanRenewal(userId, newSubEndDate) {
           triggered_by: "plan_renewal",
           rental_id: expiredRental.id,
           new_sub_end: newSubEndDate,
-          iot_request_id: iotResult?.requestId || null
+          iot_request_id: iotResult?.requestId || null,
+          device_online_check: deviceOnlineStatus
         }
       }]);
     } catch (logErr) {

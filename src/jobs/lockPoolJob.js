@@ -82,8 +82,14 @@ export async function getPendingLockPool() {
 
       // A bike is in pending lock if:
       // 1. Last lock failed or had an error / unreachable tracker, OR
-      // 2. No successful lock has been executed since expiry
-      const isLockConfirmed = lastLock && lastLock.success === true && lastLock.metadata?.iot_request_id && !lastLock.error_message;
+      // 2. No successful lock has been executed since expiry, OR
+      // 3. Last log claimed success but device was offline at the time (device_online_check.online === false)
+      const deviceWasOnlineWhenLocked = lastLock?.metadata?.device_online_check?.online !== false;
+      const isLockConfirmed = lastLock &&
+        lastLock.success === true &&
+        lastLock.metadata?.iot_request_id &&
+        !lastLock.error_message &&
+        deviceWasOnlineWhenLocked; // Must have been online — otherwise the lock never actually executed
 
       // If lock was not yet confirmed successful on hardware level:
       if (!isLockConfirmed) {

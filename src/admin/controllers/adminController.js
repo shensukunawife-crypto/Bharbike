@@ -4265,6 +4265,7 @@ export async function addBike(req, res) {
     const insertPayload = {
       bike_code: bike_code.trim(),
       status: status || "available",
+      is_locked: false,
       battery: Number(req.body.battery || 0),
       location: req.body.location && req.body.location.trim() ? req.body.location.trim() : null,
     };

@@ -136,44 +136,27 @@ export async function runLockPoolSweep() {
 
     console.log(`[lockPool] Found ${pendingBikes.length} bike(s) waiting in Pending Lock Pool. Checking live LocoNav telemetry...`);
 
-    // 1 single batch call to LocoNav API to get live telemetry of fleet
-    let loconavVehicles = [];
-    try {
-      const res = await axios.get(`${LOCONAV_API_URL}/vehicles`, {
-        headers: { "User-Authentication": LOCONAV_TOKEN },
-        params: { page: 1, per_page: 100 },
-        timeout: 10000
-      });
-      loconavVehicles = res.data?.data?.vehicles || [];
-    } catch (apiErr) {
-      console.warn("[lockPool] LocoNav batch fetch warning:", apiErr.message);
-      return { checked: pendingBikes.length, locked: 0, error: apiErr.message };
-    }
-
-    const lvMap = {};
-    loconavVehicles.forEach(lv => {
-      if (lv.vehicleUuid) lvMap[lv.vehicleUuid] = lv;
-    });
-
     let lockedCount = 0;
-    const now = Date.now();
 
     for (const pb of pendingBikes) {
       if (!pb.loconavUuid) continue;
 
-      const lv = lvMap[pb.loconavUuid];
-      if (!lv) continue;
+      let onlineCheck;
+      try {
+        onlineCheck = await iot.checkDeviceOnline(pb.bikeId);
+      } catch (err) {
+        console.warn(`[lockPool] Telemetry check failed for bike ${pb.bikeCode}:`, err.message);
+        continue;
+      }
 
       // Check if bike is Online / Awake / Moving:
-      // 1. status is 'running' or 'idle'
-      // 2. speed > 0 km/h
-      // 3. fresh ping received within last 15 minutes
-      const lastPingTime = lv.last_location_at ? new Date(lv.last_location_at).getTime() : 0;
-      const isFreshPing = lastPingTime > 0 && (now - lastPingTime) < 15 * 60 * 1000;
-      const isAwake = lv.status === "running" || lv.status === "idle" || (lv.speed && lv.speed > 0) || isFreshPing;
+      // 1. online is true (fresh ping received within last 15 minutes)
+      // 2. ignition === "ON"
+      // 3. speed > 0 km/h
+      const isAwake = onlineCheck.online || onlineCheck.ignition === "ON" || (onlineCheck.speed && onlineCheck.speed > 0);
 
       if (isAwake) {
-        console.log(`[lockPool] ⚡ Bike ${pb.bikeCode} is ONLINE / AWAKE (status: ${lv.status || 'online'})! Disagreeing lock immediately...`);
+        console.log(`[lockPool] ⚡ Bike ${pb.bikeCode} is ONLINE / AWAKE (status: ${onlineCheck.status}, ignition: ${onlineCheck.ignition}, speed: ${onlineCheck.speed}km/h)! Firing lock immediately...`);
 
         try {
           const lockResult = await iot.lockBike(pb.bikeId);
@@ -181,6 +164,9 @@ export async function runLockPoolSweep() {
 
           if (lockResult && lockResult.ok !== false) {
             lockedCount++;
+
+            // Update bike is_locked status in DB
+            await supabase.from("bikes").update({ is_locked: true }).eq("id", pb.bikeId);
 
             // Insert audit log
             await supabase.from("bike_lock_logs").insert([{
@@ -193,7 +179,7 @@ export async function runLockPoolSweep() {
                 triggered_by: "lock_pool_wakeup_retry",
                 status_reason: "expired_wakeup_locked",
                 iot_request_id: lockResult.requestId || null,
-                telemetry: { status: lv.status, speed: lv.speed }
+                device_online_check: onlineCheck
               }
             }]);
 

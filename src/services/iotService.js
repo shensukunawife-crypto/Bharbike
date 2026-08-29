@@ -16,24 +16,27 @@ async function getLocoNavId(bikeId) {
   try {
     if (!bikeId) return null;
 
-    // 1. Check if bikeId is already mapped in vehicles table
-    const { data: vehicle, error } = await supabase
+    // 1. Check if bikeId is mapped in vehicles table (order by created_at desc to get latest)
+    const { data: vehicles, error } = await supabase
       .from("vehicles")
       .select("vehicle_uuid")
       .eq("bike_id", bikeId)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    if (vehicle?.vehicle_uuid) return vehicle.vehicle_uuid;
+    if (!error && vehicles && vehicles.length > 0) {
+      const validUuid = vehicles.find(v => v.vehicle_uuid && /^[0-9a-fA-F-]{36}$/.test(v.vehicle_uuid));
+      if (validUuid?.vehicle_uuid) return validUuid.vehicle_uuid;
+      if (vehicles[0]?.vehicle_uuid) return vehicles[0].vehicle_uuid;
+    }
 
     // 2. Check if the bikeId itself is stored as vehicle_uuid
-    const { data: directVehicle } = await supabase
+    const { data: directVehicles } = await supabase
       .from("vehicles")
       .select("vehicle_uuid")
       .eq("vehicle_uuid", String(bikeId))
-      .maybeSingle();
+      .limit(1);
       
-    if (directVehicle?.vehicle_uuid) return directVehicle.vehicle_uuid;
+    if (directVehicles && directVehicles[0]?.vehicle_uuid) return directVehicles[0].vehicle_uuid;
 
     // 3. Fallback: Find bike_code from bikes table, then match vehicle by name/number
     const { data: bike } = await supabase
@@ -47,8 +50,9 @@ async function getLocoNavId(bikeId) {
         .from("vehicles")
         .select("vehicle_uuid")
         .ilike("name", `%${bike.bike_code}%`)
-        .maybeSingle();
-      if (vehicleByCode?.vehicle_uuid) return vehicleByCode.vehicle_uuid;
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (vehicleByCode && vehicleByCode[0]?.vehicle_uuid) return vehicleByCode[0].vehicle_uuid;
     }
 
     return null;

@@ -15,7 +15,7 @@ import Groq from "groq-sdk";
 import { logAdminAction } from "../../utils/adminAudit.js";
 import { logAdminAction as fileLogAdminAction } from "../../utils/auditLogger.js";
 import { nowIST, addISTDays } from "../../utils/istTime.js";
-import { getPendingLockPool, runLockPoolSweep } from "../../jobs/lockPoolJob.js";
+import { getPendingLockPool, getPendingUnlockPool, runLockPoolSweep } from "../../jobs/lockPoolJob.js";
 
 
 function parseIST(dateStr) {
@@ -6151,7 +6151,8 @@ export async function bikeLockLogsPage(req, res) {
   try {
     const [
       { data: logs, error },
-      pendingPool
+      pendingPool,
+      pendingUnlockPool
     ] = await Promise.all([
       supabase
         .from("bike_lock_logs")
@@ -6163,6 +6164,10 @@ export async function bikeLockLogsPage(req, res) {
         .limit(500),
       getPendingLockPool().catch(err => {
         console.warn("[bikeLockLogsPage] pendingPool error:", err.message);
+        return [];
+      }),
+      getPendingUnlockPool().catch(err => {
+        console.warn("[bikeLockLogsPage] pendingUnlockPool error:", err.message);
         return [];
       })
     ]);
@@ -6199,7 +6204,8 @@ export async function bikeLockLogsPage(req, res) {
       active: "lock-logs",
       bodyView: "lock-logs",
       logs: populatedLogs,
-      pendingPool: pendingPool || []
+      pendingPool: pendingPool || [],
+      pendingUnlockPool: pendingUnlockPool || []
     });
   } catch (error) {
     console.error("[adminController.bikeLockLogsPage] failed", error);
@@ -6211,7 +6217,7 @@ export async function forceRetryLockPool(req, res) {
   try {
     console.log("[admin.forceRetryLockPool] Admin triggered manual lock pool retry sweep");
     const result = await runLockPoolSweep();
-    return res.json({ success: true, message: `Lock pool sweep executed: ${result.locked} bike(s) locked.`, result });
+    return res.json({ success: true, message: `Lock & Unlock pool sweep executed: ${result.locked} bike(s) locked, ${result.unlocked || 0} bike(s) unlocked.`, result });
   } catch (err) {
     console.error("[admin.forceRetryLockPool] failed:", err);
     return res.status(500).json({ success: false, message: err.message || "Failed to execute lock pool sweep" });

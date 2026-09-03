@@ -375,10 +375,42 @@
       </div>
     <% } else { %>
       <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#166534;font-size:13px;">
-        <strong>Lock Pool is Clean:</strong> All expired bikes across the fleet have been successfully immobilized on the hardware level.
-      </div>
-    <% } %>
   </div>
+
+  <% const unlockPool = pendingUnlockPool || []; %>
+  <% if (unlockPool.length > 0) { %>
+    <div class="pool-section" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #3b82f6; margin-bottom: 24px;">
+      <div class="pool-header">
+        <div>
+          <h3 class="pool-title" style="color: #1e40af;">
+            <span>Pending Unlock Retry Queue</span>
+            <span class="pool-badge" style="background: #2563eb;"><%= unlockPool.length %> Retrying</span>
+          </h3>
+          <div style="font-size:12.5px;color:#1e3a8a;margin-top:2px;">
+            Active paid riders whose unlock command experienced a transient network delay or timeout. The backend automatically retries every 3 minutes until hardware confirms the unlock.
+          </div>
+        </div>
+      </div>
+      <div class="pool-grid">
+        <% unlockPool.forEach(pu => { %>
+          <div class="pool-card" style="border-color: #bfdbfe;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <strong style="font-size:15px;color:#0f172a;"><%= pu.bikeCode %></strong>
+              <span style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;">
+                RETRYING UNLOCK
+              </span>
+            </div>
+            <div style="font-size:12px;color:#475569;margin-bottom:4px;">
+              Rider: <strong><%= pu.userName %></strong> (<%= pu.userPhone %>)
+            </div>
+            <div style="font-size:11.5px;color:#1d4ed8;background:#eff6ff;padding:6px 8px;border-radius:6px;margin-top:6px;">
+              Status: <%= pu.lastError %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% } %>
 
   <div class="logs-controls">
     <div class="logs-search-box">

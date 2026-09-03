@@ -107,6 +107,24 @@ async function syncSubscriptionForSkippedDays(riderName, targetEndDate = null, d
       console.error(`[syncSubscription] Failed to update subscription:`, updateErr.message);
     } else {
       console.log(`[syncSubscription] Updated subscription for "${riderName}" (matched: "${profile.full_name}"). New status: ${updatedStatus}, New end date: ${newEnd.toISOString()}`);
+
+      // 4. Also update rentals.end_time and reactivate/unlock bike if subscription is active
+      try {
+        const { reactivateRentalOnPlanRenewal } = await import("../services/rentalService.js");
+        if (updatedStatus === "active") {
+          await reactivateRentalOnPlanRenewal(profile.id, newEnd.toISOString());
+          console.log(`[syncSubscription] Auto-reactivated rental and verified unlock for "${profile.full_name}".`);
+        } else {
+          // If subscription became inactive/expired due to day deduction, update rental end_time
+          await supabase
+            .from("rentals")
+            .update({ end_time: newEnd.toISOString(), updated_at: new Date().toISOString() })
+            .eq("user_id", profile.id)
+            .in("status", ["active", "ongoing"]);
+        }
+      } catch (rentErr) {
+        console.warn(`[syncSubscription] Rental sync warning for "${profile.full_name}":`, rentErr?.message);
+      }
     }
   } catch (err) {
     console.error("[syncSubscription] unexpected error:", err.message);

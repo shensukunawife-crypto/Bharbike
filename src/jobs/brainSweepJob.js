@@ -142,52 +142,52 @@ async function sweepActiveRentalsForExpiredSubscriptions() {
   if (!activeRentals || activeRentals.length === 0) return;
   
   let healedCount = 0;
+  const now = new Date();
+
   for (const rental of activeRentals) {
-    const hasSub = await subscriptionService.hasActiveSubscription(rental.user_id);
-    if (!hasSub) {
-      console.log(`[BrainSweep] Found active rental ${rental.id} but user ${rental.user_id} has NO active subscription. Forcing lock/end...`);
-      try {
-        await rentalService.forceExpireActiveRentalForUser(rental.user_id);
-        healedCount++;
-      } catch (e) {
-        console.error(`[BrainSweep] Failed to end rental ${rental.id}:`, e.message);
+    try {
+      // 1. Fetch user's latest subscription
+      const { data: latestSub } = await supabase
+        .from('user_subscriptions')
+        .select('end_date, status')
+        .eq('user_id', rental.user_id)
+        .order('end_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestSub && latestSub.end_date) {
+        // If user has an active subscription in progress, sync rental end_time
+        if (latestSub.status === 'active' && new Date(latestSub.end_date) > now) {
+          if (rental.end_time !== latestSub.end_date) {
+            await supabase.from('rentals').update({ end_time: latestSub.end_date, updated_at: now.toISOString() }).eq('id', rental.id);
+            console.log(`[BrainSweep] Auto-synced rental ${rental.id} end_time to ${latestSub.end_date}`);
+          }
+          continue;
+        }
+
+        // Check if user is still within the 9:30 AM IST next-day grace period!
+        if (!subscriptionService.hasPassedGracePeriod(latestSub.end_date)) {
+          // Still in grace period — do NOT force lock yet!
+          continue;
+        }
       }
+
+      // Past 9:30 AM grace period (or user has no subscription): force expire and lock
+      console.log(`[BrainSweep] Rental ${rental.id} (user ${rental.user_id}) is past grace period without active plan. Expiring...`);
+      await rentalService.forceExpireActiveRentalForUser(rental.user_id);
+      healedCount++;
+    } catch (e) {
+      console.error(`[BrainSweep] Failed to evaluate rental ${rental.id}:`, e.message);
     }
   }
   
   if (healedCount > 0) {
-    console.log(`[BrainSweep] Rental Sweep Complete: Force ended ${healedCount} invalid active rentals.`);
+    console.log(`[BrainSweep] Rental Sweep Complete: Force ended ${healedCount} expired rentals.`);
   }
 }
 
 async function sweepAvailableBikesLockStatus() {
-  console.log('[BrainSweep] Checking available bikes for incorrect lock status...');
-  const { data: unlockedBikes, error } = await supabase
-    .from('bikes')
-    .select('id, name')
-    .eq('status', 'available')
-    .eq('is_locked', false);
-    
-  if (error) {
-    console.error('[BrainSweep] Error fetching bikes:', error);
-    return;
-  }
-  
-  if (!unlockedBikes || unlockedBikes.length === 0) return;
-  
-  let healedCount = 0;
-  for (const bike of unlockedBikes) {
-    console.log(`[BrainSweep] Bike ${bike.id} (${bike.name}) is 'available' but 'unlocked'. Forcing lock...`);
-    try {
-      await iot.lockBike(bike.id);
-      await supabase.from('bikes').update({ is_locked: true }).eq('id', bike.id);
-      healedCount++;
-    } catch (e) {
-      console.error(`[BrainSweep] Failed to lock bike ${bike.id}:`, e.message);
-    }
-  }
-  
-  if (healedCount > 0) {
-    console.log(`[BrainSweep] Bike Sweep Complete: Force locked ${healedCount} exposed bikes.`);
-  }
+  // Available hub inventory and unlinked bikes remain in their current state (default unlocked per admin setting)
+  // We do not send blind commands to unassigned bikes to protect 12V battery and avoid LocoNav rate limits.
+  return;
 }

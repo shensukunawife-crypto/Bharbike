@@ -185,6 +185,14 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
       } else {
         console.log(`[SubscriptionBrain] SUCCESS: User ${userId} (${userName}) healed. Active until ${endDate.toISOString()}${backdated ? " [BACKDATED]" : ""}`);
         await logBrainAction({ userId, userName, paymentAmount, action: "HEALED", reason: healReason, oldStatus, newStatus: "active", oldEndDate, newEndDate: endDate.toISOString(), planId: String(expectedPlanId), backdated });
+
+        // Step 3: Automatically reactivate rental, sync end_time, and unlock bike for healed rider
+        try {
+          const { reactivateRentalOnPlanRenewal } = await import('./rentalService.js');
+          await reactivateRentalOnPlanRenewal(userId, endDate.toISOString());
+        } catch (rentalSyncErr) {
+          console.warn('[SubscriptionBrain] Rental reactivate warning:', rentalSyncErr?.message);
+        }
       }
     } else {
       console.log(`[SubscriptionBrain] Verification passed. Subscription is perfectly healthy for ${userName}.`);

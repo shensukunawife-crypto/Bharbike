@@ -196,7 +196,7 @@ export async function checkDeviceOnline(bikeId) {
           'User-Authentication': LOCONAV_TOKEN,
           'Content-Type': 'application/json'
         },
-        timeout: 8000
+        timeout: 15000
       }
     );
 
@@ -206,31 +206,38 @@ export async function checkDeviceOnline(bikeId) {
     }
 
     const gps = vehicleData.gps || {};
-    const pingTimestamp = gps.currentLocationCoordinates?.lat?.timestamp;
+    // Check multiple sensor timestamps — coordinates, speed, movement, or ignition
+    const pingTimestamp = 
+      gps.currentLocationCoordinates?.lat?.timestamp ||
+      gps.speed?.timestamp ||
+      gps.movement?.timestamp ||
+      gps.ignition?.timestamp || 0;
+
     const lastPingMs = pingTimestamp ? pingTimestamp * 1000 : 0;
     const now = Date.now();
     const ageMinutes = lastPingMs > 0 ? Math.round((now - lastPingMs) / 60000) : null;
 
-    // Device considered online if it sent a ping in the last 15 minutes.
-    // Covers: MOVING, STOPPED (parked ignition off), and "data received" states.
-    // Excludes: truly offline / sleeping devices that LocoNav cannot reach.
-    const isFreshPing = lastPingMs > 0 && (now - lastPingMs) < 15 * 60 * 1000;
-
     const movementStatus = gps.movement?.movementStatus || null; // "MOVING", "STOPPED"
     const ignition = gps.ignition?.value || null;                // "ON", "OFF"
-    const speed = gps.speed?.value || 0;
+    const speed = Number(gps.speed?.value || 0);
 
-    console.log(`[IoT] checkDeviceOnline bike_id=${bikeId}: online=${isFreshPing}, status=${movementStatus || 'unknown'}, ignition=${ignition}, speed=${speed}km/h, ping_age=${ageMinutes}min`);
+    // Device is considered online if:
+    // 1. Sent fresh ping in last 15 minutes, OR
+    // 2. Ignition is currently ON, OR
+    // 3. Speed > 0 (bike is in motion)
+    const isOnline = (lastPingMs > 0 && (now - lastPingMs) < 15 * 60 * 1000) || ignition === 'ON' || speed > 0;
+
+    console.log(`[IoT] checkDeviceOnline bike_id=${bikeId}: online=${isOnline}, status=${movementStatus || (ignition === 'ON' ? 'ignition_on' : 'unknown')}, ignition=${ignition}, speed=${speed}km/h, ping_age=${ageMinutes}min`);
 
     return {
-      online: isFreshPing,
+      online: isOnline,
       status: movementStatus || (ignition === 'ON' ? 'ignition_on' : 'offline'),
       speed,
       ignition,
       lastPingAt: lastPingMs ? new Date(lastPingMs).toISOString() : null,
       pingAgeMinutes: ageMinutes,
       loconavUuid,
-      reason: isFreshPing ? 'fresh_telemetry' : (lastPingMs === 0 ? 'no_ping_recorded' : `stale_data_${ageMinutes}min_ago`)
+      reason: isOnline ? (ignition === 'ON' ? 'ignition_on' : 'fresh_telemetry') : (lastPingMs === 0 ? 'no_ping_recorded' : `stale_data_${ageMinutes}min_ago`)
     };
   } catch (err) {
     console.error(`[IoT] checkDeviceOnline failed for bike ${bikeId}:`, err.message);

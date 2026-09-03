@@ -70,12 +70,16 @@ export async function getPendingLockPool() {
 
     for (const r of (expiredRentals || [])) {
       if (!r.bike_id || seenBikeIds.has(r.bike_id)) continue;
+      seenBikeIds.add(r.bike_id); // Evaluate each bike ONLY on its most recent rental!
 
-      // If user has an active paid plan, skip
+      // If the current rider has an active paid plan, bike is in good standing -> skip!
       if (activeUserSet.has(r.user_id)) continue;
 
       const bike = r.bikes;
       if (!bike) continue;
+
+      // Only bikes currently in use by riders are tracked in the pending lock pool
+      if (bike.status !== "in_use") continue;
 
       // Find the most recent lock log for this bike
       const lastLock = (recentLockLogs || []).find(l => l.bike_id === r.bike_id && l.action === "lock");
@@ -93,7 +97,6 @@ export async function getPendingLockPool() {
 
       // If lock was not yet confirmed successful on hardware level:
       if (!isLockConfirmed) {
-        seenBikeIds.add(r.bike_id);
         const user = usersMap[r.user_id] || null;
         const vehicle = vehiclesMap[r.bike_id] || null;
 

@@ -318,11 +318,12 @@ export async function endRental(userId, rentalId) {
 export async function expireRentalsPastEnd() {
   const now = new Date();
   // Query for both 'active' and 'ongoing' — mobile app uses 'ongoing'
+  // Also check rentals with end_time is null so admin-assigned bikes without explicit end_time are evaluated against user's subscription
   const { data: due, error } = await supabase
     .from("rentals")
     .select("*")
     .in("status", [RentalStatus.active, RentalStatus.ongoing])
-    .lt("end_time", now.toISOString());
+    .or(`end_time.lt.${now.toISOString()},end_time.is.null`);
   if (error) {
     if (isRentalsTableMissing(error)) {
       if (!rentalsTableMissingLogged) {
@@ -479,17 +480,18 @@ export async function reactivateRentalOnPlanRenewal(userId, newSubEndDate) {
 export async function getActiveRentalForUser(userId) {
   // Returns active/ongoing rentals AND expired rentals (where user still holds the bike)
   // This ensures users always see their assigned bike even if the subscription ran out
-  const { data, error } = await supabase
+  const { data: rows, error } = await supabase
     .from("rentals")
     .select("*, bikes(*)")
     .eq("user_id", userId)
     .in("status", [RentalStatus.active, RentalStatus.ongoing, RentalStatus.expired])
     .order("created_at", { ascending: false })
-    .maybeSingle();
+    .limit(1);
   if (error) {
     console.error("[rentalService.getActiveRentalForUser] failed", error);
     throw new AppError("Unable to fetch active rental", 500);
   }
+  const data = rows?.[0] || null;
   // Only return the expired rental if the bike is still physically assigned (in_use)
   if (data && data.status === RentalStatus.expired) {
     if (!data.bikes || data.bikes.status !== BikeStatus.in_use) {

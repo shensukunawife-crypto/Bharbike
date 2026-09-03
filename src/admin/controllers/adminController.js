@@ -4347,15 +4347,26 @@ export async function assignBike(req, res) {
       .eq("status", "expired");
 
 
-    const startTime = new Date();
+    // Check if user has an active subscription to sync end_time
+    const { data: userSub } = await supabase
+      .from("user_subscriptions")
+      .select("end_date")
+      .eq("user_id", user_id)
+      .eq("status", "active")
+      .gt("end_date", new Date().toISOString())
+      .order("end_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    // No end_time or duration — bike stays assigned until admin manually removes it.
+    const startTime = new Date();
+    const endTime = userSub?.end_date || null;
+
     const { error: rentalError } = await supabase.from("rentals").insert([{
       bike_id: bikeId,
       user_id,
       duration: null,
       start_time: startTime.toISOString(),
-      end_time: null,
+      end_time: endTime,
       status: "ongoing",
       price: 0
     }]);
@@ -6839,15 +6850,26 @@ export async function assignBikeToUser(req, res) {
     const { data: bike } = await supabase.from("bikes").select("id").eq("bike_code", bike_code).maybeSingle();
     if (!bike) return res.status(404).json({ success: false, message: "Bike code not found" });
     
-    const startTime = new Date();
+    // Check if user has an active subscription to sync end_time
+    const { data: userSub } = await supabase
+      .from("user_subscriptions")
+      .select("end_date")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .gt("end_date", new Date().toISOString())
+      .order("end_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    // No end_time or duration — bike stays assigned until admin manually removes it.
+    const startTime = new Date();
+    const endTime = userSub?.end_date || null;
+
     const { error: rentalError } = await supabase.from("rentals").insert([{
       bike_id: bike.id,
       user_id: userId,
       duration: null,
       start_time: startTime.toISOString(),
-      end_time: null,
+      end_time: endTime,
       status: "ongoing",
       price: 0
     }]);

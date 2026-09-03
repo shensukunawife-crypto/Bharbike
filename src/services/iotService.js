@@ -76,23 +76,51 @@ export async function lockBike(bikeId) {
       return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
     }
 
-    const response = await axios.post(
-      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-      { value: "IMMOBILIZE" },
-      {
-        headers: {
-          "User-Authentication": LOCONAV_TOKEN,
-          "Content-Type": "application/json"
-        },
-        timeout: 15000
+    let response;
+    try {
+      response = await axios.post(
+        `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+        { value: "IMMOBILIZE" },
+        {
+          headers: {
+            "User-Authentication": LOCONAV_TOKEN,
+            "Content-Type": "application/json"
+          },
+          timeout: 25000
+        }
+      );
+    } catch (reqErr) {
+      // If timed out or rate-limited, wait 2.5 seconds and retry once
+      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
+        console.warn(`[IoT] Lock attempt 1 hit ${reqErr.message}. Retrying in 2.5s for bike ${bikeId}...`);
+        await new Promise(r => setTimeout(r, 2500));
+        response = await axios.post(
+          `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+          { value: "IMMOBILIZE" },
+          {
+            headers: {
+              "User-Authentication": LOCONAV_TOKEN,
+              "Content-Type": "application/json"
+            },
+            timeout: 25000
+          }
+        );
+      } else {
+        throw reqErr;
       }
-    );
+    }
 
     console.log(`[IoT] Lock (IMMOBILIZE) response for bike ${bikeId}:`, response.data);
     if (response.data?.data?.errors) {
       const errTxt = typeof response.data.data.errors === 'string' 
         ? response.data.data.errors 
         : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
+      
+      // If already immobilized/cut off, treat as success
+      if (errTxt.toLowerCase().includes('already in the state of') || errTxt.toLowerCase().includes('fuel supply to cut off')) {
+        return { ok: true, bikeId, action: "lock", requestId: "already-locked", message: errTxt };
+      }
+
       return {
         ok: false,
         message: errTxt,
@@ -133,23 +161,51 @@ export async function unlockBike(bikeId) {
       return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
     }
 
-    const response = await axios.post(
-      `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-      { value: "MOBILIZE" },
-      {
-        headers: {
-          "User-Authentication": LOCONAV_TOKEN,
-          "Content-Type": "application/json"
-        },
-        timeout: 15000
+    let response;
+    try {
+      response = await axios.post(
+        `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+        { value: "MOBILIZE" },
+        {
+          headers: {
+            "User-Authentication": LOCONAV_TOKEN,
+            "Content-Type": "application/json"
+          },
+          timeout: 25000
+        }
+      );
+    } catch (reqErr) {
+      // If timed out or rate-limited, wait 2.5 seconds and retry once
+      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
+        console.warn(`[IoT] Unlock attempt 1 hit ${reqErr.message}. Retrying in 2.5s for bike ${bikeId}...`);
+        await new Promise(r => setTimeout(r, 2500));
+        response = await axios.post(
+          `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+          { value: "MOBILIZE" },
+          {
+            headers: {
+              "User-Authentication": LOCONAV_TOKEN,
+              "Content-Type": "application/json"
+            },
+            timeout: 25000
+          }
+        );
+      } else {
+        throw reqErr;
       }
-    );
+    }
 
     console.log(`[IoT] Unlock (MOBILIZE) response for bike ${bikeId}:`, response.data);
     if (response.data?.data?.errors) {
       const errTxt = typeof response.data.data.errors === 'string' 
         ? response.data.data.errors 
         : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
+
+      // If already mobilized/resumed, treat as success!
+      if (errTxt.toLowerCase().includes('already in the state of') || errTxt.toLowerCase().includes('fuel supply to resume')) {
+        return { ok: true, bikeId, action: "unlock", requestId: "already-unlocked", message: errTxt };
+      }
+
       return {
         ok: false,
         message: errTxt,

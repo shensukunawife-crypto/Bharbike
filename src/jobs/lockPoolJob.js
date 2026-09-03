@@ -125,23 +125,136 @@ export async function getPendingLockPool() {
 }
 
 /**
- * Runs the background lock pool sweep:
- * Checks if any bike in the pending pool has come online/moved, and instantly fires lock!
+ * Returns all bikes held by ACTIVE paid riders where an unlock command failed
+ * or is still pending confirmation on LocoNav hardware.
+ */
+export async function getPendingUnlockPool() {
+  try {
+    const now = new Date();
+
+    // 1. Fetch all ongoing/active rentals
+    const { data: ongoingRentals, error: rErr } = await supabase
+      .from("rentals")
+      .select("id, user_id, bike_id, status, end_time, created_at, bikes(id, bike_code, name, is_locked, status, last_ping_at)")
+      .in("status", ["ongoing", "active"])
+      .order("created_at", { ascending: false });
+
+    if (rErr) throw rErr;
+
+    const userIds = [...new Set((ongoingRentals || []).map(r => r.user_id).filter(Boolean))];
+    if (userIds.length === 0) return [];
+
+    const [
+      { data: activeSubs },
+      { data: usersData },
+      { data: vehiclesData },
+      { data: recentLogs }
+    ] = await Promise.all([
+      supabase
+        .from("user_subscriptions")
+        .select("user_id, status, end_date")
+        .in("user_id", userIds)
+        .eq("status", "active")
+        .gt("end_date", now.toISOString()),
+
+      supabase
+        .from("users")
+        .select("id, full_name, name, phone")
+        .in("id", userIds),
+
+      supabase
+        .from("vehicles")
+        .select("id, bike_id, vehicle_uuid, name, vehicle_number"),
+
+      supabase
+        .from("bike_lock_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200)
+    ]);
+
+    const activeUserSet = new Set((activeSubs || []).map(s => s.user_id));
+    const usersMap = {};
+    (usersData || []).forEach(u => { usersMap[u.id] = u; });
+
+    const vehiclesMap = {};
+    (vehiclesData || []).forEach(v => {
+      if (v.bike_id && v.vehicle_uuid) vehiclesMap[v.bike_id] = v;
+    });
+
+    const pendingUnlocks = [];
+    const seenBikeIds = new Set();
+
+    for (const r of (ongoingRentals || [])) {
+      if (!r.bike_id || seenBikeIds.has(r.bike_id)) continue;
+      seenBikeIds.add(r.bike_id);
+
+      // ONLY for users who HAVE an active paid subscription!
+      if (!activeUserSet.has(r.user_id)) continue;
+
+      const bike = r.bikes;
+      if (!bike) continue;
+
+      const vehicle = vehiclesMap[r.bike_id];
+      if (!vehicle) continue; // Skip unlinked bikes with no tracker
+
+      // Find the most recent lock/unlock log for this bike
+      const lastLog = (recentLogs || []).find(l => l.bike_id === r.bike_id);
+
+      // Needs unlock retry if:
+      // 1. The bike is marked is_locked: true in DB (despite active subscription!)
+      // 2. OR the most recent log was an unlock that FAILED (e.g. timeout of 15000ms exceeded)
+      const isFailedUnlock = lastLog && lastLog.action === "unlock" && lastLog.success === false;
+      const isStillLocked = bike.is_locked === true;
+
+      if (isFailedUnlock || isStillLocked) {
+        const user = usersMap[r.user_id] || null;
+        pendingUnlocks.push({
+          rentalId: r.id,
+          bikeId: r.bike_id,
+          bikeCode: bike.bike_code || `Bike #${r.bike_id}`,
+          userId: r.user_id,
+          userName: user ? (user.full_name || user.name || user.phone) : "Unknown",
+          userPhone: user?.phone || "N/A",
+          loconavUuid: vehicle.vehicle_uuid,
+          loconavName: vehicle.name || null,
+          status: "pending_unlock_retry",
+          lastAttempt: lastLog?.created_at || null,
+          lastError: lastLog?.error_message || (isStillLocked ? "Bike still locked in DB despite active plan" : "Unlock failed"),
+          lastRequestId: lastLog?.metadata?.iot_request_id || null
+        });
+      }
+    }
+
+    return pendingUnlocks;
+  } catch (err) {
+    console.error("[lockPool.getPendingUnlockPool] error:", err.message);
+    return [];
+  }
+}
+
+/**
+ * Runs the background lock & unlock pool sweep:
+ * 1. Checks if any expired bike in the pending pool has come online/moved, and instantly fires lock!
+ * 2. Checks if any active paid rider's bike had a failed/timed-out unlock, and retries unlock until confirmed!
  */
 export async function runLockPoolSweep() {
   try {
     const pendingBikes = await getPendingLockPool();
+    const pendingUnlocks = await getPendingUnlockPool();
 
-    if (!pendingBikes || pendingBikes.length === 0) {
-      // 0 bikes in pool — 0 API calls needed, completely idle
-      return { checked: 0, locked: 0 };
+    const totalToProcess = (pendingBikes?.length || 0) + (pendingUnlocks?.length || 0);
+    if (totalToProcess === 0) {
+      return { checked: 0, locked: 0, unlocked: 0 };
     }
 
-    console.log(`[lockPool] Found ${pendingBikes.length} bike(s) waiting in Pending Lock Pool. Checking live LocoNav telemetry...`);
+    console.log(`[lockPool] Sweep started: ${pendingBikes?.length || 0} pending lock(s), ${pendingUnlocks?.length || 0} pending unlock retry(ies).`);
 
     let lockedCount = 0;
+    let unlockedCount = 0;
 
-    for (const pb of pendingBikes) {
+    // PART 1: Pending Locks (Expired Riders)
+    for (const pb of (pendingBikes || [])) {
       if (!pb.loconavUuid) continue;
 
       let onlineCheck;
@@ -152,10 +265,6 @@ export async function runLockPoolSweep() {
         continue;
       }
 
-      // Check if bike is Online / Awake / Moving:
-      // 1. online is true (fresh ping received within last 15 minutes)
-      // 2. ignition === "ON"
-      // 3. speed > 0 km/h
       const isAwake = onlineCheck.online || onlineCheck.ignition === "ON" || (onlineCheck.speed && onlineCheck.speed > 0);
 
       if (isAwake) {
@@ -167,11 +276,8 @@ export async function runLockPoolSweep() {
 
           if (lockResult && lockResult.ok !== false) {
             lockedCount++;
-
-            // Update bike is_locked status in DB
             await supabase.from("bikes").update({ is_locked: true }).eq("id", pb.bikeId);
 
-            // Insert audit log
             await supabase.from("bike_lock_logs").insert([{
               bike_id: pb.bikeId,
               user_id: pb.userId,
@@ -186,22 +292,68 @@ export async function runLockPoolSweep() {
               }
             }]);
 
-            // Notify user
             createUserNotification(
               pb.userId,
               "Subscription Expired — Vehicle Immobilized 🔒",
               `Your subscription for ${pb.bikeCode} has expired. The bike has been immobilized. Please renew your plan on the BharBike app to unlock.`,
               "warning"
             ).catch(e => console.warn("[lockPool] Notification failed:", e?.message));
+          } else {
+            // Log failed attempt so it appears on dashboard and keeps retrying
+            await supabase.from("bike_lock_logs").insert([{
+              bike_id: pb.bikeId,
+              user_id: pb.userId,
+              action: "lock",
+              method: "app",
+              success: false,
+              error_message: lockResult?.message || "Lock attempt failed",
+              metadata: {
+                triggered_by: "lock_pool_wakeup_retry",
+                status_reason: "lock_attempt_failed",
+                device_online_check: onlineCheck
+              }
+            }]);
           }
         } catch (lockErr) {
           console.error(`[lockPool] Failed to lock awake bike ${pb.bikeCode}:`, lockErr.message);
         }
       }
+      await new Promise(r => setTimeout(r, 1000)); // Respect LocoNav rate limit
     }
 
-    console.log(`[lockPool] Sweep complete: ${lockedCount} of ${pendingBikes.length} pending bike(s) immobilized.`);
-    return { checked: pendingBikes.length, locked: lockedCount };
+    // PART 2: Pending Unlocks (Active Paid Riders whose unlock failed/timed out)
+    for (const pu of (pendingUnlocks || [])) {
+      console.log(`[lockPool] ⚡ Retrying UNLOCK for active paid rider on bike ${pu.bikeCode}...`);
+      try {
+        const unlockResult = await iot.unlockBike(pu.bikeId);
+        console.log(`[lockPool] Unlock retry result for ${pu.bikeCode}:`, unlockResult);
+
+        if (unlockResult && unlockResult.ok !== false) {
+          unlockedCount++;
+          await supabase.from("bikes").update({ is_locked: false }).eq("id", pu.bikeId);
+
+          await supabase.from("bike_lock_logs").insert([{
+            bike_id: pu.bikeId,
+            user_id: pu.userId,
+            action: "unlock",
+            method: "app",
+            success: true,
+            metadata: {
+              triggered_by: "lock_pool_unlock_retry",
+              status_reason: "paid_rider_unlock_confirmed",
+              iot_request_id: unlockResult.requestId || null
+            }
+          }]);
+          console.log(`[lockPool] ✅ Successfully confirmed UNLOCK for ${pu.bikeCode}!`);
+        }
+      } catch (uErr) {
+        console.error(`[lockPool] Failed to retry unlock for ${pu.bikeCode}:`, uErr.message);
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    console.log(`[lockPool] Sweep complete: ${lockedCount} locked, ${unlockedCount} unlocked.`);
+    return { checked: totalToProcess, locked: lockedCount, unlocked: unlockedCount };
   } catch (error) {
     console.error("[lockPool.runLockPoolSweep] error:", error);
     return { checked: 0, locked: 0, error: error.message };

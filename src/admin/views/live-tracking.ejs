@@ -696,8 +696,8 @@
         <!-- 4 Horizontal Sensor Chips -->
         <div class="lt-sensors-row">
           <div class="lt-sensor-chip">
-            <div class="lt-sensor-val" id="sensorSatellites">15.0</div>
-            <div class="lt-sensor-label">GPS Satellites</div>
+            <div class="lt-sensor-val" id="sensorSatellites">--</div>
+            <div class="lt-sensor-label" id="sensorSatellitesLabel">Heading</div>
           </div>
           <div class="lt-sensor-chip">
             <div class="lt-sensor-val" id="sensorIgnition" style="color: #10b981;">ON</div>
@@ -934,7 +934,7 @@
 
   // 4. Dropdown Change
   function onBikeSelected(bikeId, bikeCode) {
-    if (!bikeId || bikeId === currentBikeId) return;
+    if (!bikeId) return;
     currentBikeId = bikeId;
     if (bikeCode) {
       const input = document.getElementById('vehicleSearchInput');
@@ -1004,17 +1004,28 @@
 
     if (telemetry) {
       const isMoving = telemetry.isMoving;
-      movementStatusText.className = `lt-movement-status ${isMoving ? 'moving' : 'stopped'}`;
-      stateDurationVal.textContent = telemetry.stateDurationText || (isMoving ? 'Moving' : 'Stopped');
+      let statusClass = 'stopped';
+      if (telemetry.isMoving) statusClass = 'moving';
+      else if (telemetry.isIdling) statusClass = 'idling';
+      else if (telemetry.isStopped) statusClass = 'stopped';
+
+      movementStatusText.className = `lt-movement-status ${statusClass}`;
+      stateDurationVal.textContent = telemetry.stateDurationText || (isMoving ? 'Moving' : (telemetry.isIdling ? 'Idling' : 'Stopped'));
       dataAgeText.textContent = `Last data received: ${telemetry.pingAgeText}`;
 
-      // Sensors
-      document.getElementById('sensorSatellites').textContent = '15.0';
+      // Real Heading / Orientation Sensor
+      const deg = Number(telemetry.orientation) || 0;
+      const compassDirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+      const compDir = compassDirs[Math.floor((deg / 22.5) + 0.5) % 16];
+      document.getElementById('sensorSatellites').textContent = deg > 0 ? `${deg}° ${compDir}` : (telemetry.isMoving ? `${deg}°` : 'Parked');
+      const sensorSatLabel = document.getElementById('sensorSatellitesLabel');
+      if (sensorSatLabel) sensorSatLabel.textContent = 'Heading';
+
       const sensorIgnition = document.getElementById('sensorIgnition');
       sensorIgnition.textContent = telemetry.ignition;
       sensorIgnition.style.color = telemetry.ignition === 'ON' ? '#10b981' : '#6b7280';
       document.getElementById('sensorSpeed').textContent = `${telemetry.speed} ${telemetry.speedUnit || 'km/h'}`;
-      document.getElementById('sensorBattery').textContent = `${bike.battery != null ? bike.battery : 98}%`;
+      document.getElementById('sensorBattery').textContent = `${bike.battery != null ? bike.battery : '--'}%`;
 
       // Map Speed pill
       document.getElementById('mapSpeedPill').textContent = `Speed : ${telemetry.speed} ${telemetry.speedUnit || 'km/h'}`;
@@ -1025,19 +1036,23 @@
         currentLon = Number(telemetry.lon);
         document.getElementById('viewCoords').textContent = `(${currentLat.toFixed(6)}, ${currentLon.toFixed(6)})`;
         createOrUpdateMarker(currentLat, currentLon, bike.is_locked, isMoving, telemetry.orientation, address, telemetry.timeIST);
-        if (map) map.setView([currentLat, currentLon], map.getZoom() || 15);
+        if (map) map.flyTo([currentLat, currentLon], Math.max(map.getZoom() || 15, 15), { animate: true, duration: 1 });
       }
 
       // Distance Overviews
       const odoKm = telemetry.odometer || 0;
-      document.getElementById('ovTodayDistance').textContent = odoKm > 0 ? `${odoKm} km` : '0 km';
+      document.getElementById('ovTodayDistance').textContent = odoKm > 0 ? `${odoKm.toLocaleString()} km` : '0 km';
     } else {
       movementStatusText.className = 'lt-movement-status offline';
       stateDurationVal.textContent = 'Device Offline / Sleep';
       dataAgeText.textContent = 'No active signal from tracker';
+      document.getElementById('sensorSatellites').textContent = 'Offline';
+      const sensorSatLabel = document.getElementById('sensorSatellitesLabel');
+      if (sensorSatLabel) sensorSatLabel.textContent = 'Heading';
       document.getElementById('sensorIgnition').textContent = 'OFF';
       document.getElementById('sensorIgnition').style.color = '#6b7280';
       document.getElementById('sensorSpeed').textContent = '0 km/h';
+      document.getElementById('sensorBattery').textContent = `${bike.battery != null ? bike.battery : '--'}%`;
       document.getElementById('mapSpeedPill').textContent = 'Speed : 0 km/h';
     }
 

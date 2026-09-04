@@ -185,7 +185,7 @@ export async function getLiveBikeTelematics(req, res) {
 
     let rider = null;
     let subscription = null;
-    if (rental?.user_id) {
+    if (rental?.user_id && ["ongoing", "active", "expired"].includes(rental.status)) {
       const [uRes, sRes] = await Promise.all([
         supabase.from("users").select("id, full_name, name, phone, email, location").eq("id", rental.user_id).maybeSingle(),
         supabase.from("user_subscriptions").select("*").eq("user_id", rental.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle()

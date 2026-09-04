@@ -166,9 +166,11 @@ async function finalizeRental(rentalId, status) {
   if (!rental) {
     throw new AppError("Rental not found", 404);
   }
-  // Accept both 'active' and 'ongoing' — mobile app uses 'ongoing'
-  const isActiveRental = ['active', 'ongoing'].includes(rental.status);
-  if (!isActiveRental) {
+  // Accept 'active', 'ongoing', and for expiry enforcement 'expired' (if bike is still assigned)
+  const validStatuses = status === RentalStatus.expired 
+    ? [RentalStatus.active, RentalStatus.ongoing, RentalStatus.expired]
+    : [RentalStatus.active, RentalStatus.ongoing];
+  if (!validStatuses.includes(rental.status)) {
     throw new AppError("Rental is not active", 409);
   }
 

@@ -831,9 +831,25 @@
       attributionControl: false
     }).setView(defaultCenter, 15);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
+    // Google Maps Roadmap Layer (Exact same Google map used by LocoNav in India)
+    const googleRoadmap = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=en&gl=IN&x={x}&y={y}&z={z}', {
+      subdomains: ['0', '1', '2', '3'],
+      maxZoom: 20
+    });
+
+    // Google Maps Satellite / Hybrid Layer
+    const googleSatellite = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&hl=en&gl=IN&x={x}&y={y}&z={z}', {
+      subdomains: ['0', '1', '2', '3'],
+      maxZoom: 20
+    });
+
+    googleRoadmap.addTo(map);
+
+    // Layer switcher (Google Maps Roadmap vs Google Satellite)
+    L.control.layers({
+      "🗺️ Google Roadmap": googleRoadmap,
+      "🛰️ Google Satellite": googleSatellite
+    }, null, { position: 'topright' }).addTo(map);
 
     createOrUpdateMarker(defaultCenter[0], defaultCenter[1], false, false, 0, 'Location', 'Sep 04, 2026');
   }

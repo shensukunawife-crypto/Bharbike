@@ -699,12 +699,26 @@
 
           <!-- Dropdown items list -->
           <div class="lt-combobox-dropdown" id="vehicleComboboxMenu" style="display: none;">
+            <div 
+              class="lt-combobox-item lt-fleet-overview-item" 
+              data-id="fleet" 
+              data-code="🌐 Full Fleet Overview"
+              data-search="fleet all overview 80 vehicles thane"
+              style="border-bottom: 1px solid var(--border); background: rgba(0, 168, 150, 0.05);"
+            >
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 800; color: #00a896;">🌐 Full Fleet Overview</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="badge" style="font-size: 11px; background: #00a896; color: #fff; font-weight: 700;"><%= bikesList.length %> Bikes</span>
+              </div>
+            </div>
             <% bikesList.forEach(function(b) { %>
               <div 
                 class="lt-combobox-item <%= String(b.id) === String(selectedBikeId) ? 'selected' : '' %>" 
                 data-id="<%= b.id %>" 
                 data-code="<%= b.bike_code %>"
-                data-search="<%= b.bike_code %> <%= b.riderName || '' %> <%= b.bike_code.replace(/[^0-9]/g, '') %>"
+                data-search="<%= b.bike_code %> <%= b.riderName || '' %> <%= b.bike_code.replace(/[^0-9]/g, '') %> <%= b.vehicleNumber || '' %>"
               >
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span style="font-weight: 700;"><%= b.bike_code %></span>
@@ -877,17 +891,16 @@
       </div>
 
       <!-- Leaflet Map Canvas -->
-      <!-- Leaflet Map Canvas -->
       <div id="live-map"></div>
 
       <!-- Floating Controls on Map -->
       <div class="lt-map-floating-controls">
-        <button id="btnToggleFleetView" class="lt-map-ctrl-btn active" onclick="toggleFleetView()" title="Fit all fleet vehicles on map">
-          <span>🗺️ Fleet Overview (<span id="fleetCountBadge">79</span>)</span>
+        <button id="btnToggleFleetView" class="lt-map-ctrl-btn" onclick="toggleFleetView()" title="Toggle Full Fleet / Single Bike">
+          <span id="fleetToggleText">🌐 Fleet Overview (<span id="fleetCountBadge">80</span>)</span>
         </button>
-        <button class="lt-map-ctrl-btn" onclick="recenterMap()" title="Recenter on Selected Vehicle">
+        <button id="btnRecenter" class="lt-map-ctrl-btn" onclick="recenterMap()" title="Recenter on Selected Vehicle">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          <span>Recenter Vehicle</span>
+          <span id="recenterBtnText">Recenter Vehicle</span>
         </button>
       </div>
     </div>
@@ -907,6 +920,7 @@
   let isFetching = false;
   let pollTimer = null;
   let activeTab = 'live';
+  let isFleetView = false; // By default: single-bike focus mode
 
   // 1. Initialize Map
   function initMap() {
@@ -960,7 +974,55 @@
     });
   }
 
-  // 3. Load All Fleet Vehicles on Map
+  // 3. Map Marker Visibility Control (Single Bike vs Full Fleet)
+  function applyMapVisibility() {
+    if (!map) return;
+    const btn = document.getElementById('btnToggleFleetView');
+    const recenterBtn = document.getElementById('btnRecenter');
+    const totalCount = Object.keys(fleetMarkers).length || 80;
+
+    if (isFleetView) {
+      // Show ALL fleet markers on map
+      Object.keys(fleetMarkers).forEach(bId => {
+        const m = fleetMarkers[bId];
+        if (m && !map.hasLayer(m)) {
+          m.addTo(map);
+        }
+      });
+      if (btn) {
+        btn.classList.add('active');
+        btn.innerHTML = `<span>🎯 Focus Selected Bike</span>`;
+      }
+      if (recenterBtn) recenterBtn.style.display = 'none';
+      if (radarCircle && map.hasLayer(radarCircle)) {
+        map.removeLayer(radarCircle);
+      }
+    } else {
+      // Show ONLY the single selected bike's marker
+      Object.keys(fleetMarkers).forEach(bId => {
+        const m = fleetMarkers[bId];
+        if (String(bId) === String(currentBikeId)) {
+          if (m && !map.hasLayer(m)) {
+            m.addTo(map);
+          }
+        } else {
+          if (m && map.hasLayer(m)) {
+            map.removeLayer(m);
+          }
+        }
+      });
+      if (btn) {
+        btn.classList.remove('active');
+        btn.innerHTML = `<span>🌐 Fleet Overview (${totalCount})</span>`;
+      }
+      if (recenterBtn) recenterBtn.style.display = 'flex';
+      if (radarCircle && currentLat && currentLon && !map.hasLayer(radarCircle)) {
+        radarCircle.addTo(map);
+      }
+    }
+  }
+
+  // 4. Load All Fleet Vehicles on Map
   async function loadFleetVehiclesOnMap() {
     try {
       const res = await fetch('/admin/api/telematics/fleet/all');
@@ -988,7 +1050,7 @@
           const m = L.marker(pos, {
             icon,
             zIndexOffset: isSelected ? 1000 : 100
-          }).addTo(map);
+          });
 
           m.on('click', () => {
             onBikeSelected(b.id, b.bike_code);
@@ -1003,9 +1065,9 @@
         }
       });
 
-      // If no query param bikeId was forced, or in fleet view, fit map to all bikes
-      const hasDirectBike = new URLSearchParams(window.location.search).get('bikeId');
-      if (!hasDirectBike && allFleetBounds.isValid()) {
+      applyMapVisibility();
+
+      if (isFleetView && allFleetBounds.isValid()) {
         map.fitBounds(allFleetBounds, { padding: [40, 40], maxZoom: 15 });
       }
     } catch (e) {
@@ -1014,10 +1076,22 @@
   }
 
   function toggleFleetView() {
-    const btn = document.getElementById('btnToggleFleetView');
+    isFleetView = !isFleetView;
+    applyMapVisibility();
+    if (isFleetView) {
+      if (allFleetBounds && allFleetBounds.isValid()) {
+        map.fitBounds(allFleetBounds, { padding: [40, 40], maxZoom: 15 });
+      }
+    } else {
+      recenterMap();
+    }
+  }
+
+  function showFleetView() {
+    isFleetView = true;
+    applyMapVisibility();
     if (allFleetBounds && allFleetBounds.isValid()) {
       map.fitBounds(allFleetBounds, { padding: [40, 40], maxZoom: 15 });
-      if (btn) btn.classList.add('active');
     }
   }
 
@@ -1046,6 +1120,9 @@
       if (img) {
         img.style.transform = `rotate(${orientation || 0}deg)`;
       }
+      if (!isFleetView && !map.hasLayer(fleetMarkers[currentBikeId])) {
+        fleetMarkers[currentBikeId].addTo(map);
+      }
     }
 
     // Range pulse circle around focused bike
@@ -1057,22 +1134,26 @@
         weight: 1.5,
         fillColor: circleColor,
         fillOpacity: 0.12
-      }).addTo(map);
+      });
     } else {
       radarCircle.setLatLng([lat, lon]);
       radarCircle.setStyle({ color: circleColor, fillColor: circleColor });
     }
-  }
 
-  function recenterMap() {
-    if (map && currentLat && currentLon) {
-      map.flyTo([currentLat, currentLon], 16, { animate: true, duration: 1 });
-      const btn = document.getElementById('btnToggleFleetView');
-      if (btn) btn.classList.remove('active');
+    if (!isFleetView && !map.hasLayer(radarCircle)) {
+      radarCircle.addTo(map);
     }
   }
 
-  // 3. Tab Switcher
+  function recenterMap() {
+    isFleetView = false;
+    applyMapVisibility();
+    if (map && currentLat && currentLon) {
+      map.flyTo([currentLat, currentLon], 16, { animate: true, duration: 1 });
+    }
+  }
+
+  // 5. Tab Switcher
   function switchTab(tab) {
     activeTab = tab;
     document.getElementById('tabLiveBtn').className = `lt-tab-btn ${tab === 'live' ? 'active' : ''}`;
@@ -1081,15 +1162,19 @@
     document.getElementById('tabHistoryContent').style.display = tab === 'history' ? 'flex' : 'none';
   }
 
-  // 4. Dropdown Change
+  // 6. Dropdown or Marker Click Change
   function onBikeSelected(bikeId, bikeCode) {
     if (!bikeId) return;
     currentBikeId = bikeId;
+    isFleetView = false; // Always show ONLY the selected bike!
+
     if (bikeCode) {
       const input = document.getElementById('vehicleSearchInput');
       if (input) input.value = bikeCode;
     }
     updateFleetMarkerSelection(bikeId);
+    applyMapVisibility();
+
     const url = new URL(window.location);
     url.searchParams.set('bikeId', bikeId);
     window.history.replaceState({}, '', url);
@@ -1347,9 +1432,18 @@
     const emptyEl = document.getElementById('comboboxEmpty');
     let highlightedIndex = -1;
 
-    function openMenu() {
+    function openMenu(showAll = false) {
       menu.style.display = 'block';
-      filterList(input.value);
+      if (showAll) {
+        filterList('');
+      } else {
+        filterList(input.value);
+      }
+      // Scroll the selected bike into view so the user can easily see it
+      const activeItem = options.find(o => o.classList.contains('selected'));
+      if (activeItem) {
+        activeItem.scrollIntoView({ block: 'nearest' });
+      }
     }
 
     function closeMenu() {
@@ -1360,10 +1454,23 @@
 
     function filterList(query) {
       const q = (query || '').trim().toLowerCase();
+      const isFleetQuery = q.includes('fleet') || q.includes('overview') || q.includes('all');
       const numQuery = q.replace(/[^0-9]/g, '');
       let visible = 0;
 
       options.forEach(opt => {
+        const isFleetItem = opt.classList.contains('lt-fleet-overview-item');
+        if (isFleetItem) {
+          if (!q || isFleetQuery) {
+            opt.style.display = 'flex';
+            visible++;
+          } else {
+            opt.style.display = 'none';
+          }
+          opt.classList.remove('highlighted');
+          return;
+        }
+
         const code = (opt.dataset.code || '').toLowerCase();
         const codeDigits = code.replace(/[^0-9]/g, '');
         const searchStr = (opt.dataset.search || '').toLowerCase();
@@ -1392,12 +1499,18 @@
 
     // Input events
     input.addEventListener('focus', () => {
-      openMenu();
+      openMenu(true); // Always display all 80 bikes when user focuses!
       input.select();
     });
 
+    input.addEventListener('click', () => {
+      if (menu.style.display !== 'block') {
+        openMenu(true); // Always display all 80 bikes when clicked!
+      }
+    });
+
     input.addEventListener('input', (e) => {
-      openMenu();
+      openMenu(false);
       filterList(e.target.value);
     });
 
@@ -1407,7 +1520,7 @@
         closeMenu();
       } else {
         input.focus();
-        openMenu();
+        openMenu(true); // Always display all 80 bikes on arrow click!
       }
     });
 
@@ -1426,7 +1539,12 @@
         options.forEach(o => o.classList.remove('selected'));
         opt.classList.add('selected');
         closeMenu();
-        onBikeSelected(bId, bCode);
+
+        if (bId === 'fleet') {
+          showFleetView();
+        } else {
+          onBikeSelected(bId, bCode);
+        }
       });
     });
 

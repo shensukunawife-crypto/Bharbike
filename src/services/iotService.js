@@ -143,6 +143,11 @@ export async function lockBike(bikeId) {
       error.response?.data?.message ||
       error.message ||
       "LocoNav API error";
+
+    if (errMsg.toLowerCase().includes('already in the state of') || errMsg.toLowerCase().includes('fuel supply to cut off')) {
+      return { ok: true, bikeId, action: "lock", requestId: "already-locked", message: errMsg };
+    }
+
     return { ok: false, message: errMsg };
   }
 }
@@ -228,6 +233,11 @@ export async function unlockBike(bikeId) {
       error.response?.data?.message ||
       error.message ||
       "LocoNav API error";
+
+    if (errMsg.toLowerCase().includes('already in the state of') || errMsg.toLowerCase().includes('fuel supply to resume')) {
+      return { ok: true, bikeId, action: "unlock", requestId: "already-unlocked", message: errMsg };
+    }
+
     return { ok: false, message: errMsg };
   }
 }

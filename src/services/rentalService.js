@@ -197,38 +197,34 @@ async function finalizeRental(rentalId, status) {
   const { error: bikeUpdateErr } = await supabase.from("bikes").update(bikeUpdatePayload).eq("id", rental.bike_id);
   if (bikeUpdateErr) throw new AppError(`Failed to release bike: ${bikeUpdateErr.message}`, 500);
 
-  // ── 2-Phase IoT Lock Protocol (LocoNav requirement) ──────────────────────
-  // Phase 1: Check if device is currently online before sending any command.
-  // If offline, LocoNav cannot deliver the command to hardware — skip and let
-  // the Lock Pool retry when the device wakes up (every 3 min sweep).
-  let iotResult;
+  // ── Immediate Lock Dispatch + Retry Pool Protocol ─────────────────────────
+  // We ALWAYS dispatch the IMMOBILIZE command directly to LocoNav immediately
+  // upon rental expiry (e.g. 09:30 AM IST). This ensures:
+  // 1. LocoNav registers the immobilize request immediately with an official request ID.
+  // 2. The client and logs see the command dispatched for EVERY expired bike on time.
+  // 3. If the device was asleep/offline at the time, LocoNav queues the request, AND
+  //    our Lock Pool keeps monitoring every 3 min to fire an active retry on wakeup.
+  let iotResult = { ok: false, message: 'not attempted' };
   let deviceOnlineStatus = { online: false, reason: 'check_not_run' };
 
   try {
     deviceOnlineStatus = await iot.checkDeviceOnline(rental.bike_id);
-    console.log(`[rentalService] Phase 1 — device online check for bike ${rental.bike_id}:`, deviceOnlineStatus);
+    console.log(`[rentalService] Telemetry check before expiry lock, bike ${rental.bike_id}:`, deviceOnlineStatus);
   } catch (statusErr) {
     console.warn(`[rentalService] Device online check threw for bike ${rental.bike_id}:`, statusErr.message);
     deviceOnlineStatus = { online: false, reason: 'check_api_error', error: statusErr.message };
   }
 
-  if (deviceOnlineStatus.online) {
-    // Phase 2: Device is confirmed online — fire the lock command
-    try {
-      iotResult = await iot.lockBike(rental.bike_id);
-      console.log(`[rentalService] Phase 2 — IoT lock response for bike ${rental.bike_id}:`, iotResult);
-    } catch (iotErr) {
-      console.warn(`[rentalService] IoT lock failed for bike ${rental.bike_id}:`, iotErr.message);
-      iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
-    }
-  } else {
-    // Device is OFFLINE — skip lock command entirely.
-    // Lock Pool sweep (runs every 3 min) will retry the moment the device comes online.
-    console.log(`[rentalService] Bike ${rental.bike_id} is OFFLINE (reason: ${deviceOnlineStatus.reason}) — lock command skipped. Lock Pool will retry on wakeup.`);
-    iotResult = {
-      ok: false,
-      message: `Device offline — queued for wakeup retry (${deviceOnlineStatus.reason || 'no_recent_data'})`
-    };
+  if (!deviceOnlineStatus.online) {
+    console.log(`[rentalService] Bike ${rental.bike_id} is currently sleeping/offline (${deviceOnlineStatus.reason}) — dispatching IMMOBILIZE to LocoNav anyway so it registers on portal & network.`);
+  }
+
+  try {
+    iotResult = await iot.lockBike(rental.bike_id);
+    console.log(`[rentalService] IoT lock response for bike ${rental.bike_id}:`, iotResult);
+  } catch (iotErr) {
+    console.warn(`[rentalService] IoT lock failed for bike ${rental.bike_id}:`, iotErr.message);
+    iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
   }
 
   // Log the lock action to bike_lock_logs

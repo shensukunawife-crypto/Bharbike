@@ -97,34 +97,110 @@
     overflow: hidden;
   }
 
-  /* Vehicle Selector Header */
+  /* Vehicle Searchable Combobox Header */
   .lt-card-header {
-    padding: 16px 20px 12px;
+    padding: 14px 18px 12px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
+    position: relative;
+    z-index: 100;
   }
-  .lt-bike-dropdown-wrap {
+  .lt-combobox-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .lt-combobox-box {
     display: flex;
     align-items: center;
-    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 10px 2px 14px;
+    cursor: text;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
-  .lt-bike-select {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--text);
-    background: transparent;
+  .lt-combobox-box:focus-within {
+    border-color: #00a896;
+    box-shadow: 0 0 0 2.5px rgba(0, 168, 150, 0.15);
+  }
+  .lt-combobox-input {
+    flex: 1;
     border: none;
-    cursor: pointer;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    padding: 8px 0;
     outline: none;
     font-family: inherit;
-    width: 100%;
+    line-height: 1.2;
+  }
+  .lt-combobox-input::placeholder {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .lt-combobox-arrow {
+    background: transparent;
+    border: none;
+    color: #4b5563;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lt-combobox-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 290px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 1050;
     padding: 4px 0;
   }
-  .lt-bike-select option {
+  .lt-combobox-dropdown::-webkit-scrollbar {
+    width: 6px;
+  }
+  .lt-combobox-dropdown::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  body.dark-mode .lt-combobox-dropdown::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+  .lt-combobox-item {
+    padding: 9px 14px;
     font-size: 14px;
     font-weight: 600;
-    background: var(--surface);
     color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.12s;
+  }
+  .lt-combobox-item:hover, .lt-combobox-item.highlighted {
+    background-color: var(--border-light, #f1f5f9);
+    color: #00a896;
+  }
+  body.dark-mode .lt-combobox-item:hover, body.dark-mode .lt-combobox-item.highlighted {
+    background-color: rgba(255,255,255,0.08);
+  }
+  .lt-combobox-item.selected {
+    background-color: rgba(0, 168, 150, 0.08);
+    color: #00a896;
+    font-weight: 800;
+  }
+  .lt-combobox-empty {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
   }
 
   /* Tabs (Live vs History) */
@@ -522,16 +598,50 @@
     <!-- LEFT: VEHICLE DETAILS CARD -->
     <div class="lt-details-card">
 
-      <!-- Bike Dropdown Header -->
+      <!-- Bike Searchable Combobox Header -->
       <div class="lt-card-header">
-        <div class="lt-bike-dropdown-wrap">
-          <select id="bikeSelect" class="lt-bike-select" onchange="onBikeSelected(this.value)">
+        <div class="lt-combobox-wrap" id="vehicleComboboxWrap">
+          <div class="lt-combobox-box" onclick="document.getElementById('vehicleSearchInput').focus()">
+            <% 
+              const currentBikeObj = bikesList.find(b => String(b.id) === String(selectedBikeId)) || bikesList[0] || {};
+              const initialCode = currentBikeObj.bike_code || '';
+            %>
+            <input 
+              type="text" 
+              id="vehicleSearchInput" 
+              class="lt-combobox-input" 
+              placeholder="Select Vehicle" 
+              value="<%= initialCode %>"
+              autocomplete="off"
+            />
+            <button type="button" class="lt-combobox-arrow" id="comboboxToggleBtn" title="Toggle Vehicles">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+
+          <!-- Dropdown items list -->
+          <div class="lt-combobox-dropdown" id="vehicleComboboxMenu" style="display: none;">
             <% bikesList.forEach(function(b) { %>
-              <option value="<%= b.id %>" <%= String(b.id) === String(selectedBikeId) ? 'selected' : '' %>>
-                <%= b.bike_code %> <%= b.hasGps ? '📡' : '⚠️ No GPS' %> (<%= b.riderName ? b.riderName : 'Available' %>)
-              </option>
+              <div 
+                class="lt-combobox-item <%= String(b.id) === String(selectedBikeId) ? 'selected' : '' %>" 
+                data-id="<%= b.id %>" 
+                data-code="<%= b.bike_code %>"
+                data-search="<%= b.bike_code %> <%= b.riderName || '' %> <%= b.bike_code.replace(/[^0-9]/g, '') %>"
+              >
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-weight: 700;"><%= b.bike_code %></span>
+                  <% if (b.hasGps) { %><span style="font-size: 11px;" title="GPS Active">📡</span><% } %>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 11.5px; color: var(--text-muted);"><%= b.riderName ? b.riderName : 'Available' %></span>
+                  <span style="font-size: 11px;"><%= b.is_locked ? '🔒' : '🔓' %></span>
+                </div>
+              </div>
             <% }); %>
-          </select>
+            <div class="lt-combobox-empty" id="comboboxEmpty" style="display: none;">
+              No vehicles matching search
+            </div>
+          </div>
         </div>
       </div>
 
@@ -807,9 +917,13 @@
   }
 
   // 4. Dropdown Change
-  function onBikeSelected(bikeId) {
+  function onBikeSelected(bikeId, bikeCode) {
     if (!bikeId || bikeId === currentBikeId) return;
     currentBikeId = bikeId;
+    if (bikeCode) {
+      const input = document.getElementById('vehicleSearchInput');
+      if (input) input.value = bikeCode;
+    }
     const url = new URL(window.location);
     url.searchParams.set('bikeId', bikeId);
     window.history.replaceState({}, '', url);
@@ -1039,8 +1153,133 @@
     if (!document.hidden) fetchLiveTelematics(false);
   });
 
+  // 10. Searchable Vehicle Combobox Logic
+  function initCombobox() {
+    const input = document.getElementById('vehicleSearchInput');
+    const menu = document.getElementById('vehicleComboboxMenu');
+    const arrowBtn = document.getElementById('comboboxToggleBtn');
+    const wrap = document.getElementById('vehicleComboboxWrap');
+    const options = Array.from(document.querySelectorAll('.lt-combobox-item'));
+    const emptyEl = document.getElementById('comboboxEmpty');
+    let highlightedIndex = -1;
+
+    function openMenu() {
+      menu.style.display = 'block';
+      filterList(input.value);
+    }
+
+    function closeMenu() {
+      menu.style.display = 'none';
+      highlightedIndex = -1;
+      options.forEach(o => o.classList.remove('highlighted'));
+    }
+
+    function filterList(query) {
+      const q = (query || '').trim().toLowerCase();
+      const numQuery = q.replace(/[^0-9]/g, '');
+      let visible = 0;
+
+      options.forEach(opt => {
+        const code = (opt.dataset.code || '').toLowerCase();
+        const codeDigits = code.replace(/[^0-9]/g, '');
+        const searchStr = (opt.dataset.search || '').toLowerCase();
+
+        let isMatch = false;
+        if (!q) {
+          isMatch = true;
+        } else if (code.includes(q) || searchStr.includes(q)) {
+          isMatch = true;
+        } else if (numQuery && (codeDigits.includes(numQuery) || parseInt(codeDigits, 10) === parseInt(numQuery, 10))) {
+          isMatch = true;
+        }
+
+        if (isMatch) {
+          opt.style.display = 'flex';
+          visible++;
+        } else {
+          opt.style.display = 'none';
+        }
+        opt.classList.remove('highlighted');
+      });
+
+      emptyEl.style.display = visible === 0 ? 'block' : 'none';
+      highlightedIndex = -1;
+    }
+
+    // Input events
+    input.addEventListener('focus', () => {
+      openMenu();
+      input.select();
+    });
+
+    input.addEventListener('input', (e) => {
+      openMenu();
+      filterList(e.target.value);
+    });
+
+    arrowBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (menu.style.display === 'block') {
+        closeMenu();
+      } else {
+        input.focus();
+        openMenu();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) {
+        closeMenu();
+      }
+    });
+
+    // Option click
+    options.forEach(opt => {
+      opt.addEventListener('click', () => {
+        const bId = opt.dataset.id;
+        const bCode = opt.dataset.code;
+        input.value = bCode;
+        options.forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        closeMenu();
+        onBikeSelected(bId, bCode);
+      });
+    });
+
+    // Keyboard navigation
+    input.addEventListener('keydown', (e) => {
+      const visible = options.filter(o => o.style.display !== 'none');
+      if (!visible.length) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (menu.style.display !== 'block') openMenu();
+        highlightedIndex = (highlightedIndex + 1) % visible.length;
+        visible.forEach((o, idx) => o.classList.toggle('highlighted', idx === highlightedIndex));
+        visible[highlightedIndex]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (menu.style.display !== 'block') openMenu();
+        highlightedIndex = (highlightedIndex - 1 + visible.length) % visible.length;
+        visible.forEach((o, idx) => o.classList.toggle('highlighted', idx === highlightedIndex));
+        visible[highlightedIndex]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && visible[highlightedIndex]) {
+          visible[highlightedIndex].click();
+        } else if (visible.length === 1) {
+          visible[0].click();
+        }
+      } else if (e.key === 'Escape') {
+        closeMenu();
+      }
+    });
+  }
+
+  // Startup
   window.addEventListener('DOMContentLoaded', () => {
     initMap();
+    initCombobox();
     fetchLiveTelematics(true);
     startPolling();
   });

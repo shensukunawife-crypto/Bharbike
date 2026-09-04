@@ -340,16 +340,17 @@
     <div class="pool-header">
       <div>
         <h3 class="pool-title">
+          <i class="fas fa-hourglass-half" style="font-size:14px;"></i>
           <span>Pending Lock Pool</span>
           <span class="pool-badge"><%= pool.length %> Waiting</span>
         </h3>
         <div style="font-size:12.5px;color:#78350f;margin-top:2px;">
-          Bikes held by expired/inactive riders waiting in offline state. The backend auto-polls every 3 minutes and <strong>instantly fires the lock command the moment the bike turns ON or moves</strong>.
+          Expired riders' bikes waiting to be locked. The backend checks every 3 minutes and <strong>fires the lock the moment the bike turns ON or moves</strong>.
         </div>
       </div>
       <div>
         <button id="btnRetrySweep" class="btn-retry-sweep" onclick="triggerManualSweep()">
-          Run Smart Retry Sweep Now
+          <i id="retryIcon" class="fas fa-sync-alt"></i> Run Retry Sweep Now
         </button>
       </div>
     </div>
@@ -357,25 +358,42 @@
     <% if (pool.length > 0) { %>
       <div class="pool-grid">
         <% pool.forEach(pb => { %>
+          <%
+            var lastAttemptStr = 'No attempt yet';
+            if (pb.lastAttempt) {
+              lastAttemptStr = new Date(pb.lastAttempt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+            var statusText = pb.lastError || 'Waiting for device to come online';
+            if (statusText.includes('no_uuid_mapped')) statusText = 'No GPS tracker linked to this bike';
+            else if (statusText.includes('stale_data_')) {
+              var mins = statusText.match(/stale_data_(\d+)min/);
+              if (mins) { var h = Math.floor(mins[1]/60); statusText = 'Tracker offline for ' + (h > 0 ? h + 'h ' : '') + (mins[1]%60) + 'm — waiting for key turn'; }
+            }
+            else if (statusText.includes('api_error')) statusText = 'LocoNav API unreachable during last check';
+          %>
           <div class="pool-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
               <strong style="font-size:15px;color:#0f172a;"><%= pb.bikeCode %></strong>
               <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;">
-                OFFLINE
+                🔴 LOCK PENDING
               </span>
             </div>
-            <div style="font-size:12px;color:#475569;margin-bottom:4px;">
-              Rider: <strong><%= pb.userName %></strong> (<%= pb.userPhone %>)
+            <div style="font-size:12.5px;color:#0f172a;font-weight:600;margin-bottom:2px;">
+              <i class="fas fa-user" style="color:#94a3b8;margin-right:4px;"></i><%= pb.userName %> &nbsp;·&nbsp; <%= pb.userPhone %>
             </div>
             <div style="font-size:11.5px;color:#b45309;background:#fef3c7;padding:6px 8px;border-radius:6px;margin-top:6px;">
-              Status: <%= pb.lastError %>
+              <i class="fas fa-info-circle" style="margin-right:4px;"></i><%= statusText %>
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:6px;">
+              Last attempt: <%= lastAttemptStr %>
             </div>
           </div>
         <% }) %>
       </div>
     <% } else { %>
       <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#166534;font-size:13px;">
-        <strong>Lock Pool is Clean:</strong> All expired bikes across the fleet have been successfully immobilized on the hardware level.
+        <i class="fas fa-check-circle" style="margin-right:6px;"></i>
+        <strong>Lock Pool is Clean:</strong> All expired bikes have been successfully immobilized on hardware.
       </div>
     <% } %>
   </div>
@@ -386,28 +404,41 @@
       <div class="pool-header">
         <div>
           <h3 class="pool-title" style="color: #1e40af;">
+            <i class="fas fa-sync-alt" style="font-size:14px;"></i>
             <span>Pending Unlock Retry Queue</span>
             <span class="pool-badge" style="background: #2563eb;"><%= unlockPool.length %> Retrying</span>
           </h3>
           <div style="font-size:12.5px;color:#1e3a8a;margin-top:2px;">
-            Active paid riders whose unlock command experienced a transient network delay or timeout. The backend automatically retries every 3 minutes until hardware confirms the unlock.
+            Active paid riders whose unlock hit a transient LocoNav timeout. Backend auto-retries every 3 minutes until hardware confirms.
           </div>
         </div>
       </div>
       <div class="pool-grid">
         <% unlockPool.forEach(pu => { %>
+          <%
+            var unlockLastStr = 'No attempt yet';
+            if (pu.lastAttempt) {
+              unlockLastStr = new Date(pu.lastAttempt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+            var unlockStatusText = pu.lastError || 'Retrying...';
+            if (unlockStatusText.includes('timeout')) unlockStatusText = 'LocoNav API timed out — retrying automatically';
+            else if (unlockStatusText.includes('active request')) unlockStatusText = 'Previous command still processing on device';
+          %>
           <div class="pool-card" style="border-color: #bfdbfe;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
               <strong style="font-size:15px;color:#0f172a;"><%= pu.bikeCode %></strong>
               <span style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;">
-                RETRYING UNLOCK
+                🔄 RETRYING UNLOCK
               </span>
             </div>
-            <div style="font-size:12px;color:#475569;margin-bottom:4px;">
-              Rider: <strong><%= pu.userName %></strong> (<%= pu.userPhone %>)
+            <div style="font-size:12.5px;color:#0f172a;font-weight:600;margin-bottom:2px;">
+              <i class="fas fa-user" style="color:#94a3b8;margin-right:4px;"></i><%= pu.userName %> &nbsp;·&nbsp; <%= pu.userPhone %>
             </div>
             <div style="font-size:11.5px;color:#1d4ed8;background:#eff6ff;padding:6px 8px;border-radius:6px;margin-top:6px;">
-              Status: <%= pu.lastError %>
+              <i class="fas fa-info-circle" style="margin-right:4px;"></i><%= unlockStatusText %>
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:6px;">
+              Last attempt: <%= unlockLastStr %>
             </div>
           </div>
         <% }) %>
@@ -418,35 +449,53 @@
   <div class="logs-controls">
     <div class="logs-search-box">
       <i class="fas fa-search logs-search-icon"></i>
-      <input type="text" id="logSearchInput" class="logs-search-input" placeholder="Search by bike code, rider, action, or request ID..." onkeyup="filterLogs()">
+      <input type="text" id="logSearchInput" class="logs-search-input" placeholder="Search by bike, rider, action, trigger, or LocoNav request ID..." onkeyup="filterLogs()">
+    </div>
+    <div style="font-size:12px;color:#94a3b8;white-space:nowrap;">
+      Showing <%= logList.length %> events &nbsp;·&nbsp; All times in IST
     </div>
   </div>
 
   <% if (logList.length > 0) { %>
     <div class="logs-grid" id="logsGrid">
       <% logList.forEach(log => { 
-          const isLock = log.action === 'lock';
-          const iconClass = isLock ? 'bg-lock' : 'bg-unlock';
-          const faIcon = isLock ? 'fa-lock' : 'fa-unlock';
+          var isLock = log.action === 'lock';
+          var iconClass = isLock ? 'bg-lock' : 'bg-unlock';
+          var faIcon = isLock ? 'fa-lock' : 'fa-unlock';
           
-          let triggerLabel = log.metadata?.triggered_by || 'Unknown';
-          if (triggerLabel === 'rental_finalization') triggerLabel = 'Rental Expiry (Auto Lock @ 09:30 AM)';
-          if (triggerLabel === 'lock_pool_wakeup_retry') triggerLabel = 'Smart Wakeup Retry (Auto Lock)';
-          if (triggerLabel === 'lock_pool_unlock_retry') triggerLabel = 'Unlock Retry (Auto Unlock — Pool)';
-          if (triggerLabel === 'plan_renewal') triggerLabel = 'Plan Renewal (Auto Unlock)';
-          if (triggerLabel === 'loconav_portal_manual_click') triggerLabel = 'External LocoNav Portal Override (Manual Click)';
-          if (triggerLabel === 'system_expiry') triggerLabel = 'System Forced Expiry';
-          if (triggerLabel === 'system_manual_fix') triggerLabel = 'BharBike Admin Manual Override';
+          var triggerLabel = log.metadata && log.metadata.triggered_by ? log.metadata.triggered_by : 'Unknown';
+          if (triggerLabel === 'rental_finalization')      triggerLabel = 'Rental Expiry (Auto Lock @ 09:30 AM)';
+          if (triggerLabel === 'lock_pool_wakeup_retry')   triggerLabel = 'Smart Wakeup Retry (Auto Lock)';
+          if (triggerLabel === 'lock_pool_unlock_retry')   triggerLabel = 'Unlock Retry (Auto Unlock — Pool)';
+          if (triggerLabel === 'plan_renewal')             triggerLabel = 'Plan Renewal (Auto Unlock)';
           if (triggerLabel === 'skipped_days_reactivation') triggerLabel = 'Skipped Days Added (Auto Unlock)';
-          
-          let riderName = 'N/A';
-          if (log.users) {
-            riderName = log.users.full_name || log.users.name || log.users.phone;
-          }
-          const reqId = log.metadata?.iot_request_id;
-          const actorEmail = log.metadata?.creator_email;
+          if (triggerLabel === 'loconav_portal_manual_click') triggerLabel = 'LocoNav Portal Manual Override';
+          if (triggerLabel === 'system_expiry')            triggerLabel = 'System Forced Expiry';
+          if (triggerLabel === 'system_manual_fix')        triggerLabel = 'Admin Manual Override';
+          if (triggerLabel === 'admin_override')           triggerLabel = 'Admin Manual Override';
+
+          var riderName = 'N/A';
+          if (log.users) riderName = log.users.full_name || log.users.name || log.users.phone || 'N/A';
+
+          var reqId = log.metadata && log.metadata.iot_request_id ? log.metadata.iot_request_id : null;
+          var actorEmail = log.metadata && log.metadata.creator_email ? log.metadata.creator_email : null;
+
+          // IST timestamp with full date including year
+          var logTimeIST = new Date(log.created_at).toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          });
+
+          // Badge: use is_in_pending_pool only if the log itself is a failed lock (not a past successful lock)
+          var showPendingBadge = log.is_in_pending_pool && !log.success;
       %>
-      <div class="log-card" data-search="<%= log.bikes?.bike_code || '' %> <%= log.action %> <%= triggerLabel %> <%= riderName %> <%= reqId || '' %>">
+      <div class="log-card" data-search="<%= log.bikes && log.bikes.bike_code ? log.bikes.bike_code : '' %> <%= log.action %> <%= triggerLabel %> <%= riderName %> <%= reqId || '' %>">
         <div class="log-icon-wrap <%= iconClass %>">
           <i class="fas <%= faIcon %> fa-lg"></i>
         </div>
@@ -454,12 +503,12 @@
         <div class="log-body">
           <div class="log-title-row">
             <h3 class="log-title">
-              Bike: <%= log.bikes?.bike_code || log.bike_id %> 
+              Bike: <%= log.bikes && log.bikes.bike_code ? log.bikes.bike_code : ('Bike #' + log.bike_id) %> 
               <span style="color: #94a3b8; font-weight: 400;">—</span> 
               <span style="text-transform: capitalize;"><%= log.action %></span>
             </h3>
-            <span class="log-time">
-              <%= new Date(log.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }) %>
+            <span class="log-time" style="font-size:12.5px;font-weight:600;color:#334155;white-space:nowrap;">
+              🕐 <%= logTimeIST %> IST
             </span>
           </div>
 
@@ -467,53 +516,63 @@
             Triggered by: <strong><%= triggerLabel %></strong>
             <% if (log.method === 'loconav_portal') { %>
               <span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;margin-left:6px;">
-                External Portal Action <% if (actorEmail) { %>(<%= actorEmail %>)<% } %>
+                External Portal<% if (actorEmail) { %> (<%= actorEmail %>)<% } %>
               </span>
-            <% } else if (log.method) { %>
+            <% } else if (log.method && log.method !== 'app') { %>
               (Method: <code><%= log.method %></code>)
             <% } %>
             <% if (reqId) { %>
-              | LocoNav Req ID: <code style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700;">#<%= reqId %></code>
+              &nbsp;| LocoNav Req: <code style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700;">#<%= reqId %></code>
             <% } %>
           </p>
 
           <div class="log-meta-grid">
             <div class="meta-item">
               <i class="fas fa-user"></i> 
-              Rider: <%= riderName %>
+              Rider: <strong style="color:#0f172a;margin-left:2px;"><%= riderName %></strong>
             </div>
             
             <div class="meta-item">
               <i class="fas fa-satellite-dish"></i> 
-              <% if (log.is_in_pending_pool) { %>
-                <span class="status-badge pending-pool">
-                  Device Asleep (In Retry Pool)
-                </span>
+              <% if (showPendingBadge) { %>
+                <span class="status-badge pending-pool">⏳ Queued for Wakeup Retry</span>
+              <% } else if (log.success) { %>
+                <span class="status-badge success">✅ Confirmed on Hardware</span>
               <% } else { %>
-                <span class="status-badge <%= log.success ? 'success' : 'failed' %>">
-                  <%= log.success ? 'Success' : 'Failed' %>
-                </span>
+                <span class="status-badge failed">❌ Failed</span>
               <% } %>
             </div>
 
-            <% if (log.metadata?.device_online_check) { 
-                 const doc = log.metadata.device_online_check;
+            <% if (log.metadata && log.metadata.device_online_check) { 
+                 var doc = log.metadata.device_online_check;
             %>
               <div class="meta-item" style="background:#f8fafc;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;font-size:11.5px;color:#334155;">
                 <i class="fas fa-microchip" style="color:#0284c7;"></i>
-                <strong style="color:#0f172a;">Live Sensor Telemetry:</strong>
+                <strong>Sensor:</strong>
                 <span>Ignition: <strong style="color:<%= doc.ignition === 'ON' ? '#16a34a' : '#64748b' %>"><%= doc.ignition || 'N/A' %></strong></span>
-                <span style="color:#cbd5e1;">•</span>
+                <span style="color:#cbd5e1;">·</span>
                 <span>Speed: <strong><%= doc.speed != null ? doc.speed + ' km/h' : '0 km/h' %></strong></span>
-                <span style="color:#cbd5e1;">•</span>
+                <span style="color:#cbd5e1;">·</span>
                 <span>Ping: <strong><%= doc.pingAgeMinutes != null ? doc.pingAgeMinutes + 'm ago' : (doc.reason || 'N/A') %></strong></span>
               </div>
             <% } %>
 
-            <% if (log.error_message) { %>
+            <% if (log.error_message) { 
+                 var errDisplay = log.error_message;
+                 if (errDisplay.includes('stale_data_')) {
+                   var m = errDisplay.match(/stale_data_(\d+)min/);
+                   if (m) { var hh = Math.floor(m[1]/60); errDisplay = 'Tracker offline for ' + (hh > 0 ? hh + 'h ' : '') + (m[1]%60) + 'm — queued for wakeup retry'; }
+                 } else if (errDisplay.includes('no_uuid_mapped')) {
+                   errDisplay = 'No GPS tracker hardware fitted on this bike';
+                 } else if (errDisplay.includes('timeout')) {
+                   errDisplay = 'LocoNav API response timed out — will retry automatically';
+                 } else if (errDisplay.includes('active request')) {
+                   errDisplay = 'Previous command still processing on device (will resolve shortly)';
+                 }
+            %>
               <div class="meta-item" style="color: #dc2626; width: 100%;">
                 <i class="fas fa-exclamation-triangle" style="color: #dc2626;"></i>
-                IoT Error: <%= log.error_message %>
+                Note: <%= errDisplay %>
               </div>
             <% } %>
           </div>
@@ -525,7 +584,7 @@
     <div class="empty-state">
       <i class="fas fa-shield-alt"></i>
       <h3>No Lock Logs Found</h3>
-      <p>Lock and unlock events will appear here.</p>
+      <p>Lock and unlock events will appear here once the system processes its first command.</p>
     </div>
   <% } %>
 </div>
@@ -538,11 +597,7 @@ function filterLogs() {
   
   cards.forEach(card => {
     const searchData = card.getAttribute('data-search').toLowerCase();
-    if (searchData.includes(filter)) {
-      card.style.display = 'flex';
-    } else {
-      card.style.display = 'none';
-    }
+    card.style.display = searchData.includes(filter) ? 'flex' : 'none';
   });
 }
 

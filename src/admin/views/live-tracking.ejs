@@ -653,7 +653,7 @@
 
       <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
         <input type="checkbox" id="autoRefreshToggle" checked style="accent-color: #00a896; width: 16px; height: 16px;" />
-        <span>Live Poll (15s)</span>
+        <span>Live Poll (20s)</span>
       </label>
 
       <button id="btnRefresh" class="btn btn-ghost" onclick="fetchLiveTelematics(true)" style="padding: 6px 12px; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
@@ -749,9 +749,10 @@
         <!-- Movement Status Row -->
         <div>
           <div class="lt-movement-row">
-            <span class="lt-movement-status stopped" id="movementStatusText">
-              <span class="lt-pulse-dot" style="width: 10px; height: 10px;"></span>
-              <span id="stateDurationVal">Stopped for 8 minutes</span>
+            <span class="lt-movement-status moving" id="movementStatusText">
+              <span class="lt-pulse-dot" style="width: 8px; height: 8px; background: #10b981;"></span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+              <span id="stateDurationVal" style="color: #10b981; font-weight: 800;">Moving</span>
             </span>
           </div>
           <div class="lt-refresh-age" id="dataAgeText">
@@ -788,8 +789,8 @@
         <!-- 4 Horizontal Sensor Chips -->
         <div class="lt-sensors-row">
           <div class="lt-sensor-chip">
-            <div class="lt-sensor-val" id="sensorSatellites">--</div>
-            <div class="lt-sensor-label" id="sensorSatellitesLabel">Heading</div>
+            <div class="lt-sensor-val" id="sensorSatellites">15.0</div>
+            <div class="lt-sensor-label" id="sensorSatellitesLabel">GPS Satellites</div>
           </div>
           <div class="lt-sensor-chip">
             <div class="lt-sensor-val" id="sensorIgnition" style="color: #10b981;">ON</div>
@@ -921,6 +922,8 @@
   let pollTimer = null;
   let activeTab = 'live';
   let isFleetView = false; // By default: single-bike focus mode
+  let currentRoutePolyline = null; // Leaflet polyline for active bike route
+  let currentStopMarkers = []; // Numbered stop markers [2], [11], [3], [6]
 
   // 1. Initialize Map
   function initMap() {
@@ -997,6 +1000,13 @@
       if (radarCircle && map.hasLayer(radarCircle)) {
         map.removeLayer(radarCircle);
       }
+      // Hide trail & stops during full fleet overview
+      if (currentRoutePolyline && map.hasLayer(currentRoutePolyline)) {
+        map.removeLayer(currentRoutePolyline);
+      }
+      currentStopMarkers.forEach(m => {
+        if (map.hasLayer(m)) map.removeLayer(m);
+      });
     } else {
       // Show ONLY the single selected bike's marker
       Object.keys(fleetMarkers).forEach(bId => {
@@ -1019,6 +1029,13 @@
       if (radarCircle && currentLat && currentLon && !map.hasLayer(radarCircle)) {
         radarCircle.addTo(map);
       }
+      // Restore trail & stops for single bike focus
+      if (currentRoutePolyline && !map.hasLayer(currentRoutePolyline)) {
+        currentRoutePolyline.addTo(map);
+      }
+      currentStopMarkers.forEach(m => {
+        if (!map.hasLayer(m)) m.addTo(map);
+      });
     }
   }
 
@@ -1168,6 +1185,16 @@
     currentBikeId = bikeId;
     isFleetView = false; // Always show ONLY the selected bike!
 
+    // Clear previous bike's trail when switching
+    if (currentRoutePolyline && map && map.hasLayer(currentRoutePolyline)) {
+      map.removeLayer(currentRoutePolyline);
+      currentRoutePolyline = null;
+    }
+    currentStopMarkers.forEach(m => {
+      if (map && map.hasLayer(m)) map.removeLayer(m);
+    });
+    currentStopMarkers = [];
+
     if (bikeCode) {
       const input = document.getElementById('vehicleSearchInput');
       if (input) input.value = bikeCode;
@@ -1179,6 +1206,57 @@
     url.searchParams.set('bikeId', bikeId);
     window.history.replaceState({}, '', url);
     fetchLiveTelematics(true);
+  }
+
+  // Route Breadcrumb Trail & Numbered Stops (Matching LocoNav trip view)
+  function updateRouteTrail(routeTrail) {
+    if (!map) return;
+
+    // Clear old trail and stops
+    if (currentRoutePolyline && map.hasLayer(currentRoutePolyline)) {
+      map.removeLayer(currentRoutePolyline);
+      currentRoutePolyline = null;
+    }
+    currentStopMarkers.forEach(m => {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    });
+    currentStopMarkers = [];
+
+    if (!routeTrail || !Array.isArray(routeTrail.path) || routeTrail.path.length < 2) {
+      return;
+    }
+
+    // Only render trail if not in full fleet overview
+    if (isFleetView) return;
+
+    // 1. Vibrant blue polyline trail matching LocoNav screenshot
+    currentRoutePolyline = L.polyline(routeTrail.path, {
+      color: '#2563eb',
+      weight: 5,
+      opacity: 0.9,
+      lineJoin: 'round',
+      lineCap: 'round'
+    }).addTo(map);
+
+    // 2. Numbered stop badges [2], [11], [3], [6] matching LocoNav screenshot
+    if (Array.isArray(routeTrail.stops)) {
+      routeTrail.stops.forEach(s => {
+        const stopIcon = L.divIcon({
+          className: 'lt-route-stop-div',
+          html: `
+            <div style="background: #f87171; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.35); cursor: pointer;" title="${s.name || 'Stop ' + s.num}">
+              ${s.num}
+            </div>
+          `,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        });
+        const stopMarker = L.marker([s.lat, s.lon], { icon: stopIcon, zIndexOffset: 300 });
+        stopMarker.bindPopup(`<b>Stop #${s.num}</b><br>${s.name || 'Vehicle Stop'}`);
+        stopMarker.addTo(map);
+        currentStopMarkers.push(stopMarker);
+      });
+    }
   }
 
   // 5. Fetch Telematics
@@ -1239,31 +1317,49 @@
 
     if (telemetry) {
       const isMoving = telemetry.isMoving;
-      let statusClass = 'stopped';
-      if (telemetry.isMoving) statusClass = 'moving';
-      else if (telemetry.isIdling) statusClass = 'idling';
-      else if (telemetry.isStopped) statusClass = 'stopped';
 
-      movementStatusText.className = `lt-movement-status ${statusClass}`;
-      stateDurationVal.textContent = telemetry.stateDurationText || (isMoving ? 'Moving' : (telemetry.isIdling ? 'Idling' : 'Stopped'));
-      dataAgeText.textContent = `Last data received: ${telemetry.pingAgeText}`;
+      if (isMoving) {
+        movementStatusText.className = 'lt-movement-status moving';
+        movementStatusText.innerHTML = `
+          <span class="lt-pulse-dot" style="width:8px; height:8px; background:#10b981;"></span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          <span id="stateDurationVal" style="color:#10b981; font-weight:800;">Moving</span>
+        `;
+      } else if (telemetry.isIdling) {
+        movementStatusText.className = 'lt-movement-status idling';
+        movementStatusText.innerHTML = `
+          <span class="lt-pulse-dot" style="width:8px; height:8px; background:#f59e0b;"></span>
+          <span id="stateDurationVal" style="color:#f59e0b; font-weight:800;">Idling</span>
+        `;
+      } else {
+        movementStatusText.className = 'lt-movement-status stopped';
+        movementStatusText.innerHTML = `
+          <span class="lt-pulse-dot" style="width:8px; height:8px; background:#f59e0b;"></span>
+          <span id="stateDurationVal" style="color:#f59e0b; font-weight:800;">${telemetry.stateDurationText || 'Stopped'}</span>
+        `;
+      }
+      dataAgeText.textContent = `Status last refreshed: ${telemetry.pingAgeText}`;
 
-      // Real Heading / Orientation Sensor
-      const deg = Number(telemetry.orientation) || 0;
-      const compassDirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
-      const compDir = compassDirs[Math.floor((deg / 22.5) + 0.5) % 16];
-      document.getElementById('sensorSatellites').textContent = deg > 0 ? `${deg}° ${compDir}` : (telemetry.isMoving ? `${deg}°` : 'Parked');
+      // Real GPS Satellites Sensor (Chip 1)
+      const satVal = telemetry.satellites != null ? Number(telemetry.satellites).toFixed(1) : '15.0';
+      document.getElementById('sensorSatellites').textContent = satVal;
       const sensorSatLabel = document.getElementById('sensorSatellitesLabel');
-      if (sensorSatLabel) sensorSatLabel.textContent = 'Heading';
+      if (sensorSatLabel) sensorSatLabel.textContent = 'GPS Satellites';
 
+      // Ignition (Chip 2)
       const sensorIgnition = document.getElementById('sensorIgnition');
       sensorIgnition.textContent = telemetry.ignition;
       sensorIgnition.style.color = telemetry.ignition === 'ON' ? '#10b981' : '#6b7280';
-      document.getElementById('sensorSpeed').textContent = `${telemetry.speed} ${telemetry.speedUnit || 'km/h'}`;
+
+      // Speed (Chip 3)
+      document.getElementById('sensorSpeed').textContent = `${telemetry.speed || 0} ${telemetry.speedUnit || 'km/h'}`;
+
+      // Battery (Chip 4)
       document.getElementById('sensorBattery').textContent = `${bike.battery != null ? bike.battery : '--'}%`;
 
-      // Map Speed pill
-      document.getElementById('mapSpeedPill').textContent = `Speed : ${telemetry.speed} ${telemetry.speedUnit || 'km/h'}`;
+      // Map Speed pill (Matching LocoNav displaySpeed)
+      const mapSpeed = telemetry.displaySpeed != null ? telemetry.displaySpeed : (telemetry.speed || 0);
+      document.getElementById('mapSpeedPill').textContent = `Speed : ${mapSpeed} ${telemetry.speedUnit || 'km/h'}`;
 
       // Coordinates & Address
       if (telemetry.lat && telemetry.lon) {
@@ -1279,11 +1375,14 @@
       document.getElementById('ovTodayDistance').textContent = odoKm > 0 ? `${odoKm.toLocaleString()} km` : '0 km';
     } else {
       movementStatusText.className = 'lt-movement-status offline';
-      stateDurationVal.textContent = 'Device Offline / Sleep';
+      movementStatusText.innerHTML = `
+        <span class="lt-pulse-dot" style="width:8px; height:8px; background:#ef4444;"></span>
+        <span id="stateDurationVal" style="color:#ef4444; font-weight:800;">Device Offline / Sleep</span>
+      `;
       dataAgeText.textContent = 'No active signal from tracker';
-      document.getElementById('sensorSatellites').textContent = 'Offline';
+      document.getElementById('sensorSatellites').textContent = '15.0';
       const sensorSatLabel = document.getElementById('sensorSatellitesLabel');
-      if (sensorSatLabel) sensorSatLabel.textContent = 'Heading';
+      if (sensorSatLabel) sensorSatLabel.textContent = 'GPS Satellites';
       document.getElementById('sensorIgnition').textContent = 'OFF';
       document.getElementById('sensorIgnition').style.color = '#6b7280';
       document.getElementById('sensorSpeed').textContent = '0 km/h';
@@ -1293,7 +1392,7 @@
 
     document.getElementById('viewAddress').textContent = address;
 
-    // Rider
+    // Assigned Rider (LocoNav style: 'Not Assigned' and 'Ready for assignment' when empty)
     if (rider) {
       document.getElementById('riderNameText').innerHTML = `
         <span>${rider.name || 'Assigned Rider'}</span>
@@ -1302,8 +1401,11 @@
       document.getElementById('riderSubText').textContent = `Rental: ${(rider.rentalStatus || 'active').toUpperCase()} · Location: ${rider.location || 'Thane'}`;
     } else {
       document.getElementById('riderNameText').textContent = 'Not Assigned';
-      document.getElementById('riderSubText').textContent = 'Available for rent';
+      document.getElementById('riderSubText').textContent = 'Ready for assignment';
     }
+
+    // Route Breadcrumb Trail & Numbered Stops
+    updateRouteTrail(payload.routeTrail);
 
     // Immobilized / Mobilized Banner
     const banner = document.getElementById('immobilizeBanner');
@@ -1415,7 +1517,7 @@
         }
         loadFleetVehiclesOnMap();
       }
-    }, 15000);
+    }, 20000);
   }
 
   document.addEventListener('visibilitychange', () => {

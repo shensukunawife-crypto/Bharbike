@@ -6278,10 +6278,85 @@ export async function subscriptionsPage(req, res) {
   }
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Flexible rider resolver: accepts raw UUID, phone number, bike code (e.g. TNA057),
+ * email, or rider name, and resolves the canonical user UUID.
+ */
+async function resolveUserId(input) {
+  if (!input) return null;
+  const raw = String(input).trim();
+
+  // 1. Direct UUID match
+  if (UUID_REGEX.test(raw)) {
+    const { data: u } = await supabase.from("users").select("id").eq("id", raw).maybeSingle();
+    if (u) return u.id;
+  }
+
+  // 2. Phone number match (10+ digits)
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length >= 10) {
+    const last10 = digits.slice(-10);
+    const { data: usersByPhone } = await supabase
+      .from("users")
+      .select("id")
+      .or(`phone.eq.${last10},phone.eq.+91${last10},phone.ilike.%${last10}%`)
+      .limit(1);
+    if (usersByPhone?.[0]) return usersByPhone[0].id;
+  }
+
+  // 3. Bike code lookup (e.g. 'TNA057', 'TNA044')
+  if (raw.toUpperCase().startsWith("TNA") || raw.toUpperCase().startsWith("BIKE")) {
+    const { data: bike } = await supabase
+      .from("bikes")
+      .select("id")
+      .ilike("bike_code", raw)
+      .maybeSingle();
+    if (bike) {
+      const { data: rental } = await supabase
+        .from("rentals")
+        .select("user_id")
+        .eq("bike_id", bike.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (rental?.[0]?.user_id) return rental[0].user_id;
+    }
+  }
+
+  // 4. Email lookup
+  if (raw.includes("@")) {
+    const { data: uByEmail } = await supabase
+      .from("users")
+      .select("id")
+      .ilike("email", raw)
+      .maybeSingle();
+    if (uByEmail) return uByEmail.id;
+  }
+
+  // 5. Rider Name lookup (case-insensitive substring)
+  const { data: uByName } = await supabase
+    .from("users")
+    .select("id")
+    .ilike("full_name", `%${raw}%`)
+    .limit(1);
+  if (uByName?.[0]) return uByName[0].id;
+
+  return null;
+}
+
 export async function addSubscription(req, res) {
   try {
     const { user_id, plan_id, end_date } = req.body;
-    if (!user_id || !plan_id) return res.status(400).json({ success: false, message: "User ID and Plan ID are required" });
+    if (!user_id || !plan_id) return res.status(400).json({ success: false, message: "User and Plan are required" });
+
+    const resolvedUserId = await resolveUserId(user_id);
+    if (!resolvedUserId) {
+      return res.status(404).json({
+        success: false,
+        message: `Could not find any rider matching "${user_id}". Please enter a valid phone number, rider name, bike code, or User ID.`
+      });
+    }
 
     // Fetch plan details to get duration
     const { data: planInfo } = await supabase
@@ -6297,13 +6372,9 @@ export async function addSubscription(req, res) {
     const lastDayMidnightIST = addISTDays(startIst, duration - 1);
     const defaultExpiry = new Date(lastDayMidnightIST.getTime() + 23 * 60 * 60 * 1000);
     const expiry = end_date ? parseISTEndOfDay(end_date) : defaultExpiry;
-    
-    // Check user exists
-    const { data: user } = await supabase.from("users").select("id").eq("id", user_id).maybeSingle();
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     const { data: subData, error } = await supabase.from("user_subscriptions").insert([{
-      user_id,
+      user_id: resolvedUserId,
       plan_id,
       status: "active",
       start_date: startIst.toISOString(),
@@ -6505,28 +6576,34 @@ export async function addPayment(req, res) {
   try {
     const { user_id, amount, status, razorpay_payment_id, order_id } = req.body;
     if (!user_id || !amount) {
-      return res.status(400).json({ success: false, message: "User ID and Amount are required" });
+      return res.status(400).json({ success: false, message: "User and Amount are required" });
+    }
+
+    const resolvedUserId = await resolveUserId(user_id);
+    if (!resolvedUserId) {
+      return res.status(404).json({
+        success: false,
+        message: `Could not find any rider matching "${user_id}". Please enter a valid phone number, rider name, bike code (e.g. TNA057), or User ID.`
+      });
     }
 
     const finalStatus = status || "success";
     const finalAmount = Number(amount);
 
     const { data: newPayment, error } = await supabase.from("payments").insert([{
-      user_id,
+      user_id: resolvedUserId,
       amount: finalAmount,
       status: finalStatus,
       razorpay_payment_id: razorpay_payment_id || "manual_cash",
       order_id: order_id || null
-    }]).select("id").single();
+    }]).select("id, created_at").single();
 
     if (error) throw error;
 
     // If admin is logging a successful payment, activate the subscription
-    if (finalStatus === "success" && user_id) {
+    if (finalStatus === "success" && resolvedUserId) {
       try {
         // Always use the actual active subscription plan from DB.
-        // We do NOT match by amount because ₹3450 = ₹1950 subscription + ₹1500 registration fee (one-time).
-        // Matching ₹3450 as a plan price would find nothing.
         let targetPlan = "weekly_plan"; // safe fallback
         const { data: matchedPlan } = await supabase
           .from("subscription_plans")
@@ -6540,11 +6617,11 @@ export async function addPayment(req, res) {
         const { createSubscription } = await import("../../services/subscriptionService.js");
         // Backdate subscription to payment's created_at so user gets days from when they paid, not when admin approved
         const paymentCreatedAt = newPayment?.created_at || null;
-        await createSubscription(user_id, targetPlan, newPayment?.id, finalAmount, paymentCreatedAt);
+        await createSubscription(resolvedUserId, targetPlan, newPayment?.id, finalAmount, paymentCreatedAt);
 
         // Fire the Brain in the background to verify and heal if needed
         const { verifyAndHealSubscription } = await import("../../services/subscriptionBrain.js");
-        verifyAndHealSubscription(user_id, finalAmount).catch(console.error);
+        verifyAndHealSubscription(resolvedUserId, finalAmount).catch(console.error);
       } catch (subErr) {
         console.warn("[addPayment] subscription activation failed:", subErr?.message);
       }

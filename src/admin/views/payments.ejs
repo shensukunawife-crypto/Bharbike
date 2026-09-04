@@ -153,17 +153,20 @@
         </div>
         <form class="admin-form ajax-form" data-url="/admin/payments/add">
           <div class="form-group">
-            <label>User ID</label>
-            <input name="user_id" placeholder="Enter UUID" required />
+            <label style="font-weight: 600; color: #1e293b;">Rider (Mobile Number, Name, Bike Code, or ID)</label>
+            <input name="user_id" placeholder="e.g. 9833756857, Indrajeet Yadav, or TNA057" required style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;" />
+            <small style="color: #64748b; font-size: 11.5px; margin-top: 4px; display: block;">
+              Enter the rider's 10-digit mobile number, full name, or assigned bike code (e.g. TNA057).
+            </small>
           </div>
           <div class="form-row" style="display:flex; gap:16px;">
             <div class="form-group" style="flex:1;">
-              <label>Amount (₹)</label>
-              <input type="number" name="amount" required />
+              <label style="font-weight: 600; color: #1e293b;">Amount (₹)</label>
+              <input type="number" name="amount" placeholder="1950" required style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;" />
             </div>
             <div class="form-group" style="flex:1;">
-              <label>Status</label>
-              <select name="status">
+              <label style="font-weight: 600; color: #1e293b;">Status</label>
+              <select name="status" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
                 <option value="success">Success</option>
                 <option value="pending">Pending</option>
                 <option value="failed">Failed</option>
@@ -171,8 +174,8 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Reference / Gateway ID (Optional)</label>
-            <input name="razorpay_payment_id" placeholder="e.g. manual_cash" />
+            <label style="font-weight: 600; color: #1e293b;">Reference / Gateway ID (Optional)</label>
+            <input name="razorpay_payment_id" placeholder="e.g. cash, GPay, UPI UTR..." style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;" />
           </div>
           <button type="submit" class="btn-primary-large" style="width:100%; margin-top:10px;">Save Payment</button>
         </form>

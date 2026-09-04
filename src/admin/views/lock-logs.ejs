@@ -498,6 +498,20 @@
             hour12: true
           });
 
+          // Check if hardware reported device was already unlocked or already locked
+          var isAlreadyUnlocked = log.action === 'unlock' && (
+            reqId === 'already-unlocked' || 
+            (log.metadata && log.metadata.status_reason === 'already_unlocked') || 
+            (log.error_message && (log.error_message.includes('fuel supply to resume') || log.error_message.includes('already in the state of'))) ||
+            (log.metadata && log.metadata.loconav_message && (log.metadata.loconav_message.includes('fuel supply to resume') || log.metadata.loconav_message.includes('already in the state of')))
+          );
+          var isAlreadyLocked = log.action === 'lock' && (
+            reqId === 'already-locked' || 
+            (log.metadata && log.metadata.status_reason === 'already_locked') || 
+            (log.error_message && (log.error_message.includes('fuel supply to cut off') || log.error_message.includes('already in the state of'))) ||
+            (log.metadata && log.metadata.loconav_message && (log.metadata.loconav_message.includes('fuel supply to cut off') || log.metadata.loconav_message.includes('already in the state of')))
+          );
+
           // Badge: use is_in_pending_pool only if the log itself is a failed lock (not a past successful lock)
           var showPendingBadge = log.is_in_pending_pool && !log.success;
       %>
@@ -528,7 +542,13 @@
               (Method: <code><%= log.method %></code>)
             <% } %>
             <% if (reqId) { %>
-              &nbsp;| LocoNav Req: <code style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700;">#<%= reqId %></code>
+              <% if (isAlreadyUnlocked) { %>
+                &nbsp;| LocoNav Status: <span style="background:#ecfdf5;color:#047857;padding:2px 7px;border-radius:4px;font-size:11.5px;font-weight:700;border:1px solid #a7f3d0;"><i class="fas fa-check-circle"></i> Bike was already unlocked on device (fuel supply active)</span>
+              <% } else if (isAlreadyLocked) { %>
+                &nbsp;| LocoNav Status: <span style="background:#fef2f2;color:#991b1b;padding:2px 7px;border-radius:4px;font-size:11.5px;font-weight:700;border:1px solid #fecaca;"><i class="fas fa-check-circle"></i> Bike was already locked on device (fuel cut off)</span>
+              <% } else { %>
+                &nbsp;| LocoNav Req: <code style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700;">#<%= reqId %></code>
+              <% } %>
             <% } %>
           </p>
 
@@ -540,7 +560,15 @@
             
             <div class="meta-item">
               <i class="fas fa-satellite-dish"></i> 
-              <% if (showPendingBadge) { %>
+              <% if (isAlreadyUnlocked) { %>
+                <span class="status-badge" style="background:#ecfdf5;color:#047857;border:1.5px solid #6ee7b7;font-weight:800;">
+                  <i class="fas fa-check-double" style="color:#059669;margin-right:3px;"></i>ALREADY UNLOCKED (DEVICE ACTIVE)
+                </span>
+              <% } else if (isAlreadyLocked) { %>
+                <span class="status-badge" style="background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;font-weight:800;">
+                  <i class="fas fa-check-double" style="color:#dc2626;margin-right:3px;"></i>ALREADY LOCKED (IMMOBILIZED)
+                </span>
+              <% } else if (showPendingBadge) { %>
                 <span class="status-badge pending-pool">⏳ Queued for Wakeup Retry</span>
               <% } else if (log.success) { %>
                 <span class="status-badge success">✅ Confirmed on Hardware</span>

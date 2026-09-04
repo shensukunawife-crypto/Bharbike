@@ -489,17 +489,26 @@ export async function remoteControlBike(req, res) {
       metadata: {
         triggered_by: "live_tracking_panel",
         iot_request_id: result?.requestId || null,
+        status_reason: result?.requestId === 'already-unlocked' ? 'already_unlocked' : (result?.requestId === 'already-locked' ? 'already_locked' : action),
         note: `Manual 1-click ${action} executed from Live Tracking dashboard.`
       }
     }]);
+
+    let responseMsg = isSuccess
+      ? `Successfully sent ${action.toUpperCase()} command! (LocoNav Req #${result?.requestId || "confirmed"})`
+      : (result?.message || `Failed to execute ${action}`);
+
+    if (result?.requestId === 'already-unlocked') {
+      responseMsg = 'Bike was already unlocked on device (fuel supply active)';
+    } else if (result?.requestId === 'already-locked') {
+      responseMsg = 'Bike was already locked on device (fuel supply cut off)';
+    }
 
     return res.json({
       success: isSuccess,
       action,
       requestId: result?.requestId || null,
-      message: isSuccess
-        ? `Successfully sent ${action.toUpperCase()} command! (LocoNav Req #${result?.requestId || "confirmed"})`
-        : (result?.message || `Failed to execute ${action}`)
+      message: responseMsg
     });
   } catch (err) {
     console.error("[liveTracking.remoteControlBike] error:", err);

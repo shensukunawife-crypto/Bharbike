@@ -5760,7 +5760,9 @@ export async function adminUnlockBike(req, res) {
         admin_id: req.admin?.admin_id || req.admin?.id || null,
         admin_role: req.admin?.role || 'admin',
         bike_code: bikeInfo?.bike_code || null,
-        iot_request_id: iotResult?.requestId || null
+        iot_request_id: iotResult?.requestId || null,
+        status_reason: iotResult?.requestId === 'already-unlocked' ? 'already_unlocked' : 'unlocked',
+        loconav_message: iotResult?.message || null
       }
     };
 
@@ -5768,9 +5770,12 @@ export async function adminUnlockBike(req, res) {
     const { error: logErr } = await supabase.from('bike_lock_logs').insert([logPayload]);
     if (logErr) console.warn('[adminUnlockBike] lock log failed:', logErr.message);
 
+    const isAlreadyUnlocked = iotResult?.requestId === 'already-unlocked';
     return res.json({
       success: true,
-      message: iotResult?.ok ? 'Bike unlocked successfully' : `IoT Action queued: ${iotResult?.message || 'Queued'}`,
+      message: isAlreadyUnlocked
+        ? 'Bike was already unlocked on device (fuel supply active)'
+        : (iotResult?.ok ? 'Bike unlocked successfully' : `IoT Action queued: ${iotResult?.message || 'Queued'}`),
       requestId: iotResult?.requestId || null
     });
   } catch (error) {

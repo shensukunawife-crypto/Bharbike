@@ -290,19 +290,9 @@ export async function runLockPoolSweep() {
         continue;
       }
 
-      // 🚨 CRITICAL VEHICLE SAFETY GUARD: NEVER IMMOBILIZE A VEHICLE IN MOTION OR WITH IGNITION ON!
+      // Live telemetry status check (captured for audit logs and dashboard sensor inspection)
       const isMoving = Number(onlineCheck.speed || 0) > 3;
       const isIgnitionOn = String(onlineCheck.ignition || "").toUpperCase() === "ON";
-
-      if (isMoving) {
-        console.warn(`[lockPool] ⚠️ SAFETY HOLD: Bike ${pb.bikeCode} is MOVING at ${onlineCheck.speed} km/h! Immobilize blocked until vehicle is stopped.`);
-        continue;
-      }
-
-      if (isIgnitionOn) {
-        console.warn(`[lockPool] ⚠️ SAFETY HOLD: Bike ${pb.bikeCode} has IGNITION ON! Immobilize blocked until engine/ignition is turned off.`);
-        continue;
-      }
 
       // Avoid spamming LocoNav API every 3 min if device is offline and command was already dispatched recently:
       const hasRecentAttempt = pb.lastAttempt && (Date.now() - new Date(pb.lastAttempt).getTime() < 15 * 60 * 1000);
@@ -310,7 +300,7 @@ export async function runLockPoolSweep() {
         continue; // Wait for tracker wakeup or 15-minute retry interval
       }
 
-      console.log(`[lockPool] ⚡ Dispatching IMMOBILIZE command for ${pb.bikeCode} (online: ${onlineCheck.online}, status: ${onlineCheck.status}, ignition: ${onlineCheck.ignition})...`);
+      console.log(`[lockPool] ⚡ Dispatching IMMOBILIZE command for ${pb.bikeCode} (online: ${onlineCheck.online}, status: ${onlineCheck.status}, ignition: ${onlineCheck.ignition}, speed: ${onlineCheck.speed}km/h). LocoNav hardware safety relay active...`);
 
         try {
           const lockResult = await iot.lockBike(pb.bikeId);

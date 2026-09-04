@@ -236,7 +236,7 @@ export async function getLiveBikeTelematics(req, res) {
     try {
       const lRes = await axios.post(
         `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
-        { vehicleIds: [vehicle.vehicle_uuid], sensors: ["gps"] },
+        { vehicleIds: [vehicle.vehicle_uuid], sensors: ["gps", "odometer"] },
         {
           headers: {
             "User-Authentication": LOCONAV_TOKEN,
@@ -254,6 +254,7 @@ export async function getLiveBikeTelematics(req, res) {
         const speedVal = gps.speed?.value != null ? Number(gps.speed.value) : 0;
         const ignitionVal = String(gps.ignition?.value || "OFF").toUpperCase();
         const movementStatus = gps.movement?.movementStatus || (speedVal > 0 ? "MOVING" : "STOPPED");
+        const odoVal = val.odometer?.value != null ? Number(val.odometer.value) : 0;
 
         const rawTimestamp = gps.speed?.timestamp || gps.currentLocationCoordinates?.lat?.timestamp || Date.now() / 1000;
         const pingDate = new Date(rawTimestamp * 1000);
@@ -261,9 +262,14 @@ export async function getLiveBikeTelematics(req, res) {
         const ageMinutes = Math.floor(ageSeconds / 60);
 
         let ageText = "Just now";
-        if (ageSeconds < 60) ageText = `${ageSeconds}s ago`;
-        else if (ageMinutes < 60) ageText = `${ageMinutes}m ago`;
+        if (ageSeconds < 60) ageText = `${ageSeconds} sec ago`;
+        else if (ageMinutes < 60) ageText = `${ageMinutes} min ago`;
         else ageText = `${Math.floor(ageMinutes / 60)}h ${ageMinutes % 60}m ago`;
+
+        const isMoving = movementStatus === "MOVING" || speedVal > 0;
+        const stateDurationText = isMoving 
+          ? (ageMinutes > 0 ? `Moving: ${ageMinutes} minutes` : `Moving: Just now`)
+          : (ageMinutes > 0 ? `Stopped for ${ageMinutes} minutes` : `Stopped: Just now`);
 
         telemetry = {
           lat,
@@ -272,6 +278,9 @@ export async function getLiveBikeTelematics(req, res) {
           speedUnit: gps.speed?.unit || "km/h",
           ignition: ignitionVal,
           movementStatus,
+          isMoving,
+          stateDurationText,
+          odometer: odoVal,
           orientation: gps.orientation?.value || 0,
           pingTimestamp: pingDate.toISOString(),
           pingAgeText: ageText,

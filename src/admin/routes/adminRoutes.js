@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import * as adminController from "../controllers/adminController.js";
+import * as liveTrackingController from "../controllers/liveTrackingController.js";
 import { adminLoginPage } from "../../controllers/adminAuthController.js";
 import { requireAdminAuth, requirePermission } from "../middleware/adminAuth.js";
 import { adminAuditMiddleware } from "../middleware/adminAuditMiddleware.js";
@@ -49,6 +50,9 @@ router.post("/subscriptions/:subId/edit", requirePermission("manage_users"), adm
 router.post("/subscriptions/:subId/cancel", requirePermission("manage_users"), adminController.cancelSubscription);
 
 // Vehicle & Fleet Control
+router.get("/live-tracking", requirePermission("manage_bikes"), liveTrackingController.liveTrackingPage);
+router.get("/api/telematics/:bikeId/live", requirePermission("manage_bikes"), liveTrackingController.getLiveBikeTelematics);
+router.post("/api/telematics/:bikeId/control", requirePermission("manage_bikes"), liveTrackingController.remoteControlBike);
 router.get("/bikes", requirePermission("manage_bikes"), adminController.bikes);
 router.get("/lock-logs", requirePermission("manage_bikes"), adminController.bikeLockLogsPage);
 router.post("/api/lock-pool/retry", requirePermission("manage_bikes"), adminController.forceRetryLockPool);

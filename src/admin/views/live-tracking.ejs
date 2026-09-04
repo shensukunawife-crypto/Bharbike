@@ -1,0 +1,1068 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+  .live-tracking-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Top bar */
+  .lt-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    flex-wrap: wrap;
+    gap: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .lt-selector-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .lt-select {
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 280px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .lt-select:focus {
+    border-color: var(--accent);
+  }
+
+  .lt-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .lt-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+  .lt-status-pill.loading {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.25);
+  }
+  .lt-status-pill.offline {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+
+  .lt-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+    animation: ltPulse 1.8s infinite;
+  }
+  @keyframes ltPulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .lt-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .lt-btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .lt-btn-refresh:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Split layout */
+  .lt-grid {
+    display: grid;
+    grid-template-columns: 460px 1fr;
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  @media (max-width: 1100px) {
+    .lt-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Left Panel */
+  .lt-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .lt-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .lt-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Vehicle Header Banner */
+  .lt-vehicle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .lt-vehicle-code {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .lt-vehicle-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .lt-badges-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  /* Sensor Metric Cards */
+  .lt-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .lt-metric-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .lt-metric-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .lt-metric-val {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .lt-metric-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Rider Card */
+  .lt-rider-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .lt-rider-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(242,109,33,0.15), rgba(242,109,33,0.05));
+    border: 1px solid rgba(242,109,33,0.3);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .lt-rider-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .lt-rider-name {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lt-rider-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Controls */
+  .lt-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .lt-btn-lock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    transition: all 0.2s;
+  }
+  .lt-btn-lock:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+  }
+  .lt-btn-unlock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    transition: all 0.2s;
+  }
+  .lt-btn-unlock:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+  }
+  .lt-btn-lock:disabled, .lt-btn-unlock:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Location Card */
+  .lt-addr-text {
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .lt-coords-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Lock History Log */
+  .lt-log-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .lt-log-item:last-child {
+    border-bottom: none;
+  }
+
+  /* Right Map Column */
+  .lt-map-col {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    background: var(--surface);
+    min-height: 620px;
+  }
+
+  #live-map {
+    width: 100%;
+    height: 100%;
+    min-height: 620px;
+    z-index: 1;
+  }
+
+  .lt-map-hud {
+    position: absolute;
+    top: 14px;
+    left: 60px;
+    z-index: 999;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #111827;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  body.dark-mode .lt-map-hud {
+    background: rgba(20, 20, 20, 0.9);
+    border-color: rgba(255,255,255,0.1);
+    color: #f59e0b;
+  }
+
+  .lt-map-recenter {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 999;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .lt-map-recenter:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Leaflet custom marker */
+  .bike-marker-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .bike-marker-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #f26d21;
+    border: 3px solid #ffffff;
+    box-shadow: 0 4px 10px rgba(242, 109, 33, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 16px;
+    transition: transform 0.3s ease;
+  }
+  .bike-marker-circle.locked {
+    background: #ef4444;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5);
+  }
+  .bike-marker-circle.moving {
+    background: #10b981;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.5);
+  }
+  .bike-pulse-ring {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(242, 109, 33, 0.25);
+    animation: markerPulse 2s infinite ease-out;
+  }
+  @keyframes markerPulse {
+    0% { transform: scale(0.6); opacity: 1; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+</style>
+
+<div class="live-tracking-page">
+
+  <!-- TOP SELECTOR & STATUS BAR -->
+  <div class="lt-topbar">
+    <div class="lt-selector-group">
+      <label for="bikeSelect" style="font-size: 13px; font-weight: 700; color: var(--text-muted);">
+        Select Vehicle:
+      </label>
+      <select id="bikeSelect" class="lt-select" onchange="onBikeSelected(this.value)">
+        <% bikesList.forEach(function(b) { %>
+          <option value="<%= b.id %>" <%= String(b.id) === String(selectedBikeId) ? 'selected' : '' %>>
+            <%= b.bike_code %> <%= b.hasGps ? '📡' : '⚠️ (No GPS)' %> — <%= b.riderName ? b.riderName : 'Available' %> (<%= b.is_locked ? 'Locked' : 'Unlocked' %>)
+          </option>
+        <% }); %>
+      </select>
+    </div>
+
+    <div class="lt-topbar-actions">
+      <div id="cloudStatus" class="lt-status-pill">
+        <span class="lt-pulse-dot"></span>
+        <span id="cloudStatusText">LocoNav Cloud Connected</span>
+      </div>
+
+      <label class="lt-toggle-label">
+        <input type="checkbox" id="autoRefreshToggle" checked style="accent-color: var(--accent); width: 16px; height: 16px;" />
+        <span>Live Poll (15s)</span>
+      </label>
+
+      <button id="btnRefresh" class="lt-btn-refresh" onclick="fetchLiveTelematics(true)">
+        <svg id="refreshIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        <span>Refresh Now</span>
+      </button>
+
+      <span id="lastUpdatedTime" style="font-size: 11.5px; color: var(--text-muted);">
+        Syncing...
+      </span>
+    </div>
+  </div>
+
+  <!-- MAIN SPLIT WORKSPACE -->
+  <div class="lt-grid">
+
+    <!-- LEFT PANEL: TELEMATICS & CONTROLS -->
+    <div class="lt-panel">
+
+      <!-- 1. VEHICLE OVERVIEW -->
+      <div class="lt-card">
+        <div class="lt-vehicle-header">
+          <div>
+            <div class="lt-vehicle-code" id="viewBikeCode">---</div>
+            <div class="lt-vehicle-sub" id="viewVehicleNumber">Hardware Tracker UUID: ---</div>
+          </div>
+          <div style="text-align: right;">
+            <div id="lockBadge" class="badge danger" style="font-size: 12px; padding: 5px 10px;">
+              🔒 Locked
+            </div>
+          </div>
+        </div>
+
+        <div class="lt-badges-row">
+          <span id="movementBadge" class="badge warning" style="font-size: 11px;">
+            ⚪ Checking State...
+          </span>
+          <span id="batteryBadge" class="badge" style="font-size: 11px;">
+            🔋 Battery: --%
+          </span>
+          <span id="rentalBadge" class="badge info" style="font-size: 11px;">
+            Status: Available
+          </span>
+        </div>
+      </div>
+
+      <!-- 2. LIVE SENSOR METRICS -->
+      <div class="lt-metrics-grid">
+        <!-- Ignition -->
+        <div class="lt-metric-box">
+          <div class="lt-metric-head">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span>Ignition State</span>
+          </div>
+          <div class="lt-metric-val" id="metricIgnition" style="color: #6b7280;">OFF</div>
+          <div class="lt-metric-sub" id="metricIgnitionSub">Engine cut-off</div>
+        </div>
+
+        <!-- Speed -->
+        <div class="lt-metric-box">
+          <div class="lt-metric-head">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14v4"/><path d="M4.93 19.07A10 10 0 1 1 19.07 19.07"/></svg>
+            <span>Speed</span>
+          </div>
+          <div class="lt-metric-val" id="metricSpeed">0 km/h</div>
+          <div class="lt-metric-sub" id="metricMovement">Stopped</div>
+        </div>
+
+        <!-- Ping Age -->
+        <div class="lt-metric-box">
+          <div class="lt-metric-head">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>Last Ping (LocoNav)</span>
+          </div>
+          <div class="lt-metric-val" id="metricPingAge" style="font-size: 16px;">--</div>
+          <div class="lt-metric-sub" id="metricPingIST">Waiting for update</div>
+        </div>
+
+        <!-- Hardware Sleep / Status -->
+        <div class="lt-metric-box">
+          <div class="lt-metric-head">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            <span>Device State</span>
+          </div>
+          <div class="lt-metric-val" id="metricDeviceState" style="font-size: 16px; color: #10b981;">Online</div>
+          <div class="lt-metric-sub" id="metricDeviceSub">TCP active</div>
+        </div>
+      </div>
+
+      <!-- 3. CURRENT ADDRESS & LANDMARK -->
+      <div class="lt-card">
+        <div class="lt-card-title">
+          <span>📍 Landmark & Street Location</span>
+          <button onclick="copyCurrentCoords()" class="btn btn-ghost" style="padding: 2px 8px; font-size: 11px;">Copy Coords</button>
+        </div>
+        <div class="lt-addr-text" id="viewAddress">
+          Fetching exact location...
+        </div>
+        <div class="lt-coords-row">
+          <span id="viewCoords">Lat: --, Lon: --</span>
+          <a id="gmapsLink" href="#" target="_blank" style="color: var(--accent); font-weight: 700; text-decoration: none;">
+            Open in Google Maps ↗
+          </a>
+        </div>
+      </div>
+
+      <!-- 4. ASSIGNED RIDER & SUBSCRIPTION PLAN -->
+      <div class="lt-card">
+        <div class="lt-card-title">
+          <span>👤 Assigned Rider & Subscription</span>
+          <span id="subStatusBadge" class="badge info" style="font-size: 10px;">Checking</span>
+        </div>
+        <div class="lt-rider-box">
+          <div class="lt-rider-avatar" id="riderAvatar">R</div>
+          <div class="lt-rider-info">
+            <div class="lt-rider-name" id="riderName">No Assigned Rider</div>
+            <div class="lt-rider-sub">
+              <span id="riderPhone">📞 ---</span>
+              <span id="riderLocation">📍 ---</span>
+            </div>
+            <div id="subDates" style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
+              Plan: No active rental
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. REMOTE IMMOBILIZATION CONTROLS -->
+      <div class="lt-card" style="border-left: 4px solid var(--accent);">
+        <div class="lt-card-title">
+          <span>⚡ Remote Vehicle Control</span>
+          <span style="font-size: 11px; color: var(--text-muted);">Direct LocoNav Relays</span>
+        </div>
+        <div class="lt-actions-grid">
+          <button id="btnImmobilize" class="lt-btn-lock" onclick="triggerRemoteAction('lock')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Immobilize (Lock)</span>
+          </button>
+          <button id="btnMobilize" class="lt-btn-unlock" onclick="triggerRemoteAction('unlock')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+            <span>Mobilize (Unlock)</span>
+          </button>
+        </div>
+        <div id="controlFeedback" style="display: none; margin-top: 10px; font-size: 12px; padding: 8px 12px; border-radius: 6px;"></div>
+      </div>
+
+      <!-- 6. RECENT LOCK / UNLOCK AUDIT -->
+      <div class="lt-card">
+        <div class="lt-card-title">
+          <span>📋 Recent Lock History (This Bike)</span>
+          <a href="/admin/lock-logs" style="font-size: 11px; color: var(--accent); text-decoration: none;">Full Audit Logs ↗</a>
+        </div>
+        <div id="recentLogsList">
+          <div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 12px 0;">Loading logs...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: INTERACTIVE LEAFLET MAP -->
+    <div class="lt-map-col">
+      <!-- Floating HUD -->
+      <div class="lt-map-hud" id="mapHud">
+        <span id="hudSpeed">0 km/h</span>
+        <span style="opacity: 0.4;">|</span>
+        <span id="hudIgnition">IGN OFF</span>
+        <span style="opacity: 0.4;">|</span>
+        <span id="hudCoords">--</span>
+      </div>
+
+      <!-- Leaflet Map Container -->
+      <div id="live-map"></div>
+
+      <!-- Recenter Button -->
+      <button class="lt-map-recenter" onclick="recenterMap()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        <span>Recenter Vehicle</span>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // State management
+  let currentBikeId = "<%= selectedBikeId || '' %>";
+  let map = null;
+  let marker = null;
+  let radarCircle = null;
+  let pollTimer = null;
+  let currentLat = null;
+  let currentLon = null;
+  let isFetching = false;
+  let consecutiveErrors = 0;
+
+  // 1. Initialize Leaflet Map
+  function initMap() {
+    const defaultCenter = [19.2183, 72.9781]; // Thane, Maharashtra
+    map = L.map('live-map', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView(defaultCenter, 15);
+
+    // High quality OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Initial dummy marker until first live payload
+    createOrUpdateMarker(defaultCenter[0], defaultCenter[1], false, 'STOPPED', 0);
+  }
+
+  // 2. Custom SVG Bike Marker with heading
+  function createOrUpdateMarker(lat, lon, isLocked, movementStatus, orientation) {
+    if (!map) return;
+    const isMoving = movementStatus === 'MOVING';
+    const markerClass = isLocked ? 'locked' : (isMoving ? 'moving' : '');
+    const iconSymbol = isLocked ? '🔒' : (isMoving ? '⚡' : '🚲');
+    
+    // Rotate indicator if moving
+    const rotationStyle = isMoving ? `transform: rotate(${orientation || 0}deg);` : '';
+
+    const customIcon = L.divIcon({
+      className: 'bike-custom-leaflet-icon',
+      html: `
+        <div class="bike-marker-wrap">
+          <div class="bike-pulse-ring"></div>
+          <div class="bike-marker-circle ${markerClass}">
+            <span style="${rotationStyle} display:inline-block;">${iconSymbol}</span>
+          </div>
+        </div>
+      `,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22]
+    });
+
+    if (!marker) {
+      marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
+    } else {
+      marker.setLatLng([lat, lon]);
+      marker.setIcon(customIcon);
+    }
+
+    // Accuracy / Radar range circle
+    if (!radarCircle) {
+      radarCircle = L.circle([lat, lon], {
+        radius: 35,
+        color: isLocked ? '#ef4444' : '#f26d21',
+        weight: 1.5,
+        fillColor: isLocked ? '#ef4444' : '#f26d21',
+        fillOpacity: 0.12
+      }).addTo(map);
+    } else {
+      radarCircle.setLatLng([lat, lon]);
+      radarCircle.setStyle({
+        color: isLocked ? '#ef4444' : '#f26d21',
+        fillColor: isLocked ? '#ef4444' : '#f26d21'
+      });
+    }
+  }
+
+  function recenterMap() {
+    if (map && currentLat && currentLon) {
+      map.flyTo([currentLat, currentLon], 16, { animate: true, duration: 1 });
+      if (marker) marker.openPopup();
+    }
+  }
+
+  // 3. Dropdown selection handler
+  function onBikeSelected(bikeId) {
+    if (!bikeId || bikeId === currentBikeId) return;
+    currentBikeId = bikeId;
+    
+    // Update URL query without full page reload
+    const url = new URL(window.location);
+    url.searchParams.set('bikeId', bikeId);
+    window.history.replaceState({}, '', url);
+
+    // Trigger immediate refresh
+    fetchLiveTelematics(true);
+  }
+
+  // 4. Fetch Live Telematics from Backend Controller
+  async function fetchLiveTelematics(isManual = false) {
+    if (!currentBikeId || isFetching) return;
+    isFetching = true;
+
+    const cloudStatus = document.getElementById('cloudStatus');
+    const cloudStatusText = document.getElementById('cloudStatusText');
+    const lastUpdatedTime = document.getElementById('lastUpdatedTime');
+    const refreshIcon = document.getElementById('refreshIcon');
+
+    if (isManual) {
+      refreshIcon.style.animation = 'ltPulse 0.8s infinite';
+      cloudStatus.className = 'lt-status-pill loading';
+      cloudStatusText.textContent = 'Contacting LocoNav Cloud...';
+    }
+
+    try {
+      const res = await fetch(`/admin/api/telematics/${currentBikeId}/live`);
+      const data = await res.json();
+
+      if (!data || !data.success) {
+        throw new Error(data?.message || 'Failed to load telemetry');
+      }
+
+      consecutiveErrors = 0;
+      cloudStatus.className = 'lt-status-pill';
+      cloudStatusText.textContent = 'LocoNav Cloud Live';
+      const nowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      lastUpdatedTime.textContent = `Updated: ${nowStr} IST`;
+
+      renderBikeData(data);
+    } catch (err) {
+      console.warn('[liveTracking] Polling error:', err.message);
+      consecutiveErrors++;
+      cloudStatus.className = 'lt-status-pill offline';
+      cloudStatusText.textContent = 'LocoNav Sync Delayed';
+      lastUpdatedTime.textContent = `Retry in 15s (${err.message})`;
+    } finally {
+      isFetching = false;
+      refreshIcon.style.animation = 'none';
+    }
+  }
+
+  // 5. Render fetched telematics onto DOM
+  function renderBikeData(payload) {
+    const bike = payload.bike || {};
+    const vehicle = payload.vehicle || {};
+    const rider = payload.rider || null;
+    const sub = payload.subscription || null;
+    const telemetry = payload.telemetry || null;
+    const address = payload.address || 'Address lookup in progress...';
+    const recentLogs = payload.recentLogs || [];
+
+    // Header Overview
+    document.getElementById('viewBikeCode').textContent = bike.bike_code || `Bike #${bike.id}`;
+    document.getElementById('viewVehicleNumber').textContent = vehicle.number 
+      ? `Reg: ${vehicle.number} | Device: ${vehicle.uuid ? vehicle.uuid.slice(0, 18) + '...' : 'N/A'}`
+      : `Hardware Tracker UUID: ${vehicle.uuid || '⚠️ Unlinked'}`;
+
+    // Lock Badge
+    const lockBadge = document.getElementById('lockBadge');
+    if (bike.is_locked) {
+      lockBadge.className = 'badge danger';
+      lockBadge.textContent = '🔒 Locked (Immobilized)';
+    } else {
+      lockBadge.className = 'badge success';
+      lockBadge.textContent = '🔓 Unlocked (Mobilized)';
+    }
+
+    // Battery
+    const battVal = bike.battery != null ? Number(bike.battery) : 0;
+    const battBadge = document.getElementById('batteryBadge');
+    battBadge.textContent = `🔋 Battery: ${battVal}%`;
+    battBadge.className = `badge ${battVal > 50 ? 'success' : (battVal > 20 ? 'warning' : 'danger')}`;
+
+    // Rental / Rider
+    const rentalBadge = document.getElementById('rentalBadge');
+    if (rider) {
+      rentalBadge.className = rider.rentalStatus === 'ongoing' || rider.rentalStatus === 'active' ? 'badge success' : 'badge warning';
+      rentalBadge.textContent = `Rental: ${rider.rentalStatus ? rider.rentalStatus.toUpperCase() : 'ACTIVE'}`;
+      
+      document.getElementById('riderName').textContent = rider.name || 'Assigned Rider';
+      document.getElementById('riderPhone').innerHTML = rider.phone 
+        ? `<a href="tel:${rider.phone}" style="color:var(--accent); text-decoration:none; font-weight:700;">📞 ${rider.phone}</a>` 
+        : '📞 N/A';
+      document.getElementById('riderLocation').textContent = `📍 ${rider.location || 'Thane'}`;
+      document.getElementById('riderAvatar').textContent = (rider.name || 'R').charAt(0).toUpperCase();
+
+      if (sub) {
+        const subBadge = document.getElementById('subStatusBadge');
+        if (sub.isExpired) {
+          subBadge.className = 'badge danger';
+          subBadge.textContent = 'EXPIRED';
+        } else {
+          subBadge.className = 'badge success';
+          subBadge.textContent = 'ACTIVE';
+        }
+        document.getElementById('subDates').textContent = `Valid: ${sub.startDate ? sub.startDate.slice(0, 10) : 'N/A'} to ${sub.endDate ? sub.endDate.slice(0, 10) : 'N/A'}`;
+      } else {
+        document.getElementById('subStatusBadge').textContent = 'No Plan';
+        document.getElementById('subDates').textContent = 'No subscription record found';
+      }
+    } else {
+      rentalBadge.className = 'badge';
+      rentalBadge.textContent = 'Status: Available';
+      document.getElementById('riderName').textContent = 'No Assigned Rider';
+      document.getElementById('riderPhone').textContent = '📞 Available for rent';
+      document.getElementById('riderLocation').textContent = '📍 Hub';
+      document.getElementById('riderAvatar').textContent = '—';
+      document.getElementById('subStatusBadge').textContent = 'Available';
+      document.getElementById('subStatusBadge').className = 'badge info';
+      document.getElementById('subDates').textContent = 'Ready for assignment';
+    }
+
+    // Telematics Metrics
+    if (telemetry) {
+      const isMoving = telemetry.movementStatus === 'MOVING' || telemetry.speed > 0;
+      
+      // Movement Badge
+      const movBadge = document.getElementById('movementBadge');
+      if (isMoving) {
+        movBadge.className = 'badge success';
+        movBadge.textContent = `🟢 Moving (${telemetry.speed} km/h)`;
+      } else {
+        movBadge.className = 'badge warning';
+        movBadge.textContent = '🟡 Stopped';
+      }
+
+      // Ignition
+      const metricIgnition = document.getElementById('metricIgnition');
+      const isIgnOn = telemetry.ignition === 'ON';
+      metricIgnition.textContent = isIgnOn ? 'ON' : 'OFF';
+      metricIgnition.style.color = isIgnOn ? '#10b981' : '#6b7280';
+      document.getElementById('metricIgnitionSub').textContent = isIgnOn ? 'Engine running' : 'Engine cut-off';
+
+      // Speed
+      document.getElementById('metricSpeed').textContent = `${telemetry.speed} ${telemetry.speedUnit || 'km/h'}`;
+      document.getElementById('metricMovement').textContent = telemetry.movementStatus;
+
+      // Ping Age
+      document.getElementById('metricPingAge').textContent = telemetry.pingAgeText || 'Live';
+      document.getElementById('metricPingIST').textContent = telemetry.timeIST || '--';
+
+      // Device State
+      document.getElementById('metricDeviceState').textContent = 'Online';
+      document.getElementById('metricDeviceState').style.color = '#10b981';
+      document.getElementById('metricDeviceSub').textContent = 'GPS locked';
+
+      // Map HUD
+      document.getElementById('hudSpeed').textContent = `${telemetry.speed} km/h`;
+      document.getElementById('hudIgnition').textContent = `IGN ${telemetry.ignition}`;
+      document.getElementById('hudCoords').textContent = `${Number(telemetry.lat).toFixed(4)}, ${Number(telemetry.lon).toFixed(4)}`;
+
+      // Coordinates & Address
+      if (telemetry.lat && telemetry.lon) {
+        currentLat = Number(telemetry.lat);
+        currentLon = Number(telemetry.lon);
+        document.getElementById('viewCoords').textContent = `Lat: ${currentLat.toFixed(5)}, Lon: ${currentLon.toFixed(5)}`;
+        document.getElementById('gmapsLink').href = `https://www.google.com/maps?q=${currentLat},${currentLon}`;
+
+        // Move marker & map
+        createOrUpdateMarker(currentLat, currentLon, bike.is_locked, telemetry.movementStatus, telemetry.orientation);
+        if (map) {
+          map.setView([currentLat, currentLon], map.getZoom() || 15);
+        }
+      }
+    } else {
+      document.getElementById('movementBadge').className = 'badge';
+      document.getElementById('movementBadge').textContent = '⚪ Inactive / Sleep';
+      document.getElementById('metricIgnition').textContent = 'OFF';
+      document.getElementById('metricSpeed').textContent = '0 km/h';
+      document.getElementById('metricPingAge').textContent = 'No Ping';
+      document.getElementById('metricPingIST').textContent = 'Device sleeping';
+      document.getElementById('metricDeviceState').textContent = payload.hasGps ? 'Sleep Mode' : 'No Tracker';
+      document.getElementById('metricDeviceState').style.color = '#f59e0b';
+      document.getElementById('metricDeviceSub').textContent = payload.hasGps ? 'Awaiting ignition' : 'Link GPS first';
+    }
+
+    // Address
+    document.getElementById('viewAddress').textContent = address;
+
+    // Recent Logs Table
+    const logsContainer = document.getElementById('recentLogsList');
+    if (!recentLogs.length) {
+      logsContainer.innerHTML = '<div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 12px 0;">No lock/unlock actions logged for this bike yet.</div>';
+    } else {
+      logsContainer.innerHTML = recentLogs.map(l => `
+        <div class="lt-log-item">
+          <div>
+            <span class="badge ${l.action === 'LOCK' ? 'danger' : 'success'}" style="font-size: 10px; font-weight:700;">
+              ${l.action === 'LOCK' ? '🔒 LOCK' : '🔓 UNLOCK'}
+            </span>
+            <span style="margin-left: 6px; font-weight: 600; color: var(--text);">
+              ${l.success ? 'Success' : 'Failed'}
+            </span>
+            <span style="color: var(--text-muted); font-size: 11px; margin-left: 4px;">(${l.trigger})</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted);">
+            ${l.timeIST}
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // 6. 1-Click Remote Immobilization / Mobilization
+  async function triggerRemoteAction(action) {
+    if (!currentBikeId) return;
+    const bikeCode = document.getElementById('viewBikeCode').textContent || 'this vehicle';
+    const actionLabel = action === 'lock' ? 'IMMOBILIZE (Lock)' : 'MOBILIZE (Unlock)';
+
+    if (!confirm(`Are you sure you want to ${actionLabel} ${bikeCode}? LocoNav will send an immediate cut-off command.`)) {
+      return;
+    }
+
+    const btnLock = document.getElementById('btnImmobilize');
+    const btnUnlock = document.getElementById('btnMobilize');
+    const feedback = document.getElementById('controlFeedback');
+
+    btnLock.disabled = true;
+    btnUnlock.disabled = true;
+    feedback.style.display = 'block';
+    feedback.style.background = 'rgba(245, 158, 11, 0.1)';
+    feedback.style.color = '#f59e0b';
+    feedback.textContent = `Sending ${action.toUpperCase()} command to LocoNav...`;
+
+    try {
+      const res = await fetch(`/admin/api/telematics/${currentBikeId}/control`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        feedback.style.background = 'rgba(16, 185, 129, 0.15)';
+        feedback.style.color = '#10b981';
+        feedback.textContent = `✅ ${data.message}`;
+        // Immediately refresh telemetry to sync badge
+        setTimeout(() => fetchLiveTelematics(true), 1200);
+      } else {
+        feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+        feedback.style.color = '#ef4444';
+        feedback.textContent = `❌ ${data.message || 'Action failed'}`;
+      }
+    } catch (err) {
+      feedback.style.background = 'rgba(239, 68, 68, 0.15)';
+      feedback.style.color = '#ef4444';
+      feedback.textContent = `❌ Network error: ${err.message}`;
+    } finally {
+      btnLock.disabled = false;
+      btnUnlock.disabled = false;
+      setTimeout(() => {
+        if (feedback) feedback.style.display = 'none';
+      }, 7000);
+    }
+  }
+
+  // 7. Copy coordinates helper
+  function copyCurrentCoords() {
+    if (!currentLat || !currentLon) {
+      alert('Location coordinates not available yet.');
+      return;
+    }
+    const text = `${currentLat}, ${currentLon}`;
+    navigator.clipboard.writeText(text).then(() => {
+      alert(`Copied coordinates to clipboard:\n${text}`);
+    });
+  }
+
+  // 8. Lifecycle & Background auto-polling setup
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => {
+      const autoRefresh = document.getElementById('autoRefreshToggle')?.checked;
+      // Do NOT poll if tab is hidden (browser tab switched away) or auto-refresh unchecked
+      if (autoRefresh && !document.hidden && consecutiveErrors < 5) {
+        fetchLiveTelematics(false);
+      }
+    }, 15000); // 15 seconds safe pacing
+  }
+
+  // Handle visibility change (tab sleep)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      // User returned to tab -> trigger one immediate fresh fetch
+      fetchLiveTelematics(false);
+    }
+  });
+
+  // Startup
+  window.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    fetchLiveTelematics(true);
+    startPolling();
+  });
+</script>

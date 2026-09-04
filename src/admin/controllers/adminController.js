@@ -554,7 +554,7 @@ function toISTDate(dateStr) {
   } catch { return String(dateStr); }
 }
 
-function renderPage(res, data) {
+export function renderPage(res, data) {
   const isServiceRoleConfigured = supabase.isServiceRole !== false;
   const isProduction = process.env.NODE_ENV === "production";
   return res.render("layout", {

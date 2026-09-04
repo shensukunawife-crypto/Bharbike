@@ -46,6 +46,17 @@ export function hasPassedGracePeriod(endDateStr) {
 }
 
 /**
+ * Helper to compute the exact Date of the 9:30 AM IST grace period expiration
+ * for a given subscription end_date.
+ */
+export function getGracePeriodExpiry(endDateStr) {
+  if (!endDateStr) return new Date();
+  const end = new Date(endDateStr);
+  const nextISTDay = addISTDays(end, 1);
+  return new Date(nextISTDay.getTime() + (9 * 60 + 30) * 60 * 1000);
+}
+
+/**
  * Get all active subscription plans
  */
 export async function getSubscriptionPlans() {

@@ -168,6 +168,11 @@ async function sweepActiveRentalsForExpiredSubscriptions() {
         // Check if user is still within the 9:30 AM IST next-day grace period!
         if (!subscriptionService.hasPassedGracePeriod(latestSub.end_date)) {
           // Still in grace period — do NOT force lock yet!
+          const graceExp = subscriptionService.getGracePeriodExpiry(latestSub.end_date);
+          if (rental.end_time !== graceExp.toISOString()) {
+            await supabase.from('rentals').update({ end_time: graceExp.toISOString(), updated_at: now.toISOString() }).eq('id', rental.id);
+            console.log(`[BrainSweep] Auto-synced rental ${rental.id} end_time to 09:30 AM grace cutoff (${graceExp.toISOString()})`);
+          }
           continue;
         }
       }

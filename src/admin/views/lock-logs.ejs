@@ -464,7 +464,13 @@
           var faIcon = isLock ? 'fa-lock' : 'fa-unlock';
           
           var triggerLabel = log.metadata && log.metadata.triggered_by ? log.metadata.triggered_by : 'Unknown';
-          if (triggerLabel === 'rental_finalization')      triggerLabel = 'Rental Expiry (Auto Lock @ 09:30 AM)';
+          if (triggerLabel === 'rental_finalization') {
+            var logDate = new Date(log.created_at);
+            var istHours = new Date(logDate.getTime() + 5.5 * 3600 * 1000).getUTCHours();
+            triggerLabel = (istHours >= 9 && istHours <= 10) 
+              ? 'Rental Expiry (Auto Lock @ 09:30 AM)' 
+              : 'Rental Expiry (Auto Lock)';
+          }
           if (triggerLabel === 'lock_pool_wakeup_retry')   triggerLabel = 'Smart Wakeup Retry (Auto Lock)';
           if (triggerLabel === 'lock_pool_unlock_retry')   triggerLabel = 'Unlock Retry (Auto Unlock — Pool)';
           if (triggerLabel === 'plan_renewal')             triggerLabel = 'Plan Renewal (Auto Unlock)';

@@ -11,7 +11,7 @@ import * as iot from "./iotService.js";
 import * as earningsService from "./earningsService.js";
 import { createUserNotification } from "./notificationService.js";
 import { getWalletBalance, deductMoney } from "./walletService.js";
-import { hasActiveSubscription, hasPassedGracePeriod } from "./subscriptionService.js";
+import { hasActiveSubscription, hasPassedGracePeriod, getGracePeriodExpiry } from "./subscriptionService.js";
 
 const PLAN_MS = {
   [RentalPlan.daily]: 24 * 60 * 60 * 1000,
@@ -215,16 +215,34 @@ async function finalizeRental(rentalId, status) {
     deviceOnlineStatus = { online: false, reason: 'check_api_error', error: statusErr.message };
   }
 
-  if (!deviceOnlineStatus.online) {
-    console.log(`[rentalService] Bike ${rental.bike_id} is currently sleeping/offline (${deviceOnlineStatus.reason}) — dispatching IMMOBILIZE to LocoNav anyway so it registers on portal & network.`);
-  }
+  // 🚨 CRITICAL VEHICLE SAFETY GUARD: NEVER IMMOBILIZE A VEHICLE IN MOTION OR WITH IGNITION ON!
+  const isMoving = Number(deviceOnlineStatus.speed || 0) > 3;
+  const isIgnitionOn = String(deviceOnlineStatus.ignition || '').toUpperCase() === 'ON';
 
-  try {
-    iotResult = await iot.lockBike(rental.bike_id);
-    console.log(`[rentalService] IoT lock response for bike ${rental.bike_id}:`, iotResult);
-  } catch (iotErr) {
-    console.warn(`[rentalService] IoT lock failed for bike ${rental.bike_id}:`, iotErr.message);
-    iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
+  if (isMoving) {
+    console.warn(`[rentalService] ⚠️ SAFETY HOLD: Bike ${rental.bike_id} is MOVING at ${deviceOnlineStatus.speed} km/h! Immobilize blocked until vehicle is stopped.`);
+    iotResult = {
+      ok: false,
+      message: `Safety hold: vehicle is moving (${deviceOnlineStatus.speed} km/h) — immobilize deferred to Lock Pool when stopped`
+    };
+  } else if (isIgnitionOn) {
+    console.warn(`[rentalService] ⚠️ SAFETY HOLD: Bike ${rental.bike_id} has IGNITION ON! Immobilize blocked until engine/ignition is turned off.`);
+    iotResult = {
+      ok: false,
+      message: 'Safety hold: vehicle ignition is ON — immobilize deferred to Lock Pool when parked'
+    };
+  } else {
+    if (!deviceOnlineStatus.online) {
+      console.log(`[rentalService] Bike ${rental.bike_id} is currently sleeping/offline (${deviceOnlineStatus.reason}) — dispatching IMMOBILIZE to LocoNav so it registers on portal & network.`);
+    }
+
+    try {
+      iotResult = await iot.lockBike(rental.bike_id);
+      console.log(`[rentalService] IoT lock response for bike ${rental.bike_id}:`, iotResult);
+    } catch (iotErr) {
+      console.warn(`[rentalService] IoT lock failed for bike ${rental.bike_id}:`, iotErr.message);
+      iotResult = { ok: false, message: iotErr.message || 'IoT service error' };
+    }
   }
 
   // Log the lock action to bike_lock_logs
@@ -361,6 +379,15 @@ export async function expireRentalsPastEnd() {
         // Grace period allows riders to finish their night and renew until 9:30 AM next morning.
         if (!hasPassedGracePeriod(latestSub.end_date)) {
           // Still in grace period — do NOT expire rental or lock the bike yet!
+          // Auto-sync rental end_time to 09:30 AM IST grace period cutoff so it stays valid throughout the night
+          const graceExp = getGracePeriodExpiry(latestSub.end_date);
+          if (r.end_time !== graceExp.toISOString()) {
+            await supabase.from("rentals").update({
+              end_time: graceExp.toISOString(),
+              updated_at: new Date().toISOString()
+            }).eq("id", r.id);
+            console.log(`[rentalService] Auto-synced rental ${r.id} to 09:30 AM grace period cutoff (${graceExp.toISOString()})`);
+          }
           continue;
         }
       }

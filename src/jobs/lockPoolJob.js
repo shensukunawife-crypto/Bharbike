@@ -2,6 +2,7 @@ import supabase from "../utils/supabaseClient.js";
 import * as iot from "../services/iotService.js";
 import axios from "axios";
 import { createUserNotification } from "../services/notificationService.js";
+import { hasPassedGracePeriod } from "../services/subscriptionService.js";
 
 const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://app.loconav.sensorise.net/integration/api/v1";
 const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN || "ZBC5heBXfKDx8qcGWcjy";
@@ -37,8 +38,7 @@ export async function getPendingLockPool() {
         .from("user_subscriptions")
         .select("user_id, status, end_date")
         .in("user_id", userIds)
-        .eq("status", "active")
-        .gt("end_date", now.toISOString()),
+        .in("status", ["active", "ongoing"]),
 
       supabase
         .from("users")
@@ -56,7 +56,18 @@ export async function getPendingLockPool() {
         .limit(200)
     ]);
 
-    const activeUserSet = new Set((activeSubs || []).map(s => s.user_id));
+    // A rider is in active standing (and protected from lock) if their subscription is active/ongoing
+    // AND they have not passed the 09:30 AM IST next-day grace period!
+    const activeUserSet = new Set();
+    (activeSubs || []).forEach(s => {
+      if (s.end_date) {
+        const isFuture = new Date(s.end_date) > now;
+        const inGrace = !hasPassedGracePeriod(s.end_date);
+        if (isFuture || inGrace) {
+          activeUserSet.add(s.user_id);
+        }
+      }
+    });
     const usersMap = {};
     (usersData || []).forEach(u => { usersMap[u.id] = u; });
 
@@ -277,7 +288,21 @@ export async function runLockPoolSweep() {
       const isAwake = onlineCheck.online || onlineCheck.ignition === "ON" || (onlineCheck.speed && onlineCheck.speed > 0);
 
       if (isAwake) {
-        console.log(`[lockPool] ⚡ Bike ${pb.bikeCode} is ONLINE / AWAKE (status: ${onlineCheck.status}, ignition: ${onlineCheck.ignition}, speed: ${onlineCheck.speed}km/h)! Firing lock immediately...`);
+        // 🚨 CRITICAL VEHICLE SAFETY GUARD: NEVER IMMOBILIZE A VEHICLE IN MOTION OR WITH IGNITION ON!
+        const isMoving = Number(onlineCheck.speed || 0) > 3;
+        const isIgnitionOn = String(onlineCheck.ignition || "").toUpperCase() === "ON";
+
+        if (isMoving) {
+          console.warn(`[lockPool] ⚠️ SAFETY HOLD: Bike ${pb.bikeCode} is MOVING at ${onlineCheck.speed} km/h! Immobilize blocked until vehicle is stopped.`);
+          continue;
+        }
+
+        if (isIgnitionOn) {
+          console.warn(`[lockPool] ⚠️ SAFETY HOLD: Bike ${pb.bikeCode} has IGNITION ON! Immobilize blocked until engine/ignition is turned off.`);
+          continue;
+        }
+
+        console.log(`[lockPool] ⚡ Bike ${pb.bikeCode} is ONLINE & SAFELY PARKED (status: ${onlineCheck.status}, ignition: ${onlineCheck.ignition}, speed: ${onlineCheck.speed}km/h). Firing lock...`);
 
         try {
           const lockResult = await iot.lockBike(pb.bikeId);

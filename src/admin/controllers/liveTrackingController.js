@@ -103,7 +103,9 @@ export async function liveTrackingPage(req, res) {
         riderName: u ? (u.full_name || u.name || "Assigned Rider") : null,
         riderPhone: u?.phone || null,
         rentalStatus: r?.status || null,
-        rentalEndTime: r?.end_time || null
+        rentalEndTime: r?.end_time || null,
+        last_lat: b.last_lat ? Number(b.last_lat) : null,
+        last_lng: b.last_lng ? Number(b.last_lng) : null
       };
     });
 
@@ -253,8 +255,16 @@ export async function getLiveBikeTelematics(req, res) {
         const lon = gps.currentLocationCoordinates?.long?.value || null;
         const speedVal = gps.speed?.value != null ? Number(gps.speed.value) : 0;
         const ignitionVal = String(gps.ignition?.value || "OFF").toUpperCase();
-        const movementStatus = gps.movement?.movementStatus || (speedVal > 0 ? "MOVING" : "STOPPED");
         const odoVal = val.odometer?.value != null ? Number(val.odometer.value) : 0;
+
+        const isMoving = speedVal > 0;
+        const isIdling = ignitionVal === "ON" && speedVal === 0;
+        const isStopped = !isMoving && !isIdling;
+
+        let movementStatus = "STOPPED";
+        if (isMoving) movementStatus = "MOVING";
+        else if (isIdling) movementStatus = "IDLING";
+        else if (isStopped) movementStatus = "STOPPED";
 
         const rawTimestamp = gps.speed?.timestamp || gps.currentLocationCoordinates?.lat?.timestamp || Date.now() / 1000;
         const pingDate = new Date(rawTimestamp * 1000);
@@ -266,10 +276,14 @@ export async function getLiveBikeTelematics(req, res) {
         else if (ageMinutes < 60) ageText = `${ageMinutes} min ago`;
         else ageText = `${Math.floor(ageMinutes / 60)}h ${ageMinutes % 60}m ago`;
 
-        const isMoving = movementStatus === "MOVING" || speedVal > 0;
-        const stateDurationText = isMoving 
-          ? (ageMinutes > 0 ? `Moving: ${ageMinutes} minutes` : `Moving: Just now`)
-          : (ageMinutes > 0 ? `Stopped for ${ageMinutes} minutes` : `Stopped: Just now`);
+        let stateDurationText = "Stopped: Just now";
+        if (isMoving) {
+          stateDurationText = ageMinutes > 0 ? `Moving: ${ageMinutes} minutes` : `Moving: Just now`;
+        } else if (isIdling) {
+          stateDurationText = ageMinutes > 0 ? `Idling: ${ageMinutes} minutes` : `Idling (Engine ON)`;
+        } else {
+          stateDurationText = ageMinutes > 0 ? `Stopped for ${ageMinutes} minutes` : `Stopped: Just now`;
+        }
 
         telemetry = {
           lat,
@@ -279,6 +293,8 @@ export async function getLiveBikeTelematics(req, res) {
           ignition: ignitionVal,
           movementStatus,
           isMoving,
+          isIdling,
+          isStopped,
           stateDurationText,
           odometer: odoVal,
           orientation: gps.orientation?.value || 0,

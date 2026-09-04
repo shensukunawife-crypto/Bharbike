@@ -14,11 +14,11 @@ export async function getPendingLockPool() {
   try {
     const now = new Date();
 
-    // 1. Fetch all expired/cancelled rentals and bikes marked in_use / locked
+    // 1. Fetch all recent rentals (including completed) to evaluate each bike on its true latest rental
     const { data: expiredRentals, error: rErr } = await supabase
       .from("rentals")
       .select("id, user_id, bike_id, status, end_time, created_at, bikes(id, bike_code, name, is_locked, status, last_ping_at)")
-      .in("status", ["expired", "ongoing", "active"])
+      .in("status", ["expired", "ongoing", "active", "completed"])
       .order("created_at", { ascending: false });
 
     if (rErr) throw rErr;
@@ -71,6 +71,15 @@ export async function getPendingLockPool() {
     for (const r of (expiredRentals || [])) {
       if (!r.bike_id || seenBikeIds.has(r.bike_id)) continue;
       seenBikeIds.add(r.bike_id); // Evaluate each bike ONLY on its most recent rental!
+
+      // If the most recent rental is completed, the bike has been returned
+      if (r.status === "completed") {
+        // Auto-heal: If bike is erroneously still marked in_use in DB, fix it to available
+        if (r.bikes && r.bikes.status === "in_use") {
+          supabase.from("bikes").update({ status: "available" }).eq("id", r.bike_id).then(() => {});
+        }
+        continue;
+      }
 
       // If the current rider has an active paid plan, bike is in good standing -> skip!
       if (activeUserSet.has(r.user_id)) continue;

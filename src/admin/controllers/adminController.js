@@ -6910,12 +6910,12 @@ export async function assignBikeToUser(req, res) {
     const { userId } = req.params;
     const { bike_code } = req.body;
     
-    // First, end any existing ongoing rentals for this user and free the old bike
+    // First, end any existing ongoing or expired rentals for this user and free the old bike
     const { data: existingRentals } = await supabase
       .from("rentals")
       .select("bike_id")
       .eq("user_id", userId)
-      .eq("status", "ongoing");
+      .in("status", ["ongoing", "expired"]);
 
     await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).in("status", ["ongoing", "expired"]);
 

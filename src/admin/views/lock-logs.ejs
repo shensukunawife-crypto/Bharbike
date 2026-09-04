@@ -432,10 +432,12 @@
           let triggerLabel = log.metadata?.triggered_by || 'Unknown';
           if (triggerLabel === 'rental_finalization') triggerLabel = 'Rental Expiry (Auto Lock @ 09:30 AM)';
           if (triggerLabel === 'lock_pool_wakeup_retry') triggerLabel = 'Smart Wakeup Retry (Auto Lock)';
+          if (triggerLabel === 'lock_pool_unlock_retry') triggerLabel = 'Unlock Retry (Auto Unlock — Pool)';
           if (triggerLabel === 'plan_renewal') triggerLabel = 'Plan Renewal (Auto Unlock)';
           if (triggerLabel === 'loconav_portal_manual_click') triggerLabel = 'External LocoNav Portal Override (Manual Click)';
           if (triggerLabel === 'system_expiry') triggerLabel = 'System Forced Expiry';
           if (triggerLabel === 'system_manual_fix') triggerLabel = 'BharBike Admin Manual Override';
+          if (triggerLabel === 'skipped_days_reactivation') triggerLabel = 'Skipped Days Added (Auto Unlock)';
           
           let riderName = 'N/A';
           if (log.users) {

@@ -53,7 +53,7 @@ export async function getPendingLockPool() {
         .from("bike_lock_logs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(200)
+        .limit(500)
     ]);
 
     // A rider is in active standing (and protected from lock) if their subscription is active/ongoing
@@ -101,19 +101,24 @@ export async function getPendingLockPool() {
       // Only bikes currently in use by riders are tracked in the pending lock pool
       if (bike.status !== "in_use") continue;
 
-      // Find the most recent lock log for this bike
-      const lastLock = (recentLockLogs || []).find(l => l.bike_id === r.bike_id && l.action === "lock");
+      // A lock is only confirmed for this rental cycle if:
+      // 1. The bike is marked locked in DB (bike.is_locked === true)
+      // 2. A successful lock was executed AFTER this rental's expiration (or rental start)
+      // 3. The device was verified online at the time (so hardware physically received it)
+      const expiryTime = r.end_time ? new Date(r.end_time) : new Date(r.created_at);
+      const lastLock = (recentLockLogs || []).find(l => 
+        l.bike_id === r.bike_id && 
+        l.action === "lock" && 
+        new Date(l.created_at) >= expiryTime
+      );
 
-      // A bike is in pending lock if:
-      // 1. Last lock failed or had an error / unreachable tracker, OR
-      // 2. No successful lock has been executed since expiry, OR
-      // 3. Last log claimed success but device was offline at the time (device_online_check.online === false)
       const deviceWasOnlineWhenLocked = lastLock?.metadata?.device_online_check?.online !== false;
-      const isLockConfirmed = lastLock &&
+      const isLockConfirmed = bike.is_locked === true &&
+        lastLock &&
         lastLock.success === true &&
         lastLock.metadata?.iot_request_id &&
         !lastLock.error_message &&
-        deviceWasOnlineWhenLocked; // Must have been online — otherwise the lock never actually executed
+        deviceWasOnlineWhenLocked;
 
       // If lock was not yet confirmed successful on hardware level:
       if (!isLockConfirmed) {

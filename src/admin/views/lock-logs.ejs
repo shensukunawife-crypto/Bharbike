@@ -375,9 +375,12 @@
       </div>
     <% } else { %>
       <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#166534;font-size:13px;">
+        <strong>Lock Pool is Clean:</strong> All expired bikes across the fleet have been successfully immobilized on the hardware level.
+      </div>
+    <% } %>
   </div>
 
-  <% const unlockPool = pendingUnlockPool || []; %>
+  <% var unlockPool = pendingUnlockPool || []; %>
   <% if (unlockPool.length > 0) { %>
     <div class="pool-section" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #3b82f6; margin-bottom: 24px;">
       <div class="pool-header">

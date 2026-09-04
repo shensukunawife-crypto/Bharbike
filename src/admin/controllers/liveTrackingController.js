@@ -426,3 +426,119 @@ export async function remoteControlBike(req, res) {
     return res.status(500).json({ success: false, message: err.message || "Failed to control vehicle" });
   }
 }
+
+let fleetCache = {
+  timestamp: 0,
+  data: []
+};
+
+/**
+ * GET /admin/api/telematics/fleet/all
+ * Returns live GPS coordinates, heading, speed, and status for all fleet bikes
+ */
+export async function getAllFleetTelematics(req, res) {
+  try {
+    const now = Date.now();
+    // 10s cache to avoid excessive LocoNav API load
+    if (fleetCache.data.length > 0 && (now - fleetCache.timestamp) < 10000) {
+      return res.json({ success: true, cached: true, count: fleetCache.data.length, vehicles: fleetCache.data });
+    }
+
+    // 1. Fetch all bikes
+    const { data: bikes, error: bErr } = await supabase
+      .from("bikes")
+      .select("id, bike_code, name, status, is_locked, battery, last_lat, last_lng")
+      .order("bike_code", { ascending: true });
+
+    if (bErr) throw bErr;
+
+    // 2. Fetch all linked vehicles
+    const { data: vehicles } = await supabase
+      .from("vehicles")
+      .select("bike_id, vehicle_uuid, vehicle_number");
+
+    const vehicleMap = {};
+    const validVehicles = [];
+    (vehicles || []).forEach(v => {
+      if (v.bike_id) vehicleMap[v.bike_id] = v;
+      if (v.vehicle_uuid && /^[0-9a-fA-F-]{36}$/.test(v.vehicle_uuid)) {
+        validVehicles.push(v);
+      }
+    });
+
+    // 3. Batch query LocoNav in parallel chunks of 10
+    const chunks = [];
+    for (let i = 0; i < validVehicles.length; i += 10) {
+      chunks.push(validVehicles.slice(i, i + 10));
+    }
+
+    const chunkResults = await Promise.all(
+      chunks.map(chunk =>
+        axios.post(
+          `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
+          { vehicleIds: chunk.map(v => v.vehicle_uuid), sensors: ["gps"] },
+          {
+            headers: {
+              "User-Authentication": LOCONAV_TOKEN,
+              "Content-Type": "application/json"
+            },
+            timeout: 12000
+          }
+        ).then(r => r.data?.data?.values || []).catch(() => [])
+      )
+    );
+
+    const telematicsByUuid = {};
+    chunkResults.flat().forEach(val => {
+      if (val.vehicleId) telematicsByUuid[val.vehicleId] = val;
+    });
+
+    // 4. Map together
+    const fleetList = (bikes || []).map(b => {
+      const v = vehicleMap[b.id];
+      const t = v?.vehicle_uuid ? telematicsByUuid[v.vehicle_uuid] : null;
+      const gps = t?.gps;
+
+      let lat = gps?.currentLocationCoordinates?.lat?.value != null ? Number(gps.currentLocationCoordinates.lat.value) : (b.last_lat ? Number(b.last_lat) : null);
+      let lon = gps?.currentLocationCoordinates?.long?.value != null ? Number(gps.currentLocationCoordinates.long.value) : (b.last_lng ? Number(b.last_lng) : null);
+      let speed = gps?.speed?.value != null ? Number(gps.speed.value) : 0;
+      let orientation = gps?.orientation?.value != null ? Number(gps.orientation.value) : 0;
+      let ignition = String(gps?.ignition?.value || "OFF").toUpperCase();
+
+      const isMoving = speed > 0;
+      const isIdling = ignition === "ON" && speed === 0;
+      const isStopped = !isMoving && !isIdling;
+
+      return {
+        id: b.id,
+        bike_code: b.bike_code || `Bike #${b.id}`,
+        name: b.name || b.bike_code,
+        status: b.status || "available",
+        is_locked: b.is_locked === true,
+        battery: b.battery != null ? Number(b.battery) : null,
+        vehicleUuid: v?.vehicle_uuid || null,
+        vehicleNumber: v?.vehicle_number || null,
+        lat,
+        lon,
+        speed,
+        orientation,
+        ignition,
+        isMoving,
+        isIdling,
+        isStopped,
+        movementStatus: isMoving ? "MOVING" : (isIdling ? "IDLING" : "STOPPED")
+      };
+    });
+
+    fleetCache = {
+      timestamp: now,
+      data: fleetList
+    };
+
+    return res.json({ success: true, count: fleetList.length, vehicles: fleetList });
+  } catch (error) {
+    console.error("[liveTracking.getAllFleetTelematics] error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+

@@ -51,6 +51,7 @@ router.post("/subscriptions/:subId/cancel", requirePermission("manage_users"), a
 
 // Vehicle & Fleet Control
 router.get("/live-tracking", requirePermission("manage_bikes"), liveTrackingController.liveTrackingPage);
+router.get("/api/telematics/fleet/all", requirePermission("manage_bikes"), liveTrackingController.getAllFleetTelematics);
 router.get("/api/telematics/:bikeId/live", requirePermission("manage_bikes"), liveTrackingController.getLiveBikeTelematics);
 router.post("/api/telematics/:bikeId/control", requirePermission("manage_bikes"), liveTrackingController.remoteControlBike);
 router.get("/bikes", requirePermission("manage_bikes"), adminController.bikes);

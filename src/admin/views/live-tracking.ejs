@@ -462,11 +462,16 @@
     color: #f8fafc;
   }
 
-  .lt-map-recenter-btn {
+  .lt-map-floating-controls {
     position: absolute;
     bottom: 24px;
     right: 24px;
     z-index: 999;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .lt-map-ctrl-btn {
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text);
@@ -479,6 +484,79 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    transition: all 0.2s;
+  }
+  .lt-map-ctrl-btn:hover {
+    border-color: #00a896;
+    color: #00a896;
+  }
+  .lt-map-ctrl-btn.active {
+    background: #00a896;
+    color: #ffffff;
+    border-color: #008475;
+  }
+
+  /* 3D Isometric Bike Marker (Matching LocoNav screenshot) */
+  .lt-fleet-leaflet-div {
+    background: transparent;
+    border: none;
+  }
+  .lt-fleet-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: transform 0.2s ease;
+  }
+  .lt-fleet-marker:hover {
+    transform: scale(1.18);
+    z-index: 1000 !important;
+  }
+  .lt-fleet-bike-wrap {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .lt-fleet-bike-img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    transition: transform 0.3s linear;
+  }
+  .lt-fleet-badge-pill {
+    background: #ffffff;
+    color: #111827;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 5px;
+    border: 1px solid rgba(0,0,0,0.12);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.18);
+    white-space: nowrap;
+    margin-top: -3px;
+    pointer-events: auto;
+    line-height: 1.2;
+  }
+  .lt-fleet-marker.selected .lt-fleet-badge-pill {
+    background: #00a896;
+    color: #ffffff;
+    border-color: #008475;
+    box-shadow: 0 0 0 2px rgba(0, 168, 150, 0.4), 0 3px 8px rgba(0,0,0,0.3);
+  }
+  .lt-fleet-marker.selected .lt-fleet-bike-wrap::after {
+    content: '';
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2.5px solid #00a896;
+    animation: markerPulse 1.8s infinite ease-out;
   }
 
   /* Leaflet custom marker */
@@ -799,13 +877,19 @@
       </div>
 
       <!-- Leaflet Map Canvas -->
+      <!-- Leaflet Map Canvas -->
       <div id="live-map"></div>
 
-      <!-- Recenter Button -->
-      <button class="lt-map-recenter-btn" onclick="recenterMap()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-        <span>Recenter Vehicle</span>
-      </button>
+      <!-- Floating Controls on Map -->
+      <div class="lt-map-floating-controls">
+        <button id="btnToggleFleetView" class="lt-map-ctrl-btn active" onclick="toggleFleetView()" title="Fit all fleet vehicles on map">
+          <span>🗺️ Fleet Overview (<span id="fleetCountBadge">79</span>)</span>
+        </button>
+        <button class="lt-map-ctrl-btn" onclick="recenterMap()" title="Recenter on Selected Vehicle">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          <span>Recenter Vehicle</span>
+        </button>
+      </div>
     </div>
 
   </div>
@@ -815,7 +899,8 @@
 <script>
   let currentBikeId = "<%= selectedBikeId || '' %>";
   let map = null;
-  let marker = null;
+  let fleetMarkers = {}; // map of bikeId -> L.marker
+  let allFleetBounds = L.latLngBounds([]);
   let radarCircle = null;
   let currentLat = null;
   let currentLon = null;
@@ -825,11 +910,11 @@
 
   // 1. Initialize Map
   function initMap() {
-    const defaultCenter = [19.2183, 72.9781]; // Thane, Maharashtra
+    const defaultCenter = [19.2000, 72.9650]; // Thane, Maharashtra
     map = L.map('live-map', {
       zoomControl: true,
       attributionControl: false
-    }).setView(defaultCenter, 15);
+    }).setView(defaultCenter, 14);
 
     // Google Maps Roadmap Layer (Exact same Google map used by LocoNav in India)
     const googleRoadmap = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=en&gl=IN&x={x}&y={y}&z={z}', {
@@ -851,56 +936,119 @@
       "🛰️ Google Satellite": googleSatellite
     }, null, { position: 'topright' }).addTo(map);
 
-    createOrUpdateMarker(defaultCenter[0], defaultCenter[1], false, false, 0, 'Location', 'Sep 04, 2026');
+    // Load entire fleet onto map
+    loadFleetVehiclesOnMap();
   }
 
-  // 2. Custom Marker & Popup
-  function createOrUpdateMarker(lat, lon, isLocked, isMoving, orientation, address, timeIST) {
-    if (!map) return;
-    const markerClass = isLocked ? 'locked' : (isMoving ? '' : 'stopped');
-    const iconSymbol = isLocked ? '🔒' : (isMoving ? '⚡' : '🚲');
-    const rotationStyle = isMoving ? `transform: rotate(${orientation || 0}deg);` : '';
-
-    const customIcon = L.divIcon({
-      className: 'bike-custom-leaflet-icon',
+  // 2. Build 3D Isometric Bike Icon (LocoNav style from screenshot)
+  function buildFleetMarkerIcon(bike, isSelected) {
+    const rot = Number(bike.orientation) || 0;
+    return L.divIcon({
+      className: 'lt-fleet-leaflet-div',
       html: `
-        <div class="bike-marker-wrap">
-          <div class="bike-pulse-ring"></div>
-          <div class="bike-marker-circle ${markerClass}">
-            <span style="${rotationStyle} display:inline-block;">${iconSymbol}</span>
+        <div class="lt-fleet-marker ${isSelected ? 'selected' : ''}" id="fleet-marker-${bike.id}">
+          <div class="lt-fleet-bike-wrap">
+            <img src="/assets/bike_isometric.png" onerror="this.onerror=null;this.src='/admin/static/images/bike_isometric.png';" class="lt-fleet-bike-img" style="transform: rotate(${rot}deg);" alt="${bike.bike_code}" />
+          </div>
+          <div class="lt-fleet-badge-pill">
+            <span>${bike.bike_code}</span>
           </div>
         </div>
       `,
-      iconSize: [42, 42],
-      iconAnchor: [21, 21]
+      iconSize: [56, 56],
+      iconAnchor: [28, 28]
     });
+  }
 
-    const popupHtml = `
-      <div style="min-width: 220px; font-family: inherit;">
-        <div class="lt-popup-title ${isMoving ? 'moving' : ''}">
-          <span style="font-size: 14px;">●</span>
-          <span>${isMoving ? 'Moving' : 'Stopped'}</span>
-        </div>
-        <div class="lt-popup-body">
-          ${address || 'Thane West, Maharashtra'}
-        </div>
-        <div class="lt-popup-footer">
-          <span>(${Number(lat).toFixed(5)}, ${Number(lon).toFixed(5)})</span>
-          <span>${timeIST || ''}</span>
-        </div>
-      </div>
-    `;
+  // 3. Load All Fleet Vehicles on Map
+  async function loadFleetVehiclesOnMap() {
+    try {
+      const res = await fetch('/admin/api/telematics/fleet/all');
+      const data = await res.json();
+      if (!data || !data.success || !Array.isArray(data.vehicles)) return;
 
-    if (!marker) {
-      marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
-      marker.bindPopup(popupHtml);
-    } else {
-      marker.setLatLng([lat, lon]);
-      marker.setIcon(customIcon);
-      marker.setPopupContent(popupHtml);
+      const badgeCountEl = document.getElementById('fleetCountBadge');
+      if (badgeCountEl) badgeCountEl.textContent = data.vehicles.length;
+
+      allFleetBounds = L.latLngBounds([]);
+
+      data.vehicles.forEach(b => {
+        if (!b.lat || !b.lon) return;
+
+        const pos = [Number(b.lat), Number(b.lon)];
+        allFleetBounds.extend(pos);
+
+        const isSelected = String(b.id) === String(currentBikeId);
+        const icon = buildFleetMarkerIcon(b, isSelected);
+
+        if (fleetMarkers[b.id]) {
+          fleetMarkers[b.id].setLatLng(pos);
+          fleetMarkers[b.id].setIcon(icon);
+        } else {
+          const m = L.marker(pos, {
+            icon,
+            zIndexOffset: isSelected ? 1000 : 100
+          }).addTo(map);
+
+          m.on('click', () => {
+            onBikeSelected(b.id, b.bike_code);
+          });
+
+          fleetMarkers[b.id] = m;
+        }
+
+        if (isSelected) {
+          currentLat = Number(b.lat);
+          currentLon = Number(b.lon);
+        }
+      });
+
+      // If no query param bikeId was forced, or in fleet view, fit map to all bikes
+      const hasDirectBike = new URLSearchParams(window.location.search).get('bikeId');
+      if (!hasDirectBike && allFleetBounds.isValid()) {
+        map.fitBounds(allFleetBounds, { padding: [40, 40], maxZoom: 15 });
+      }
+    } catch (e) {
+      console.warn('[liveTracking] Failed to load fleet map:', e.message);
+    }
+  }
+
+  function toggleFleetView() {
+    const btn = document.getElementById('btnToggleFleetView');
+    if (allFleetBounds && allFleetBounds.isValid()) {
+      map.fitBounds(allFleetBounds, { padding: [40, 40], maxZoom: 15 });
+      if (btn) btn.classList.add('active');
+    }
+  }
+
+  function updateFleetMarkerSelection(selectedId) {
+    Object.keys(fleetMarkers).forEach(bId => {
+      const m = fleetMarkers[bId];
+      const isSel = String(bId) === String(selectedId);
+      const el = document.getElementById(`fleet-marker-${bId}`);
+      if (el) {
+        el.classList.toggle('selected', isSel);
+      }
+      if (m) {
+        m.setZIndexOffset(isSel ? 1000 : 100);
+      }
+    });
+  }
+
+  function createOrUpdateFocusMarker(lat, lon, isLocked, isMoving, orientation, address, timeIST, bikeCode) {
+    if (!map) return;
+    updateFleetMarkerSelection(currentBikeId);
+
+    // If marker exists in fleetMarkers, update its position and rotation
+    if (fleetMarkers[currentBikeId]) {
+      fleetMarkers[currentBikeId].setLatLng([lat, lon]);
+      const img = document.querySelector(`#fleet-marker-${currentBikeId} .lt-fleet-bike-img`);
+      if (img) {
+        img.style.transform = `rotate(${orientation || 0}deg)`;
+      }
     }
 
-    // Range circle
+    // Range pulse circle around focused bike
     const circleColor = isLocked ? '#ef4444' : '#00a896';
     if (!radarCircle) {
       radarCircle = L.circle([lat, lon], {
@@ -919,7 +1067,8 @@
   function recenterMap() {
     if (map && currentLat && currentLon) {
       map.flyTo([currentLat, currentLon], 16, { animate: true, duration: 1 });
-      if (marker) marker.openPopup();
+      const btn = document.getElementById('btnToggleFleetView');
+      if (btn) btn.classList.remove('active');
     }
   }
 
@@ -940,6 +1089,7 @@
       const input = document.getElementById('vehicleSearchInput');
       if (input) input.value = bikeCode;
     }
+    updateFleetMarkerSelection(bikeId);
     const url = new URL(window.location);
     url.searchParams.set('bikeId', bikeId);
     window.history.replaceState({}, '', url);
@@ -1035,7 +1185,7 @@
         currentLat = Number(telemetry.lat);
         currentLon = Number(telemetry.lon);
         document.getElementById('viewCoords').textContent = `(${currentLat.toFixed(6)}, ${currentLon.toFixed(6)})`;
-        createOrUpdateMarker(currentLat, currentLon, bike.is_locked, isMoving, telemetry.orientation, address, telemetry.timeIST);
+        createOrUpdateFocusMarker(currentLat, currentLon, bike.is_locked, isMoving, telemetry.orientation, address, telemetry.timeIST, bike.bike_code);
         if (map) map.flyTo([currentLat, currentLon], Math.max(map.getZoom() || 15, 15), { animate: true, duration: 1 });
       }
 
@@ -1175,7 +1325,10 @@
     pollTimer = setInterval(() => {
       const autoRefresh = document.getElementById('autoRefreshToggle')?.checked;
       if (autoRefresh && !document.hidden) {
-        fetchLiveTelematics(false);
+        if (currentBikeId) {
+          fetchLiveTelematics(false);
+        }
+        loadFleetVehiclesOnMap();
       }
     }, 15000);
   }

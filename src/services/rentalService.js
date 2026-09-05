@@ -205,7 +205,21 @@ async function finalizeRental(rentalId, status) {
   // 1. LocoNav registers the immobilize request immediately with an official request ID.
   // 2. The client and logs see the command dispatched for EVERY expired bike on time.
   // 3. If the device was asleep/offline at the time, LocoNav queues the request, AND
-  //    our Lock Pool keeps monitoring every 3 min to fire an active retry on wakeup.
+  // Deduplication guard: if an immobilize command was ALREADY dispatched for this bike within the last 60 seconds, skip duplicate
+  const { data: recentLock } = await supabase
+    .from("bike_lock_logs")
+    .select("id, metadata, success")
+    .eq("bike_id", rental.bike_id)
+    .eq("action", "lock")
+    .gte("created_at", new Date(Date.now() - 60 * 1000).toISOString())
+    .limit(1)
+    .maybeSingle();
+
+  if (recentLock && recentLock.success) {
+    console.log(`[rentalService] Lock already dispatched for bike ${rental.bike_id} in last 60s (req: ${recentLock.metadata?.iot_request_id}). Skipping duplicate call.`);
+    return { rentalId, status, rentalEarning: amount };
+  }
+
   let iotResult = { ok: false, message: 'not attempted' };
   let deviceOnlineStatus = { online: false, reason: 'check_not_run' };
 

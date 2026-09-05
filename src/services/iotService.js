@@ -289,9 +289,10 @@ export async function checkDeviceOnline(bikeId) {
 
     // Device is considered online if:
     // 1. Sent fresh ping in last 15 minutes, OR
-    // 2. Ignition is currently ON, OR
-    // 3. Speed > 0 (bike is in motion)
-    const isOnline = (lastPingMs > 0 && (now - lastPingMs) < 15 * 60 * 1000) || ignition === 'ON' || speed > 0;
+    // 2. Sent ping in last 60 minutes AND (ignition is ON or speed > 0)
+    const isFresh = lastPingMs > 0 && (now - lastPingMs) < 15 * 60 * 1000;
+    const isRecentMotion = lastPingMs > 0 && (now - lastPingMs) < 60 * 60 * 1000 && (ignition === 'ON' || speed > 0);
+    const isOnline = isFresh || isRecentMotion;
 
     console.log(`[IoT] checkDeviceOnline bike_id=${bikeId}: online=${isOnline}, status=${movementStatus || (ignition === 'ON' ? 'ignition_on' : 'unknown')}, ignition=${ignition}, speed=${speed}km/h, ping_age=${ageMinutes}min`);
 
@@ -303,7 +304,7 @@ export async function checkDeviceOnline(bikeId) {
       lastPingAt: lastPingMs ? new Date(lastPingMs).toISOString() : null,
       pingAgeMinutes: ageMinutes,
       loconavUuid,
-      reason: isOnline ? (ignition === 'ON' ? 'ignition_on' : 'fresh_telemetry') : (lastPingMs === 0 ? 'no_ping_recorded' : `stale_data_${ageMinutes}min_ago`)
+      reason: isOnline ? (isFresh ? 'fresh_telemetry' : 'recent_motion') : (lastPingMs === 0 ? 'no_ping_recorded' : `stale_data_${ageMinutes}min_ago`)
     };
   } catch (err) {
     console.error(`[IoT] checkDeviceOnline failed for bike ${bikeId}:`, err.message);

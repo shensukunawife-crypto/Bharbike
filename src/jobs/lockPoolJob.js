@@ -103,27 +103,56 @@ export async function getPendingLockPool() {
 
       // A lock is only confirmed for this rental cycle if:
       // 1. The bike is marked locked in DB (bike.is_locked === true)
-      // 2. A successful lock was executed AFTER this rental's expiration (or rental start)
-      // 3. The device was verified online at the time (so hardware physically received it)
-      const expiryTime = r.end_time ? new Date(r.end_time) : new Date(r.created_at);
+      // 2. A successful lock was executed around or after this rental's expiration (with 15-minute buffer)
+      // 3. No newer unlock occurred after that lock
+      // 4. The tracker was not completely dead (>24h offline) when lock was attempted
+      const expiryThreshold = r.end_time 
+        ? new Date(new Date(r.end_time).getTime() - 15 * 60 * 1000) 
+        : new Date(new Date(r.created_at).getTime() - 15 * 60 * 1000);
+
       const lastLock = (recentLockLogs || []).find(l => 
         l.bike_id === r.bike_id && 
         l.action === "lock" && 
-        new Date(l.created_at) >= expiryTime
+        new Date(l.created_at) >= expiryThreshold
       );
 
-      const deviceWasOnlineWhenLocked = lastLock?.metadata?.device_online_check?.online !== false;
+      const lastUnlock = (recentLockLogs || []).find(l => 
+        l.bike_id === r.bike_id && 
+        l.action === "unlock" && 
+        new Date(l.created_at) >= expiryThreshold
+      );
+
+      const unlockedAfterLastLock = lastUnlock && lastLock && new Date(lastUnlock.created_at) > new Date(lastLock.created_at);
+
+      // A device is considered dead/disconnected only if its last ping age was > 24 hours (1440 min)
+      // Parked bikes overnight (<24h) still receive cellular/SMS commands reliably from LocoNav
+      const pingAgeMin = lastLock?.metadata?.device_online_check?.pingAgeMinutes;
+      const trackerWasDead = typeof pingAgeMin === "number" && pingAgeMin > 1440;
+
       const isLockConfirmed = bike.is_locked === true &&
         lastLock &&
         lastLock.success === true &&
         lastLock.metadata?.iot_request_id &&
         !lastLock.error_message &&
-        deviceWasOnlineWhenLocked;
+        !unlockedAfterLastLock &&
+        !trackerWasDead;
 
       // If lock was not yet confirmed successful on hardware level:
       if (!isLockConfirmed) {
         const user = usersMap[r.user_id] || null;
         const vehicle = vehiclesMap[r.bike_id] || null;
+
+        let lastErrorMsg = "Device offline (Waiting for motion / ignition)";
+        if (trackerWasDead) {
+          const daysAgo = Math.round(pingAgeMin / 1440);
+          lastErrorMsg = `Tracker offline for ${daysAgo}d (Device dead / unpowered)`;
+        } else if (lastLock?.error_message) {
+          lastErrorMsg = lastLock.error_message;
+        } else if (bike.is_locked === false) {
+          lastErrorMsg = "Unlocked in database (Needs immobilize command)";
+        } else if (!lastLock) {
+          lastErrorMsg = "No lock attempt recorded for current expiry";
+        }
 
         pendingPool.push({
           rentalId: r.id,
@@ -136,7 +165,7 @@ export async function getPendingLockPool() {
           loconavName: vehicle?.name || null,
           status: "pending_wakeup", // waiting for bike to come online
           lastAttempt: lastLock?.created_at || null,
-          lastError: lastLock?.error_message || "Device offline (Waiting for motion / ignition)",
+          lastError: lastErrorMsg,
           lastRequestId: lastLock?.metadata?.iot_request_id || null
         });
       }
@@ -293,6 +322,7 @@ export async function runLockPoolSweep() {
       // Live telemetry status check (captured for audit logs and dashboard sensor inspection)
       const isMoving = Number(onlineCheck.speed || 0) > 3;
       const isIgnitionOn = String(onlineCheck.ignition || "").toUpperCase() === "ON";
+      const isAwake = onlineCheck.online || isMoving || isIgnitionOn;
 
       // Avoid spamming LocoNav API every 3 min if device is offline and command was already dispatched recently:
       const hasRecentAttempt = pb.lastAttempt && (Date.now() - new Date(pb.lastAttempt).getTime() < 15 * 60 * 1000);

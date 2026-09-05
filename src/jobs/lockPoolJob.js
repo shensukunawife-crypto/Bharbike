@@ -348,75 +348,49 @@ export async function runLockPoolSweep() {
         continue;
       }
 
-      // Live telemetry status check (captured for audit logs and dashboard sensor inspection)
-      const isMoving = Number(onlineCheck.speed || 0) > 3;
-      const isIgnitionOn = String(onlineCheck.ignition || "").toUpperCase() === "ON";
-      const isAwake = onlineCheck.online || isMoving || isIgnitionOn;
-
-      // Avoid spamming LocoNav API every 3 min if device is offline and command was already dispatched recently:
-      const hasRecentAttempt = pb.lastAttempt && (Date.now() - new Date(pb.lastAttempt).getTime() < 15 * 60 * 1000);
-      if (!isAwake && hasRecentAttempt) {
-        continue; // Wait for tracker wakeup or 15-minute retry interval
+      // The pending pool is a wakeup listener: ONLY dispatch when the bike physically comes online!
+      // If the device is offline, leave it quietly in the Pending Lock Pool — do NOT spam LocoNav or insert duplicate logs.
+      if (!onlineCheck.online) {
+        console.log(`[lockPool] Bike ${pb.bikeCode} is still offline (${onlineCheck.reason}). Waiting for tracker to ping...`);
+        continue;
       }
 
-      console.log(`[lockPool] ⚡ Dispatching IMMOBILIZE command for ${pb.bikeCode} (online: ${onlineCheck.online}, status: ${onlineCheck.status}, ignition: ${onlineCheck.ignition}, speed: ${onlineCheck.speed}km/h). LocoNav hardware safety relay active...`);
+      console.log(`[lockPool] ⚡ Bike ${pb.bikeCode} is ONLINE / AWAKE! Dispatching IMMOBILIZE command...`);
 
-        try {
-          const lockResult = await iot.lockBike(pb.bikeId);
-          console.log(`[lockPool] Lock result for ${pb.bikeCode}:`, lockResult);
+      try {
+        const lockResult = await iot.lockBike(pb.bikeId);
+        console.log(`[lockPool] Lock result for ${pb.bikeCode}:`, lockResult);
 
-          if (lockResult && lockResult.ok !== false) {
-            lockedCount++;
-            await supabase.from("bikes").update({ is_locked: true }).eq("id", pb.bikeId);
+        if (lockResult && lockResult.ok !== false) {
+          lockedCount++;
+          await supabase.from("bikes").update({ is_locked: true }).eq("id", pb.bikeId);
 
-            // Only mark success: true if device was online and able to receive signal
-            // Otherwise, mark as queued on LocoNav so it doesn't show fake hardware confirmation
-            const isHardwareConfirmed = onlineCheck.online !== false;
-            await supabase.from("bike_lock_logs").insert([{
-              bike_id: pb.bikeId,
-              user_id: pb.userId,
-              action: "lock",
-              method: "app",
-              success: isHardwareConfirmed,
-              error_message: isHardwareConfirmed ? null : "Command queued on LocoNav (Waiting for tracker to connect)",
-              metadata: {
-                triggered_by: "lock_pool_wakeup_retry",
-                status_reason: isHardwareConfirmed ? "expired_wakeup_locked" : "queued_on_loconav",
-                iot_request_id: lockResult.requestId || null,
-                device_online_check: onlineCheck
-              }
-            }]);
-
-            createUserNotification(
-              pb.userId,
-              "Subscription Expired — Vehicle Immobilized 🔒",
-              `Your subscription for ${pb.bikeCode} has expired. The bike has been immobilized. Please renew your plan on the BharBike app to unlock.`,
-              "warning"
-            ).catch(e => console.warn("[lockPool] Notification failed:", e?.message));
-          } else {
-            // Don't spam duplicate logs every 3 min if command is already queued on LocoNav
-            const isAlreadyActiveOnLocoNav = lockResult?.message?.includes("already an active request");
-            if (!isAlreadyActiveOnLocoNav) {
-              await supabase.from("bike_lock_logs").insert([{
-                bike_id: pb.bikeId,
-                user_id: pb.userId,
-                action: "lock",
-                method: "app",
-                success: false,
-                error_message: lockResult?.message || "Lock attempt failed",
-                metadata: {
-                  triggered_by: "lock_pool_wakeup_retry",
-                  status_reason: "lock_attempt_failed",
-                  device_online_check: onlineCheck
-                }
-              }]);
-            } else {
-              console.log(`[lockPool] Command already queued on LocoNav for ${pb.bikeCode}. Skipping duplicate log.`);
+          await supabase.from("bike_lock_logs").insert([{
+            bike_id: pb.bikeId,
+            user_id: pb.userId,
+            action: "lock",
+            method: "app",
+            success: true,
+            metadata: {
+              triggered_by: "lock_pool_wakeup_retry",
+              status_reason: "expired_wakeup_locked",
+              iot_request_id: lockResult.requestId || null,
+              device_online_check: onlineCheck
             }
-          }
-        } catch (lockErr) {
-          console.error(`[lockPool] Failed to lock awake bike ${pb.bikeCode}:`, lockErr.message);
+          }]);
+
+          createUserNotification(
+            pb.userId,
+            "Subscription Expired — Vehicle Immobilized 🔒",
+            `Your subscription for ${pb.bikeCode} has expired. The bike has been immobilized. Please renew your plan on the BharBike app to unlock.`,
+            "warning"
+          ).catch(e => console.warn("[lockPool] Notification failed:", e?.message));
+        } else {
+          console.warn(`[lockPool] Lock attempt for awake bike ${pb.bikeCode} returned:`, lockResult?.message);
         }
+      } catch (lockErr) {
+        console.error(`[lockPool] Failed to lock awake bike ${pb.bikeCode}:`, lockErr.message);
+      }
       await new Promise(r => setTimeout(r, 1000)); // Respect LocoNav rate limit
     }
 

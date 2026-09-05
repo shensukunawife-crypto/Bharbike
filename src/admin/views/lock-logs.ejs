@@ -568,8 +568,12 @@
                 <span class="status-badge" style="background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;font-weight:800;">
                   <i class="fas fa-check-double" style="color:#dc2626;margin-right:3px;"></i>ALREADY LOCKED (IMMOBILIZED)
                 </span>
-              <% } else if (showPendingBadge) { %>
+              <% } else if (log.is_in_pending_pool) { %>
                 <span class="status-badge pending-pool">⏳ Queued for Wakeup Retry</span>
+              <% } else if (log.metadata && log.metadata.loconav_status === 'submitted') { %>
+                <span class="status-badge" style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd;font-weight:800;">
+                  ⏳ Queued on LocoNav
+                </span>
               <% } else if (log.success) { %>
                 <span class="status-badge success">✅ Confirmed on Hardware</span>
               <% } else { %>

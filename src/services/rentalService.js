@@ -249,6 +249,14 @@ async function finalizeRental(rentalId, status) {
   // Log the lock action to bike_lock_logs
   // success: true  → device was online and LocoNav accepted the command
   // success: false → device was offline (pool will retry) OR lock API returned an error
+  const isHardwareDeliverable = iotResult?.ok !== false && deviceOnlineStatus?.online !== false;
+  let lockError = null;
+  if (iotResult?.ok === false) {
+    lockError = iotResult?.message || 'IoT service error';
+  } else if (deviceOnlineStatus?.online === false) {
+    lockError = 'Device offline — queued on LocoNav for wakeup retry';
+  }
+
   try {
     await supabase.from("bike_lock_logs").insert([{
       bike_id: rental.bike_id,
@@ -256,8 +264,8 @@ async function finalizeRental(rentalId, status) {
       // rental_id: rentalId, // Omitted due to UUID vs BIGINT type mismatch
       action: "lock",
       method: "app",
-      success: iotResult?.ok !== false,
-      error_message: iotResult?.ok === false ? (iotResult?.message || null) : null,
+      success: isHardwareDeliverable,
+      error_message: lockError,
       metadata: {
         triggered_by: "rental_finalization",
         status_reason: status,

@@ -369,15 +369,19 @@ export async function runLockPoolSweep() {
             lockedCount++;
             await supabase.from("bikes").update({ is_locked: true }).eq("id", pb.bikeId);
 
+            // Only mark success: true if device was online and able to receive signal
+            // Otherwise, mark as queued on LocoNav so it doesn't show fake hardware confirmation
+            const isHardwareConfirmed = onlineCheck.online !== false;
             await supabase.from("bike_lock_logs").insert([{
               bike_id: pb.bikeId,
               user_id: pb.userId,
               action: "lock",
               method: "app",
-              success: true,
+              success: isHardwareConfirmed,
+              error_message: isHardwareConfirmed ? null : "Command queued on LocoNav (Waiting for tracker to connect)",
               metadata: {
                 triggered_by: "lock_pool_wakeup_retry",
-                status_reason: "expired_wakeup_locked",
+                status_reason: isHardwareConfirmed ? "expired_wakeup_locked" : "queued_on_loconav",
                 iot_request_id: lockResult.requestId || null,
                 device_online_check: onlineCheck
               }
@@ -390,20 +394,25 @@ export async function runLockPoolSweep() {
               "warning"
             ).catch(e => console.warn("[lockPool] Notification failed:", e?.message));
           } else {
-            // Log failed attempt so it appears on dashboard and keeps retrying
-            await supabase.from("bike_lock_logs").insert([{
-              bike_id: pb.bikeId,
-              user_id: pb.userId,
-              action: "lock",
-              method: "app",
-              success: false,
-              error_message: lockResult?.message || "Lock attempt failed",
-              metadata: {
-                triggered_by: "lock_pool_wakeup_retry",
-                status_reason: "lock_attempt_failed",
-                device_online_check: onlineCheck
-              }
-            }]);
+            // Don't spam duplicate logs every 3 min if command is already queued on LocoNav
+            const isAlreadyActiveOnLocoNav = lockResult?.message?.includes("already an active request");
+            if (!isAlreadyActiveOnLocoNav) {
+              await supabase.from("bike_lock_logs").insert([{
+                bike_id: pb.bikeId,
+                user_id: pb.userId,
+                action: "lock",
+                method: "app",
+                success: false,
+                error_message: lockResult?.message || "Lock attempt failed",
+                metadata: {
+                  triggered_by: "lock_pool_wakeup_retry",
+                  status_reason: "lock_attempt_failed",
+                  device_online_check: onlineCheck
+                }
+              }]);
+            } else {
+              console.log(`[lockPool] Command already queued on LocoNav for ${pb.bikeCode}. Skipping duplicate log.`);
+            }
           }
         } catch (lockErr) {
           console.error(`[lockPool] Failed to lock awake bike ${pb.bikeCode}:`, lockErr.message);

@@ -124,6 +124,35 @@ export async function getPendingLockPool() {
 
       const unlockedAfterLastLock = lastUnlock && lastLock && new Date(lastUnlock.created_at) > new Date(lastLock.created_at);
 
+      // Verify hardware delivery status directly from LocoNav if a request ID exists
+      if (lastLock && lastLock.metadata?.iot_request_id && !lastLock.metadata?.loconav_verified) {
+        try {
+          const reqId = lastLock.metadata.iot_request_id;
+          if (reqId && !String(reqId).startsWith("already-") && !String(reqId).startsWith("loconav-")) {
+            const locoStatus = await iot.getLockUnlockStatus(reqId);
+            if (locoStatus && locoStatus.ok) {
+              if (locoStatus.status === "error") {
+                // Device was unreachable over cellular network (e.g. offline/dead)
+                lastLock.success = false;
+                lastLock.error_message = locoStatus.message || "Could not signal device";
+                supabase.from("bike_lock_logs").update({
+                  success: false,
+                  error_message: lastLock.error_message,
+                  metadata: { ...lastLock.metadata, loconav_verified: true, loconav_status: "error" }
+                }).eq("id", lastLock.id).then(() => {});
+              } else if (locoStatus.status === "success" || locoStatus.status === "failure") {
+                lastLock.metadata.loconav_verified = true;
+                supabase.from("bike_lock_logs").update({
+                  metadata: { ...lastLock.metadata, loconav_verified: true, loconav_status: locoStatus.status }
+                }).eq("id", lastLock.id).then(() => {});
+              }
+            }
+          }
+        } catch (e) {
+          // Non-blocking on network error
+        }
+      }
+
       // A device is considered dead/disconnected only if its last ping age was > 24 hours (1440 min)
       // Parked bikes overnight (<24h) still receive cellular/SMS commands reliably from LocoNav
       const pingAgeMin = lastLock?.metadata?.device_online_check?.pingAgeMinutes;

@@ -103,12 +103,12 @@ export async function getPendingLockPool() {
 
       // A lock is only confirmed for this rental cycle if:
       // 1. The bike is marked locked in DB (bike.is_locked === true)
-      // 2. A successful lock was executed around or after this rental's expiration (with 15-minute buffer)
+      // 2. A successful lock was executed around or after this rental's expiration (with 60-minute buffer)
       // 3. No newer unlock occurred after that lock
       // 4. The tracker was not completely dead (>24h offline) when lock was attempted
       const expiryThreshold = r.end_time 
-        ? new Date(new Date(r.end_time).getTime() - 15 * 60 * 1000) 
-        : new Date(new Date(r.created_at).getTime() - 15 * 60 * 1000);
+        ? new Date(new Date(r.end_time).getTime() - 60 * 60 * 1000) 
+        : new Date(new Date(r.created_at).getTime() - 60 * 60 * 1000);
 
       const lastLock = (recentLockLogs || []).find(l => 
         l.bike_id === r.bike_id && 

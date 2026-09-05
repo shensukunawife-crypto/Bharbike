@@ -174,10 +174,12 @@ async function finalizeRental(rentalId, status) {
     throw new AppError("Rental is not active", 409);
   }
 
-  const { error: rentUpdateErr } = await supabase.from("rentals").update({ 
-    status,
-    end_time: new Date().toISOString()
-  }).eq("id", rentalId);
+  const updatePayload = { status };
+  if (!rental.end_time || rental.status !== RentalStatus.expired) {
+    updatePayload.end_time = new Date().toISOString();
+  }
+
+  const { error: rentUpdateErr } = await supabase.from("rentals").update(updatePayload).eq("id", rentalId);
   if (rentUpdateErr) throw new AppError(`Failed to end rental: ${rentUpdateErr.message}`, 500);
 
   // When a rental EXPIRES: keep the bike marked as in_use and store the user_id on the bike

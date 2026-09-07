@@ -62,6 +62,82 @@ async function getLocoNavId(bikeId) {
   }
 }
 
+// Hardware Command Rate-Limiter & Priority Queue for LocoNav API
+// Gives high-priority immediate dispatch (2s buffer) to unlocks (paying riders waiting)
+// while pacing background locks at a calm 18s interval to completely prevent 429 rate limits.
+let lastCommandTime = 0;
+let lastLockTime = 0;
+const MIN_UNLOCK_INTERVAL_MS = 2000;  // 2s interval for rider unlocks
+const MIN_LOCK_INTERVAL_MS = 18000;  // 18s interval for background expiry locks
+
+const unlockQueue = [];
+const lockQueue = [];
+let isProcessingQueue = false;
+
+async function processNextCommand() {
+  if (isProcessingQueue) return;
+  if (unlockQueue.length === 0 && lockQueue.length === 0) return;
+
+  isProcessingQueue = true;
+  try {
+    // Priority 1: Unlocks (paying riders waiting to ride)
+    if (unlockQueue.length > 0) {
+      const item = unlockQueue.shift();
+      const now = Date.now();
+      const elapsed = now - lastCommandTime;
+      if (elapsed < MIN_UNLOCK_INTERVAL_MS) {
+        await new Promise(r => setTimeout(r, MIN_UNLOCK_INTERVAL_MS - elapsed));
+      }
+      lastCommandTime = Date.now();
+      try {
+        const result = await item.fn();
+        item.resolve(result);
+      } catch (err) {
+        item.reject(err);
+      }
+    }
+    // Priority 2: Locks (background batch expiry sweeps)
+    else if (lockQueue.length > 0) {
+      const item = lockQueue.shift();
+      const now = Date.now();
+      const elapsedLock = now - lastLockTime;
+      const elapsedAny = now - lastCommandTime;
+      
+      const waitTime = Math.max(
+        elapsedLock < MIN_LOCK_INTERVAL_MS ? (MIN_LOCK_INTERVAL_MS - elapsedLock) : 0,
+        elapsedAny < MIN_UNLOCK_INTERVAL_MS ? (MIN_UNLOCK_INTERVAL_MS - elapsedAny) : 0
+      );
+      if (waitTime > 0) {
+        await new Promise(r => setTimeout(r, waitTime));
+      }
+      lastCommandTime = Date.now();
+      lastLockTime = Date.now();
+      try {
+        const result = await item.fn();
+        item.resolve(result);
+      } catch (err) {
+        item.reject(err);
+      }
+    }
+  } finally {
+    isProcessingQueue = false;
+    if (unlockQueue.length > 0 || lockQueue.length > 0) {
+      setTimeout(processNextCommand, 50);
+    }
+  }
+}
+
+function enqueueLocoNavCommand(fn, type = 'lock') {
+  return new Promise((resolve, reject) => {
+    if (type === 'unlock') {
+      unlockQueue.push({ fn, resolve, reject });
+    } else {
+      lockQueue.push({ fn, resolve, reject });
+    }
+    processNextCommand();
+  });
+}
+
 /**
  * LOCK (Immobilize) a bike via LocoNav API
  * POST https://app.loconav.sensorise.net/integration/api/v1/vehicles/{vehicleUuid}/immobilizer_requests
@@ -78,23 +154,8 @@ export async function lockBike(bikeId) {
 
     let response;
     try {
-      response = await axios.post(
-        `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-        { value: "IMMOBILIZE" },
-        {
-          headers: {
-            "User-Authentication": LOCONAV_TOKEN,
-            "Content-Type": "application/json"
-          },
-          timeout: 25000
-        }
-      );
-    } catch (reqErr) {
-      // If timed out or rate-limited, wait 2.5 seconds and retry once
-      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
-        console.warn(`[IoT] Lock attempt 1 hit ${reqErr.message}. Retrying in 2.5s for bike ${bikeId}...`);
-        await new Promise(r => setTimeout(r, 2500));
-        response = await axios.post(
+      response = await enqueueLocoNavCommand(() =>
+        axios.post(
           `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
           { value: "IMMOBILIZE" },
           {
@@ -104,6 +165,27 @@ export async function lockBike(bikeId) {
             },
             timeout: 25000
           }
+        ),
+        'lock'
+      );
+    } catch (reqErr) {
+      // If timed out or rate-limited, wait 3 seconds and retry once
+      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
+        console.warn(`[IoT] Lock attempt 1 hit ${reqErr.message}. Retrying in 3s for bike ${bikeId}...`);
+        await new Promise(r => setTimeout(r, 3000));
+        response = await enqueueLocoNavCommand(() =>
+          axios.post(
+            `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+            { value: "IMMOBILIZE" },
+            {
+              headers: {
+                "User-Authentication": LOCONAV_TOKEN,
+                "Content-Type": "application/json"
+              },
+              timeout: 25000
+            }
+          ),
+          'lock'
         );
       } else {
         throw reqErr;
@@ -168,23 +250,8 @@ export async function unlockBike(bikeId) {
 
     let response;
     try {
-      response = await axios.post(
-        `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-        { value: "MOBILIZE" },
-        {
-          headers: {
-            "User-Authentication": LOCONAV_TOKEN,
-            "Content-Type": "application/json"
-          },
-          timeout: 25000
-        }
-      );
-    } catch (reqErr) {
-      // If timed out or rate-limited, wait 2.5 seconds and retry once
-      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
-        console.warn(`[IoT] Unlock attempt 1 hit ${reqErr.message}. Retrying in 2.5s for bike ${bikeId}...`);
-        await new Promise(r => setTimeout(r, 2500));
-        response = await axios.post(
+      response = await enqueueLocoNavCommand(() =>
+        axios.post(
           `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
           { value: "MOBILIZE" },
           {
@@ -194,6 +261,27 @@ export async function unlockBike(bikeId) {
             },
             timeout: 25000
           }
+        ),
+        'unlock'
+      );
+    } catch (reqErr) {
+      // If timed out or rate-limited, wait 3 seconds and retry once
+      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
+        console.warn(`[IoT] Unlock attempt 1 hit ${reqErr.message}. Retrying in 3s for bike ${bikeId}...`);
+        await new Promise(r => setTimeout(r, 3000));
+        response = await enqueueLocoNavCommand(() =>
+          axios.post(
+            `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+            { value: "MOBILIZE" },
+            {
+              headers: {
+                "User-Authentication": LOCONAV_TOKEN,
+                "Content-Type": "application/json"
+              },
+              timeout: 25000
+            }
+          ),
+          'unlock'
         );
       } else {
         throw reqErr;

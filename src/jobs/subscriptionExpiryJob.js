@@ -11,7 +11,7 @@ export async function runSubscriptionExpirySweep() {
       for (const sub of expiredSubs) {
         try {
           await rentalService.forceExpireActiveRentalForUser(sub.user_id);
-          await new Promise(r => setTimeout(r, 1000));
+          await new Promise(r => setTimeout(r, 2500));
         } catch (rentalErr) {
           console.error(`[jobs] Error expiring rental for user ${sub.user_id}:`, rentalErr);
         }

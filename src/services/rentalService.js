@@ -217,8 +217,8 @@ async function finalizeRental(rentalId, status) {
     .limit(1)
     .maybeSingle();
 
-  if (recentLock && recentLock.success) {
-    console.log(`[rentalService] Lock already dispatched for bike ${rental.bike_id} in last 60s (req: ${recentLock.metadata?.iot_request_id}). Skipping duplicate call.`);
+  if (recentLock) {
+    console.log(`[rentalService] Lock already dispatched for bike ${rental.bike_id} in last 60s (req: ${recentLock.metadata?.iot_request_id || 'recent'}). Skipping duplicate call.`);
     return { rentalId, status, rentalEarning: amount };
   }
 
@@ -403,6 +403,7 @@ export async function expireRentalsPastEnd() {
 
       // Past 9:30 AM grace period (or no subscription) — expire the rental and lock the bike
       results.push(await finalizeRental(r.id, RentalStatus.expired));
+      await new Promise(r => setTimeout(r, 2000)); // Rate limit buffer
     } catch (e) {
       console.error("[rental expiry]", r.id, e.message);
     }

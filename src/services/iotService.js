@@ -74,6 +74,11 @@ const unlockQueue = [];
 const lockQueue = [];
 let isProcessingQueue = false;
 
+// In-flight command tracking & deduplication cache (per bike)
+const inFlightLockPromises = new Map();
+const inFlightUnlockPromises = new Map();
+const recentLockDispatches = new Map(); // key: String(bikeId), value: { timestamp, result }
+
 async function processNextCommand() {
   if (isProcessingQueue) return;
   if (unlockQueue.length === 0 && lockQueue.length === 0) return;
@@ -144,35 +149,37 @@ function enqueueLocoNavCommand(fn, type = 'lock') {
  * Body: { "value": "IMMOBILIZE" }
  */
 export async function lockBike(bikeId) {
-  console.log(`[IoT] Attempting to LOCK (IMMOBILIZE) bike_id=${bikeId} via LocoNav API`);
-  try {
-    const loconavUuid = await getLocoNavId(bikeId);
-    if (!loconavUuid) {
-      console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}`);
-      return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
-    }
+  const bikeKey = String(bikeId);
 
-    let response;
+  // 1. In-flight coalescing: If a lock command for this bike is already queued or executing, reuse promise!
+  if (inFlightLockPromises.has(bikeKey)) {
+    console.log(`[IoT] Lock command for bike ${bikeId} already in-flight/queued. Reusing existing execution.`);
+    const result = await inFlightLockPromises.get(bikeKey);
+    return { ...result, isCoalesced: true, isDuplicate: true };
+  }
+
+  // 2. Recent dispatch cache: If a lock command was dispatched for this bike within the last 60s, reuse!
+  if (recentLockDispatches.has(bikeKey)) {
+    const cached = recentLockDispatches.get(bikeKey);
+    if (Date.now() - cached.timestamp < 60000) {
+      console.log(`[IoT] Lock was already dispatched for bike ${bikeId} ${Math.round((Date.now() - cached.timestamp) / 1000)}s ago. Skipping duplicate.`);
+      return { ...cached.result, isCoalesced: true, isDuplicate: true };
+    } else {
+      recentLockDispatches.delete(bikeKey);
+    }
+  }
+
+  const promise = (async () => {
+    console.log(`[IoT] Attempting to LOCK (IMMOBILIZE) bike_id=${bikeId} via LocoNav API`);
     try {
-      response = await enqueueLocoNavCommand(() =>
-        axios.post(
-          `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-          { value: "IMMOBILIZE" },
-          {
-            headers: {
-              "User-Authentication": LOCONAV_TOKEN,
-              "Content-Type": "application/json"
-            },
-            timeout: 25000
-          }
-        ),
-        'lock'
-      );
-    } catch (reqErr) {
-      // If timed out or rate-limited, wait 3 seconds and retry once
-      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
-        console.warn(`[IoT] Lock attempt 1 hit ${reqErr.message}. Retrying in 3s for bike ${bikeId}...`);
-        await new Promise(r => setTimeout(r, 3000));
+      const loconavUuid = await getLocoNavId(bikeId);
+      if (!loconavUuid) {
+        console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}`);
+        return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
+      }
+
+      let response;
+      try {
         response = await enqueueLocoNavCommand(() =>
           axios.post(
             `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
@@ -187,50 +194,96 @@ export async function lockBike(bikeId) {
           ),
           'lock'
         );
-      } else {
-        throw reqErr;
+      } catch (reqErr) {
+        // If timed out or rate-limited, wait 3 seconds and retry once
+        if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
+          console.warn(`[IoT] Lock attempt 1 hit ${reqErr.message}. Retrying in 3s for bike ${bikeId}...`);
+          await new Promise(r => setTimeout(r, 3000));
+          response = await enqueueLocoNavCommand(() =>
+            axios.post(
+              `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+              { value: "IMMOBILIZE" },
+              {
+                headers: {
+                  "User-Authentication": LOCONAV_TOKEN,
+                  "Content-Type": "application/json"
+                },
+                timeout: 25000
+              }
+            ),
+            'lock'
+          );
+        } else {
+          throw reqErr;
+        }
       }
-    }
 
-    console.log(`[IoT] Lock (IMMOBILIZE) response for bike ${bikeId}:`, response.data);
-    if (response.data?.data?.errors) {
-      const errTxt = typeof response.data.data.errors === 'string' 
-        ? response.data.data.errors 
-        : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
-      
-      // If already immobilized/cut off, treat as success
-      if (errTxt.toLowerCase().includes('already in the state of') || errTxt.toLowerCase().includes('fuel supply to cut off')) {
-        return { ok: true, bikeId, action: "lock", requestId: "already-locked", message: errTxt };
+      console.log(`[IoT] Lock (IMMOBILIZE) response for bike ${bikeId}:`, response.data);
+      if (response.data?.data?.errors) {
+        const errTxt = typeof response.data.data.errors === 'string' 
+          ? response.data.data.errors 
+          : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
+        
+        // If already immobilized/cut off, treat as success
+        if (errTxt.toLowerCase().includes('already in the state of') || errTxt.toLowerCase().includes('fuel supply to cut off')) {
+          const res = { ok: true, bikeId, action: "lock", requestId: "already-locked", message: errTxt };
+          recentLockDispatches.set(bikeKey, { timestamp: Date.now(), result: res });
+          return res;
+        }
+
+        // If an active request is already present on LocoNav, treat as active/queued on LocoNav!
+        if (errTxt.toLowerCase().includes('already an active request present')) {
+          const res = { ok: true, bikeId, action: "lock", requestId: "active-request-present", message: errTxt, isAlreadyActive: true };
+          recentLockDispatches.set(bikeKey, { timestamp: Date.now(), result: res });
+          return res;
+        }
+
+        return {
+          ok: false,
+          message: errTxt,
+          bikeId,
+          action: "lock"
+        };
       }
-
-      return {
-        ok: false,
-        message: errTxt,
+      const requestId = response.data?.data?.id || null;
+      const res = {
+        ok: true,
         bikeId,
-        action: "lock"
+        action: "lock",
+        requestId: requestId ? String(requestId) : "loconav-lock",
+        data: response.data?.data
       };
-    }
-    const requestId = response.data?.data?.id || null;
-    return {
-      ok: true,
-      bikeId,
-      action: "lock",
-      requestId: requestId ? String(requestId) : "loconav-lock",
-      data: response.data?.data
-    };
-  } catch (error) {
-    console.error(`[IoT] Lock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
-    const errMsg =
-      error.response?.data?.data?.errors?.[0]?.message ||
-      error.response?.data?.message ||
-      error.message ||
-      "LocoNav API error";
+      recentLockDispatches.set(bikeKey, { timestamp: Date.now(), result: res });
+      return res;
+    } catch (error) {
+      console.error(`[IoT] Lock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
+      const errMsg =
+        error.response?.data?.data?.errors?.[0]?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        "LocoNav API error";
 
-    if (errMsg.toLowerCase().includes('already in the state of') || errMsg.toLowerCase().includes('fuel supply to cut off')) {
-      return { ok: true, bikeId, action: "lock", requestId: "already-locked", message: errMsg };
-    }
+      if (errMsg.toLowerCase().includes('already in the state of') || errMsg.toLowerCase().includes('fuel supply to cut off')) {
+        const res = { ok: true, bikeId, action: "lock", requestId: "already-locked", message: errMsg };
+        recentLockDispatches.set(bikeKey, { timestamp: Date.now(), result: res });
+        return res;
+      }
 
-    return { ok: false, message: errMsg };
+      if (errMsg.toLowerCase().includes('already an active request present')) {
+        const res = { ok: true, bikeId, action: "lock", requestId: "active-request-present", message: errMsg, isAlreadyActive: true };
+        recentLockDispatches.set(bikeKey, { timestamp: Date.now(), result: res });
+        return res;
+      }
+
+      return { ok: false, message: errMsg };
+    }
+  })();
+
+  inFlightLockPromises.set(bikeKey, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlightLockPromises.delete(bikeKey);
   }
 }
 
@@ -240,35 +293,28 @@ export async function lockBike(bikeId) {
  * Body: { "value": "MOBILIZE" }
  */
 export async function unlockBike(bikeId) {
-  console.log(`[IoT] Attempting to UNLOCK (MOBILIZE) bike_id=${bikeId} via LocoNav API`);
-  try {
-    const loconavUuid = await getLocoNavId(bikeId);
-    if (!loconavUuid) {
-      console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}`);
-      return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
-    }
+  const bikeKey = String(bikeId);
+  // Clear any recent lock cache immediately when rider unlocks!
+  recentLockDispatches.delete(bikeKey);
 
-    let response;
+  // In-flight coalescing: If an unlock command for this bike is already queued or executing, reuse promise!
+  if (inFlightUnlockPromises.has(bikeKey)) {
+    console.log(`[IoT] Unlock command for bike ${bikeId} already in-flight/queued. Reusing existing execution.`);
+    const result = await inFlightUnlockPromises.get(bikeKey);
+    return { ...result, isCoalesced: true, isDuplicate: true };
+  }
+
+  const promise = (async () => {
+    console.log(`[IoT] Attempting to UNLOCK (MOBILIZE) bike_id=${bikeId} via LocoNav API`);
     try {
-      response = await enqueueLocoNavCommand(() =>
-        axios.post(
-          `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
-          { value: "MOBILIZE" },
-          {
-            headers: {
-              "User-Authentication": LOCONAV_TOKEN,
-              "Content-Type": "application/json"
-            },
-            timeout: 25000
-          }
-        ),
-        'unlock'
-      );
-    } catch (reqErr) {
-      // If timed out or rate-limited, wait 3 seconds and retry once
-      if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
-        console.warn(`[IoT] Unlock attempt 1 hit ${reqErr.message}. Retrying in 3s for bike ${bikeId}...`);
-        await new Promise(r => setTimeout(r, 3000));
+      const loconavUuid = await getLocoNavId(bikeId);
+      if (!loconavUuid) {
+        console.warn(`[IoT] No LocoNav UUID found for bike_id=${bikeId}`);
+        return { ok: false, message: "LocoNav vehicle UUID not linked for this bike" };
+      }
+
+      let response;
+      try {
         response = await enqueueLocoNavCommand(() =>
           axios.post(
             `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
@@ -283,50 +329,86 @@ export async function unlockBike(bikeId) {
           ),
           'unlock'
         );
-      } else {
-        throw reqErr;
+      } catch (reqErr) {
+        // If timed out or rate-limited, wait 3 seconds and retry once
+        if (reqErr.code === 'ECONNABORTED' || reqErr.response?.status === 429 || reqErr.message?.includes('timeout')) {
+          console.warn(`[IoT] Unlock attempt 1 hit ${reqErr.message}. Retrying in 3s for bike ${bikeId}...`);
+          await new Promise(r => setTimeout(r, 3000));
+          response = await enqueueLocoNavCommand(() =>
+            axios.post(
+              `${LOCONAV_API_URL}/vehicles/${loconavUuid}/immobilizer_requests`,
+              { value: "MOBILIZE" },
+              {
+                headers: {
+                  "User-Authentication": LOCONAV_TOKEN,
+                  "Content-Type": "application/json"
+                },
+                timeout: 25000
+              }
+            ),
+            'unlock'
+          );
+        } else {
+          throw reqErr;
+        }
       }
-    }
 
-    console.log(`[IoT] Unlock (MOBILIZE) response for bike ${bikeId}:`, response.data);
-    if (response.data?.data?.errors) {
-      const errTxt = typeof response.data.data.errors === 'string' 
-        ? response.data.data.errors 
-        : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
+      console.log(`[IoT] Unlock (MOBILIZE) response for bike ${bikeId}:`, response.data);
+      if (response.data?.data?.errors) {
+        const errTxt = typeof response.data.data.errors === 'string' 
+          ? response.data.data.errors 
+          : (response.data.data.errors[0]?.message || 'An active command is already in progress.');
 
-      // If already mobilized/resumed, treat as success!
-      if (errTxt.toLowerCase().includes('already in the state of') || errTxt.toLowerCase().includes('fuel supply to resume')) {
-        return { ok: true, bikeId, action: "unlock", requestId: "already-unlocked", message: errTxt };
+        // If already mobilized/resumed, treat as success!
+        if (errTxt.toLowerCase().includes('already in the state of') || errTxt.toLowerCase().includes('fuel supply to resume')) {
+          return { ok: true, bikeId, action: "unlock", requestId: "already-unlocked", message: errTxt };
+        }
+
+        // If an active request is already present on LocoNav, treat as active/queued on LocoNav!
+        if (errTxt.toLowerCase().includes('already an active request present')) {
+          return { ok: true, bikeId, action: "unlock", requestId: "active-request-present", message: errTxt, isAlreadyActive: true };
+        }
+
+        return {
+          ok: false,
+          message: errTxt,
+          bikeId,
+          action: "unlock"
+        };
       }
-
+      const requestId = response.data?.data?.id || null;
       return {
-        ok: false,
-        message: errTxt,
+        ok: true,
         bikeId,
-        action: "unlock"
+        action: "unlock",
+        requestId: requestId ? String(requestId) : "loconav-unlock",
+        data: response.data?.data
       };
-    }
-    const requestId = response.data?.data?.id || null;
-    return {
-      ok: true,
-      bikeId,
-      action: "unlock",
-      requestId: requestId ? String(requestId) : "loconav-unlock",
-      data: response.data?.data
-    };
-  } catch (error) {
-    console.error(`[IoT] Unlock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
-    const errMsg =
-      error.response?.data?.data?.errors?.[0]?.message ||
-      error.response?.data?.message ||
-      error.message ||
-      "LocoNav API error";
+    } catch (error) {
+      console.error(`[IoT] Unlock failed for bike_id ${bikeId}:`, error.response?.data || error.message);
+      const errMsg =
+        error.response?.data?.data?.errors?.[0]?.message ||
+        error.response?.data?.message ||
+        error.message ||
+        "LocoNav API error";
 
-    if (errMsg.toLowerCase().includes('already in the state of') || errMsg.toLowerCase().includes('fuel supply to resume')) {
-      return { ok: true, bikeId, action: "unlock", requestId: "already-unlocked", message: errMsg };
-    }
+      if (errMsg.toLowerCase().includes('already in the state of') || errMsg.toLowerCase().includes('fuel supply to resume')) {
+        return { ok: true, bikeId, action: "unlock", requestId: "already-unlocked", message: errMsg };
+      }
 
-    return { ok: false, message: errMsg };
+      if (errMsg.toLowerCase().includes('already an active request present')) {
+        return { ok: true, bikeId, action: "unlock", requestId: "active-request-present", message: errMsg, isAlreadyActive: true };
+      }
+
+      return { ok: false, message: errMsg };
+    }
+  })();
+
+  inFlightUnlockPromises.set(bikeKey, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlightUnlockPromises.delete(bikeKey);
   }
 }
 

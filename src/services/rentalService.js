@@ -257,24 +257,29 @@ async function finalizeRental(rentalId, status) {
     lockError = 'Device offline — queued on LocoNav for wakeup retry';
   }
 
-  try {
-    await supabase.from("bike_lock_logs").insert([{
-      bike_id: rental.bike_id,
-      user_id: rental.user_id,
-      // rental_id: rentalId, // Omitted due to UUID vs BIGINT type mismatch
-      action: "lock",
-      method: "app",
-      success: isHardwareDeliverable,
-      error_message: lockError,
-      metadata: {
-        triggered_by: "rental_finalization",
-        status_reason: status,
-        iot_request_id: iotResult?.requestId || null,
-        device_online_check: deviceOnlineStatus
-      }
-    }]);
-  } catch (logErr) {
-    console.warn("[rentalService] Failed to insert lock log:", logErr.message);
+  // Skip duplicate log insertion if this lock was coalesced with an already executing or recently dispatched lock
+  if (iotResult?.isDuplicate || iotResult?.isCoalesced) {
+    console.log(`[rentalService] Lock for bike ${rental.bike_id} was coalesced/already logged. Skipping duplicate log insertion.`);
+  } else {
+    try {
+      await supabase.from("bike_lock_logs").insert([{
+        bike_id: rental.bike_id,
+        user_id: rental.user_id,
+        // rental_id: rentalId, // Omitted due to UUID vs BIGINT type mismatch
+        action: "lock",
+        method: "app",
+        success: isHardwareDeliverable,
+        error_message: lockError,
+        metadata: {
+          triggered_by: "rental_finalization",
+          status_reason: status,
+          iot_request_id: iotResult?.requestId || null,
+          device_online_check: deviceOnlineStatus
+        }
+      }]);
+    } catch (logErr) {
+      console.warn("[rentalService] Failed to insert lock log:", logErr.message);
+    }
   }
 
   // Deduct Wallet Balance (if no active subscription)

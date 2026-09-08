@@ -511,6 +511,11 @@
             (log.error_message && (log.error_message.includes('fuel supply to cut off') || log.error_message.includes('already in the state of'))) ||
             (log.metadata && log.metadata.loconav_message && (log.metadata.loconav_message.includes('fuel supply to cut off') || log.metadata.loconav_message.includes('already in the state of')))
           );
+          var isActiveRequestPresent = (
+            reqId === 'active-request-present' ||
+            (log.error_message && log.error_message.toLowerCase().includes('already an active request present')) ||
+            (log.metadata && log.metadata.loconav_message && log.metadata.loconav_message.toLowerCase().includes('already an active request present'))
+          );
 
           // Badge: use is_in_pending_pool only if the log itself is a failed lock (not a past successful lock)
           var showPendingBadge = log.is_in_pending_pool && !log.success;
@@ -567,6 +572,10 @@
               <% } else if (isAlreadyLocked) { %>
                 <span class="status-badge" style="background:#fef2f2;color:#991b1b;border:1.5px solid #fca5a5;font-weight:800;">
                   <i class="fas fa-check-double" style="color:#dc2626;margin-right:3px;"></i>ALREADY LOCKED (IMMOBILIZED)
+                </span>
+              <% } else if (isActiveRequestPresent) { %>
+                <span class="status-badge" style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd;font-weight:800;">
+                  ⏳ Active Command on LocoNav
                 </span>
               <% } else if (log.is_in_pending_pool) { %>
                 <span class="status-badge pending-pool">⏳ Queued for Wakeup Retry</span>

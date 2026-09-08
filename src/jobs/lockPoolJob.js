@@ -140,10 +140,23 @@ export async function getPendingLockPool() {
                   error_message: lastLock.error_message,
                   metadata: { ...lastLock.metadata, loconav_verified: true, loconav_status: "error" }
                 }).eq("id", lastLock.id).then(() => {});
-              } else if (locoStatus.status === "success" || locoStatus.status === "failure") {
+              } else if (locoStatus.status === "success") {
+                lastLock.success = true;
+                lastLock.error_message = null;
+                if (!lastLock.metadata) lastLock.metadata = {};
+                lastLock.metadata.loconav_verified = true;
+                lastLock.metadata.loconav_status = "success";
+                supabase.from("bike_lock_logs").update({
+                  success: true,
+                  error_message: null,
+                  metadata: { ...lastLock.metadata, loconav_verified: true, loconav_status: "success" }
+                }).eq("id", lastLock.id).then(() => {});
+              } else if (locoStatus.status === "failure") {
+                lastLock.success = false;
+                if (!lastLock.metadata) lastLock.metadata = {};
                 lastLock.metadata.loconav_verified = true;
                 supabase.from("bike_lock_logs").update({
-                  metadata: { ...lastLock.metadata, loconav_verified: true, loconav_status: locoStatus.status }
+                  metadata: { ...lastLock.metadata, loconav_verified: true, loconav_status: "failure" }
                 }).eq("id", lastLock.id).then(() => {});
               }
             }
@@ -157,14 +170,23 @@ export async function getPendingLockPool() {
       // Parked bikes overnight (<24h) still receive cellular/SMS commands reliably from LocoNav
       const pingAgeMin = lastLock?.metadata?.device_online_check?.pingAgeMinutes;
       const trackerWasDead = typeof pingAgeMin === "number" && pingAgeMin > 1440;
+      const isLoconavConfirmedSuccess = lastLock?.metadata?.loconav_status === "success";
 
       const isLockConfirmed = bike.is_locked === true &&
         lastLock &&
-        lastLock.success === true &&
+        (lastLock.success === true || isLoconavConfirmedSuccess) &&
         lastLock.metadata?.iot_request_id &&
-        !lastLock.error_message &&
+        (!lastLock.error_message || isLoconavConfirmedSuccess) &&
         !unlockedAfterLastLock &&
         !trackerWasDead;
+
+      // If LocoNav confirmed success in metadata but DB row had success: false, auto-sync DB row
+      if (isLoconavConfirmedSuccess && lastLock.success !== true) {
+        supabase.from("bike_lock_logs").update({
+          success: true,
+          error_message: null
+        }).eq("id", lastLock.id).then(() => {});
+      }
 
       // If lock was not yet confirmed successful on hardware level:
       if (!isLockConfirmed) {

@@ -67,11 +67,27 @@ export async function getPendingLockPool() {
         .from("vehicles")
         .select("id, bike_id, vehicle_uuid, name, vehicle_number"),
 
-      supabase
-        .from("bike_lock_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(500)
+      // ── Per-bike lock log fetch (replaces global 500-limit query) ──────────
+      // Global .limit(500) caused duplicate locks: as fleet grows, a bike's
+      // recent successful lock falls outside the window → pool thinks it's
+      // unlocked and fires again. Fix: fetch per-bike for only the bikes in
+      // the current rental list, within a 30-day window.
+      (async () => {
+        const bikeIds = [...new Set((expiredRentals || []).map(r => r.bike_id).filter(Boolean))];
+        const bikeBatches = chunkArray(bikeIds, BATCH_SIZE);
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const results = await Promise.all(
+          bikeBatches.map(batch =>
+            supabase
+              .from("bike_lock_logs")
+              .select("*")
+              .in("bike_id", batch)
+              .gte("created_at", thirtyDaysAgo)
+              .order("created_at", { ascending: false })
+          )
+        );
+        return { data: results.flatMap(r => r.data || []) };
+      })()
     ]);
 
     const activeSubs = activeSubsRaw.data || [];
@@ -271,34 +287,61 @@ export async function getPendingUnlockPool() {
     const userIds = [...new Set((ongoingRentals || []).map(r => r.user_id).filter(Boolean))];
     if (userIds.length === 0) return [];
 
-    const [
-      { data: activeSubs },
-      { data: usersData },
-      { data: vehiclesData },
-      { data: recentLogs }
-    ] = await Promise.all([
-      supabase
-        .from("user_subscriptions")
-        .select("user_id, status, end_date")
-        .in("user_id", userIds)
-        .eq("status", "active")
-        .gt("end_date", now.toISOString()),
+    const BATCH_SIZE_U = 50;
+    const chunkArrayU = (arr, size) => {
+      const chunks = [];
+      for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+      return chunks;
+    };
+    const userIdBatchesU = chunkArrayU(userIds, BATCH_SIZE_U);
+    const bikeIdsU = [...new Set((ongoingRentals || []).map(r => r.bike_id).filter(Boolean))];
+    const bikeIdBatchesU = chunkArrayU(bikeIdsU, BATCH_SIZE_U);
 
-      supabase
-        .from("users")
-        .select("id, full_name, name, phone")
-        .in("id", userIds),
+    const [activeSubsU, usersDataU, { data: vehiclesData }, recentLogsU] = await Promise.all([
+      Promise.all(
+        userIdBatchesU.map(batch =>
+          supabase
+            .from("user_subscriptions")
+            .select("user_id, status, end_date")
+            .in("user_id", batch)
+            .eq("status", "active")
+            .gt("end_date", now.toISOString())
+        )
+      ).then(results => ({ data: results.flatMap(r => r.data || []) })),
+
+      Promise.all(
+        userIdBatchesU.map(batch =>
+          supabase
+            .from("users")
+            .select("id, full_name, name, phone")
+            .in("id", batch)
+        )
+      ).then(results => ({ data: results.flatMap(r => r.data || []) })),
 
       supabase
         .from("vehicles")
         .select("id, bike_id, vehicle_uuid, name, vehicle_number"),
 
-      supabase
-        .from("bike_lock_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200)
+      // Per-bike log fetch for unlock pool (replaces global 200-limit query)
+      (async () => {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const results = await Promise.all(
+          bikeIdBatchesU.map(batch =>
+            supabase
+              .from("bike_lock_logs")
+              .select("*")
+              .in("bike_id", batch)
+              .gte("created_at", thirtyDaysAgo)
+              .order("created_at", { ascending: false })
+          )
+        );
+        return results.flatMap(r => r.data || []);
+      })()
     ]);
+
+    const activeSubs = activeSubsU.data || [];
+    const usersData = usersDataU.data || [];
+    const recentLogs = recentLogsU;
 
     const activeUserSet = new Set((activeSubs || []).map(s => s.user_id));
     const usersMap = {};

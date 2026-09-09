@@ -28,22 +28,40 @@ export async function getPendingLockPool() {
     const userIds = [...new Set((expiredRentals || []).map(r => r.user_id).filter(Boolean))];
     if (userIds.length === 0) return [];
 
-    const [
-      { data: activeSubs },
-      { data: usersData },
-      { data: vehiclesData },
-      { data: recentLockLogs }
-    ] = await Promise.all([
-      supabase
-        .from("user_subscriptions")
-        .select("user_id, status, end_date")
-        .in("user_id", userIds)
-        .in("status", ["active", "ongoing"]),
+    // ─── Batched queries to avoid Supabase .in() URL-length limit ─────────────
+    // A large userIds list (100+) causes the single .in() query to silently return
+    // empty/partial results, breaking the active-subscription protection check.
+    // Fix: split into chunks of 50 and merge results.
+    const BATCH_SIZE = 50;
+    const chunkArray = (arr, size) => {
+      const chunks = [];
+      for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+      return chunks;
+    };
 
-      supabase
-        .from("users")
-        .select("id, full_name, name, phone")
-        .in("id", userIds),
+    const userIdBatches = chunkArray(userIds, BATCH_SIZE);
+
+    const [activeSubsRaw, usersDataRaw, { data: vehiclesData }, { data: recentLockLogs }] = await Promise.all([
+      // Batch the subscription query
+      Promise.all(
+        userIdBatches.map(batch =>
+          supabase
+            .from("user_subscriptions")
+            .select("user_id, status, end_date")
+            .in("user_id", batch)
+            .in("status", ["active", "ongoing"])
+        )
+      ).then(results => ({ data: results.flatMap(r => r.data || []) })),
+
+      // Batch the users query
+      Promise.all(
+        userIdBatches.map(batch =>
+          supabase
+            .from("users")
+            .select("id, full_name, name, phone")
+            .in("id", batch)
+        )
+      ).then(results => ({ data: results.flatMap(r => r.data || []) })),
 
       supabase
         .from("vehicles")
@@ -55,6 +73,9 @@ export async function getPendingLockPool() {
         .order("created_at", { ascending: false })
         .limit(500)
     ]);
+
+    const activeSubs = activeSubsRaw.data || [];
+    const usersData = usersDataRaw.data || [];
 
     // A rider is in active standing (and protected from lock) if their subscription is active/ongoing
     // AND they have not passed the 09:30 AM IST next-day grace period!
@@ -68,6 +89,7 @@ export async function getPendingLockPool() {
         }
       }
     });
+
     const usersMap = {};
     (usersData || []).forEach(u => { usersMap[u.id] = u; });
 
@@ -377,7 +399,32 @@ export async function runLockPoolSweep() {
         continue;
       }
 
+      // ── SAFETY DOUBLE-CHECK ────────────────────────────────────────────────
+      // Re-verify at the last moment that this user truly has NO active subscription.
+      // This guards against any race condition or batching issue in getPendingLockPool().
+      const { data: freshSub } = await supabase
+        .from("user_subscriptions")
+        .select("user_id, status, end_date")
+        .eq("user_id", pb.userId)
+        .in("status", ["active", "ongoing"])
+        .order("end_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (freshSub && freshSub.end_date) {
+        const subEndDate = new Date(freshSub.end_date);
+        const graceCutoff = new Date(subEndDate);
+        graceCutoff.setDate(graceCutoff.getDate() + 1);
+        graceCutoff.setHours(4, 0, 0, 0); // 09:30 AM IST = 04:00 UTC
+        if (new Date() < graceCutoff) {
+          console.log(`[lockPool] ⛔ SKIP LOCK — Bike ${pb.bikeCode} rider has active subscription until ${subEndDate.toISOString()}. Removing from pool silently.`);
+          continue;
+        }
+      }
+      // ── END SAFETY CHECK ───────────────────────────────────────────────────
+
       console.log(`[lockPool] ⚡ Bike ${pb.bikeCode} is ONLINE / AWAKE! Dispatching IMMOBILIZE command...`);
+
 
       try {
         const lockResult = await iot.lockBike(pb.bikeId);

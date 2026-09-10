@@ -899,3 +899,103 @@ export async function sendSubscriptionExpiryWarnings() {
   }
 }
 
+/**
+ * Calculate overdue dues for a user.
+ * Formula:
+ * - Rate: ₹1,950 / 7 days = ₹278.57 per day
+ * - Count from expiration date (end_date) to when user was marked inactive/blocked (minus 1 day morning grace)
+ * - Returns: { isInactive, subStatus, daysSinceInactive, overdueAmount, dailyRate, reason }
+ */
+export async function calculateUserOverdueDues(userId) {
+  try {
+    if (!userId) return { isInactive: false, subStatus: "none", daysSinceInactive: 0, overdueAmount: 0, dailyRate: 278.57, reason: "" };
+
+    const now = new Date();
+
+    function getISTDayDiff(d1, d2) {
+      if (!d1 || !d2) return 0;
+      const s1 = new Date(new Date(d1).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      const s2 = new Date(new Date(d2).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      s1.setHours(0, 0, 0, 0);
+      s2.setHours(0, 0, 0, 0);
+      return Math.round((s1.getTime() - s2.getTime()) / (24 * 60 * 60 * 1000));
+    }
+
+    // Fetch user record from users table (which contains status, is_blocked, updated_at, created_at)
+    const { data: userRecord } = await supabase
+      .from("users")
+      .select("id, status, is_blocked, updated_at, created_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    // Fetch user latest subscription
+    const { data: latestSub } = await supabase
+      .from("user_subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("end_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const isBlocked = userRecord?.is_blocked === true || userRecord?.status === "blocked" || userRecord?.status === "inactive";
+    let subStatus = "none";
+    let daysSinceInactive = 0;
+    let inactiveReason = "";
+    let inactiveDate = null;
+
+    if (isBlocked) {
+      subStatus = "inactive";
+      inactiveReason = "Account Marked Blocked / Inactive by Admin";
+      inactiveDate = userRecord?.updated_at ? new Date(userRecord.updated_at) : new Date(userRecord?.created_at || now);
+      if (latestSub?.end_date) {
+        const planExpiredDate = new Date(latestSub.end_date);
+        const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+        daysSinceInactive = Math.max(0, rawDiff - 1);
+      } else {
+        daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+      }
+    } else if (latestSub) {
+      const end = new Date(latestSub.end_date);
+      const isActuallyActive = end >= now && latestSub.status === "active";
+
+      if (isActuallyActive) {
+        subStatus = "active";
+        daysSinceInactive = 0;
+      } else if (latestSub.status === "cancelled") {
+        subStatus = "inactive";
+        inactiveReason = latestSub.cancellation_reason || "Subscription Cancelled / Marked Inactive by Admin";
+        inactiveDate = latestSub.cancelled_at ? new Date(latestSub.cancelled_at) : new Date(latestSub.updated_at || latestSub.created_at);
+        const planExpiredDate = new Date(latestSub.end_date);
+        const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+        daysSinceInactive = Math.max(0, rawDiff - 1);
+      } else {
+        subStatus = "expired";
+        inactiveReason = "Subscription Plan Expired (No Active Plan)";
+        daysSinceInactive = 0;
+      }
+    } else {
+      subStatus = "none";
+      inactiveReason = "No Subscription Ever Activated";
+      daysSinceInactive = 0;
+    }
+
+    const dailyRate = 278.57;
+    const overdueAmount = (subStatus === "inactive" && daysSinceInactive > 0)
+      ? Number((daysSinceInactive * (1950 / 7)).toFixed(2))
+      : 0;
+
+    return {
+      isInactive: subStatus === "inactive",
+      subStatus,
+      daysSinceInactive,
+      overdueAmount,
+      dailyRate,
+      reason: inactiveReason,
+    };
+  } catch (err) {
+    console.warn("[calculateUserOverdueDues] Error:", err.message);
+    return { isInactive: false, subStatus: "none", daysSinceInactive: 0, overdueAmount: 0, dailyRate: 278.57, reason: "" };
+  }
+}
+
+

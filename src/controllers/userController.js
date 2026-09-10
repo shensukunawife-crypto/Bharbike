@@ -7,11 +7,22 @@ import { createUserNotification } from "../services/notificationService.js";
 export const profile = asyncHandler(async (req, res) => {
   const raw = await userService.getProfile(req.user.id);
   const { deliveryRequest, ...profileRow } = raw;
+  let dues = { isInactive: false, daysSinceInactive: 0, overdueAmount: 0 };
+  try {
+    const { calculateUserOverdueDues } = await import("../services/subscriptionService.js");
+    dues = await calculateUserOverdueDues(req.user.id);
+  } catch (e) {
+    console.warn("[userController.profile] dues lookup failed:", e?.message);
+  }
+
   res.json({
     success: true,
     data: {
       ...shapePublicUser(profileRow),
       deliveryRequest: deliveryRequest ?? null,
+      pending_amount: dues.overdueAmount || 0,
+      days_overdue: dues.daysSinceInactive || 0,
+      is_inactive: dues.isInactive,
     },
   });
 });

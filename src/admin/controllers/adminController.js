@@ -1232,6 +1232,15 @@ export async function users(req, res) {
     const midnightIstUnix = nowIST().getTime();
     const allOrders = safeData(ordersData).map(o => normalizeOrder(o, mappings));
 
+    function getISTDayDiff(d1, d2) {
+      if (!d1 || !d2) return 0;
+      const s1 = new Date(new Date(d1).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      const s2 = new Date(new Date(d2).toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      s1.setHours(0,0,0,0);
+      s2.setHours(0,0,0,0);
+      return Math.round((s1.getTime() - s2.getTime()) / (24 * 60 * 60 * 1000));
+    }
+
     const users = safeData(usersData)
       .filter((row) => row.is_delivery_partner !== true)
       .map((row) => {
@@ -1271,6 +1280,36 @@ export async function users(req, res) {
           if (bike && bike.status === "in_use") {
             assignedBikeCode = bike.bike_code || "Bike";
           }
+        }
+
+        // Calculate overdue dues for inactive riders
+        const isUserBlockedOrInactive = row.is_blocked === true || row.status === "blocked" || row.status === "inactive";
+        let subStatus = "none";
+        let daysSinceInactive = 0;
+        let overdueAmount = 0;
+
+        if (isUserBlockedOrInactive) {
+          subStatus = "inactive";
+          const inactiveDate = row.updated_at ? new Date(row.updated_at) : new Date(row.created_at || now);
+          if (userSub?.end_date) {
+            const planExpiredDate = new Date(userSub.end_date);
+            const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+            daysSinceInactive = Math.max(0, rawDiff - 1);
+          } else {
+            daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+          }
+        } else if (userSub && userSub.status === "cancelled") {
+          subStatus = "inactive";
+          const inactiveDate = userSub.cancelled_at ? new Date(userSub.cancelled_at) : new Date(userSub.updated_at || userSub.created_at);
+          if (userSub.end_date) {
+            const planExpiredDate = new Date(userSub.end_date);
+            const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
+            daysSinceInactive = Math.max(0, rawDiff - 1);
+          }
+        }
+
+        if (subStatus === "inactive" && daysSinceInactive > 0) {
+          overdueAmount = Number((daysSinceInactive * (1950 / 7)).toFixed(2));
         }
 
         const formatDateTimeLocal = (dateStr) => {
@@ -1337,6 +1376,9 @@ export async function users(req, res) {
           lastLogin: row.last_login || row.lastLogin || joinedDate,
           lastActive: row.is_online ? "Online now" : "Recently",
           walletBalance: userWallet ? Number(userWallet.balance || 0) : 0,
+          overdueAmount,
+          daysSinceInactive,
+          isInactiveUser: subStatus === "inactive",
           subscriptionText: subText,
           assignedBikeCode,
           subscription: userSub ? {
@@ -1467,6 +1509,8 @@ export async function users(req, res) {
         winner.totalOrders = (winner.totalOrders || 0) + (loser.totalOrders || 0);
         winner.totalSpent = (winner.totalSpent || 0) + (loser.totalSpent || 0);
         winner.walletBalance = Math.max(winner.walletBalance || 0, loser.walletBalance || 0);
+        winner.overdueAmount = Math.max(winner.overdueAmount || 0, loser.overdueAmount || 0);
+        winner.daysSinceInactive = Math.max(winner.daysSinceInactive || 0, loser.daysSinceInactive || 0);
       }
       return winner;
     });

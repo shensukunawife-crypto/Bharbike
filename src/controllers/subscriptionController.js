@@ -37,6 +37,35 @@ export const getActiveSubscription = async (req, res) => {
       console.warn("[getActiveSubscription] service failed:", e?.message);
     }
 
+    // Fetch any overdue dues for inactive / penalty calculation
+    let dues = { isInactive: false, subStatus: "none", daysSinceInactive: 0, overdueAmount: 0, dailyRate: 278.57, reason: "" };
+    try {
+      dues = await subscriptionService.calculateUserOverdueDues(userId);
+      // If user has outstanding overdue dues, ensure they receive an in-app notification
+      if (dues.isInactive && dues.overdueAmount > 0) {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: existingNotifs } = await supabase
+          .from("notifications")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("type", "overdue_dues")
+          .gt("created_at", oneDayAgo)
+          .limit(1);
+
+        if (!existingNotifs || existingNotifs.length === 0) {
+          const { createUserNotification } = await import("../services/notificationService.js");
+          await createUserNotification(
+            userId,
+            "⚠️ Outstanding Dues Notice",
+            `You have ₹${dues.overdueAmount} pending dues (${dues.daysSinceInactive} days overdue). Please clear your dues or contact admin.`,
+            "overdue_dues"
+          ).catch(() => {});
+        }
+      }
+    } catch (dueErr) {
+      console.warn("[getActiveSubscription] dues calculation error:", dueErr?.message);
+    }
+
     if (!subscription) {
       // Check if user has any subscription record even without plan join
       try {
@@ -79,22 +108,41 @@ export const getActiveSubscription = async (req, res) => {
           } catch { /* plan table may not exist yet */ }
 
           const isPastEnd = endDate < now;
+          const canRenew = isPastEnd || daysRemaining <= 2;
+
           return res.json({
             success: true,
             data: {
               ...rawSub,
+              // When canRenew is true (Day 6, Day 7, or overnight grace), set plan_id to null so the mobile
+              // app's subscription-plans.tsx does not disable the "Select Plan" button, allowing seamless renewal!
+              plan_id: canRenew ? null : rawSub.plan_id,
+              current_plan_id: rawSub.plan_id,
               status: isPastEnd ? "expired" : rawSub.status,
               end_date: rawSub.end_date ? new Date(new Date(rawSub.end_date).getTime() - 1000).toISOString() : rawSub.end_date,
               plan: planInfo,
               days_remaining: daysRemaining,
+              can_renew: canRenew,
+              is_renewal_window: canRenew,
+              is_in_grace: isPastEnd,
             },
+            pending_amount: dues.overdueAmount || 0,
+            days_overdue: dues.daysSinceInactive || 0,
+            is_inactive: dues.isInactive,
           });
         }
       } catch (e2) {
         console.warn("[getActiveSubscription] direct query also failed:", e2?.message);
       }
 
-      return res.json({ success: true, data: null, message: "No active subscription" });
+      return res.json({
+        success: true,
+        data: null,
+        message: dues.overdueAmount > 0 ? `Pending dues: ₹${dues.overdueAmount}` : "No active subscription",
+        pending_amount: dues.overdueAmount || 0,
+        days_overdue: dues.daysSinceInactive || 0,
+        is_inactive: dues.isInactive,
+      });
     }
 
     // Calculate inclusive calendar days remaining in IST
@@ -107,15 +155,26 @@ export const getActiveSubscription = async (req, res) => {
     const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
     const daysRemaining = Math.max(0, diffDays + 1);
     const isPastEnd = endDate < now;
+    const canRenew = isPastEnd || daysRemaining <= 2;
 
     return res.json({
       success: true,
       data: {
         ...subscription,
+        // When canRenew is true (Day 6, Day 7, or overnight grace), set plan_id to null so the mobile
+        // app's subscription-plans.tsx does not disable the "Select Plan" button, allowing seamless renewal!
+        plan_id: canRenew ? null : subscription.plan_id,
+        current_plan_id: subscription.plan_id,
         status: isPastEnd ? "expired" : subscription.status,
         end_date: subscription.end_date ? new Date(new Date(subscription.end_date).getTime() - 1000).toISOString() : subscription.end_date,
         days_remaining: daysRemaining,
+        can_renew: canRenew,
+        is_renewal_window: canRenew,
+        is_in_grace: isPastEnd,
       },
+      pending_amount: dues.overdueAmount || 0,
+      days_overdue: dues.daysSinceInactive || 0,
+      is_inactive: dues.isInactive,
     });
   } catch (error) {
     console.error("[subscriptionController.getActiveSubscription]", error);
@@ -240,11 +299,27 @@ export const createSubscription = async (req, res) => {
     // Check if user already has active subscription
     const existingSubscription = await subscriptionService.getUserActiveSubscription(userId);
     if (existingSubscription) {
-      return res.status(400).json({
-        success: false,
-        message: "User already has an active subscription",
-        data: existingSubscription,
-      });
+      const endDate = new Date(existingSubscription.end_date);
+      const now = new Date();
+      const _endIST = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const _nowIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const endMidnight = new Date(_endIST.getFullYear(), _endIST.getMonth(), _endIST.getDate());
+      const nowMidnight = new Date(_nowIST.getFullYear(), _nowIST.getMonth(), _nowIST.getDate());
+      const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
+      const daysRemaining = Math.max(0, diffDays + 1);
+      const isPastEnd = endDate < now;
+
+      // Allow renewal on Day 6 & 7 (daysRemaining <= 2) or during overnight grace before 9:30 AM (isPastEnd)
+      const canRenew = isPastEnd || daysRemaining <= 2;
+
+      if (!canRenew) {
+        return res.status(400).json({
+          success: false,
+          message: `Your subscription is currently active with ${daysRemaining} days remaining. Early renewal opens on Day 6 (2 days before expiry).`,
+          data: existingSubscription,
+        });
+      }
+      console.log(`[createSubscription] Renewal permitted for user ${userId} (daysRemaining: ${daysRemaining}, isPastEnd: ${isPastEnd})`);
     }
 
     const subscription = await subscriptionService.createSubscription(

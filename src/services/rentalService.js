@@ -404,9 +404,14 @@ export async function expireRentalsPastEnd() {
           }
           continue;
         }
+      } else {
+        // Rider has NO subscription record in user_subscriptions (admin-assigned / backup / courtesy bike).
+        // Per client instruction: Do not auto-expire or auto-lock admin-assigned bikes for non-subscription users. Leave them alone!
+        console.log(`[rentalService.expireRentalsPastEnd] Skipping admin-assigned backup bike #${r.bike_id} — rider ${r.user_id} has no subscription.`);
+        continue;
       }
 
-      // Past 9:30 AM grace period (or no subscription) — expire the rental and lock the bike
+      // Past 9:30 AM grace period for a subscription user — expire the rental and lock the bike
       results.push(await finalizeRental(r.id, RentalStatus.expired));
       await new Promise(r => setTimeout(r, 2000)); // Rate limit buffer
     } catch (e) {

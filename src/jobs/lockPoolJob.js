@@ -42,14 +42,14 @@ export async function getPendingLockPool() {
     const userIdBatches = chunkArray(userIds, BATCH_SIZE);
 
     const [activeSubsRaw, usersDataRaw, { data: vehiclesData }, { data: recentLockLogs }] = await Promise.all([
-      // Batch the subscription query
+      // Batch the subscription query (including 'expired' to evaluate next-day 09:30 AM grace period)
       Promise.all(
         userIdBatches.map(batch =>
           supabase
             .from("user_subscriptions")
             .select("user_id, status, end_date")
             .in("user_id", batch)
-            .in("status", ["active", "ongoing"])
+            .in("status", ["active", "ongoing", "expired"])
         )
       ).then(results => ({ data: results.flatMap(r => r.data || []) })),
 
@@ -106,6 +106,8 @@ export async function getPendingLockPool() {
       }
     });
 
+    const usersWithAnySubSet = new Set(activeSubs.map(s => s.user_id));
+
     const usersMap = {};
     (usersData || []).forEach(u => { usersMap[u.id] = u; });
 
@@ -132,6 +134,12 @@ export async function getPendingLockPool() {
 
       // If the current rider has an active paid plan, bike is in good standing -> skip!
       if (activeUserSet.has(r.user_id)) continue;
+
+      // If the rider has NO subscription records, this is an admin-assigned backup / courtesy bike.
+      // Per client instruction: Leave them alone — do NOT auto-lock! Admin manages them manually.
+      if (!usersWithAnySubSet.has(r.user_id)) {
+        continue;
+      }
 
       const bike = r.bikes;
       if (!bike) continue;
@@ -443,24 +451,36 @@ export async function runLockPoolSweep() {
       }
 
       // ── SAFETY DOUBLE-CHECK ────────────────────────────────────────────────
-      // Re-verify at the last moment that this user truly has NO active subscription.
+      // Re-verify at the last moment:
+      // 1. Guard against admin-assigned non-subscription riders (backup / courtesy bikes)
+      const { data: anySubCheck } = await supabase
+        .from("user_subscriptions")
+        .select("id")
+        .eq("user_id", pb.userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (!anySubCheck) {
+        console.log(`[lockPool] ⛔ SKIP LOCK — Bike ${pb.bikeCode} rider is an admin-assigned non-subscription user. Leaving alone.`);
+        continue;
+      }
+
+      // 2. Re-verify that this user truly has NO active subscription or grace period protection.
       // This guards against any race condition or batching issue in getPendingLockPool().
       const { data: freshSub } = await supabase
         .from("user_subscriptions")
         .select("user_id, status, end_date")
         .eq("user_id", pb.userId)
-        .in("status", ["active", "ongoing"])
+        .in("status", ["active", "ongoing", "expired"])
         .order("end_date", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (freshSub && freshSub.end_date) {
-        const subEndDate = new Date(freshSub.end_date);
-        const graceCutoff = new Date(subEndDate);
-        graceCutoff.setDate(graceCutoff.getDate() + 1);
-        graceCutoff.setHours(4, 0, 0, 0); // 09:30 AM IST = 04:00 UTC
-        if (new Date() < graceCutoff) {
-          console.log(`[lockPool] ⛔ SKIP LOCK — Bike ${pb.bikeCode} rider has active subscription until ${subEndDate.toISOString()}. Removing from pool silently.`);
+        const isFuture = new Date(freshSub.end_date) > new Date();
+        const inGrace = !hasPassedGracePeriod(freshSub.end_date);
+        if (isFuture || inGrace) {
+          console.log(`[lockPool] ⛔ SKIP LOCK — Bike ${pb.bikeCode} rider is protected by active plan or 09:30 AM grace period (sub end: ${freshSub.end_date}). Removing from pool silently.`);
           continue;
         }
       }

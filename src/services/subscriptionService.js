@@ -87,13 +87,20 @@ export async function getSubscriptionPlans(userId = null) {
               overdue_amount: dues.overdueAmount,
               overdue_days: dues.daysSinceInactive,
               display_name: `${p.display_name || "Weekly Plan"} (incl. ₹${Math.round(dues.overdueAmount)} past dues)`,
-              description: `Includes ₹${basePrice.toLocaleString("en-IN")} (${p.duration_days || 7} Days) + ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} past inactive dues (${dues.daysSinceInactive} days)`,
+              description: `Includes ₹${basePrice.toLocaleString("en-IN")} (7 Days fresh) + ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} overdue dues (${dues.daysSinceInactive} days bike held past expiry without renewal)`,
+              features: [
+                `Weekly Plan: ₹${basePrice.toLocaleString("en-IN")} (7 Days fresh riding)`,
+                `Past Overdue Dues: ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} (${dues.daysSinceInactive} days unpaid bike retention)`,
+                `Clears past debt & fully reactivates account`,
+                `Unlimited daily rides & Battery Swapping`
+              ],
               has_overdue_dues: true,
               dues_breakdown: {
                 plan_price: basePrice,
                 overdue_amount: dues.overdueAmount,
                 overdue_days: dues.daysSinceInactive,
                 total_amount: combinedPrice,
+                reason: `${dues.daysSinceInactive} days bike held past expiry without renewal`,
               }
             };
           });
@@ -211,13 +218,20 @@ export async function getSubscriptionPlanById(planId, userId = null) {
             overdue_amount: dues.overdueAmount,
             overdue_days: dues.daysSinceInactive,
             display_name: `${data.display_name || "Weekly Plan"} (incl. ₹${Math.round(dues.overdueAmount)} past dues)`,
-            description: `Includes ₹${basePrice.toLocaleString("en-IN")} (${data.duration_days || 7} Days) + ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} past inactive dues (${dues.daysSinceInactive} days)`,
+            description: `Includes ₹${basePrice.toLocaleString("en-IN")} (7 Days fresh) + ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} overdue dues (${dues.daysSinceInactive} days bike held past expiry without renewal)`,
+            features: [
+              `Weekly Plan: ₹${basePrice.toLocaleString("en-IN")} (7 Days fresh riding)`,
+              `Past Overdue Dues: ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} (${dues.daysSinceInactive} days unpaid bike retention)`,
+              `Clears past debt & fully reactivates account`,
+              `Unlimited daily rides & Battery Swapping`
+            ],
             has_overdue_dues: true,
             dues_breakdown: {
               plan_price: basePrice,
               overdue_amount: dues.overdueAmount,
               overdue_days: dues.daysSinceInactive,
               total_amount: combinedPrice,
+              reason: `${dues.daysSinceInactive} days bike held past expiry without renewal`,
             }
           };
         }

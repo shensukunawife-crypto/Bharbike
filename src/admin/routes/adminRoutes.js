@@ -107,6 +107,7 @@ router.get("/earnings/export/excel", requirePermission("manage_finance"), adminC
 router.get("/earnings/export/pdf", requirePermission("manage_finance"), adminController.exportEarningsPDF);
 router.get("/analytics", requirePermission("manage_finance"), adminController.analytics);
 router.get("/payments", requirePermission("manage_payments"), adminController.paymentsPage);
+router.get("/api/riders/search", requirePermission("manage_payments"), adminController.searchRiders);
 router.post("/payments/add", requirePermission("manage_payments"), adminController.addPayment);
 router.post("/payments/:paymentId/edit", requirePermission("manage_payments"), adminController.editPayment);
 router.post("/payments/:paymentId/delete", requirePermission("manage_payments"), adminController.deletePayment);

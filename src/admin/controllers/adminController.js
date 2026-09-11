@@ -1290,15 +1290,13 @@ export async function users(req, res) {
 
         if (isUserBlockedOrInactive) {
           subStatus = "inactive";
-          const inactiveDate = userSub?.cancelled_at
-            ? new Date(userSub.cancelled_at)
-            : (row.updated_at ? new Date(row.updated_at) : new Date(row.created_at || now));
+          const inactiveDate = row.updated_at ? new Date(row.updated_at) : new Date(row.created_at || now);
           if (userSub?.end_date) {
             const planExpiredDate = new Date(userSub.end_date);
             const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
             daysSinceInactive = Math.max(0, rawDiff - 1);
           } else {
-            daysSinceInactive = 0;
+            daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
           }
         } else if (userSub && userSub.status === "cancelled") {
           subStatus = "inactive";
@@ -3935,10 +3933,112 @@ export async function deletePromoCode(req, res) {
   }
 }
 
+export async function searchRiders(req, res) {
+  try {
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const { data: usersData } = await supabase
+      .from("users")
+      .select("id, full_name")
+      .order("full_name", { ascending: true });
+
+    const { data: rentalsData } = await supabase
+      .from("rentals")
+      .select("user_id, bikes(bike_code)")
+      .in("status", ["active", "ongoing"])
+      .order("created_at", { ascending: false });
+
+    const bikeMap = new Map();
+    if (rentalsData) {
+      for (const r of rentalsData) {
+        if (r.user_id && r.bikes?.bike_code && !bikeMap.has(r.user_id)) {
+          bikeMap.set(r.user_id, r.bikes.bike_code);
+        }
+      }
+    }
+
+    const riders = (usersData || [])
+      .filter(u => u.full_name && u.full_name.trim())
+      .map(u => ({
+        id: u.id,
+        name: u.full_name.trim(),
+        bike_code: bikeMap.get(u.id) || null
+      }));
+
+    if (!q) {
+      return res.json({ success: true, data: riders.slice(0, 50) });
+    }
+
+    const filtered = riders.filter(r => {
+      const nameMatch = r.name.toLowerCase().includes(q);
+      const bikeMatch = r.bike_code && r.bike_code.toLowerCase().includes(q);
+      const idMatch = r.id.toLowerCase().includes(q);
+      return nameMatch || bikeMatch || idMatch;
+    });
+
+    filtered.sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aStarts = aName.startsWith(q);
+      const bStarts = bName.startsWith(q);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      const aBike = (a.bike_code || "").toLowerCase();
+      const bBike = (b.bike_code || "").toLowerCase();
+      const aBikeStarts = aBike.startsWith(q);
+      const bBikeStarts = bBike.startsWith(q);
+      if (aBikeStarts && !bBikeStarts) return -1;
+      if (!aBikeStarts && bBikeStarts) return 1;
+
+      return aName.localeCompare(bName);
+    });
+
+    return res.json({ success: true, data: filtered.slice(0, 50) });
+  } catch (error) {
+    console.error("[searchRiders] error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
 export async function paymentsPage(req, res) {
   try {
     const configs = await paymentConfigService.listPaymentConfigs();
     const pay = await loadAdminPaymentsData(req);
+
+    // Fetch active riders list with their currently assigned bike for manual payment modal autocomplete
+    let ridersList = [];
+    try {
+      const { data: usersData } = await supabase
+        .from("users")
+        .select("id, full_name")
+        .order("full_name", { ascending: true });
+
+      const { data: rentalsData } = await supabase
+        .from("rentals")
+        .select("user_id, bikes(bike_code)")
+        .in("status", ["active", "ongoing"])
+        .order("created_at", { ascending: false });
+
+      const bikeMap = new Map();
+      if (rentalsData) {
+        for (const r of rentalsData) {
+          if (r.user_id && r.bikes?.bike_code && !bikeMap.has(r.user_id)) {
+            bikeMap.set(r.user_id, r.bikes.bike_code);
+          }
+        }
+      }
+
+      ridersList = (usersData || [])
+        .filter(u => u.full_name && u.full_name.trim())
+        .map(u => ({
+          id: u.id,
+          name: u.full_name.trim(),
+          bike_code: bikeMap.get(u.id) || null
+        }));
+    } catch (rErr) {
+      console.warn("[admin.paymentsPage] ridersList fetch error:", rErr?.message);
+    }
+
     return renderPage(res, {
       title: "Payments",
       active: "payments",
@@ -3947,6 +4047,7 @@ export async function paymentsPage(req, res) {
       paymentsList: pay.paymentsList,
       payStats: pay.payStats,
       payFilter: pay.payFilter,
+      ridersList: ridersList || [],
       supabaseRealtimeEnabled: !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       supabasePublicUrl: process.env.SUPABASE_URL || "",
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
@@ -3961,6 +4062,7 @@ export async function paymentsPage(req, res) {
       paymentsList: [],
       payStats: { total: 0, success: 0, failed: 0, revenue: 0 },
       payFilter: "all",
+      ridersList: [],
       supabaseRealtimeEnabled: false,
       supabasePublicUrl: "",
       supabaseAnonKey: "",
@@ -7125,9 +7227,7 @@ export async function getUserDetail(req, res) {
       isUserActive = false;
       subStatus = "inactive";
       inactiveReason = "Account Marked Blocked / Inactive by Admin";
-      inactiveDate = targetSub?.cancelled_at
-        ? new Date(targetSub.cancelled_at)
-        : (userData?.updated_at ? new Date(userData.updated_at) : new Date(userData?.created_at || now));
+      inactiveDate = userData?.updated_at ? new Date(userData.updated_at) : new Date(userData?.created_at || now);
       markedInactiveDateStr = inactiveDate.toISOString();
       
       // If user had a subscription, count from its expiration date to the date admin marked them inactive/blocked (minus 1 day next-morning return grace)
@@ -7137,7 +7237,7 @@ export async function getUserDetail(req, res) {
         const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
         daysSinceInactive = Math.max(0, rawDiff - 1);
       } else {
-        daysSinceInactive = 0;
+        daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
       }
     } else if (targetSub) {
       const end = new Date(targetSub.end_date);

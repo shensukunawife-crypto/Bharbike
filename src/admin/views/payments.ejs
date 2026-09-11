@@ -152,12 +152,22 @@
           <button type="button" style="background:none; border:none; font-size:24px; cursor:pointer; color:#6b7280;" onclick="document.getElementById('add-payment-modal').classList.remove('show')">&times;</button>
         </div>
         <form class="admin-form ajax-form" data-url="/admin/payments/add">
-          <div class="form-group">
-            <label style="font-weight: 600; color: #1e293b;">Rider (Mobile Number, Name, Bike Code, or ID)</label>
-            <input name="user_id" placeholder="e.g. 9833756857, Indrajeet Yadav, or TNA057" required style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;" />
+          <div class="form-group" style="position: relative;">
+            <label style="font-weight: 600; color: #1e293b;">Rider (Name, Bike Code, or ID)</label>
+            <input 
+              id="manual-pay-rider-input" 
+              type="text" 
+              autocomplete="off" 
+              placeholder="e.g. Indrajeet Yadav, TNA057, or User ID" 
+              required 
+              style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;" 
+            />
+            <input type="hidden" name="user_id" id="manual-pay-user-id" />
             <small style="color: #64748b; font-size: 11.5px; margin-top: 4px; display: block;">
-              Enter the rider's 10-digit mobile number, full name, or assigned bike code (e.g. TNA057).
+              Enter the rider's full name, assigned bike code (e.g. TNA057), or User ID.
             </small>
+            <!-- Scrollable Autocomplete Dropdown Menu -->
+            <div id="rider-autocomplete-dropdown" class="rider-autocomplete-menu"></div>
           </div>
           <div class="form-row" style="display:flex; gap:16px;">
             <div class="form-group" style="flex:1;">
@@ -815,5 +825,256 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('edit-payment-amount').addEventListener('input', function() {
     document.getElementById('edit-payment-amount-hidden').value = this.value;
   });
+})();
+</script>
+
+<style>
+  .rider-autocomplete-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.08);
+    z-index: 10000;
+  }
+  .rider-autocomplete-menu::-webkit-scrollbar {
+    width: 6px;
+  }
+  .rider-autocomplete-menu::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .rider-autocomplete-menu::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  .rider-autocomplete-item {
+    padding: 9px 12px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.1s ease;
+  }
+  .rider-autocomplete-item:last-child {
+    border-bottom: none;
+  }
+  .rider-autocomplete-item:hover, .rider-autocomplete-item.active {
+    background: #f8fafc;
+  }
+  body.dark-mode .rider-autocomplete-menu {
+    background: #1e1e1e;
+    border-color: #333333;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+  }
+  body.dark-mode .rider-autocomplete-menu::-webkit-scrollbar-thumb {
+    background: #444444;
+  }
+  body.dark-mode .rider-autocomplete-item {
+    border-bottom-color: #262626;
+  }
+  body.dark-mode .rider-autocomplete-item:hover, body.dark-mode .rider-autocomplete-item.active {
+    background: #2a2a2a;
+  }
+  body.dark-mode .rider-autocomplete-item .rider-name {
+    color: #f1f5f9 !important;
+  }
+  body.dark-mode .rider-autocomplete-item .rider-sub {
+    color: #94a3b8 !important;
+  }
+</style>
+
+<script>
+var ALL_RIDERS = <%- JSON.stringify(typeof ridersList !== 'undefined' ? ridersList : []) %>;
+
+(function() {
+  function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  var input = document.getElementById('manual-pay-rider-input');
+  var hiddenId = document.getElementById('manual-pay-user-id');
+  var dropdown = document.getElementById('rider-autocomplete-dropdown');
+  if (!input || !dropdown) return;
+
+  var activeIndex = -1;
+  var currentMatches = [];
+
+  // Reset modal fields on open
+  var logBtn = document.querySelector('button[onclick*="add-payment-modal"]');
+  if (logBtn) {
+    logBtn.addEventListener('click', function() {
+      input.value = '';
+      hiddenId.value = '';
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      currentMatches = [];
+      activeIndex = -1;
+    });
+  }
+
+  function renderDropdown(items, query) {
+    currentMatches = items;
+    activeIndex = -1;
+    if (!items || items.length === 0) {
+      dropdown.innerHTML = '<div style="padding: 11px 14px; color: #94a3b8; font-size: 13px; text-align: center;">No riders found matching "' + escapeHtml(query) + '"</div>';
+      dropdown.style.display = 'block';
+      return;
+    }
+
+    var html = items.map(function(r, idx) {
+      var bikeBadge = r.bike_code 
+        ? '<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 11px; padding: 2px 7px; border-radius: 12px; font-weight: 700; font-family: monospace;">🚲 ' + escapeHtml(r.bike_code) + '</span>'
+        : '<span class="rider-sub" style="color: #94a3b8; font-size: 11px;">No bike</span>';
+      
+      var shortId = r.id ? r.id.slice(0, 8) : '';
+      return '<div class="rider-autocomplete-item" data-index="' + idx + '">' +
+               '<div>' +
+                 '<div class="rider-name" style="font-weight: 600; font-size: 13.5px; color: #1e293b;">' + escapeHtml(r.name) + '</div>' +
+                 '<div class="rider-sub" style="font-size: 11px; color: #64748b; margin-top: 1px;">ID: ' + escapeHtml(shortId) + '...</div>' +
+               '</div>' +
+               '<div>' + bikeBadge + '</div>' +
+             '</div>';
+    }).join('');
+
+    dropdown.innerHTML = html;
+    dropdown.style.display = 'block';
+  }
+
+  function selectRider(rider) {
+    if (!rider) return;
+    var label = rider.name + (rider.bike_code ? ' (' + rider.bike_code + ')' : '');
+    input.value = label;
+    hiddenId.value = rider.id;
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    currentMatches = [];
+    activeIndex = -1;
+  }
+
+  function doSearch(val) {
+    var q = (val || '').trim().toLowerCase();
+    if (!q) {
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      currentMatches = [];
+      hiddenId.value = '';
+      return;
+    }
+
+    // Set fallback user_id in case admin submits without picking from list
+    hiddenId.value = input.value.trim();
+
+    var pool = Array.isArray(ALL_RIDERS) ? ALL_RIDERS : [];
+    var filtered = pool.filter(function(r) {
+      var nameMatch = r.name && r.name.toLowerCase().indexOf(q) !== -1;
+      var bikeMatch = r.bike_code && r.bike_code.toLowerCase().indexOf(q) !== -1;
+      var idMatch = r.id && r.id.toLowerCase().indexOf(q) !== -1;
+      return nameMatch || bikeMatch || idMatch;
+    });
+
+    // Smart sort:
+    // 1. Name starts with q
+    // 2. Bike code starts with q
+    // 3. Alphabetical by name
+    filtered.sort(function(a, b) {
+      var aName = (a.name || '').toLowerCase();
+      var bName = (b.name || '').toLowerCase();
+      var aStarts = aName.indexOf(q) === 0;
+      var bStarts = bName.indexOf(q) === 0;
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      var aBike = (a.bike_code || '').toLowerCase();
+      var bBike = (b.bike_code || '').toLowerCase();
+      var aBikeStarts = aBike.indexOf(q) === 0;
+      var bBikeStarts = bBike.indexOf(q) === 0;
+      if (aBikeStarts && !bBikeStarts) return -1;
+      if (!aBikeStarts && bBikeStarts) return 1;
+
+      return aName.localeCompare(bName);
+    });
+
+    renderDropdown(filtered.slice(0, 40), q);
+  }
+
+  input.addEventListener('input', function() {
+    doSearch(this.value);
+  });
+
+  input.addEventListener('focus', function() {
+    if (this.value.trim()) {
+      doSearch(this.value);
+    }
+  });
+
+  dropdown.addEventListener('click', function(e) {
+    var item = e.target.closest('.rider-autocomplete-item');
+    if (!item) return;
+    var idx = parseInt(item.dataset.index, 10);
+    if (!isNaN(idx) && currentMatches[idx]) {
+      selectRider(currentMatches[idx]);
+    }
+  });
+
+  input.addEventListener('keydown', function(e) {
+    if (dropdown.style.display === 'none' || !currentMatches.length) return;
+
+    var items = dropdown.querySelectorAll('.rider-autocomplete-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      updateActiveItem(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      updateActiveItem(items);
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && activeIndex < currentMatches.length) {
+        e.preventDefault();
+        selectRider(currentMatches[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  function updateActiveItem(items) {
+    items.forEach(function(el, i) {
+      if (i === activeIndex) {
+        el.classList.add('active');
+        el.scrollIntoView({ block: 'nearest' });
+      } else {
+        el.classList.remove('active');
+      }
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // Ensure hiddenId is set before form submit
+  var addForm = input.closest('form');
+  if (addForm) {
+    addForm.addEventListener('submit', function() {
+      if (!hiddenId.value) {
+        hiddenId.value = input.value.trim();
+      }
+    });
+  }
 })();
 </script>

@@ -89,6 +89,69 @@
         color: #1a1a1a;
         border-bottom-left-radius: 2px;
       }
+      .chat-msg.bot a, .chat-link-badge {
+        color: #c45510 !important;
+        background: rgba(242, 109, 33, 0.12) !important;
+        border: 1px solid rgba(242, 109, 33, 0.3) !important;
+        padding: 3px 10px !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        margin: 2px 2px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+      }
+      .chat-msg.bot a:hover, .chat-link-badge:hover {
+        background: #f26d21 !important;
+        color: #fff !important;
+        border-color: #f26d21 !important;
+        box-shadow: 0 2px 6px rgba(242, 109, 33, 0.35) !important;
+        transform: translateY(-1px);
+      }
+      .chat-table-wrap {
+        overflow-x: auto;
+        margin: 8px 0;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      .chat-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        background: #fff;
+      }
+      .chat-table th {
+        background: #f8fafc;
+        color: #334155;
+        font-weight: 600;
+        padding: 8px 10px;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0;
+        white-space: nowrap;
+      }
+      .chat-table td {
+        padding: 7px 10px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+      }
+      .chat-table tr:hover td {
+        background: #f8fafc;
+      }
+      .chat-msg p {
+        margin: 4px 0;
+      }
+      .chat-msg ul, .chat-msg ol {
+        margin: 4px 0;
+        padding-left: 18px;
+      }
+      .chat-msg li {
+        margin: 3px 0;
+      }
       .chat-msg.sys {
         align-self: center;
         font-size: 11px;
@@ -1064,18 +1127,81 @@
 
         const WELCOME = '<div class="chat-msg bot" style="background:rgba(242,109,33,0.1);color:#c45510;font-weight:500;">👋 Hi! I\'m your BharBike AI Assistant. Ask me anything about your platform — bookings, revenue, users, bikes, or recent activity!</div>';
 
-        // Simple markdown → HTML parser
-        const parseMarkdown = (text) => {
+        const formatInline = (text) => {
+          if (!text) return "";
+          return text
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`(.+?)`/g, '<code style="background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 4px; font-size: 11px;">$1</code>')
+            // Markdown links: [Title](URL)
+            .replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, (match, title, url) => {
+              const icon = url.match(/\.(jpg|jpeg|png|webp|gif)/i) ? '🖼️' : (url.match(/\.pdf/i) ? '📄' : '🔗');
+              return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link-badge">${icon} ${title}</a>`;
+            })
+            // Standalone raw URLs
+            .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (match, prefix, url) => {
+              if (prefix.includes('href=') || prefix.includes('src=')) return match;
+              const icon = url.match(/\.(jpg|jpeg|png|webp|gif)/i) ? '🖼️' : (url.match(/\.pdf/i) ? '📄' : '🔗');
+              const label = url.match(/\.(jpg|jpeg|png|webp|gif)/i) ? 'View Image' : (url.match(/\.pdf/i) ? 'View Document' : 'Open Link');
+              return `${prefix}<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link-badge">${icon} ${label}</a>`;
+            });
+        };
+
+        // Enhanced markdown → HTML parser with table and link support
+        const parseMarkdown = (rawText) => {
+          if (!rawText) return "";
+          // 1. Join split markdown links: e.g. [View]\n(https://...) or [View] (https://...)
+          let text = rawText.replace(/\[([^\]]+)\]\s*\n*\s*\((https?:\/\/[^\s\)]+)\)/gi, '[$1]($2)');
+
           const lines = text.split('\n');
           let html = '';
-          let inOl = false, inUl = false;
+          let inOl = false, inUl = false, inTable = false;
+          let tableRows = [];
 
           const closeList = () => {
             if (inOl) { html += '</ol>'; inOl = false; }
             if (inUl) { html += '</ul>'; inUl = false; }
           };
 
+          const flushTable = () => {
+            if (!inTable || tableRows.length === 0) return;
+            html += '<div class="chat-table-wrap"><table class="chat-table">';
+            tableRows.forEach((row, idx) => {
+              const cells = row.split('|').slice(1, -1).map(c => c.trim());
+              if (idx === 0) {
+                html += '<thead><tr>' + cells.map(c => `<th>${formatInline(c)}</th>`).join('') + '</tr></thead><tbody>';
+              } else if (idx === 1 && cells.every(c => /^:?-+:?$/.test(c))) {
+                // separator row, skip
+              } else {
+                html += '<tr>' + cells.map(c => `<td>${formatInline(c)}</td>`).join('') + '</tr>';
+              }
+            });
+            html += '</tbody></table></div>';
+            inTable = false;
+            tableRows = [];
+          };
+
           lines.forEach(line => {
+            const trimmed = line.trim();
+
+            // Table rows
+            if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.includes('|')) {
+              closeList();
+              inTable = true;
+              tableRows.push(trimmed);
+              return;
+            } else if (inTable) {
+              flushTable();
+            }
+
+            // Headings
+            const hMatch = line.match(/^\s*(#{1,4})\s+(.+)/);
+            if (hMatch) {
+              closeList();
+              html += `<div style="font-weight: 700; margin: 8px 0 3px; color: #1a1a1a; font-size: 13.5px;">${formatInline(hMatch[2])}</div>`;
+              return;
+            }
+
             // Ordered list: "1. ", "2. " etc
             const olMatch = line.match(/^\s*\d+\.\s+(.+)/);
             // Unordered list: "- ", "* ", "• "
@@ -1091,22 +1217,16 @@
               html += `<li>${formatInline(ulMatch[1])}</li>`;
             } else {
               closeList();
-              if (line.trim() === '') {
-                html += '<br>';
+              if (trimmed === '') {
+                html += '<div style="height: 4px;"></div>';
               } else {
                 html += `<p>${formatInline(line)}</p>`;
               }
             }
           });
           closeList();
+          if (inTable) flushTable();
           return html;
-        };
-
-        const formatInline = (text) => {
-          return text
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            .replace(/`(.+?)`/g, '<code>$1</code>');
         };
 
         const renderHistory = () => {

@@ -3706,7 +3706,15 @@ QUERY CONVENTIONS:
 - Active rentals: WHERE status IN ('active', 'ongoing')
 - Expiry / overdue: WHERE end_time < NOW() AND status IN ('active', 'ongoing')
 - Fleet size: COUNT(*) FROM bikes
-- Unless aggregating with SUM/COUNT/AVG, always append "LIMIT 10" or "ORDER BY created_at DESC LIMIT 5".`;
+- Unless aggregating with SUM/COUNT/AVG, always append "LIMIT 10" or "ORDER BY created_at DESC LIMIT 5".
+
+NON-TECHNICAL ADMIN & CLICKABLE LINKS RULES:
+- The admins and clients are non-technical. Present every answer in a clean, professional, readable format with clear bullet points, bold key data, and tables.
+- NEVER display raw, long URL strings (e.g. https://...supabase.co/...).
+- When sharing documents or image links (such as selfie_url, pan_card_url, aadhaar_front_url, aadhaar_back_url, driving_license_url, electricity_bill_url from "users", or file_url from "kyc_documents"), ALWAYS format them as clean, clickable markdown links:
+  - Example: [View Selfie](URL), [View PAN Card](URL), [View Aadhaar Front](URL), [View Aadhaar Back](URL)
+  - Keep the link on the EXACT SAME LINE. Never split [View ...] and (URL) onto different lines!
+  - If a document is null or not uploaded, write: "(Not uploaded)".`;
 
     let currentMessages = [
       { role: "system", content: systemPrompt },

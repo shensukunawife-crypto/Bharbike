@@ -1290,13 +1290,15 @@ export async function users(req, res) {
 
         if (isUserBlockedOrInactive) {
           subStatus = "inactive";
-          const inactiveDate = row.updated_at ? new Date(row.updated_at) : new Date(row.created_at || now);
+          const inactiveDate = userSub?.cancelled_at
+            ? new Date(userSub.cancelled_at)
+            : (row.updated_at ? new Date(row.updated_at) : new Date(row.created_at || now));
           if (userSub?.end_date) {
             const planExpiredDate = new Date(userSub.end_date);
             const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
             daysSinceInactive = Math.max(0, rawDiff - 1);
           } else {
-            daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+            daysSinceInactive = 0;
           }
         } else if (userSub && userSub.status === "cancelled") {
           subStatus = "inactive";
@@ -7123,7 +7125,9 @@ export async function getUserDetail(req, res) {
       isUserActive = false;
       subStatus = "inactive";
       inactiveReason = "Account Marked Blocked / Inactive by Admin";
-      inactiveDate = userData?.updated_at ? new Date(userData.updated_at) : new Date(userData?.created_at || now);
+      inactiveDate = targetSub?.cancelled_at
+        ? new Date(targetSub.cancelled_at)
+        : (userData?.updated_at ? new Date(userData.updated_at) : new Date(userData?.created_at || now));
       markedInactiveDateStr = inactiveDate.toISOString();
       
       // If user had a subscription, count from its expiration date to the date admin marked them inactive/blocked (minus 1 day next-morning return grace)
@@ -7133,7 +7137,7 @@ export async function getUserDetail(req, res) {
         const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
         daysSinceInactive = Math.max(0, rawDiff - 1);
       } else {
-        daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+        daysSinceInactive = 0;
       }
     } else if (targetSub) {
       const end = new Date(targetSub.end_date);

@@ -1050,6 +1050,16 @@ export async function calculateUserOverdueDues(userId) {
       .eq("id", userId)
       .maybeSingle();
 
+    let profileRecord = null;
+    if (!userRecord) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id, is_blocked, updated_at, created_at")
+        .eq("id", userId)
+        .maybeSingle();
+      profileRecord = prof;
+    }
+
     // Fetch user latest subscription
     const { data: latestSub } = await supabase
       .from("user_subscriptions")
@@ -1059,7 +1069,7 @@ export async function calculateUserOverdueDues(userId) {
       .limit(1)
       .maybeSingle();
 
-    const isBlocked = userRecord?.is_blocked === true || userRecord?.status === "blocked" || userRecord?.status === "inactive";
+    const isBlocked = userRecord?.is_blocked === true || userRecord?.status === "blocked" || userRecord?.status === "inactive" || profileRecord?.is_blocked === true;
     let subStatus = "none";
     let daysSinceInactive = 0;
     let inactiveReason = "";
@@ -1068,13 +1078,15 @@ export async function calculateUserOverdueDues(userId) {
     if (isBlocked) {
       subStatus = "inactive";
       inactiveReason = "Account Marked Blocked / Inactive by Admin";
-      inactiveDate = userRecord?.updated_at ? new Date(userRecord.updated_at) : new Date(userRecord?.created_at || now);
+      inactiveDate = latestSub?.cancelled_at
+        ? new Date(latestSub.cancelled_at)
+        : (userRecord?.updated_at ? new Date(userRecord.updated_at) : (profileRecord?.updated_at ? new Date(profileRecord.updated_at) : new Date(userRecord?.created_at || profileRecord?.created_at || now)));
       if (latestSub?.end_date) {
         const planExpiredDate = new Date(latestSub.end_date);
         const rawDiff = Math.max(0, getISTDayDiff(inactiveDate, planExpiredDate));
         daysSinceInactive = Math.max(0, rawDiff - 1);
       } else {
-        daysSinceInactive = Math.max(0, getISTDayDiff(now, inactiveDate));
+        daysSinceInactive = 0;
       }
     } else if (latestSub) {
       const end = new Date(latestSub.end_date);

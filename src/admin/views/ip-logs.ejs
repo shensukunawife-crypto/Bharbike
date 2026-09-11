@@ -8,117 +8,293 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding-bottom: 12px;
+    padding-bottom: 14px;
     border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 12px;
   }
   .logs-head-title h2 {
     margin: 0;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
   .logs-head-title p {
     margin: 4px 0 0;
     font-size: 13px;
     color: #64748b;
   }
+  .logs-counter-badge {
+    font-size: 12px;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .logs-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .logs-search-input {
+    flex: 1;
+    min-width: 260px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 13.5px;
+    outline: none;
+    background: #fff;
+    color: #1e293b;
+    transition: border-color 0.15s ease;
+  }
+  .logs-search-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  .log-table-container {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
   .log-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
-    background: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
   .log-table th {
     background: #f8fafc;
     color: #475569;
-    font-weight: 600;
-    font-size: 13px;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     text-align: left;
     padding: 12px 16px;
     border-bottom: 1px solid #e2e8f0;
   }
   .log-table td {
-    padding: 12px 16px;
+    padding: 13px 16px;
     font-size: 13px;
     color: #1e293b;
     border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
   }
   .log-table tr:hover {
     background-color: #f8fafc;
   }
-  .badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+  .badge-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
     font-weight: 700;
-    color: white;
+    letter-spacing: 0.01em;
   }
-  .badge.assign { background: #10b981; }
-  .badge.cancel { background: #ef4444; }
-  .badge.skipped { background: #f59e0b; }
-  .badge.edit-user { background: #3b82f6; }
-  .badge.edit-payment { background: #8b5cf6; }
-  .badge.kyc { background: #06b6d4; }
-  .badge.maintenance { background: #f97316; }
-  .badge.default { background: #64748b; }
+  .badge-action.assign { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .badge-action.cancel { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+  .badge-action.skipped { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+  .badge-action.edit-user { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .badge-action.payment { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+  .badge-action.kyc { background: #cffafe; color: #0e7490; border: 1px solid #a5f3fc; }
+  .badge-action.maintenance { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+  .badge-action.default { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+  .ip-pill {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  body.dark-mode .logs-head {
+    border-bottom-color: #262626;
+  }
+  body.dark-mode .logs-head-title h2 {
+    color: #f8fafc;
+  }
+  body.dark-mode .logs-search-input {
+    background: #141414;
+    border-color: #333;
+    color: #f1f5f9;
+  }
+  body.dark-mode .log-table-container {
+    background: #141414;
+    border-color: #262626;
+  }
+  body.dark-mode .log-table th {
+    background: #1e1e1e;
+    color: #94a3b8;
+    border-bottom-color: #262626;
+  }
+  body.dark-mode .log-table td {
+    color: #f1f5f9;
+    border-bottom-color: #262626;
+  }
+  body.dark-mode .log-table tr:hover {
+    background-color: #1a1a1a;
+  }
+  body.dark-mode .ip-pill {
+    background: #1e1e1e;
+    border-color: #333;
+    color: #f1f5f9;
+  }
 </style>
 
 <div class="logs-shell">
   <div class="logs-head">
     <div class="logs-head-title">
-      <h2>Admin IP Logs</h2>
-      <p>Forensic audit logs of all Admin actions, modifications & security events</p>
+      <h2>
+        <span>Admin Audit & IP Logs</span>
+        <span class="logs-counter-badge"><%= logs ? logs.length : 0 %> Logs Recorded</span>
+      </h2>
+      <p>Permanent historical audit logs of all Admin modifications, user updates, and system operations</p>
     </div>
   </div>
 
-  <table class="log-table">
-    <thead>
-      <tr>
-        <th>Date & Time</th>
-        <th>Admin Account</th>
-        <th>Action Taken</th>
-        <th>Target Rider / Details</th>
-        <th>IP Address</th>
-        <th>Details / Device</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% if (logs && logs.length > 0) { %>
-        <% logs.forEach(log => { %>
-          <% 
-             let badgeClass = 'default';
-             const act = String(log.action || '').toUpperCase();
-             if (act.includes('ASSIGN')) badgeClass = 'assign';
-             if (act.includes('CANCEL') || act.includes('DELETE')) badgeClass = 'cancel';
-             if (act.includes('SKIPPED')) badgeClass = 'skipped';
-             if (act.includes('USER_PROFILE') || act.includes('EDIT_USER')) badgeClass = 'edit-user';
-             if (act.includes('PAYMENT')) badgeClass = 'edit-payment';
-             if (act.includes('KYC')) badgeClass = 'kyc';
-             if (act.includes('MAINTENANCE') || act.includes('UNLOCK')) badgeClass = 'maintenance';
-             
-             // Format date
-             const dt = new Date(log.timestamp);
-             const formattedTime = dt.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-          %>
-          <tr>
-            <td style="white-space: nowrap;"><%= formattedTime %></td>
-            <td style="font-weight: 600; color: #0f172a;"><%= log.admin_name || log.admin_id %></td>
-            <td><span class="badge <%= badgeClass %>"><%= log.action %></span></td>
-            <td style="font-weight: 600; color: #2563eb;"><%= log.target_user_name || log.target_user_id %></td>
-            <td style="font-weight: 600; color: #dc2626;"><%= log.ip_address %></td>
-            <td style="font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= log.user_agent %>">
-              <%= log.user_agent %>
+  <div class="logs-toolbar">
+    <input 
+      type="text" 
+      id="logs-filter-input" 
+      class="logs-search-input" 
+      placeholder="🔍 Search logs by rider name, admin, action, or details..." 
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="log-table-container">
+    <table class="log-table" id="admin-logs-table">
+      <thead>
+        <tr>
+          <th style="width: 170px;">Date & Time (IST)</th>
+          <th style="width: 140px;">Admin Account</th>
+          <th style="width: 180px;">Action Taken</th>
+          <th style="width: 220px;">Target Rider / Entity</th>
+          <th style="width: 130px;">IP Address</th>
+          <th>Action Details & Device</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (logs && logs.length > 0) { %>
+          <% logs.forEach(log => { %>
+            <% 
+               let badgeClass = 'default';
+               const raw = String(log.raw_action || log.action || '').toUpperCase();
+               if (raw.includes('ASSIGN') || raw.includes('TOPUP')) badgeClass = 'assign';
+               else if (raw.includes('CANCEL') || raw.includes('DELETE') || raw.includes('BLOCK') || raw.includes('REJECT')) badgeClass = 'cancel';
+               else if (raw.includes('SKIPPED') || raw.includes('INACTIVE')) badgeClass = 'skipped';
+               else if (raw.includes('USER_PROFILE') || raw.includes('EDIT_USER') || raw.includes('USER')) badgeClass = 'edit-user';
+               else if (raw.includes('PAYMENT') || raw.includes('WALLET')) badgeClass = 'payment';
+               else if (raw.includes('KYC')) badgeClass = 'kyc';
+               else if (raw.includes('MAINTENANCE') || raw.includes('LOCK') || raw.includes('BIKE')) badgeClass = 'maintenance';
+               
+               // Format IST timestamp
+               const dt = new Date(log.timestamp);
+               const istStr = !isNaN(dt.getTime())
+                 ? dt.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }) + ', ' +
+                   dt.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                 : log.timestamp;
+            %>
+            <tr class="log-row">
+              <td style="white-space: nowrap; font-size: 12.5px; color: #475569; font-weight: 500;">
+                <%= istStr %>
+              </td>
+              <td style="font-weight: 600; color: #0f172a;">
+                <%= log.admin_name || log.admin_id || "Master Admin" %>
+              </td>
+              <td>
+                <span class="badge-action <%= badgeClass %>">
+                  <%= log.action %>
+                </span>
+              </td>
+              <td>
+                <% if (log.target_user_name && log.target_user_name !== 'System / General' && log.target_user_name !== 'System / Fleet') { %>
+                  <span style="font-weight: 600; color: #2563eb;">
+                    <%= log.target_user_name %>
+                  </span>
+                <% } else { %>
+                  <span style="color: #64748b; font-size: 12.5px;">
+                    <%= log.target_user_name || "System / Fleet" %>
+                  </span>
+                <% } %>
+              </td>
+              <td>
+                <span class="ip-pill"><%= log.ip_address || "Recorded" %></span>
+              </td>
+              <td>
+                <div style="font-weight: 500; color: #1e293b; line-height: 1.4;">
+                  <%= log.detail || log.action %>
+                </div>
+                <% if (log.user_agent && log.user_agent !== 'Web Browser') { %>
+                  <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                    <%= log.user_agent %>
+                  </div>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr id="no-logs-row">
+            <td colspan="6" style="text-align: center; padding: 48px; color: #64748b; font-size: 14px;">
+              No admin IP logs recorded yet.
             </td>
           </tr>
-        <% }) %>
-      <% } else { %>
-        <tr>
-          <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">No admin IP logs recorded yet.</td>
-        </tr>
-      <% } %>
-    </tbody>
-  </table>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
 </div>
+
+<script>
+(function() {
+  var filterInput = document.getElementById('logs-filter-input');
+  var table = document.getElementById('admin-logs-table');
+  if (!filterInput || !table) return;
+
+  filterInput.addEventListener('input', function() {
+    var q = this.value.trim().toLowerCase();
+    var rows = table.querySelectorAll('tbody tr.log-row');
+    var visibleCount = 0;
+
+    rows.forEach(function(row) {
+      var text = row.textContent.toLowerCase();
+      if (!q || text.indexOf(q) !== -1) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    var emptyRow = document.getElementById('filter-empty-row');
+    if (visibleCount === 0) {
+      if (!emptyRow) {
+        emptyRow = document.createElement('tr');
+        emptyRow.id = 'filter-empty-row';
+        emptyRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 36px; color: #94a3b8;">No logs matching "' + q + '"</td>';
+        table.querySelector('tbody').appendChild(emptyRow);
+      } else {
+        emptyRow.style.display = '';
+        emptyRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 36px; color: #94a3b8;">No logs matching "' + q + '"</td>';
+      }
+    } else if (emptyRow) {
+      emptyRow.style.display = 'none';
+    }
+  });
+})();
+</script>

@@ -5454,13 +5454,71 @@ export async function subscriptionBrainPage(req, res) {
   }
 }
 
+function formatAuditAction(rawAction) {
+  if (!rawAction) return "Admin Action";
+  const upper = String(rawAction).toUpperCase();
+  const map = {
+    ADMIN_EDITED_USER_PROFILE: "Edited User Profile",
+    ADMIN_UPDATE_INACTIVE_DATE: "Updated Inactive Date",
+    ADMIN_MANUALLY_ADDED_SUBSCRIPTION: "Added Subscription",
+    ADMIN_EDITED_SUBSCRIPTION: "Edited Subscription",
+    ADMIN_CANCELLED_SUBSCRIPTION: "Cancelled Subscription",
+    ADMIN_CANCEL_PLAN: "Cancelled Plan",
+    ADMIN_ASSIGN_PLAN: "Assigned Plan",
+    ADMIN_EDITED_PAYMENT_RECORD: "Edited Payment",
+    ADMIN_ADDED_PAYMENT: "Added Manual Payment",
+    ADMIN_DELETED_PAYMENT: "Deleted Payment",
+    ADMIN_ASSIGNED_UNASSIGNED_BIKE_TO_USER: "Assigned Bike to User",
+    ADMIN_ASSIGNED_BIKE_TO_USER: "Assigned Bike to User",
+    ADMIN_BLOCKED_UNBLOCKED_USER: "Blocked/Unblocked User",
+    ADMIN_DELETED_USER_ACCOUNT: "Deleted User Account",
+    ADMIN_UPDATED_KYC_DOCUMENT_STATUS: "Updated KYC Status",
+    ADMIN_VERIFIED_USER_ADDRESS: "Verified Address",
+    ADMIN_ADDED_A_NEW_USER: "Added New User",
+    ADMIN_ADDED_A_NEW_BIKE: "Added New Bike",
+    ADMIN_LOCKED_BIKE_REMOTELY: "Locked Bike Remotely",
+    ADMIN_UNLOCKED_BIKE_REMOTELY: "Unlocked Bike Remotely",
+    ADMIN_SENT_BIKE_TO_MAINTENANCE: "Sent to Maintenance",
+    ADMIN_MARKED_BIKE_AS_FIXED: "Marked Bike Fixed",
+    ADMIN_FORCED_SUBSCRIPTION_BRAIN_SWEEP: "Triggered Brain Sweep",
+    ADMIN_TOPPED_UP_USER_WALLET: "Topped Up Wallet",
+    ADMIN_DEDUCTED_FROM_USER_WALLET: "Deducted From Wallet",
+    ADMIN_APPROVED_DELIVERY_PARTNER: "Approved Delivery Partner",
+    ADMIN_REJECTED_DELIVERY_PARTNER: "Rejected Delivery Partner",
+    ADMIN_TOGGLED_PROMO_CODE_ON_OFF: "Toggled Promo Code",
+    ADMIN_SAVED_SYSTEM_SETTINGS: "Saved System Settings",
+    ADMIN_ADD_SKIPPED_DAY: "Added Skipped Day",
+  };
+  if (map[upper]) return map[upper];
+  return upper.replace(/^ADMIN_/, "").split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
+function parseDevice(ua) {
+  if (!ua || ua === "Unknown" || ua === "Admin Action") return "Web Browser";
+  const s = String(ua);
+  let os = "Desktop";
+  if (/Android/i.test(s)) os = "Android";
+  else if (/iPhone|iPad|iPod/i.test(s)) os = "iOS";
+  else if (/Windows/i.test(s)) os = "Windows";
+  else if (/Macintosh|Mac OS X/i.test(s)) os = "macOS";
+  else if (/Linux/i.test(s)) os = "Linux";
+
+  let browser = "Browser";
+  if (/Chrome/i.test(s) && !/Edg/i.test(s)) browser = "Chrome";
+  else if (/Safari/i.test(s) && !/Chrome/i.test(s)) browser = "Safari";
+  else if (/Firefox/i.test(s)) browser = "Firefox";
+  else if (/Edg/i.test(s)) browser = "Edge";
+
+  return `${browser} on ${os}`;
+}
+
 export async function ipLogsPage(req, res) {
   try {
     const fs = await import('fs');
     const path = await import('path');
     const LOG_FILE_PATH = path.join(process.cwd(), 'admin_audit_logs.json');
 
-    // 1. Fetch file logs
+    // 1. Fetch file logs (fallback / legacy)
     let fileLogs = [];
     if (fs.existsSync(LOG_FILE_PATH)) {
       try {
@@ -5471,15 +5529,26 @@ export async function ipLogsPage(req, res) {
       }
     }
 
-    // 2. Fetch database audit logs & user/admin mappings
+    // 2. Fetch database audit logs (FILTERED BY ADMIN_% IN SQL so background sweeps never push them out!)
     let dbLogs = [];
     let userMap = new Map();
     let adminMap = new Map();
     try {
       const [{ data: logsData }, { data: users }, { data: admins }] = await Promise.all([
-        supabase.from("brain_activity_logs").select("*").order("created_at", { ascending: false }).limit(200),
+        supabase
+          .from("brain_activity_logs")
+          .select("*")
+          .ilike("action", "ADMIN_%")
+          .order("created_at", { ascending: false })
+          .limit(500),
         supabase.from("users").select("id, full_name, phone, email"),
-        supabase.from("admins").select("id, email, username, full_name").catch(() => ({ data: [] }))
+        (async () => {
+          try {
+            return await supabase.from("admin_users").select("id, username, full_name");
+          } catch {
+            return { data: [] };
+          }
+        })()
       ]);
       dbLogs = logsData || [];
       userMap = new Map((users || []).map(u => [u.id, u.full_name || u.phone || u.email || u.id]));
@@ -5488,44 +5557,109 @@ export async function ipLogsPage(req, res) {
       console.warn("[ipLogsPage] DB logs/mappings fetch failed:", e?.message);
     }
 
-    // Format DB logs for display
-    const dbFormattedLogs = (dbLogs || [])
-      .filter(l => l.action && l.action.startsWith("ADMIN_"))
-      .map(l => {
-        let adminName = "Admin System";
-        let detail = "";
-        if (l.reason && l.reason.startsWith("{")) {
-          try {
-            const parsed = JSON.parse(l.reason);
-            if (parsed._admin) {
-              adminName = parsed.admin_name || adminName;
-              detail = parsed.detail || "";
-            }
-          } catch {}
+    // Format DB logs for clean, human-readable display
+    const dbFormattedLogs = (dbLogs || []).map(l => {
+      let parsed = {};
+      if (l.reason && l.reason.startsWith("{")) {
+        try { parsed = JSON.parse(l.reason); } catch {}
+      }
+
+      // Resolve Admin Account name
+      let adminName = "Master Admin";
+      if (parsed.admin_name && parsed.admin_name !== "Unknown Admin") {
+        adminName = parsed.admin_name;
+      } else if (parsed.admin_id && adminMap.has(parsed.admin_id)) {
+        adminName = adminMap.get(parsed.admin_id);
+      } else if (parsed.admin_role === "master_admin" || l.admin_role === "master_admin") {
+        adminName = "Master Admin";
+      }
+
+      // Resolve Target Rider / Entity Name
+      let targetName = userMap.get(l.user_id) || null;
+      if (!targetName && l.user_name && l.user_name !== "N/A") {
+        targetName = userMap.get(l.user_name) || l.user_name;
+      }
+      if (!targetName && parsed.detail) {
+        const matchUuid = parsed.detail.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+        if (matchUuid && userMap.get(matchUuid[0])) {
+          targetName = userMap.get(matchUuid[0]);
         }
-        const targetName = userMap.get(l.user_id) || l.user_name || l.user_id || "N/A";
+      }
+      if (!targetName) {
+        if (parsed.detail && /\/bikes\/(\w+)/.test(parsed.detail)) {
+          const bikeMatch = parsed.detail.match(/\/bikes\/(\w+)/);
+          targetName = `Bike #${bikeMatch[1]}`;
+        } else if (l.action?.includes("PROMO")) {
+          targetName = "Promo Codes";
+        } else if (l.action?.includes("SETTING")) {
+          targetName = "System Settings";
+        } else if (l.action?.includes("SWEEP")) {
+          targetName = "Subscription Brain";
+        } else {
+          targetName = "System / Fleet";
+        }
+      }
 
-        return {
-          timestamp: l.created_at,
-          admin_id: adminName,
-          admin_name: adminName,
-          action: l.action,
-          target_user_id: targetName,
-          target_user_name: targetName,
-          ip_address: "Logged",
-          user_agent: detail || "Admin Action"
-        };
-      });
+      // Clean Action text
+      const cleanAction = formatAuditAction(l.action);
 
-    // Format file logs
-    const enrichedFileLogs = (fileLogs || []).map(log => ({
-      ...log,
-      admin_name: adminMap.get(log.admin_id) || (log.admin_id && log.admin_id.length > 20 ? "Admin System" : (log.admin_id || "Admin System")),
-      target_user_name: userMap.get(log.target_user_id) || log.target_user_id || "N/A"
-    }));
+      // Clean Detail text (strip raw URL paths)
+      let cleanDetail = parsed.detail || l.reason || cleanAction;
+      if (cleanDetail.includes(" — URL:")) {
+        cleanDetail = cleanDetail.split(" — URL:")[0].trim();
+      }
 
-    // Combine & sort newest first
-    const allLogs = [...dbFormattedLogs, ...enrichedFileLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      // Clean IP address
+      let ipAddress = parsed.ip_address || parsed.ip || "Recorded";
+      if (ipAddress === "Logged" || ipAddress === "Unknown IP") {
+        ipAddress = "Recorded";
+      }
+
+      // Clean Device Info
+      const device = parseDevice(parsed.user_agent);
+
+      return {
+        timestamp: l.created_at,
+        admin_id: adminName,
+        admin_name: adminName,
+        action: cleanAction,
+        raw_action: l.action,
+        target_user_id: targetName,
+        target_user_name: targetName,
+        ip_address: ipAddress,
+        user_agent: device,
+        detail: cleanDetail
+      };
+    });
+
+    // Format file logs if any
+    const enrichedFileLogs = (fileLogs || []).map(log => {
+      let targetName = userMap.get(log.target_user_id) || log.target_user_id || "System";
+      return {
+        timestamp: log.timestamp,
+        admin_id: adminMap.get(log.admin_id) || (log.admin_id === "Unknown Admin" ? "Master Admin" : log.admin_id),
+        admin_name: adminMap.get(log.admin_id) || (log.admin_id === "Unknown Admin" ? "Master Admin" : log.admin_id),
+        action: formatAuditAction(log.action),
+        raw_action: log.action,
+        target_user_id: targetName,
+        target_user_name: targetName,
+        ip_address: log.ip_address === "Unknown IP" ? "Recorded" : log.ip_address,
+        user_agent: parseDevice(log.user_agent),
+        detail: log.metadata ? (log.metadata.reason || JSON.stringify(log.metadata).replace(/["{}]/g, "")) : "Admin Action"
+      };
+    });
+
+    // Combine, deduplicate by timestamp+action, & sort newest first
+    const seen = new Set();
+    const allLogs = [];
+    for (const log of [...dbFormattedLogs, ...enrichedFileLogs]) {
+      const key = `${new Date(log.timestamp).getTime()}_${log.raw_action}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        allLogs.push(log);
+      }
+    }
+    allLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     return renderPage(res, {
       title: "Admin IP Logs",

@@ -84,6 +84,17 @@ const ACTION_MAP = [
   { method: 'POST', regex: /\/backend\/force-brain-sweep/, label: 'Forced Subscription Brain sweep' },
 ];
 
+function getClientIp(req) {
+  if (!req) return 'Unknown IP';
+  const cfIp = req.headers && req.headers['cf-connecting-ip'];
+  if (cfIp) return cfIp;
+  const forwardedFor = req.headers && req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || req.ip || 'Unknown IP';
+}
+
 /**
  * Express middleware that automatically logs any state-changing admin request
  * to brain_activity_logs after the response is sent.
@@ -110,8 +121,10 @@ export function adminAuditMiddleware(req, res, next) {
     const admin = req.admin;
     if (!admin) return;
 
-    const adminName = admin.name || admin.email || admin.username || 'Unknown Admin';
     const adminRole = admin.role || 'admin';
+    const adminName = admin.name || admin.email || admin.username || (adminRole === 'master_admin' ? 'Master Admin' : 'Admin');
+    const clientIp = getClientIp(req);
+    const userAgent = (req.headers && req.headers['user-agent']) || 'Unknown';
 
     // Extract any IDs from URL for context
     const urlParts = url.split('/').filter(Boolean);
@@ -122,6 +135,8 @@ export function adminAuditMiddleware(req, res, next) {
       admin_name: adminName,
       admin_role: adminRole,
       admin_id: admin.admin_id || admin.id || null,
+      ip_address: clientIp,
+      user_agent: userAgent,
       detail: `${match.label} — URL: ${url}`
     });
 

@@ -1,14 +1,58 @@
 import * as subscriptionService from "../services/subscriptionService.js";
 import supabase from "../utils/supabaseClient.js";
 
+async function getUserIdFromRequest(req) {
+  if (req.user?.id) return req.user.id;
+  if (req.query?.user_id) return String(req.query.user_id).trim();
+  const header = req.headers?.authorization;
+  if (header?.startsWith("Bearer ")) {
+    const token = header.slice(7).trim();
+    try {
+      const { env } = await import("../config/env.js");
+      const jwt = (await import("jsonwebtoken")).default;
+      const payload = jwt.verify(token, env.jwtSecret);
+      if (payload?.sub) return payload.sub;
+    } catch {
+      try {
+        const { default: supabase } = await import("../utils/supabaseClient.js");
+        const { data } = await supabase.auth.getUser(token);
+        if (data?.user?.id) return data.user.id;
+      } catch {}
+    }
+  }
+  return null;
+}
+
 /**
  * GET /api/subscription/plans
- * Get all available subscription plans
+ * Get all available subscription plans (dynamically bundled with overdue dues if rider is inactive)
  */
 export const getPlans = async (req, res) => {
   try {
-    const plans = await subscriptionService.getSubscriptionPlans();
-    return res.json({ success: true, data: plans });
+    const userId = await getUserIdFromRequest(req);
+    const plans = await subscriptionService.getSubscriptionPlans(userId);
+
+    let pendingAmount = 0;
+    let daysOverdue = 0;
+    let isInactive = false;
+    if (userId) {
+      try {
+        const dues = await subscriptionService.calculateUserOverdueDues(userId);
+        pendingAmount = dues.overdueAmount || 0;
+        daysOverdue = dues.daysSinceInactive || 0;
+        isInactive = dues.isInactive || false;
+      } catch (e) {
+        console.warn("[subscriptionController.getPlans] dues lookup failed:", e?.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: plans,
+      pending_amount: pendingAmount,
+      days_overdue: daysOverdue,
+      is_inactive: isInactive,
+    });
   } catch (error) {
     console.error("[subscriptionController.getPlans]", error);
     return res.status(500).json({

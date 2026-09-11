@@ -57,9 +57,9 @@ export function getGracePeriodExpiry(endDateStr) {
 }
 
 /**
- * Get all active subscription plans
+ * Get all active subscription plans (optionally enriched with inactive overdue dues for a specific user)
  */
-export async function getSubscriptionPlans() {
+export async function getSubscriptionPlans(userId = null) {
   try {
     const { data, error } = await supabase
       .from("subscription_plans")
@@ -67,11 +67,43 @@ export async function getSubscriptionPlans() {
       .eq("is_active", true)
       .order("price", { ascending: true });
 
+    let plans = (data && data.length > 0) ? data : MOCK_PLANS;
     if (error) {
-      if (isDatabaseError(error)) return MOCK_PLANS;
-      throw error;
+      if (isDatabaseError(error)) plans = MOCK_PLANS;
+      else throw error;
     }
-    return data && data.length > 0 ? data : MOCK_PLANS;
+
+    if (userId) {
+      try {
+        const dues = await calculateUserOverdueDues(userId);
+        if (dues && dues.isInactive && dues.overdueAmount > 0) {
+          plans = plans.map(p => {
+            const basePrice = Number(p.price || 1950);
+            const combinedPrice = Math.round(basePrice + dues.overdueAmount);
+            return {
+              ...p,
+              price: combinedPrice,
+              base_price: basePrice,
+              overdue_amount: dues.overdueAmount,
+              overdue_days: dues.daysSinceInactive,
+              display_name: `${p.display_name || "Weekly Plan"} (incl. ₹${Math.round(dues.overdueAmount)} past dues)`,
+              description: `Includes ₹${basePrice.toLocaleString("en-IN")} (${p.duration_days || 7} Days) + ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} past inactive dues (${dues.daysSinceInactive} days)`,
+              has_overdue_dues: true,
+              dues_breakdown: {
+                plan_price: basePrice,
+                overdue_amount: dues.overdueAmount,
+                overdue_days: dues.daysSinceInactive,
+                total_amount: combinedPrice,
+              }
+            };
+          });
+        }
+      } catch (dueErr) {
+        console.warn("[subscriptionService] getSubscriptionPlans dues calculation warning:", dueErr?.message);
+      }
+    }
+
+    return plans;
   } catch (error) {
     console.error("[subscriptionService] getSubscriptionPlans failed:", error.message);
     throw error;
@@ -79,7 +111,7 @@ export async function getSubscriptionPlans() {
 }
 
 /**
- * Get a specific subscription plan by ID
+ * Get a specific subscription plan by ID (optionally enriched with inactive overdue dues for a specific user)
  */
 const isValidUuid = (str) => {
   if (!str) return false;
@@ -98,7 +130,7 @@ const LEGACY_PLAN_ID_MAP = {
   'Monthly Plan': 'monthly_plan',
 };
 
-export async function getSubscriptionPlanById(planId) {
+export async function getSubscriptionPlanById(planId, userId = null) {
   try {
     // Normalize legacy plan IDs before any lookup
     if (planId && LEGACY_PLAN_ID_MAP[planId]) {
@@ -149,13 +181,14 @@ export async function getSubscriptionPlanById(planId) {
     if (error) {
       if (isDatabaseError(error)) {
         const mockPlan = MOCK_PLANS.find(p => p.id === planId || p.name === planId || p.display_name.toLowerCase().includes(planId.toLowerCase()));
-        if (mockPlan) return mockPlan;
+        if (mockPlan) data = mockPlan;
+      } else {
+        throw error;
       }
-      throw error;
     }
     if (!data) {
       const mockPlan = MOCK_PLANS.find(p => p.id === planId || p.name === planId || p.display_name.toLowerCase().includes(planId.toLowerCase()));
-      if (mockPlan) return mockPlan;
+      if (mockPlan) data = mockPlan;
     }
     if (data && data.display_name) {
       const dn = String(data.display_name);
@@ -163,6 +196,36 @@ export async function getSubscriptionPlanById(planId) {
         data.display_name = "Weekly Plan";
       }
     }
+
+    // If userId provided, enrich with overdue dues if user is inactive
+    if (data && userId) {
+      try {
+        const dues = await calculateUserOverdueDues(userId);
+        if (dues && dues.isInactive && dues.overdueAmount > 0) {
+          const basePrice = Number(data.price || 1950);
+          const combinedPrice = Math.round(basePrice + dues.overdueAmount);
+          return {
+            ...data,
+            price: combinedPrice,
+            base_price: basePrice,
+            overdue_amount: dues.overdueAmount,
+            overdue_days: dues.daysSinceInactive,
+            display_name: `${data.display_name || "Weekly Plan"} (incl. ₹${Math.round(dues.overdueAmount)} past dues)`,
+            description: `Includes ₹${basePrice.toLocaleString("en-IN")} (${data.duration_days || 7} Days) + ₹${Math.round(dues.overdueAmount).toLocaleString("en-IN")} past inactive dues (${dues.daysSinceInactive} days)`,
+            has_overdue_dues: true,
+            dues_breakdown: {
+              plan_price: basePrice,
+              overdue_amount: dues.overdueAmount,
+              overdue_days: dues.daysSinceInactive,
+              total_amount: combinedPrice,
+            }
+          };
+        }
+      } catch (dueErr) {
+        console.warn("[subscriptionService] getSubscriptionPlanById dues calculation warning:", dueErr?.message);
+      }
+    }
+
     return data;
   } catch (error) {
     console.error("[subscriptionService] getSubscriptionPlanById failed:", error.message);
@@ -322,47 +385,74 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
     // =============================
 
 
+    // Check if user has inactive overdue dues being settled with this renewal
+    let isSettlingOverdue = false;
+    let overdueDuesAmount = 0;
+    try {
+      const dues = await calculateUserOverdueDues(userId);
+      if (dues && dues.isInactive && dues.overdueAmount > 0) {
+        isSettlingOverdue = true;
+        overdueDuesAmount = dues.overdueAmount;
+      }
+    } catch (e) {
+      console.warn("[createSubscription] Check dues failed:", e?.message);
+    }
+
     // New Subscription Start Date Logic:
-    // 1. If user has an active subscription, new plan starts the day AFTER current one ends.
-    // 2. If user is within 7 days of expiry of last sub, backdate to day after expiry.
-    // 3. Otherwise, start today.
+    // 1. If user is settling overdue inactive dues, past gap was cleared via overdue charge -> fresh start from today.
+    // 2. If user has an active subscription, new plan starts the day AFTER current one ends.
+    // 3. If user is within 7 days of expiry of last sub, backdate to day after expiry.
+    // 4. Otherwise, start today.
     let startDate = nowIST();
     try {
-      const { data: activeOrRecentSub } = await supabase
-        .from("user_subscriptions")
-        .select("end_date")
-        .eq("user_id", userId)
-        .in("status", ["active", "expired"])
-        .order("end_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (activeOrRecentSub && activeOrRecentSub.end_date) {
-        const lastEndDate = new Date(activeOrRecentSub.end_date);
-        const now = nowIST();
-        
-        // If still active or within 7 day grace period
-        if (lastEndDate >= now || (now - lastEndDate) / (1000 * 60 * 60 * 24) <= 7) {
-          startDate = addISTDays(lastEndDate, 1);
-          console.log(`[createSubscription] Extending subscription. Starting on ${toISTDateStr(startDate)} IST`);
+      if (isSettlingOverdue) {
+        // User paid overdue dues to settle past inactive gap — give a fresh start from payment date or today
+        if (overrideStartDate) {
+          const overrideMs = new Date(overrideStartDate).getTime();
+          const payIST = new Date(overrideMs + 5.5 * 60 * 60 * 1000);
+          payIST.setUTCHours(0, 0, 0, 0);
+          startDate = new Date(payIST.getTime() - 5.5 * 60 * 60 * 1000);
         } else {
-          // Beyond grace — fresh start.
-          // If admin passed a payment date override, backdate to that date (max 30 days back, not future).
-          if (overrideStartDate) {
-            const overrideMs = new Date(overrideStartDate).getTime();
-            const thirtyDaysAgoMs = now.getTime() - 30 * 24 * 60 * 60 * 1000;
-            if (overrideMs >= thirtyDaysAgoMs && overrideMs <= now.getTime()) {
-              // Use IST midnight of the payment date
-              const payIST = new Date(overrideMs + 5.5 * 60 * 60 * 1000);
-              payIST.setUTCHours(0, 0, 0, 0);
-              startDate = new Date(payIST.getTime() - 5.5 * 60 * 60 * 1000); // back to UTC for storage
-              console.log(`[createSubscription] Backdating fresh start to payment date: ${toISTDateStr(startDate)} IST`);
+          startDate = nowIST();
+        }
+        console.log(`[createSubscription] User is settling overdue inactive dues (₹${overdueDuesAmount}). Fresh start on ${toISTDateStr(startDate)} IST`);
+      } else {
+        const { data: activeOrRecentSub } = await supabase
+          .from("user_subscriptions")
+          .select("end_date")
+          .eq("user_id", userId)
+          .in("status", ["active", "expired"])
+          .order("end_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeOrRecentSub && activeOrRecentSub.end_date) {
+          const lastEndDate = new Date(activeOrRecentSub.end_date);
+          const now = nowIST();
+          
+          // If still active or within 7 day grace period
+          if (lastEndDate >= now || (now - lastEndDate) / (1000 * 60 * 60 * 24) <= 7) {
+            startDate = addISTDays(lastEndDate, 1);
+            console.log(`[createSubscription] Extending subscription. Starting on ${toISTDateStr(startDate)} IST`);
+          } else {
+            // Beyond grace — fresh start.
+            // If admin passed a payment date override, backdate to that date (max 30 days back, not future).
+            if (overrideStartDate) {
+              const overrideMs = new Date(overrideStartDate).getTime();
+              const thirtyDaysAgoMs = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+              if (overrideMs >= thirtyDaysAgoMs && overrideMs <= now.getTime()) {
+                // Use IST midnight of the payment date
+                const payIST = new Date(overrideMs + 5.5 * 60 * 60 * 1000);
+                payIST.setUTCHours(0, 0, 0, 0);
+                startDate = new Date(payIST.getTime() - 5.5 * 60 * 60 * 1000); // back to UTC for storage
+                console.log(`[createSubscription] Backdating fresh start to payment date: ${toISTDateStr(startDate)} IST`);
+              } else {
+                startDate = now;
+                console.log(`[createSubscription] Override date out of range, using today: ${toISTDateStr(startDate)} IST`);
+              }
             } else {
               startDate = now;
-              console.log(`[createSubscription] Override date out of range, using today: ${toISTDateStr(startDate)} IST`);
             }
-          } else {
-            startDate = now;
           }
         }
       }
@@ -428,6 +518,24 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
         const plan = await getSubscriptionPlanById(data.plan_id);
         data.plan = plan || { display_name: "Active Plan", price: null, duration_days: null };
       } catch { data.plan = { display_name: "Active Plan", price: null, duration_days: null }; }
+
+      // Unblock and activate user in users & profiles tables if they were inactive or blocked
+      try {
+        await supabase.from("users").update({ status: "active", is_blocked: false }).eq("id", userId);
+        await supabase.from("profiles").update({ is_blocked: false }).eq("id", userId);
+
+        if (isSettlingOverdue) {
+          await supabase
+            .from("user_subscriptions")
+            .update({
+              cancellation_reason: "Dues settled & renewed via payment " + (paymentId || "")
+            })
+            .eq("user_id", userId)
+            .eq("status", "cancelled");
+        }
+      } catch (statusErr) {
+        console.warn("[subscriptionService] User status reactivate error:", statusErr?.message);
+      }
     }
 
     if (error) {

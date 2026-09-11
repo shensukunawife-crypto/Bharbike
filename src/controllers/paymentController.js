@@ -561,6 +561,20 @@ export const verifyPayment = async (req, res) => {
         }
       }
 
+      // Check if user has overdue inactive dues to bundle into plan price
+      try {
+        const { calculateUserOverdueDues } = await import("../services/subscriptionService.js");
+        const dues = await calculateUserOverdueDues(user_id);
+        if (dues && dues.isInactive && dues.overdueAmount > 0) {
+          const overdueDues = dues.overdueAmount;
+          serverSidePrice = Math.round(serverSidePrice + overdueDues);
+          planDisplayName = `${planDisplayName} (incl. ₹${Math.round(overdueDues)} past dues)`;
+          console.log(`[verifyPayment] Bundled ₹${overdueDues} overdue dues to plan price: Total ₹${serverSidePrice}`);
+        }
+      } catch (dueErr) {
+        console.warn("[verifyPayment] overdue dues lookup error:", dueErr?.message);
+      }
+
       const subAmount = serverSidePrice;
 
       // If paying via wallet, we MUST deduct the server-verified plan price (not client amount)

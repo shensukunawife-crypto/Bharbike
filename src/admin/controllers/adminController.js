@@ -3643,143 +3643,162 @@ export async function chatBot(req, res) {
       return res.status(400).json({ success: false, message: "Invalid messages format" });
     }
 
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY
-    });
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      return res.status(500).json({ success: false, message: "GROQ_API_KEY is not configured" });
+    }
 
-    const systemPrompt = `You are BharBot, a friendly helper for the BHAR BIKE team.
+    const groq = new Groq({ apiKey: groqApiKey });
+    const groqModel = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+    const groqFallbackModel = "openai/gpt-oss-20b";
+
+    const systemPrompt = `You are BharBot, an intelligent, sharp, and friendly AI assistant for the BHAR BIKE admin and management team.
+
+ABOUT BHAR BIKE:
+BHAR BIKE is an electric bike rental and subscription platform in India, serving delivery executives and urban commuters.
+- Core Plan: Weekly Rental Plan (₹1,950 for 7 days).
+- Inactive / Overdue riders: Subscription plans have grace periods; overdue inactive riders incur ₹280/day dues before resuming.
+- Currency: Indian Rupees (₹). Always format amounts with the ₹ symbol and commas (e.g. ₹1,950, ₹21,000).
 
 STRICT RULES — follow these always:
-1. ONLY talk about BHAR BIKE topics. If asked anything else, politely say you can only help with BHAR BIKE.
-2. Use simple, friendly English. NEVER say technical words like "database", "SQL", "query", "PostgreSQL", "API".
-3. ONLY write a markdown SQL code block (e.g. \`\`\`sql SELECT ... \`\`\`) when you need new or different data that is NOT already in your chat history. For greetings, normal conversation, or if you can already answer using the chat history, do NOT write a SQL block—just reply normally. When outputting a SQL code block, do not include any conversational text or explanations in that same message.
-4. After getting the data from the tool, explain the result in simple friendly English.
-5. Keep answers short and use bullet points for lists.
-6. All money is in Indian Rupees (₹). NEVER use $ or dollars. Format large numbers with commas (e.g., ₹21,000).
-7. Be SMART: If a user asks for a list of things (like "show me recent users"), always add "ORDER BY created_at DESC LIMIT 5" so you don't crash the system with huge lists.
-8. Be ANALYTICAL: If the user asks for summaries, feel free to use SUM(), AVG(), or COUNT() in your SQL to give them smart insights.
-9. NEVER GUESS OR MAKE UP DATA! If the user asks about prices, plans, users, stats, or anything related to the business, you MUST write a SQL query to fetch the exact real data first. Never rely on your general knowledge.
-10. AMBIGUOUS USERS: If you search for a user by name and find MULTIPLE people with the same name, DO NOT just blindly ask for more info. Proactively show the admin the list of users you found (including their phone number/email) and ask "Which one of these do you mean?".
+1. ONLY talk about BHAR BIKE topics, operations, bookings, fleet, revenue, and riders. If asked anything unrelated, politely state you only assist with BHAR BIKE.
+2. Use friendly, executive-ready English. NEVER use technical jargon like "SQL", "PostgreSQL", "database table", "schema", "API", or "query" in your conversational messages.
+3. If you need new data, output ONLY a single markdown SQL code block:
+\`\`\`sql
+SELECT ...
+\`\`\`
+Do NOT include any greetings or conversation when outputting a SQL code block.
+4. For greetings, casual questions, or if the answer is already in chat history, reply immediately without a SQL block.
+5. After receiving data from the query, explain the findings clearly with concise bullet points and totals.
+6. Never guess or invent numbers. Always fetch real data.
+7. Only write safe, read-only SELECT or WITH statements. NEVER use semicolons (;). Never write INSERT, UPDATE, DELETE, ALTER, or DROP.
 
-Database tables and their EXACT columns (use these when writing queries):
-- users: id, full_name, email, phone, is_delivery_partner, address, location, created_at
-- rentals: id, user_id, bike_id, start_time, end_time, status, price, duration, created_at
-- bikes: id, name, model, registration_number, status, battery, location, is_locked, created_at
-- payments: id, user_id, amount, status, razorpay_payment_id, created_at
-- user_subscriptions: id, user_id, plan_id, status, start_date, end_date, created_at
-- kyc_documents: id, user_id, type, status, address, created_at
-- orders: id, user_id, bike_id, amount, price, status, pickup_location, assigned_user_id, created_at
-- wallet_transactions: id, user_id, amount, type, title, status, created_at
-- wallet_balances: id, user_id, balance, currency, created_at
-- support_tickets: id, user_id, ticket_number, issue_type, description, status, created_at
-- hubs: id, name, address, latitude, longitude, status, created_at
-- maintenance: id, bike_id, status, issue_type, work_details, repair_cost, created_at
-- promo_codes: id, code, discount_type, discount_value, max_uses, is_active, created_at
-- delivery_partners: id, user_id, name, phone, city, status, created_at
-- rider_skipped_days: id, rider_name, bike_id, skipped_start_date, skipped_end_date, days_skipped, reason, status, created_at
-- earnings: id, userid, type, amount, created_at
-- admin_users: id, email, full_name, role, permissions, is_active, created_at, last_login
-- ticket_messages: id, ticket_id, sender_id, sender_type, message, created_at
-- bike_lock_logs: id, bike_id, user_id, rental_id, action, method, success, created_at
-- reward_points: id, user_id, points, cashback_value, created_at
-- subscription_billing: id, subscription_id, user_id, amount, status, payment_method, billing_date, paid_at, created_at
-- profiles: id, full_name, phone, email, is_prepaid, location, created_at
-- promo_uses: id, promo_id, user_id, created_at
-- vehicles: id, vehicle_number, status, name, registration_number, bike_id, created_at
-- addresses: id, user_id, name, address_line, city, pincode, is_default, created_at
-- payment_methods: id, user_id, type, provider, display_name, is_default, created_at
-- reward_transactions: id, user_id, points, type, description, created_at
-- subscription_plans: id, name, display_name, price, duration_days, is_active, created_at
-- ads: id, title, status, created_at
+CRITICAL POSTGRES TYPE-CASTING RULES (failure to follow these causes SQL errors):
+1. user_subscriptions:
+   - "user_subscriptions.user_id" is TEXT. When joining with "users.id" (UUID), write: CAST(u.id AS TEXT) = us.user_id
+   - "user_subscriptions.plan_id" is TEXT. When joining with "subscription_plans.id" (UUID), write: CAST(sp.id AS TEXT) = us.plan_id
+2. maintenance:
+   - "maintenance.bike_id" is TEXT while "bikes.id" is BIGINT. When joining, write: b.bike_code = m.bike_code OR CAST(b.id AS TEXT) = m.bike_id
+3. wallet_balances & wallet_transactions:
+   - "wallet_balances.user_id" is TEXT. When joining with "users.id" (UUID), write: CAST(u.id AS TEXT) = wb.user_id
+4. rentals & orders:
+   - "rentals.bike_id" and "orders.bike_id" are BIGINT (matches bikes.id).
 
-IMPORTANT SQL rules (to match the admin dashboard perfectly):
-- NEVER use a semicolon (;) at the end of your queries.
-- Always use "created_at" for date filtering, never "timestamp" or "date"
-- For "Today": WHERE DATE(created_at) = CURRENT_DATE
-- For "This Week": WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
-- For payments (revenue/earnings), use: WHERE status = 'success' AND amount > 0
-- For Total Users, exclude delivery partners and test accounts: WHERE is_delivery_partner IS NOT TRUE AND full_name NOT ILIKE '%test%'
-- For Active Rentals, use: WHERE status IN ('active', 'ongoing')
-- For Expiry/Overdue Orders, use: WHERE end_time < NOW() AND status IN ('active', 'ongoing')
-- For Fleet Size (Total Bikes), count all rows in the bikes table without filters.
-- For Pending KYC, use: WHERE status = 'pending'
-- Only write SELECT queries. Never INSERT, UPDATE or DELETE.`;
+DATABASE TABLES & COLUMNS:
+- bikes: id (bigint), name (text), bike_code (text), registration_number (text), status ('available', 'rented', 'maintenance'), battery (text), location (text), is_locked (boolean), price (text), created_at (timestamp)
+- maintenance: id (uuid), ticket_id (text), bike_id (text), bike_code (text), issue_type (text), description (text), status ('pending', 'in_progress', 'completed'), repair_cost (numeric), technician_name (text), created_at (timestamp)
+- users: id (uuid), full_name (text), email (text), phone (text), is_delivery_partner (boolean), is_blocked (boolean), status (text), address (text), location (text), created_at (timestamp)
+- rentals: id (uuid), bike_id (bigint), user_id (uuid), status ('active', 'completed', 'cancelled'), start_time (timestamp), end_time (timestamp), price (numeric), duration (integer), created_at (timestamp)
+- payments: id (uuid), user_id (uuid), amount (numeric), status ('success', 'pending', 'failed'), razorpay_payment_id (text), created_at (timestamp)
+- user_subscriptions: id (uuid), user_id (text), plan_id (text), status ('active', 'expired', 'cancelled'), start_date (timestamp), end_date (timestamp), created_at (timestamp)
+- subscription_plans: id (uuid), name (text), display_name (text), price (numeric), duration_days (integer), is_active (boolean), created_at (timestamp)
+- orders: id (uuid), order_code (text), user_id (uuid), bike_id (bigint), amount (integer), price (integer), status ('active', 'completed', 'cancelled'), pickup_location (text), created_at (timestamp)
+- wallet_balances: id (uuid), user_id (text), balance (numeric), currency (text), created_at (timestamp)
+- wallet_transactions: id (uuid), user_id (text), amount (numeric), type ('credit', 'debit'), title (text), status ('success', 'pending'), created_at (timestamp)
+- hubs: id (uuid), name (text), address (text), latitude (numeric), longitude (numeric), status (text), created_at (timestamp)
+- support_tickets: id (uuid), user_id (uuid), bike_name (text), issue_type (text), description (text), status ('open', 'resolved', 'closed'), ticket_number (integer), created_at (timestamp)
+- kyc_documents: id (bigint), user_id (text), type (text), status ('pending', 'approved', 'rejected'), created_at (timestamp)
+- rider_skipped_days: id (bigint), rider_name (text), bike_id (text), skipped_start_date (date), skipped_end_date (date), days_skipped (integer), reason (text), status (text), created_at (timestamp)
+
+QUERY CONVENTIONS:
+- Revenue from payments: WHERE status = 'success' AND amount > 0
+- Real users: WHERE is_delivery_partner IS NOT TRUE AND full_name NOT ILIKE '%test%'
+- Active rentals: WHERE status IN ('active', 'ongoing')
+- Expiry / overdue: WHERE end_time < NOW() AND status IN ('active', 'ongoing')
+- Fleet size: COUNT(*) FROM bikes
+- Unless aggregating with SUM/COUNT/AVG, always append "LIMIT 10" or "ORDER BY created_at DESC LIMIT 5".`;
 
     let currentMessages = [
       { role: "system", content: systemPrompt },
       ...messages
     ];
 
-    let maxLoops = 6;
+    let currentModel = groqModel;
+    const callGroq = async (msgs) => {
+      try {
+        return await groq.chat.completions.create({
+          messages: msgs,
+          model: currentModel
+        });
+      } catch (callErr) {
+        // If 120b rate-limited or failed, fallback to 20b
+        if (currentModel !== groqFallbackModel) {
+          console.warn(`[BharBot] ${currentModel} failed (${callErr.message}), falling back to ${groqFallbackModel}`);
+          currentModel = groqFallbackModel;
+          return await groq.chat.completions.create({
+            messages: msgs,
+            model: currentModel
+          });
+        }
+        throw callErr;
+      }
+    };
+
+    let maxLoops = 4;
     while (maxLoops > 0) {
-      const chatCompletion = await groq.chat.completions.create({
-        messages: currentMessages,
-        model: "llama-3.3-70b-versatile"
-      });
+      const chatCompletion = await callGroq(currentMessages);
+      const responseMessage = chatCompletion.choices[0]?.message;
+      const content = (responseMessage?.content || "").trim();
 
-      const responseMessage = chatCompletion.choices[0].message;
-      const content = (responseMessage.content || "").trim();
-
-      // Check if the AI wants to run a SQL query via a markdown code block
       const sqlMatch = content.match(/```sql\s*([\s\S]*?)\s*```/i);
       if (!sqlMatch) {
-        // It's a plain text response, return it immediately
         return res.json({ success: true, reply: content || "Sorry, I couldn't process that properly." });
       }
 
-      // It's a SQL query! Extract and validate it
       let sqlQuery = sqlMatch[1].replace(/;/g, '').trim();
 
-      if (!sqlQuery.toUpperCase().startsWith("SELECT")) {
-        sqlQuery = "SELECT 1"; // Safe fallback
+      const upperSql = sqlQuery.toUpperCase();
+      if (!upperSql.startsWith("SELECT") && !upperSql.startsWith("WITH")) {
+        sqlQuery = "SELECT 1";
       }
 
-      // Hard limit: NEVER let the AI load massive data that breaks the chat context
-      if (!/LIMIT\s+\d+/i.test(sqlQuery)) {
-        sqlQuery += " LIMIT 10";
+      // Hard limit if not an aggregate
+      const isAggregate = /\b(COUNT|SUM|AVG|MIN|MAX)\s*\(/i.test(sqlQuery);
+      if (!isAggregate && !/LIMIT\s+\d+/i.test(sqlQuery)) {
+        sqlQuery += " LIMIT 15";
       }
 
       console.log("[BharBot] Running query:", sqlQuery);
 
       let resultData;
+      let querySuccess = true;
       try {
-        // Try exec_sql RPC
         const { data, error } = await supabase.rpc("exec_sql", { sql_query: sqlQuery });
         if (error) throw error;
-        // The RPC might return { error: "..." } inside data when it fails
         if (data && data.error) throw new Error(data.error);
-        
-        resultData = data;
 
+        // Supabase jsonb_agg returns null when 0 rows match
+        resultData = data === null ? [] : data;
       } catch (sqlErr) {
         console.error("[BharBot] Query error:", sqlErr.message, "| SQL:", sqlQuery);
-        // Give the AI a meaningful error so it can explain properly
-        resultData = { error: `Could not get data: ${sqlErr.message}. The SQL query failed.` };
+        querySuccess = false;
+        resultData = { error: sqlErr.message };
       }
 
-      // Append assistant's SQL output and the user's data response
       currentMessages.push({ role: "assistant", content: content });
-      currentMessages.push({
-        role: "user",
-        content: `Here is the query result:\n${JSON.stringify(resultData, null, 2)}\n\nNow, translate this data into a friendly English response for the user.`
-      });
+
+      if (!querySuccess) {
+        currentMessages.push({
+          role: "user",
+          content: `The SQL query failed with error: "${resultData.error}". Please review the database column types and joins, fix the SQL query, and output only the corrected markdown \`\`\`sql ... \`\`\` block.`
+        });
+      } else {
+        currentMessages.push({
+          role: "user",
+          content: `Here is the query result:\n${JSON.stringify(resultData, null, 2)}\n\nNow, translate this data into a friendly English response for the user.`
+        });
+      }
 
       maxLoops--;
     }
 
-    // If we exhausted loops, get a final response
-    const finalCompletion = await groq.chat.completions.create({
-      messages: currentMessages,
-      model: "llama-3.3-70b-versatile"
-    });
-    
+    const finalCompletion = await callGroq(currentMessages);
     let reply = finalCompletion.choices[0]?.message?.content || "";
     return res.json({ success: true, reply: reply || "Sorry, I couldn't process that properly." });
 
   } catch (err) {
     console.error("[admin.chatBot]", err);
-    // Graceful fallback so the client never sees scary JSON errors
-    const fallbackMessage = "I'm having a little trouble connecting to the database right now. However, I can still see the recent activity on the dashboard! Let me know if you want me to summarize the latest alerts.";
+    const fallbackMessage = "I'm having a little trouble retrieving that data right now. Let me know if you want me to look up specific riders, active bikes, or recent payments!";
     return res.json({ success: true, reply: fallbackMessage });
   }
 }

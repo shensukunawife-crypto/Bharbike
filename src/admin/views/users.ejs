@@ -331,27 +331,14 @@
     return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;background:'+clr+'22;color:'+clr+';border:1px solid '+clr+'44;">'+text+'</span>';
   }
 
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.open-user-detail');
-    if (!btn) return;
-    var uid = btn.dataset.id;
-    var name = btn.dataset.name || 'User';
-    document.getElementById('user-detail-title').textContent = '📂 ' + name + ' — Detail';
+  var currentDetailUid = null;
+  function loadUserDetail(uid) {
+    currentDetailUid = uid;
     document.getElementById('detail-loading').style.display = 'block';
     ['status','subs','pays','skip'].forEach(function(t) {
       var el = document.getElementById('detail-tab-' + t);
       if (el) el.style.display = 'none';
     });
-    document.querySelectorAll('.detail-tab').forEach(function(t) {
-      t.style.color = 'var(--text-muted)';
-      t.style.borderBottom = 'none';
-    });
-    var firstTab = document.querySelector('.detail-tab[data-tab="status"]');
-    if (firstTab) {
-      firstTab.style.color = '#6366f1';
-      firstTab.style.borderBottom = '2px solid #6366f1';
-    }
-    document.getElementById('user-detail-modal').classList.add('show');
 
     var token = localStorage.getItem('adminToken');
     fetch('/admin/api/users/' + uid + '/detail', {
@@ -413,7 +400,17 @@
           + '  <div>'
           + '    <span style="background:#dc2626;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🚫 BLOCKED / INACTIVE USER</span>'
           + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#991b1b;">Account Marked Inactive</h3>'
-          + '    <div style="font-size:12px;color:#7f1d1d;">Marked inactive on ' + markedInactiveDateFormatted + '</div>'
+          + '    <div style="font-size:12px;color:#7f1d1d;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">'
+          + '      <span>Marked inactive on <strong>' + markedInactiveDateFormatted + '</strong></span>'
+          + '      <button type="button" class="btn-toggle-inactive-date" style="padding:2px 8px;font-size:10.5px;font-weight:700;background:#ffffff;color:#dc2626;border:1px solid #f87171;border-radius:4px;cursor:pointer;">✏️ Edit Date</button>'
+          + '    </div>'
+          + '    <div class="edit-inactive-box" style="display:none;margin-top:10px;padding:8px 12px;background:#ffffff;border:1.5px solid #f87171;border-radius:8px;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 2px 4px rgba(239,68,68,0.1);">'
+          + '      <span style="font-size:11.5px;font-weight:700;color:#991b1b;">Set Inactive Date:</span>'
+          + '      <input type="date" class="input-inactive-date" value="' + (summary.markedInactiveDate ? String(summary.markedInactiveDate).slice(0, 10) : '') + '" style="padding:4px 8px;font-size:12px;border:1px solid #cbd5e1;border-radius:6px;outline:none;" />'
+          + '      <button type="button" class="btn-save-inactive-date" data-uid="' + uid + '" style="padding:4px 10px;font-size:11px;font-weight:700;background:#dc2626;color:#ffffff;border:none;border-radius:5px;cursor:pointer;">Save</button>'
+          + '      <button type="button" class="btn-cancel-inactive-date" style="padding:4px 10px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:5px;cursor:pointer;">Cancel</button>'
+          + '      <span class="inactive-date-status-msg" style="font-size:11px;font-weight:600;display:none;"></span>'
+          + '    </div>'
           + '  </div>'
           + '  <div style="text-align:right;">'
           + '    <div style="font-size:26px;font-weight:800;color:#dc2626;line-height:1;">' + daysSinceInactive + ' <span style="font-size:14px;font-weight:600;">Days Inactive</span></div>'
@@ -454,7 +451,17 @@
           + '  <div>'
           + '    <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🔴 MARKED INACTIVE</span>'
           + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7f1d1d;">Subscription Expired / Inactive</h3>'
-          + '    <div style="font-size:12px;color:#991b1b;">Plan Expired: <strong>' + planExpiredDateFormatted + '</strong> | Marked Inactive: <strong>' + markedInactiveDateFormatted + '</strong></div>'
+          + '    <div style="font-size:12px;color:#991b1b;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">'
+          + '      <span>Plan Expired: <strong>' + planExpiredDateFormatted + '</strong> | Marked Inactive: <strong>' + markedInactiveDateFormatted + '</strong></span>'
+          + '      <button type="button" class="btn-toggle-inactive-date" style="padding:2px 8px;font-size:10.5px;font-weight:700;background:#ffffff;color:#dc2626;border:1px solid #f87171;border-radius:4px;cursor:pointer;">✏️ Edit Date</button>'
+          + '    </div>'
+          + '    <div class="edit-inactive-box" style="display:none;margin-top:10px;padding:8px 12px;background:#ffffff;border:1.5px solid #f87171;border-radius:8px;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 2px 4px rgba(239,68,68,0.1);">'
+          + '      <span style="font-size:11.5px;font-weight:700;color:#991b1b;">Set Inactive Date:</span>'
+          + '      <input type="date" class="input-inactive-date" value="' + (summary.markedInactiveDate ? String(summary.markedInactiveDate).slice(0, 10) : '') + '" style="padding:4px 8px;font-size:12px;border:1px solid #cbd5e1;border-radius:6px;outline:none;" />'
+          + '      <button type="button" class="btn-save-inactive-date" data-uid="' + uid + '" style="padding:4px 10px;font-size:11px;font-weight:700;background:#dc2626;color:#ffffff;border:none;border-radius:5px;cursor:pointer;">Save</button>'
+          + '      <button type="button" class="btn-cancel-inactive-date" style="padding:4px 10px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:5px;cursor:pointer;">Cancel</button>'
+          + '      <span class="inactive-date-status-msg" style="font-size:11px;font-weight:600;display:none;"></span>'
+          + '    </div>'
           + '  </div>'
           + '  <div style="text-align:right;">'
           + '    <div style="font-size:26px;font-weight:800;color:#dc2626;line-height:1;">' + daysSinceInactive + ' <span style="font-size:14px;font-weight:600;">Days Inactive</span></div>'
@@ -596,8 +603,99 @@
     })
     .catch(function(err) {
       document.getElementById('detail-loading').style.display = 'block';
-      document.getElementById('detail-loading').textContent = 'Error loading data: ' + err.message;
     });
+  }
+
+  // Open User Detail Modal
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.open-user-detail');
+    if (!btn) return;
+    var uid = btn.dataset.id;
+    var name = btn.dataset.name || 'User';
+    document.getElementById('user-detail-title').textContent = '📂 ' + name + ' — Detail';
+    document.querySelectorAll('.detail-tab').forEach(function(t) {
+      t.style.color = 'var(--text-muted)';
+      t.style.borderBottom = 'none';
+    });
+    var firstTab = document.querySelector('.detail-tab[data-tab="status"]');
+    if (firstTab) {
+      firstTab.style.color = '#6366f1';
+      firstTab.style.borderBottom = '2px solid #6366f1';
+    }
+    document.getElementById('user-detail-modal').classList.add('show');
+    loadUserDetail(uid);
+  });
+
+  // Handle Inactive Date Edit & Save inside User Detail modal
+  document.addEventListener('click', function(e) {
+    var toggleBtn = e.target.closest('.btn-toggle-inactive-date');
+    if (toggleBtn) {
+      var container = toggleBtn.closest('div').parentElement;
+      var box = container ? container.querySelector('.edit-inactive-box') : null;
+      if (box) {
+        box.style.display = (box.style.display === 'none' || !box.style.display) ? 'flex' : 'none';
+      }
+      return;
+    }
+
+    var cancelBtn = e.target.closest('.btn-cancel-inactive-date');
+    if (cancelBtn) {
+      var box = cancelBtn.closest('.edit-inactive-box');
+      if (box) box.style.display = 'none';
+      return;
+    }
+
+    var saveBtn = e.target.closest('.btn-save-inactive-date');
+    if (saveBtn) {
+      var box = saveBtn.closest('.edit-inactive-box');
+      if (!box) return;
+      var dateInput = box.querySelector('.input-inactive-date');
+      var statusMsg = box.querySelector('.inactive-date-status-msg');
+      var newDate = dateInput ? dateInput.value : '';
+      var targetUid = saveBtn.dataset.uid || currentDetailUid;
+
+      if (!newDate) {
+        alert('Please select a valid date.');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      if (statusMsg) statusMsg.style.display = 'none';
+
+      var token = localStorage.getItem('adminToken');
+      fetch('/admin/api/users/' + targetUid + '/inactive-date', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (token || '')
+        },
+        body: JSON.stringify({ inactive_date: newDate })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        if (!json.success) {
+          alert(json.message || 'Failed to update date');
+          return;
+        }
+        if (statusMsg) {
+          statusMsg.style.display = 'inline';
+          statusMsg.style.color = '#15803d';
+          statusMsg.textContent = '✅ Updated!';
+        }
+        setTimeout(function() {
+          loadUserDetail(targetUid);
+        }, 350);
+      })
+      .catch(function(err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        alert('Error updating date: ' + err.message);
+      });
+      return;
+    }
   });
 
   // Tab switching

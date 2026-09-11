@@ -7236,3 +7236,70 @@ export async function getUserDetail(req, res) {
     return res.status(500).json({ success: false, message: err.message || "Failed to load user detail" });
   }
 }
+
+export async function updateUserInactiveDate(req, res) {
+  try {
+    const { userId } = req.params;
+    const { inactive_date } = req.body;
+
+    if (!inactive_date) {
+      return res.status(400).json({ success: false, message: "Inactive date is required (YYYY-MM-DD)" });
+    }
+
+    const dateStr = String(inactive_date).trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return res.status(400).json({ success: false, message: "Invalid date format. Expected YYYY-MM-DD" });
+    }
+
+    // Set time to 18:00 IST (evening cutoff) on the specified calendar date
+    const targetDate = new Date(dateStr + "T18:00:00+05:30");
+    if (isNaN(targetDate.getTime())) {
+      return res.status(400).json({ success: false, message: "Invalid date value" });
+    }
+    const targetIso = targetDate.toISOString();
+
+    // 1. Update cancelled_at on user_subscriptions for this user
+    await supabase
+      .from("user_subscriptions")
+      .update({
+        cancelled_at: targetIso,
+        updated_at: targetIso
+      })
+      .eq("user_id", userId)
+      .in("status", ["cancelled", "expired"]);
+
+    // 2. Also update users table updated_at so blocked/inactive checks reflect this date
+    await supabase
+      .from("users")
+      .update({
+        updated_at: targetIso
+      })
+      .eq("id", userId);
+
+    // 3. Log audit actions
+    fileLogAdminAction(req, "ADMIN_UPDATE_INACTIVE_DATE", userId, {
+      userId,
+      new_inactive_date: targetIso,
+      input_date: dateStr
+    });
+
+    logAdminAction({
+      admin: req.admin,
+      action: "ADMIN_UPDATE_INACTIVE_DATE",
+      targetId: userId,
+      targetName: userId,
+      detail: `Updated marked inactive date to ${dateStr} (18:00 IST)`,
+      newStatus: targetIso
+    });
+
+    return res.json({
+      success: true,
+      message: "Marked inactive date updated successfully",
+      inactive_date: targetIso
+    });
+  } catch (error) {
+    console.error("[adminController.updateUserInactiveDate] failed:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to update inactive date" });
+  }
+}
+

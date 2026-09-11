@@ -30,6 +30,8 @@ router.get("/activity-logs", adminController.activityLogsPage);
 router.get("/users", requirePermission("manage_users"), adminController.users);
 router.get("/users/:userId", requirePermission("manage_users"), adminController.userProfile);
 router.get("/api/users/:userId/detail", requirePermission("manage_users"), adminController.getUserDetail);
+router.post("/api/users/:userId/inactive-date", requirePermission("manage_users"), adminController.updateUserInactiveDate);
+router.post("/users/:userId/inactive-date", requirePermission("manage_users"), adminController.updateUserInactiveDate);
 router.get("/kyc-documents", requirePermission("manage_users"), adminController.kycDocumentsPage);
 router.post("/kyc-documents/:docId/status", requirePermission("manage_users"), adminController.kycUpdateStatus);
 router.post("/kyc-documents/user/:userId/delete", requirePermission("manage_users"), adminController.deleteUserKyc);

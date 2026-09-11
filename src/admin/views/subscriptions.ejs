@@ -66,11 +66,12 @@
                 if ((s.status === 'active' || s.status === 'cancelled') && s.end_date && new Date(s.end_date) < new Date()) {
                   displayStatus = 'expired';
                 }
+                if (displayStatus === 'cancelled') {
+                  displayStatus = 'expired';
+                }
               %>
               <% if (displayStatus === 'active') { %>
                 <span class="badge success">Active</span>
-              <% } else if (displayStatus === 'cancelled') { %>
-                <span class="badge danger">Cancelled</span>
               <% } else if (displayStatus === 'expired') { %>
                 <span class="badge warning">Expired</span>
               <% } else { %>

@@ -325,8 +325,10 @@
     });
   }
   function statusBadge(s) {
-    var clr = s==='active'?'#22c55e':s==='expired'?'#94a3b8':s==='cancelled'?'#ef4444':s==='success'?'#22c55e':s==='pending'?'#f59e0b':'#94a3b8';
-    return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;background:'+clr+'22;color:'+clr+';border:1px solid '+clr+'44;">'+s+'</span>';
+    var raw = String(s || '').toLowerCase();
+    var text = (raw === 'cancelled' || raw === 'expired') ? 'expired' : raw;
+    var clr = text==='active'?'#22c55e':text==='expired'?'#ef4444':text==='success'?'#22c55e':text==='pending'?'#f59e0b':'#94a3b8';
+    return '<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;background:'+clr+'22;color:'+clr+';border:1px solid '+clr+'44;">'+text+'</span>';
   }
 
   document.addEventListener('click', function(e) {
@@ -451,7 +453,7 @@
           + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">'
           + '  <div>'
           + '    <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">🔴 MARKED INACTIVE</span>'
-          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7f1d1d;">Subscription Cancelled / Inactive</h3>'
+          + '    <h3 style="margin:8px 0 2px;font-size:18px;color:#7f1d1d;">Subscription Expired / Inactive</h3>'
           + '    <div style="font-size:12px;color:#991b1b;">Plan Expired: <strong>' + planExpiredDateFormatted + '</strong> | Marked Inactive: <strong>' + markedInactiveDateFormatted + '</strong></div>'
           + '  </div>'
           + '  <div style="text-align:right;">'
@@ -537,7 +539,7 @@
           + subs.map(function(s) {
               return '<tr style="border-bottom:1px solid var(--border);">'
                 + '<td style="padding:10px 12px;font-weight:600;">' + (s.plan_name || '—') + '</td>'
-                + '<td style="padding:10px 12px;">' + statusBadge(s.status) + '</td>'
+                + '<td style="padding:10px 12px;">' + statusBadge(s.display_status || s.status) + '</td>'
                 + '<td style="padding:10px 12px;">' + fmtDate(s.start_date) + '</td>'
                 + '<td style="padding:10px 12px;">' + fmtDate(s.end_date) + '</td>'
                 + '<td style="padding:10px 12px;color:var(--text-muted);">' + fmtDate(s.created_at) + '</td>'

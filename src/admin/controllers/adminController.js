@@ -7084,6 +7084,7 @@ export async function getUserDetail(req, res) {
 
     const subscriptions = (subsData || []).map(s => ({
       ...s,
+      display_status: s.status === "cancelled" ? "expired" : s.status,
       plan_name: planMap[s.plan_id]?.display_name || planMap[s.plan_id]?.name || "Weekly Plan",
       duration_days: planMap[s.plan_id]?.duration_days || 7,
     }));

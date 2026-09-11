@@ -1968,7 +1968,8 @@ export async function apiJsonAdminOrders(req, res) {
 /** GET /api/admin/payments — JSON list + stats. */
 export async function apiJsonAdminPayments(req, res) {
   try {
-    const configs = await paymentConfigService.listPaymentConfigs();
+    const isMaster = req.admin && (req.admin.role === "master_admin" || req.admin.role === "admin" || (req.admin.permissions && req.admin.permissions.includes("*")));
+    const configs = isMaster ? await paymentConfigService.listPaymentConfigs() : [];
     const pay = await loadAdminPaymentsData(req);
     return res.json({
       success: true,
@@ -4029,7 +4030,8 @@ export async function searchRiders(req, res) {
 
 export async function paymentsPage(req, res) {
   try {
-    const configs = await paymentConfigService.listPaymentConfigs();
+    const isMaster = req.admin && (req.admin.role === "master_admin" || req.admin.role === "admin" || (req.admin.permissions && req.admin.permissions.includes("*")));
+    const configs = isMaster ? await paymentConfigService.listPaymentConfigs() : [];
     const pay = await loadAdminPaymentsData(req);
 
     // Fetch active riders list with their currently assigned bike for manual payment modal autocomplete
@@ -4070,6 +4072,7 @@ export async function paymentsPage(req, res) {
       title: "Payments",
       active: "payments",
       bodyView: "payments",
+      isMaster,
       configs: configs || [],
       paymentsList: pay.paymentsList,
       payStats: pay.payStats,
@@ -4085,6 +4088,7 @@ export async function paymentsPage(req, res) {
       title: "Payments",
       active: "payments",
       bodyView: "payments",
+      isMaster: false,
       configs: [],
       paymentsList: [],
       payStats: { total: 0, success: 0, failed: 0, revenue: 0 },
@@ -6901,7 +6905,9 @@ export async function addPayment(req, res) {
       });
     }
 
-    const finalStatus = status || "success";
+    // Sub-admins can log manual payments, but CANNOT approve them. Force status to "pending".
+    const isSub = req.admin && ["sub_admin", "manager", "support"].includes(req.admin.role);
+    const finalStatus = isSub ? "pending" : (status || "success");
     const finalAmount = Number(amount);
 
     const { data: newPayment, error } = await supabase.from("payments").insert([{
@@ -6941,7 +6947,10 @@ export async function addPayment(req, res) {
       }
     }
 
-    res.json({ success: true, message: "Payment added and subscription activated successfully" });
+    const msg = isSub 
+      ? "Payment logged successfully and queued for Master Admin verification."
+      : "Payment added and subscription activated successfully";
+    res.json({ success: true, message: msg });
   } catch (error) {
     console.error("[adminController.addPayment] failed", error);
     res.status(500).json({ success: false, message: error.message || "Failed to add payment" });
@@ -6950,6 +6959,14 @@ export async function addPayment(req, res) {
 
 export async function editPayment(req, res) {
   try {
+    // Hard security check: Sub-admins are strictly forbidden from approving or editing payments
+    if (req.admin && ["sub_admin", "manager", "support"].includes(req.admin.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Forbidden: Sub-admins are not authorized to approve or edit payments." 
+      });
+    }
+
     const { paymentId } = req.params;
     const { status } = req.body;
     // Admin can override the payment amount (e.g. ₹1950 vs ₹3450 for new users)
@@ -7101,6 +7118,15 @@ export async function editPayment(req, res) {
 
 export async function deletePayment(req, res) {
   try {
+    // Hard security check: Only Master Admin can delete payment records
+    const isMaster = req.admin && (req.admin.role === "master_admin" || req.admin.role === "admin" || (req.admin.permissions && req.admin.permissions.includes("*")));
+    if (!isMaster) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Forbidden: Only Master Admin can delete payment records." 
+      });
+    }
+
     const { paymentId } = req.params;
     const { error } = await supabase.from("payments").delete().eq("id", paymentId);
     

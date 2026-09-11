@@ -822,9 +822,9 @@ api.delete("/admin/hubs/:id", async (req, res) => {
   }
 });
 
-// Payment Admin Routes
-api.use("/admin/payment", adminPaymentRoutes);
-api.post("/admin/payment-config", asyncHandler(paymentAdminController.addConfig));
+// Payment Admin Routes (Master Admin / Settings only)
+api.use("/admin/payment", requirePermission("manage_settings"), adminPaymentRoutes);
+api.post("/admin/payment-config", requirePermission("manage_settings"), asyncHandler(paymentAdminController.addConfig));
 
 // Admin Order Creation
 api.post("/admin/orders/create", async (req, res) => {

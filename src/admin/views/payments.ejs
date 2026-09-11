@@ -17,6 +17,7 @@
     const hoursStr = String(hours).padStart(2, '0');
     return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
   }
+  const activeKey = ((typeof configs !== 'undefined' && configs) || []).find(c => c && c.is_active) || null;
 %>
 <div class="payments-dashboard-v2">
   <div class="dashboard-container">
@@ -132,10 +133,14 @@
               </td>
               <td><%= formatToIST12Hr(p.created_at) %></td>
               <td style="display:flex; gap:8px;">
-                <button class="btn btn-sm btn-outline open-edit-payment" style="padding:4px 8px; font-size:12px;"
-                  data-id="<%= p.id %>" 
-                  data-status="<%= String(p.status).toLowerCase() %>">Edit</button>
-                <button class="btn btn-sm btn-danger admin-action" style="padding:4px 8px; font-size:12px; background:white; color:#ef4444; border:1px solid #fca5a5;" data-url="/admin/payments/<%= p.id %>/delete" data-method="POST" data-confirm="Are you sure you want to delete this payment?">Delete</button>
+                <% if (locals.isMaster || (locals.admin && (locals.admin.role === 'master_admin' || locals.admin.role === 'admin'))) { %>
+                  <button class="btn btn-sm btn-outline open-edit-payment" style="padding:4px 8px; font-size:12px;"
+                    data-id="<%= p.id %>" 
+                    data-status="<%= String(p.status).toLowerCase() %>">Edit</button>
+                  <button class="btn btn-sm btn-danger admin-action" style="padding:4px 8px; font-size:12px; background:white; color:#ef4444; border:1px solid #fca5a5;" data-url="/admin/payments/<%= p.id %>/delete" data-method="POST" data-confirm="Are you sure you want to delete this payment?">Delete</button>
+                <% } else { %>
+                  <span class="badge" style="background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600;">View Only</span>
+                <% } %>
               </td>
             </tr>
             <% }); %>
@@ -176,11 +181,16 @@
             </div>
             <div class="form-group" style="flex:1;">
               <label style="font-weight: 600; color: #1e293b;">Status</label>
-              <select name="status" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
-                <option value="success">Success</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
+              <% if (locals.isMaster || (locals.admin && (locals.admin.role === 'master_admin' || locals.admin.role === 'admin'))) { %>
+                <select name="status" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
+                  <option value="success">Success</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                </select>
+              <% } else { %>
+                <input type="text" value="Pending (Awaits Master Approval)" readonly style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #f8fafc; color: #64748b; font-weight: 600;" />
+                <input type="hidden" name="status" value="pending" />
+              <% } %>
             </div>
           </div>
           <div class="form-group">
@@ -224,6 +234,7 @@
       </div>
     </div>
 
+    <% if (locals.isMaster || (locals.admin && (locals.admin.role === 'master_admin' || locals.admin.role === 'admin'))) { %>
     <h3 class="gateway-section-title">Gateway configuration</h3>
 
     <!-- SECTION 2: GRID -->
@@ -273,7 +284,6 @@
       <!-- RIGHT: 40% -->
       <div class="col-40">
         <!-- Active Config -->
-        <% const activeKey = configs.find(c => c.is_active); %>
         <div class="premium-card" style="margin-bottom: 24px;">
           <div style="display: flex; align-items: center; margin-bottom: 12px;">
             <div class="status-dot" style="background: <%= activeKey ? '#10b981' : '#ef4444' %>;"></div>
@@ -334,6 +344,7 @@
         </table>
       </div>
     </div>
+    <% } %>
   </div>
 </div>
 
@@ -522,6 +533,7 @@
 </script>
 <% } %>
 
+<% if (locals.isMaster || (locals.admin && (locals.admin.role === 'master_admin' || locals.admin.role === 'admin'))) { %>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const toggleSecret = document.getElementById('toggle-secret');
@@ -651,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch('/api/admin/payment/test-connection', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` },
-          body: JSON.stringify({ key_id: document.getElementById('key_id').value || '<%= activeKey?.key_id %>', key_secret: keySecret.value })
+          body: JSON.stringify({ key_id: document.getElementById('key_id').value || '<%= activeKey ? activeKey.key_id : "" %>', key_secret: keySecret.value })
         });
         const data = await res.json();
         testResult.innerHTML = `<span style="color: ${data.success ? '#10b981' : '#ef4444'}; font-weight: 600;">${data.success ? '✅ Success' : '❌ Failed'}</span>`;
@@ -661,6 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+<% } %>
 
 <script>
 (function () {
@@ -691,6 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return year + '-' + month + '-' + day + ' ' + hoursStr + ':' + minutes + ':' + seconds + ' ' + ampm;
   }
   window.refreshAdminPayments = async function () {
+    var isMasterAdmin = <%= (locals.isMaster || (locals.admin && (locals.admin.role === 'master_admin' || locals.admin.role === 'admin'))) ? 'true' : 'false' %>;
     var token = localStorage.getItem("adminToken");
     if (!token) return;
     var pill = document.getElementById("admin-payments-live");
@@ -724,36 +738,49 @@ document.addEventListener('DOMContentLoaded', () => {
           var st = String(p.status || "").toLowerCase();
           var isOk = st === "success";
           var isFail = st === "failed" || st === "failure";
-          var badgeClass = isOk ? "pay-badge-success" : isFail ? "pay-badge-failed" : "pay-badge-pending";
+          var badgeClass = isOk
+            ? "pay-badge-success"
+            : isFail
+              ? "pay-badge-failed"
+              : "pay-badge-pending";
           var created = formatToIST12Hr(p.created_at);
+          var shortP = p.shortId || "#" + String(p.id || "").slice(0, 8);
+          var shortO = p.shortOrderId || "#" + String(p.order_id || "").slice(0, 8);
+          var amt = "₹" + Number(p.amount || 0).toFixed(2);
           return (
             "<tr>" +
-            '<td><span class="code-badge" title="' + escapeHtml(p.id) + '">' +
-            escapeHtml(p.shortId || '#' + String(p.id).substring(0, 8)) +
+            "<td><span class=\"code-badge\" title=\"" +
+            escapeHtml(p.id) +
+            "\">" +
+            escapeHtml(shortP) +
             "</span></td>" +
-            "<td><strong>" + escapeHtml(p.userName || '—') + "</strong></td>" +
             "<td><strong>" +
-            escapeHtml(p.order_code) +
-            '</strong><br/><span class="muted-small" title="' + escapeHtml(p.order_id || '') + '">' +
-            escapeHtml(p.shortOrderId || '#' + String(p.order_id || '').substring(0, 8)) +
+            escapeHtml(p.userName || "Unknown") +
+            "</strong></td>" +
+            "<td><strong>" +
+            escapeHtml(p.order_code || "—") +
+            "</strong><br/><span class=\"muted-small\" title=\"" +
+            escapeHtml(p.order_id) +
+            "\">" +
+            escapeHtml(shortO) +
             "</span></td>" +
-            '<td style="font-weight:600;">₹' +
-            Number(p.amount || 0).toFixed(2) +
+            "<td style=\"font-weight:600;\">" +
+            escapeHtml(amt) +
             "</td>" +
-            '<td><span class="pay-badge ' +
+            "<td><span class=\"pay-badge " +
             badgeClass +
-            '">' +
+            "\">" +
             escapeHtml(p.status) +
             "</span></td>" +
-            '<td><span class="code-badge">' +
-            escapeHtml(p.razorpay_payment_id) +
+            "<td><span class=\"code-badge\">" +
+            escapeHtml(p.razorpay_payment_id || "") +
             "</span></td>" +
             "<td>" +
-            (() => {
+            (function() {
               var displayQrId = "";
               var screenshotUrl = "";
-              var orderIdVal = String(p.razorpay_order_id || "");
-              if (orderIdVal.indexOf('|') !== -1) {
+              var orderIdVal = String(p.razorpay_order_id || '');
+              if (orderIdVal.includes('|')) {
                 var parts = orderIdVal.split('|');
                 displayQrId = parts[0];
                 screenshotUrl = parts[1];
@@ -777,8 +804,12 @@ document.addEventListener('DOMContentLoaded', () => {
             escapeHtml(created) +
             "</td>" +
             "<td style='display:flex; gap:8px;'>" +
-            '<button class="btn btn-sm btn-outline open-edit-payment" style="padding:4px 8px; font-size:12px;" data-id="' + escapeHtml(p.id) + '" data-status="' + escapeHtml(st) + '">Edit</button>' +
-            '<button class="btn btn-sm btn-danger admin-action" style="padding:4px 8px; font-size:12px; background:white; color:#ef4444; border:1px solid #fca5a5;" data-url="/admin/payments/' + escapeHtml(p.id) + '/delete" data-method="POST" data-confirm="Are you sure?">Delete</button>' +
+            (isMasterAdmin ? (
+              '<button class="btn btn-sm btn-outline open-edit-payment" style="padding:4px 8px; font-size:12px;" data-id="' + escapeHtml(p.id) + '" data-status="' + escapeHtml(st) + '">Edit</button>' +
+              '<button class="btn btn-sm btn-danger admin-action" style="padding:4px 8px; font-size:12px; background:white; color:#ef4444; border:1px solid #fca5a5;" data-url="/admin/payments/' + escapeHtml(p.id) + '/delete" data-method="POST" data-confirm="Are you sure?">Delete</button>'
+            ) : (
+              '<span class="badge" style="background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:4px; font-weight:600;">View Only</span>'
+            )) +
             "</td>" +
             "</tr>"
           );

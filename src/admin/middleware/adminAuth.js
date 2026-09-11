@@ -76,10 +76,31 @@ export function requirePermission(permission) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     
-    // Strict restriction: Sub-admins, managers, and support agents cannot access financial status or payments
+    // Role-based restrictions for Sub-Admins, Managers, and Support agents:
+    // 1. Can SEE payment details (GET /admin/payments, GET /admin/api/riders/search)
+    // 2. Can log manual payment entries (POST /admin/payments/add) - backend will force to "pending"
+    // 3. CANNOT APPROVE, EDIT, OR DELETE payments
+    // 4. CANNOT view earnings or revenue analytics
     if (req.admin.role === "sub_admin" || req.admin.role === "manager" || req.admin.role === "support") {
-      const isEditPayment = req.originalUrl.includes("payments") && req.originalUrl.includes("/edit") && req.method === "POST";
-      if (isEditPayment) {
+      const isPaymentApproveOrDelete = 
+        req.originalUrl.includes("payments") && 
+        (req.originalUrl.includes("/edit") || req.originalUrl.includes("/delete")) && 
+        req.method === "POST";
+
+      if (isPaymentApproveOrDelete) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: Sub-admins are not authorized to approve, edit, or delete payments."
+        });
+      }
+
+      const isViewingPayments = (req.method === "GET" && (permission === "manage_payments" || req.originalUrl.includes("payments")));
+      if (isViewingPayments) {
+        return next();
+      }
+
+      const isLoggingManualPayment = (req.method === "POST" && req.originalUrl.includes("payments/add"));
+      if (isLoggingManualPayment) {
         return next();
       }
 
@@ -88,10 +109,7 @@ export function requirePermission(permission) {
         req.originalUrl.includes("earnings") || 
         req.originalUrl.includes("analytics");
 
-      const isPayments = req.originalUrl.includes("payments");
-      const hasPaymentsPerm = req.admin.permissions && req.admin.permissions.includes("manage_payments");
-        
-      if (isStrictFinance || (isPayments && !hasPaymentsPerm)) {
+      if (isStrictFinance) {
         if (req.method === "GET") {
           return res.status(403).render("layout", {
             BRAND_NAME,
@@ -100,13 +118,13 @@ export function requirePermission(permission) {
             title: "Access Denied",
             active: "dashboard",
             bodyView: "forbidden",
-            message: "Access Denied: Sub-admins are restricted from viewing financial status or configuring payments without explicit permission.",
+            message: "Access Denied: Sub-admins are restricted from viewing financial status or revenue analytics.",
             locals: { admin: req.admin }
           });
         }
         return res.status(403).json({
           success: false,
-          message: "Forbidden: Sub-admins are not allowed to view financial status or manage payments without explicit permission."
+          message: "Forbidden: Sub-admins are not allowed to view financial status or revenue analytics."
         });
       }
     }

@@ -4031,6 +4031,8 @@ export async function searchRiders(req, res) {
 export async function paymentsPage(req, res) {
   try {
     const isMaster = req.admin && (req.admin.role === "master_admin" || req.admin.role === "admin" || (req.admin.permissions && req.admin.permissions.includes("*")));
+    const isManager = req.admin && req.admin.role === "manager";
+    const canEditPayments = isMaster || isManager;
     const configs = isMaster ? await paymentConfigService.listPaymentConfigs() : [];
     const pay = await loadAdminPaymentsData(req);
 
@@ -4073,6 +4075,8 @@ export async function paymentsPage(req, res) {
       active: "payments",
       bodyView: "payments",
       isMaster,
+      isManager,
+      canEditPayments,
       configs: configs || [],
       paymentsList: pay.paymentsList,
       payStats: pay.payStats,
@@ -6906,7 +6910,8 @@ export async function addPayment(req, res) {
     }
 
     // Sub-admins can log manual payments, but CANNOT approve them. Force status to "pending".
-    const isSub = req.admin && ["sub_admin", "manager", "support"].includes(req.admin.role);
+    // Master Admin and Managers can directly log approved payments.
+    const isSub = req.admin && ["sub_admin", "support"].includes(req.admin.role);
     const finalStatus = isSub ? "pending" : (status || "success");
     const finalAmount = Number(amount);
 
@@ -6959,8 +6964,8 @@ export async function addPayment(req, res) {
 
 export async function editPayment(req, res) {
   try {
-    // Hard security check: Sub-admins are strictly forbidden from approving or editing payments
-    if (req.admin && ["sub_admin", "manager", "support"].includes(req.admin.role)) {
+    // Hard security check: Sub-admins are strictly forbidden from approving or editing payments. Managers can edit.
+    if (req.admin && ["sub_admin", "support"].includes(req.admin.role)) {
       return res.status(403).json({ 
         success: false, 
         message: "Forbidden: Sub-admins are not authorized to approve or edit payments." 

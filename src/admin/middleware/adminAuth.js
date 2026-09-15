@@ -76,12 +76,13 @@ export function requirePermission(permission) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     
-    // Role-based restrictions for Sub-Admins, Managers, and Support agents:
+    // Role-based restrictions for Sub-Admins and Support agents:
     // 1. Can SEE payment details (GET /admin/payments, GET /admin/api/riders/search)
     // 2. Can log manual payment entries (POST /admin/payments/add) - backend will force to "pending"
     // 3. CANNOT APPROVE, EDIT, OR DELETE payments
     // 4. CANNOT view earnings or revenue analytics
-    if (req.admin.role === "sub_admin" || req.admin.role === "manager" || req.admin.role === "support") {
+    // Note: Managers ARE authorized to edit and approve payments if they have manage_payments permission.
+    if (req.admin.role === "sub_admin" || req.admin.role === "support") {
       const isPaymentApproveOrDelete = 
         req.originalUrl.includes("payments") && 
         (req.originalUrl.includes("/edit") || req.originalUrl.includes("/delete")) && 

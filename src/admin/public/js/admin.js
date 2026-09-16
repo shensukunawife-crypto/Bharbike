@@ -40,7 +40,21 @@ async function handleAction(url, method = "POST", body = null) {
     return false;
   }
   showToast(data.message || "Success");
-  setTimeout(() => window.location.reload(), 500);
+  setTimeout(() => {
+    const activeTabEl = document.querySelector(".db-tab-btn.active");
+    if (activeTabEl) {
+      const activeTabId = activeTabEl.getAttribute("data-tab");
+      if (activeTabId) {
+        try {
+          const u = new URL(window.location.href);
+          u.searchParams.set("tab", activeTabId);
+          window.location.href = u.toString();
+          return;
+        } catch (e) {}
+      }
+    }
+    window.location.reload();
+  }, 500);
   return true;
 }
 

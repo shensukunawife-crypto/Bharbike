@@ -1489,7 +1489,9 @@ export async function users(req, res) {
       for (let i = 1; i < cluster.length; i++) {
         const loser = cluster[i];
 
-        if ((!winner.subscriptionText || winner.subscriptionText.includes("None / Inactive")) && loser.subscriptionText && !loser.subscriptionText.includes("None / Inactive")) {
+        const winnerNeedsSub = !winner.subscriptionText || winner.subscriptionText.includes("None / Inactive") || winner.subscriptionText === "Bike Assigned";
+        const loserHasSub = loser.subscriptionText && !loser.subscriptionText.includes("None / Inactive") && loser.subscriptionText !== "Bike Assigned";
+        if (winnerNeedsSub && loserHasSub) {
           winner.subscriptionText = loser.subscriptionText;
           winner.subscription = loser.subscription;
         }
@@ -4041,7 +4043,7 @@ export async function paymentsPage(req, res) {
     try {
       const { data: usersData } = await supabase
         .from("users")
-        .select("id, full_name")
+        .select("id, full_name, phone, email")
         .order("full_name", { ascending: true });
 
       const { data: rentalsData } = await supabase
@@ -4059,13 +4061,38 @@ export async function paymentsPage(req, res) {
         }
       }
 
-      ridersList = (usersData || [])
-        .filter(u => u.full_name && u.full_name.trim())
-        .map(u => ({
-          id: u.id,
-          name: u.full_name.trim(),
-          bike_code: bikeMap.get(u.id) || null
-        }));
+      const rawUsers = (usersData || []).filter(u => u.full_name && u.full_name.trim());
+      
+      // Index accounts that possess a valid phone number
+      const phoneOwnerByEmail = new Set();
+      const phoneOwnerByName = new Set();
+      for (const u of rawUsers) {
+        const p = (u.phone || "").replace(/\D/g, "");
+        if (p.length >= 10) {
+          const e = (u.email || "").trim().toLowerCase();
+          if (e && !e.endsWith("@app.local")) phoneOwnerByEmail.add(e);
+          const n = (u.full_name || "").trim().toLowerCase();
+          if (n && n !== "user") phoneOwnerByName.add(n);
+        }
+      }
+
+      // If an account has no phone, but an account with the same email or name exists with a phone, suppress the orphan
+      const filteredUsers = rawUsers.filter(u => {
+        const p = (u.phone || "").replace(/\D/g, "");
+        if (p.length >= 10) return true;
+        const e = (u.email || "").trim().toLowerCase();
+        if (e && phoneOwnerByEmail.has(e)) return false;
+        const n = (u.full_name || "").trim().toLowerCase();
+        if (n && phoneOwnerByName.has(n)) return false;
+        return true;
+      });
+
+      ridersList = filteredUsers.map(u => ({
+        id: u.id,
+        name: u.full_name.trim(),
+        phone: u.phone && String(u.phone).trim() && u.phone !== "null" ? String(u.phone).trim() : null,
+        bike_code: bikeMap.get(u.id) || null
+      }));
     } catch (rErr) {
       console.warn("[admin.paymentsPage] ridersList fetch error:", rErr?.message);
     }
@@ -6646,23 +6673,27 @@ async function resolveUserId(input) {
     }
   }
 
-  // 4. Email lookup
+  // 4. Email lookup (prioritizes account with a mobile number if duplicates exist)
   if (raw.includes("@")) {
     const { data: uByEmail } = await supabase
       .from("users")
-      .select("id")
-      .ilike("email", raw)
-      .maybeSingle();
-    if (uByEmail) return uByEmail.id;
+      .select("id, phone")
+      .ilike("email", raw);
+    if (uByEmail && uByEmail.length > 0) {
+      const withPhone = uByEmail.find(u => u.phone && String(u.phone).trim() && u.phone !== "null");
+      return (withPhone || uByEmail[0]).id;
+    }
   }
 
-  // 5. Rider Name lookup (case-insensitive substring)
+  // 5. Rider Name lookup (case-insensitive substring, prioritizes account with a mobile number)
   const { data: uByName } = await supabase
     .from("users")
-    .select("id")
-    .ilike("full_name", `%${raw}%`)
-    .limit(1);
-  if (uByName?.[0]) return uByName[0].id;
+    .select("id, phone")
+    .ilike("full_name", `%${raw}%`);
+  if (uByName && uByName.length > 0) {
+    const withPhone = uByName.find(u => u.phone && String(u.phone).trim() && u.phone !== "null");
+    return (withPhone || uByName[0]).id;
+  }
 
   return null;
 }

@@ -973,10 +973,18 @@ var ALL_RIDERS = <%- JSON.stringify(typeof ridersList !== 'undefined' ? ridersLi
         : '<span class="rider-sub" style="color: #94a3b8; font-size: 11px;">No bike</span>';
       
       var shortId = r.id ? r.id.slice(0, 8) : '';
+      var phoneBadge = r.phone 
+        ? '<span style="color: #059669; font-weight: 600; font-family: monospace;">📱 ' + escapeHtml(r.phone) + '</span>'
+        : '<span style="color: #d97706; font-size: 10.5px;">⚠️ No mobile</span>';
+
       return '<div class="rider-autocomplete-item" data-index="' + idx + '">' +
                '<div>' +
                  '<div class="rider-name" style="font-weight: 600; font-size: 13.5px; color: #1e293b;">' + escapeHtml(r.name) + '</div>' +
-                 '<div class="rider-sub" style="font-size: 11px; color: #64748b; margin-top: 1px;">ID: ' + escapeHtml(shortId) + '...</div>' +
+                 '<div class="rider-sub" style="font-size: 11px; color: #64748b; margin-top: 2px; display: flex; gap: 8px; align-items: center;">' +
+                   phoneBadge +
+                   '<span>•</span>' +
+                   '<span>ID: ' + escapeHtml(shortId) + '...</span>' +
+                 '</div>' +
                '</div>' +
                '<div>' + bikeBadge + '</div>' +
              '</div>';
@@ -988,8 +996,9 @@ var ALL_RIDERS = <%- JSON.stringify(typeof ridersList !== 'undefined' ? ridersLi
 
   function selectRider(rider) {
     if (!rider) return;
-    var label = rider.name + (rider.bike_code ? ' (' + rider.bike_code + ')' : '');
-    input.value = label;
+    var phoneLabel = rider.phone ? ' (' + rider.phone + ')' : '';
+    var bikeLabel = rider.bike_code ? ' [' + rider.bike_code + ']' : '';
+    input.value = rider.name + phoneLabel + bikeLabel;
     hiddenId.value = rider.id;
     dropdown.style.display = 'none';
     dropdown.innerHTML = '';
@@ -1010,19 +1019,29 @@ var ALL_RIDERS = <%- JSON.stringify(typeof ridersList !== 'undefined' ? ridersLi
     // Set fallback user_id in case admin submits without picking from list
     hiddenId.value = input.value.trim();
 
+    var qDigits = q.replace(/\D/g, '');
     var pool = Array.isArray(ALL_RIDERS) ? ALL_RIDERS : [];
     var filtered = pool.filter(function(r) {
       var nameMatch = r.name && r.name.toLowerCase().indexOf(q) !== -1;
       var bikeMatch = r.bike_code && r.bike_code.toLowerCase().indexOf(q) !== -1;
       var idMatch = r.id && r.id.toLowerCase().indexOf(q) !== -1;
-      return nameMatch || bikeMatch || idMatch;
+      var rDigits = (r.phone || '').replace(/\D/g, '');
+      var phoneMatch = qDigits.length >= 3 && rDigits.indexOf(qDigits) !== -1;
+      return nameMatch || bikeMatch || idMatch || phoneMatch;
     });
 
     // Smart sort:
+    // 0. Accounts with valid mobile number first
     // 1. Name starts with q
-    // 2. Bike code starts with q
-    // 3. Alphabetical by name
+    // 2. Phone matches q
+    // 3. Bike code starts with q
+    // 4. Alphabetical by name
     filtered.sort(function(a, b) {
+      var aHasPhone = !!a.phone;
+      var bHasPhone = !!b.phone;
+      if (aHasPhone && !bHasPhone) return -1;
+      if (!aHasPhone && bHasPhone) return 1;
+
       var aName = (a.name || '').toLowerCase();
       var bName = (b.name || '').toLowerCase();
       var aStarts = aName.indexOf(q) === 0;

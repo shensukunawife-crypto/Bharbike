@@ -1247,19 +1247,28 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
   // Dashboard Search Logic
   const searchInput = document.getElementById("dash-search");
   if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      const term = e.target.value.toLowerCase();
+    const filterAllTables = (term) => {
+      const cleanTerm = (term || "").toLowerCase().trim();
       const rows = document.querySelectorAll(".db-table tbody tr");
       rows.forEach((row) => {
-        if (row.cells.length === 1) return; // skip "No activity" row
+        if (row.cells.length === 1 || row.querySelector("td[colspan]")) return; // skip empty state rows
         const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(term) ? "" : "none";
+        row.style.display = cleanTerm === "" || text.includes(cleanTerm) ? "" : "none";
       });
+    };
+
+    searchInput.addEventListener("input", (e) => {
+      filterAllTables(e.target.value);
     });
 
     searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && e.target.value.trim().length > 0) {
-        window.location.href = "/admin/orders?search=" + encodeURIComponent(e.target.value.trim());
+      if (e.key === "Enter") {
+        e.preventDefault();
+        filterAllTables(e.target.value);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.target.value = "";
+        filterAllTables("");
       }
     });
   }

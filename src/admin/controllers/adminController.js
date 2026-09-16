@@ -608,7 +608,7 @@ export async function dashboard(req, res) {
         .select("*", { count: "exact", head: true })
         .in("status", ["active", "ongoing"]),
       supabase.from("bikes").select("*"),
-      supabase.from("orders").select("id, amount, status, created_at, pickup_location"),
+      supabase.from("orders").select("id, user_id, amount, status, created_at, pickup_location, drop_location, plan_name, customer_name"),
       supabase.from("wallet_transactions").select("id, user_id, amount, type, title, status, created_at").eq("status", "completed").order("created_at", { ascending: true }),
       supabase.from("payments").select("id, user_id, amount, status, order_id, created_at"),
       supabase.from("profiles").select("id, full_name"),

@@ -754,6 +754,37 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
     <!-- RIGHT: Recent Orders + Low Battery + Quick Links -->
     <div class="db-col-right">
 
+      <!-- Recent Orders Table -->
+      <div class="db-chart-card">
+        <div class="db-chart-head" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0;">
+          <div>
+            <p class="db-chart-title">Recent Orders</p>
+            <p class="db-chart-sub"><%= (recentActivity||[]).length %> latest transactions</p>
+          </div>
+          <a href="/admin/orders" style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;">View All &rarr;</a>
+        </div>
+        <table class="db-table" style="margin:0;">
+          <thead><tr><th>Order</th><th>Amt</th><th>Status</th></tr></thead>
+          <tbody>
+            <% var rList = (recentActivity||[]).slice(0,6); %>
+            <% if(!rList.length){ %><tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px;">No recent activity</td></tr><% } %>
+            <% rList.forEach(function(item){ var st=(item.title||'').toLowerCase(); var amt = item.amount; %>
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:12.5px;color:var(--text);line-height:1.3;"><%= item.title||'—' %></div>
+                <div style="color:var(--text-muted);font-size:11px;margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%= item.subtitle||'' %></div>
+              </td>
+              <td style="font-weight:700;font-size:12.5px;"><%= amt ? '₹' + Number(amt).toLocaleString('en-IN') : '—' %></td>
+              <td>
+                <% var badge=st.includes('completed')||st.includes('paid')?'success':st.includes('active')||st.includes('ongoing')||st.includes('accepted')?'active':st.includes('cancelled')||st.includes('rejected')?'danger':'pending'; %>
+                <span class="db-badge db-badge-<%= badge %>"><%= badge==='success'?'Paid':badge==='active'?'Active':badge==='danger'?'Cancelled':'Pending' %></span>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
       <!-- Low Battery Bikes -->
       <% if(lowBatteryBikes && lowBatteryBikes.length){ %>
       <div class="db-chart-card">

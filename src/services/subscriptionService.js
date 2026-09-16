@@ -971,15 +971,28 @@ export async function sendSubscriptionExpiryWarnings() {
     const { data: subs, error } = await supabase
       .from("user_subscriptions")
       .select("*")
-      .neq("status", "cancelled")
+      .eq("status", "active")
       .lte("end_date", targetMax)
       .gt("end_date", now.toISOString());
 
     if (error) throw error;
-    console.log(`[subscriptionService] Found ${subs?.length || 0} subscriptions expiring in the next 48 hours`);
+    console.log(`[subscriptionService] Found ${subs?.length || 0} active subscriptions expiring in the next 48 hours`);
 
     if (subs && subs.length > 0) {
       for (const sub of subs) {
+        // Skip if user has already renewed (has a newer active subscription ending after targetMax)
+        const { data: newerSub } = await supabase
+          .from("user_subscriptions")
+          .select("id")
+          .eq("user_id", sub.user_id)
+          .eq("status", "active")
+          .gt("end_date", targetMax)
+          .limit(1);
+
+        if (newerSub && newerSub.length > 0) {
+          continue; // Already renewed!
+        }
+
         // To prevent duplicate warning notifications in a short timeframe (e.g. within 3 days),
         // we check if a subscription_warning notification was already sent to this user.
         // We query the notifications table for this user with type 'subscription_warning' in the last 3 days.

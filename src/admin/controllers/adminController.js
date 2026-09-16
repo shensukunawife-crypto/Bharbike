@@ -847,7 +847,7 @@ export async function dashboard(req, res) {
           { data: pendingPaymentsDocsData, error: payErr },
           { data: maintenanceTicketsData, error: maintErr }
         ] = await Promise.all([
-          supabase.from("users").select("id, full_name, phone"),
+          supabase.from("users").select("id, full_name, phone, is_blocked, status"),
           supabase.from("profiles").select("id, full_name, phone"),
           supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
           supabase.from("subscription_plans").select("id, name"),
@@ -859,14 +859,14 @@ export async function dashboard(req, res) {
 
         const usersMap = {};
         (allUsersData || []).forEach(u => {
-          usersMap[u.id] = { id: u.id, full_name: u.full_name, phone: u.phone };
+          usersMap[u.id] = { id: u.id, full_name: u.full_name, phone: u.phone, is_blocked: u.is_blocked, status: u.status };
         });
         (allProfilesData || []).forEach(p => {
           if (usersMap[p.id]) {
             usersMap[p.id].full_name = usersMap[p.id].full_name || p.full_name;
             usersMap[p.id].phone = usersMap[p.id].phone || p.phone;
           } else {
-            usersMap[p.id] = { id: p.id, full_name: p.full_name, phone: p.phone };
+            usersMap[p.id] = { id: p.id, full_name: p.full_name, phone: p.phone, is_blocked: false, status: 'active' };
           }
         });
         const allUsers = Object.values(usersMap);
@@ -882,18 +882,50 @@ export async function dashboard(req, res) {
         - Rentals: ${activeRentals.length} (error: ${rErr ? rErr.message : 'none'})
         `);
 
+        // Group subscriptions by user to evaluate canonical state
+        const subsByUser = {};
+        for (const s of allSubs) {
+          if (!subsByUser[s.user_id]) subsByUser[s.user_id] = [];
+          subsByUser[s.user_id].push(s);
+        }
+
         // Expiring Subscriptions (<= 2 Days left)
+        // ACCURATE LOGIC:
+        // 1. Only consider user's latest ACTIVE subscription (strictly exclude cancelled or expired)
+        // 2. If user renewed with a new subscription ending > 48h, do NOT show as expiring!
+        // 3. Exclude blocked or inactive accounts
+        // 4. Attach active assigned bike code for clear operational visibility
         const nowMs = now.getTime();
         const twoDaysMs = nowMs + 48 * 60 * 60 * 1000;
-        expiringSubs = allSubs
-          .filter(s => {
-            const endMs = new Date(s.end_date).getTime();
-            return endMs > nowMs && endMs <= twoDaysMs;
-          })
-          .map(s => {
-            const u = allUsers.find(user => user.id === s.user_id);
-            const p = allPlans.find(plan => plan.id === s.plan_id);
-            const actualEndMs = new Date(s.end_date).getTime();
+        expiringSubs = [];
+
+        for (const [uid, userSubs] of Object.entries(subsByUser)) {
+          const u = allUsers.find(user => String(user.id) === String(uid));
+          if (!u || u.is_blocked === true || u.status === "blocked" || u.status === "inactive") continue;
+
+          // Find active subscriptions sorted by end_date descending (latest first)
+          const activeSubs = userSubs
+            .filter(s => s.status === "active")
+            .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime());
+
+          if (!activeSubs.length) continue; // No active subscription!
+
+          const latestActiveSub = activeSubs[0];
+          const endMs = new Date(latestActiveSub.end_date).getTime();
+
+          // Only include if user's latest active subscription is expiring in the next 48 hours
+          if (endMs > nowMs && endMs <= twoDaysMs) {
+            const p = allPlans.find(plan => plan.id === latestActiveSub.plan_id);
+            const activeRental = activeRentals.find(r => String(r.user_id) === String(uid) && (r.status === "ongoing" || r.status === "active"));
+            let assignedBikeCode = null;
+            if (activeRental) {
+              const b = (bikes || []).find(bike => bike.id === activeRental.bike_id);
+              if (b && b.status === "in_use") {
+                assignedBikeCode = b.bike_code || b.code || "Bike";
+              }
+            }
+
+            const actualEndMs = endMs;
             const hoursLeft = Math.max(0, Math.ceil((actualEndMs - nowMs) / (1000 * 60 * 60)));
             let timeLeftStr = `${hoursLeft} hours left`;
             if (hoursLeft > 24) {
@@ -901,27 +933,27 @@ export async function dashboard(req, res) {
               const remHours = hoursLeft % 24;
               timeLeftStr = `${daysLeft}d ${remHours}h left`;
             }
-            return {
-              userName: u ? u.full_name : "Unknown User",
-              userPhone: u ? u.phone : "—",
+
+            expiringSubs.push({
+              userName: u.full_name || "Unknown User",
+              userPhone: u.phone || "—",
               planName: p ? p.name : "Subscription",
-              endDate: new Date(s.end_date).toLocaleString("en-IN"),
+              assignedBikeCode,
+              endDate: new Date(latestActiveSub.end_date).toLocaleString("en-IN"),
               timeLeftStr,
-            };
-          });
+              hoursLeft
+            });
+          }
+        }
+
+        // Sort by closest to expiration first
+        expiringSubs.sort((a, b) => a.hoursLeft - b.hoursLeft);
 
         // Filter active vs expired rentals
         const activeRentalsFiltered = activeRentals.filter(r => {
           const isExpired = r.status === "expired" || (r.end_time && new Date(r.end_time) <= now);
           return !isExpired;
         });
-
-        // Map expired subscriptions based on user_subscriptions table (matching Users Page logic)
-        const subsByUser = {};
-        for (const s of (allSubsData || [])) {
-          if (!subsByUser[s.user_id]) subsByUser[s.user_id] = [];
-          subsByUser[s.user_id].push(s);
-        }
 
         const expiredUsersList = [];
         for (const [uid, list] of Object.entries(subsByUser)) {

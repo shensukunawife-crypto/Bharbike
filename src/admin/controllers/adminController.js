@@ -992,12 +992,34 @@ export async function dashboard(req, res) {
           };
         });
 
-        // Assigned Bikes to Who and all details (with IDs for IoT/cancel actions)
+        const expiredUserIds = new Set(expiredUsersList.map(e => String(e.uid)));
+        activeRentals.forEach(r => {
+          if (r.status === "expired" && r.user_id && !expiredUserIds.has(String(r.user_id))) {
+            const b = bikes.find(bike => bike.id === r.bike_id);
+            if (b && b.status === "in_use") {
+              const u = allUsers.find(user => String(user.id) === String(r.user_id));
+              if (u) {
+                expiryOrders.push({
+                  id: r.id,
+                  bikeId: b.id,
+                  bikeCode: b.bike_code || b.code || "Bike",
+                  userName: u.full_name || "Unknown User",
+                  userPhone: u.phone || "—",
+                  endDate: r.end_time ? new Date(r.end_time).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Expired"
+                });
+                expiredUserIds.add(String(r.user_id));
+              }
+            }
+          }
+        });
+
+        // Assigned Bikes to Who and all details (Strictly active and ongoing rentals only)
+        const currentActiveRentals = activeRentals.filter(r => r.status === "ongoing" || r.status === "active");
         const uniqueRecentRentals = [];
         const seenBikeIds = new Set();
-        for (const r of activeRentals) {
+        for (const r of currentActiveRentals) {
           if (!seenBikeIds.has(r.bike_id)) {
-            const u = allUsers.find(user => user.id === r.user_id);
+            const u = allUsers.find(user => String(user.id) === String(r.user_id));
             if (u) {
               uniqueRecentRentals.push({ r, u });
             }

@@ -649,6 +649,7 @@ export async function dashboard(req, res) {
     // 2. Wallet Net Revenue (credits - debits per user) to capture unspent deposits
     const walletCreditsByUser = {};
     const walletDebitsByUser = {};
+    const walletLastCreditDateByUser = {};
 
     safeData(walletTransactionsData).forEach(t => {
       if (!t.user_id || !realUserIds.has(t.user_id)) return;
@@ -658,6 +659,10 @@ export async function dashboard(req, res) {
       const amt = Number(t.amount || 0);
       if (t.type === "credit") {
         walletCreditsByUser[t.user_id] = (walletCreditsByUser[t.user_id] || 0) + amt;
+        const txDate = new Date(t.created_at || now);
+        if (!walletLastCreditDateByUser[t.user_id] || txDate > walletLastCreditDateByUser[t.user_id]) {
+          walletLastCreditDateByUser[t.user_id] = txDate;
+        }
       } else if (t.type === "debit") {
         walletDebitsByUser[t.user_id] = (walletDebitsByUser[t.user_id] || 0) + amt;
       }
@@ -673,7 +678,7 @@ export async function dashboard(req, res) {
       }))
     ];
 
-    // Add net unspent wallet balance per user if positive
+    // Add net unspent wallet balance per user if positive (anchored to actual deposit date, NOT dynamic now)
     realUserIds.forEach(uid => {
       const cred = walletCreditsByUser[uid] || 0;
       const deb = walletDebitsByUser[uid] || 0;
@@ -681,7 +686,7 @@ export async function dashboard(req, res) {
       if (net > 0) {
         earnings.push({
           amount: net,
-          createdAt: new Date(now),
+          createdAt: walletLastCreditDateByUser[uid] || new Date(now),
           title: "Wallet Deposit (Unspent)",
           userId: uid
         });
@@ -2560,6 +2565,7 @@ export async function earnings(req, res) {
     // 2. Wallet Net Revenue (credits - debits per user)
     const walletCreditsByUser = {};
     const walletDebitsByUser = {};
+    const walletLastCreditDateByUser = {};
 
     safeData(walletTransactionsData).forEach(t => {
       if (!t.user_id || !realUserIds.has(t.user_id)) return;
@@ -2569,6 +2575,10 @@ export async function earnings(req, res) {
       const amt = Number(t.amount || 0);
       if (t.type === "credit") {
         walletCreditsByUser[t.user_id] = (walletCreditsByUser[t.user_id] || 0) + amt;
+        const txDate = new Date(t.created_at || now);
+        if (!walletLastCreditDateByUser[t.user_id] || txDate > walletLastCreditDateByUser[t.user_id]) {
+          walletLastCreditDateByUser[t.user_id] = txDate;
+        }
       } else if (t.type === "debit") {
         walletDebitsByUser[t.user_id] = (walletDebitsByUser[t.user_id] || 0) + amt;
       }
@@ -2588,7 +2598,7 @@ export async function earnings(req, res) {
       }))
     ];
 
-    // Add net positive wallet balance per user as a separate entry
+    // Add net positive wallet balance per user as a separate entry (anchored to actual deposit date, NOT dynamic now)
     realUserIds.forEach(uid => {
       const cred = walletCreditsByUser[uid] || 0;
       const deb = walletDebitsByUser[uid] || 0;
@@ -2597,7 +2607,7 @@ export async function earnings(req, res) {
         allRealCredits.push({
           id: `WLT-UNSPENT-${uid}`,
           amount: net,
-          created_at: new Date(now).toISOString(),
+          created_at: (walletLastCreditDateByUser[uid] || new Date(now)).toISOString(),
           title: "Wallet Deposit",
           user_id: uid
         });
@@ -3099,6 +3109,7 @@ export async function analytics(req, res) {
     // 2. Wallet Net Revenue (credits - debits per user) to capture unspent deposits
     const walletCreditsByUser = {};
     const walletDebitsByUser = {};
+    const walletLastCreditDateByUser = {};
 
     safeData(walletTransactionsData).forEach(t => {
       if (!t.user_id || !realUserIds.has(t.user_id)) return;
@@ -3108,6 +3119,10 @@ export async function analytics(req, res) {
       const amt = Number(t.amount || 0);
       if (t.type === "credit") {
         walletCreditsByUser[t.user_id] = (walletCreditsByUser[t.user_id] || 0) + amt;
+        const txDate = new Date(t.created_at || now);
+        if (!walletLastCreditDateByUser[t.user_id] || txDate > walletLastCreditDateByUser[t.user_id]) {
+          walletLastCreditDateByUser[t.user_id] = txDate;
+        }
       } else if (t.type === "debit") {
         walletDebitsByUser[t.user_id] = (walletDebitsByUser[t.user_id] || 0) + amt;
       }
@@ -3122,7 +3137,7 @@ export async function analytics(req, res) {
       }))
     ];
 
-    // Add net unspent wallet balance per user if positive
+    // Add net unspent wallet balance per user if positive (anchored to actual deposit date, NOT dynamic now)
     realUserIds.forEach(uid => {
       const cred = walletCreditsByUser[uid] || 0;
       const deb = walletDebitsByUser[uid] || 0;
@@ -3130,7 +3145,7 @@ export async function analytics(req, res) {
       if (net > 0) {
         realCreditsInPeriod.push({
           amount: net,
-          created_at: new Date(now).toISOString(),
+          created_at: (walletLastCreditDateByUser[uid] || new Date(now)).toISOString(),
           user_id: uid
         });
       }

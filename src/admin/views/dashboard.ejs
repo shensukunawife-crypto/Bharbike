@@ -917,7 +917,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
 <!-- Tab 3: Fleet & Operations -->
 <% if (canManageBikes || canManageOrders) { %>
 <div id="tab-operations" class="db-tab-content <%= activeTab === 'tab-operations' ? 'active' : '' %>">
-  <% var gridColsTab3 = (canManageBikes && canManageOrders) ? '1.6fr 1fr' : '1fr'; %>
+  <% var gridColsTab3 = canManageBikes ? '1.6fr 1fr' : '1fr'; %>
   <div style="display: grid; grid-template-columns: <%= gridColsTab3 %>; gap: 20px; align-items: start;">
     
     <% if (canManageBikes) { %>
@@ -993,7 +993,7 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
     </div>
     <% } %>
 
-    <% if (canManageOrders) { %>
+    <% if (canManageOrders || canManageBikes) { %>
     <!-- Right column: Maintenance and Expiring Subscriptions -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
       <!-- Bikes Under Maintenance -->
@@ -1028,7 +1028,11 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
                   <span style="font-size:11px; color:var(--text-muted); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<%= m.workDetails %>"><%= m.workDetails %></span>
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-primary bike-fixed-btn" data-bike-id="<%= m.bikeId %>" style="padding:4px 8px; font-size:11px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold;">✅ Fixed</button>
+                  <% if (canManageBikes) { %>
+                    <button class="btn btn-sm btn-primary bike-fixed-btn" data-bike-id="<%= m.bikeId %>" style="padding:4px 8px; font-size:11px; background:#10b981; border:none; color:white; border-radius:6px; font-weight:bold;">✅ Fixed</button>
+                  <% } else { %>
+                    <span style="font-size:11px; color:var(--text-muted); font-weight:600;">In Repair</span>
+                  <% } %>
                 </td>
               </tr>
               <% }) %>

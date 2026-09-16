@@ -20,7 +20,7 @@
 
 <!-- Filter bar -->
 <form class="filter-bar" method="get" action="/admin/users">
-  <input type="text" name="search" placeholder="Search name / email / phone…" value="<%= filters.search %>" />
+  <input type="text" name="search" placeholder="Search name / bike / email / phone…" value="<%= filters.search %>" />
   <select name="status">
     <option value="all"     <%= filters.status === 'all'     ? 'selected' : '' %>>All Status</option>
     <option value="active"  <%= filters.status === 'active'  ? 'selected' : '' %>>Active</option>

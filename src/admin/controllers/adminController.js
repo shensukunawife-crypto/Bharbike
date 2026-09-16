@@ -1436,7 +1436,8 @@ export async function users(req, res) {
           !String(user.full_name || "").toLowerCase().includes(search) &&
           !String(user.phone || "").toLowerCase().includes(search) &&
           !String(user.email || "").toLowerCase().includes(search) &&
-          !String(user.location || "").toLowerCase().includes(search)
+          !String(user.location || "").toLowerCase().includes(search) &&
+          !String(user.assignedBikeCode || "").toLowerCase().includes(search)
         ) {
           return false;
         }

@@ -14,7 +14,7 @@ import * as walletService from "../../services/walletService.js";
 import Groq from "groq-sdk";
 import { logAdminAction } from "../../utils/adminAudit.js";
 import { logAdminAction as fileLogAdminAction } from "../../utils/auditLogger.js";
-import { nowIST, addISTDays } from "../../utils/istTime.js";
+import { nowIST, addISTDays, toISTDateStr } from "../../utils/istTime.js";
 import { getPendingLockPool, getPendingUnlockPool, runLockPoolSweep } from "../../jobs/lockPoolJob.js";
 
 
@@ -726,18 +726,22 @@ export async function dashboard(req, res) {
 
     const revenueLabels = [];
     const revenueData = [];
+    const slotDateMap = {};
+
     for (let i = 6; i >= 0; i -= 1) {
-      const date = new Date(startOfToday);
-      date.setDate(startOfToday.getDate() - i);
-      revenueLabels.push(date.toLocaleDateString("en-IN", { weekday: "short" }));
+      const slotDate = addISTDays(nowIST(), -i);
+      const istDayStr = toISTDateStr(slotDate);
+      const weekdayLabel = slotDate.toLocaleDateString("en-IN", { weekday: "short", timeZone: "Asia/Kolkata" });
+      const slot = 6 - i;
+      revenueLabels.push(weekdayLabel);
       revenueData.push(0);
+      slotDateMap[istDayStr] = slot;
     }
+
     earnings.forEach((entry) => {
-      const dayStart = new Date(entry.createdAt.getFullYear(), entry.createdAt.getMonth(), entry.createdAt.getDate());
-      const dayDiff = Math.floor((startOfToday - dayStart) / (1000 * 60 * 60 * 24));
-      if (dayDiff >= 0 && dayDiff <= 6) {
-        const slot = 6 - dayDiff;
-        revenueData[slot] += entry.amount;
+      const entryDayStr = toISTDateStr(entry.createdAt);
+      if (slotDateMap[entryDayStr] !== undefined) {
+        revenueData[slotDateMap[entryDayStr]] += entry.amount;
       }
     });
 

@@ -353,7 +353,7 @@
     <form class="admin-form ajax-form" data-url="/admin/users/<%= user.id %>/assign-bike">
       <div style="margin-bottom: 16px;">
         <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:4px;">Bike Code</label>
-        <input name="bike_code" placeholder="e.g. BB001 (Leave empty to unassign)" value="<%= user.assignedBike === 'None' ? '' : user.assignedBike %>" />
+        <input name="bike_code" placeholder="e.g. TNA001 or 001 (Leave empty to unassign)" value="<%= user.assignedBike === 'None' ? '' : user.assignedBike %>" />
       </div>
       <button type="submit" class="btn btn-gold glow" style="width: 100%;">Assign Bike</button>
     </form>

@@ -1304,13 +1304,21 @@ export async function users(req, res) {
         const userWallet = (walletsData || []).find(w => String(w.user_id).toLowerCase() === String(base.id).toLowerCase());
         
         // Find assigned bike for this user
-        const activeRental = (rentalsData || []).find(r => String(r.user_id).toLowerCase() === String(base.id).toLowerCase());
+        const userRentals = (rentalsData || []).filter(r => String(r.user_id).toLowerCase() === String(base.id).toLowerCase());
+        const ongoingRental = userRentals.find(r => r.status === "ongoing" || r.status === "active");
+        const activeRental = ongoingRental || userRentals.find(r => r.status === "expired");
         let assignedBikeCode = "-";
         if (activeRental) {
           const bike = (bikesData || []).find(b => b.id === activeRental.bike_id);
-          // Only show as assigned if the physical bike hasn't been returned/reassigned
-          if (bike && bike.status === "in_use") {
-            assignedBikeCode = bike.bike_code || "Bike";
+          if (bike) {
+            if (activeRental.status === "ongoing" || activeRental.status === "active") {
+              assignedBikeCode = bike.bike_code || "Bike";
+              if (bike.status !== "in_use") {
+                supabase.from("bikes").update({ status: "in_use" }).eq("id", bike.id).then(() => {});
+              }
+            } else if (bike.status === "in_use") {
+              assignedBikeCode = bike.bike_code || "Bike";
+            }
           }
         }
 
@@ -1591,7 +1599,7 @@ export async function userProfile(req, res) {
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
       supabase.from("orders").select("*"),
       supabase.from("wallet_balances").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("rentals").select("*").eq("user_id", userId).eq("status", "ongoing").maybeSingle(),
+      supabase.from("rentals").select("*").eq("user_id", userId).in("status", ["ongoing", "active"]).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("profiles").select("image_url").eq("id", userId).maybeSingle(),
     ]);
     if (!userRow) {
@@ -4569,24 +4577,25 @@ export async function assignBike(req, res) {
       return res.status(409).json({ success: false, message: `Bike ${bikeRow.bike_code} is currently under maintenance and cannot be assigned` });
     }
 
-    // Fix: Check user doesn't already have an active rental
-    const { data: existingRental } = await supabase
+    // Auto-complete any previous ongoing or active rentals for this user and free old bikes
+    const { data: existingRentals } = await supabase
       .from("rentals")
-      .select("id")
+      .select("id, bike_id")
       .eq("user_id", user_id)
-      .in("status", ["active", "ongoing"])
-      .maybeSingle();
+      .in("status", ["active", "ongoing", "expired"]);
 
-    if (existingRental) {
-      return res.status(409).json({ success: false, message: "This user already has an active rental. End it first before assigning a new bike." });
+    if (existingRentals && existingRentals.length > 0) {
+      await supabase
+        .from("rentals")
+        .update({ status: "completed", updated_at: new Date().toISOString() })
+        .eq("user_id", user_id)
+        .in("status", ["active", "ongoing", "expired"]);
+
+      const oldBikeIds = [...new Set(existingRentals.map(r => r.bike_id).filter(id => id && String(id) !== String(bikeId)))];
+      if (oldBikeIds.length > 0) {
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).in("id", oldBikeIds);
+      }
     }
-
-    // NEW: Auto-complete any old expired rentals for this user so they don't stay stuck in the Dashboard Expiry Orders list
-    await supabase
-      .from("rentals")
-      .update({ status: "completed", updated_at: new Date().toISOString() })
-      .eq("user_id", user_id)
-      .eq("status", "expired");
 
 
     // Check if user has an active subscription to sync end_time
@@ -7318,29 +7327,62 @@ export async function assignBikeToUser(req, res) {
     const { userId } = req.params;
     const { bike_code } = req.body;
     
-    // First, end any existing ongoing or expired rentals for this user and free the old bike
+    const rawBikeCode = (bike_code || "").trim();
+
+    // Check if unassigning
+    if (!rawBikeCode || rawBikeCode.toUpperCase() === "NONE" || rawBikeCode === "-") {
+      const { data: existingRentals } = await supabase
+        .from("rentals")
+        .select("bike_id")
+        .eq("user_id", userId)
+        .in("status", ["ongoing", "active", "expired"]);
+
+      await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).in("status", ["ongoing", "active", "expired"]);
+
+      if (existingRentals && existingRentals.length > 0) {
+        const oldBikeIds = [...new Set(existingRentals.map(r => r.bike_id).filter(Boolean))];
+        if (oldBikeIds.length > 0) {
+          await supabase.from("bikes").update({ status: "available", is_locked: true }).in("id", oldBikeIds);
+        }
+      }
+      return res.json({ success: true, message: "Bike unassigned successfully" });
+    }
+
+    // Smart Normalization: handles "tna075", "tna 75", "tna-75", "75", "075", etc.
+    let cleanCode = rawBikeCode.toUpperCase().replace(/[\s\-_]+/g, "");
+    if (/^\d+$/.test(cleanCode)) {
+      cleanCode = `TNA${String(parseInt(cleanCode, 10)).padStart(3, "0")}`;
+    } else {
+      const match = cleanCode.match(/^TNA(\d+)$/);
+      if (match) {
+        cleanCode = `TNA${String(parseInt(match[1], 10)).padStart(3, "0")}`;
+      }
+    }
+
+    // Find the bike (exact match first, then case-insensitive ilike fallback)
+    let { data: bike } = await supabase.from("bikes").select("id, bike_code, status").eq("bike_code", cleanCode).maybeSingle();
+    if (!bike) {
+      const { data: fallbackBike } = await supabase.from("bikes").select("id, bike_code, status").ilike("bike_code", `%${cleanCode}%`).limit(1).maybeSingle();
+      bike = fallbackBike;
+    }
+    if (!bike) return res.status(404).json({ success: false, message: `Bike code "${bike_code}" not found` });
+    
+    // First, end any existing ongoing or active rentals for this user and free previous bikes
     const { data: existingRentals } = await supabase
       .from("rentals")
       .select("bike_id")
       .eq("user_id", userId)
-      .in("status", ["ongoing", "expired"]);
+      .in("status", ["ongoing", "active", "expired"]);
 
-    await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).in("status", ["ongoing", "expired"]);
+    await supabase.from("rentals").update({ status: "completed", end_time: new Date().toISOString() }).eq("user_id", userId).in("status", ["ongoing", "active", "expired"]);
 
-    // Reset old bike(s) status back to available
     if (existingRentals && existingRentals.length > 0) {
-      const oldBikeIds = [...new Set(existingRentals.map(r => r.bike_id))];
-      await supabase.from("bikes").update({ status: "available", is_locked: true }).in("id", oldBikeIds);
+      const oldBikeIds = [...new Set(existingRentals.map(r => r.bike_id).filter(id => id && String(id) !== String(bike.id)))];
+      if (oldBikeIds.length > 0) {
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).in("id", oldBikeIds);
+      }
     }
 
-    if (!bike_code || bike_code.trim() === "None" || bike_code.trim() === "") {
-       return res.json({ success: true, message: "Bike unassigned successfully" });
-    }
-    
-    // Find the bike
-    const { data: bike } = await supabase.from("bikes").select("id").eq("bike_code", bike_code).maybeSingle();
-    if (!bike) return res.status(404).json({ success: false, message: "Bike code not found" });
-    
     // Check if user has an active subscription to sync end_time
     const { data: userSub } = await supabase
       .from("user_subscriptions")
@@ -7366,8 +7408,8 @@ export async function assignBikeToUser(req, res) {
     }]);
     if (rentalError) throw rentalError;
     
-    await supabase.from("bikes").update({ status: "in_use" }).eq("id", bike.id);
-    return res.json({ success: true, message: "Bike assigned successfully!" });
+    await supabase.from("bikes").update({ status: "in_use", is_locked: false }).eq("id", bike.id);
+    return res.json({ success: true, message: `Bike ${bike.bike_code || cleanCode} assigned successfully!` });
   } catch (err) {
     console.error("[admin.assignBikeToUser]", err);
     return res.status(500).json({ success: false, message: err.message || "Unable to assign bike" });

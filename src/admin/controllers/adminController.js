@@ -280,11 +280,7 @@ function normalizeBike(bike, index) {
   };
   const status = statusMap[rawStatus] || "available";
   const rawBattery = Number(bike.battery_percentage ?? bike.battery ?? 0);
-  const charSum = String(bike.id || "").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  // Generate consistent pseudo-random battery between 65 and 85 for each bike
-  const pseudoRandomBattery = 65 + (charSum % 21);
-  const batteryValue = (rawBattery === 0 || rawBattery === 85) ? pseudoRandomBattery : rawBattery;
-  const battery = Number.isFinite(batteryValue) ? Math.max(0, Math.min(100, batteryValue)) : 0;
+  const battery = Number.isFinite(rawBattery) ? Math.max(0, Math.min(100, Math.round(rawBattery))) : 0;
   const healthScore = Number(bike.health_score ?? 100);
   const healthStatus = status === "maintenance" ? "Needs Service" : "Good";
   const usage = status === "in_use" ? "In Service" : status === "maintenance" ? "Repair Queue" : "Standby";

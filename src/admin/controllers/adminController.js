@@ -3987,11 +3987,16 @@ export async function completeBooking(req, res) {
       .update({ status: "completed", end_time: new Date().toISOString() })
       .eq("id", bookingId);
     if (error) throw error;
-    // Free the bike so it becomes available again
+    // Free the bike so it becomes available again and ensure it is safely locked
     if (rental?.bike_id) {
-      await supabase.from("bikes").update({ status: "available" }).eq("id", rental.bike_id);
+      await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("id", rental.bike_id);
+      try {
+        await iotService.lockBike(rental.bike_id);
+      } catch (iotErr) {
+        console.warn("[admin.completeBooking] IoT lock attempt non-fatal error:", iotErr.message);
+      }
     }
-    return res.json({ success: true, message: "Booking marked as completed" });
+    return res.json({ success: true, message: "Booking marked as completed and bike secured" });
   } catch (err) {
     console.error("[admin.completeBooking]", err);
     return res.status(500).json({ success: false, message: err.message || "Failed" });
@@ -4008,11 +4013,16 @@ export async function cancelBooking(req, res) {
       .update({ status: "cancelled" })
       .eq("id", bookingId);
     if (error) throw error;
-    // Free the bike so it becomes available again
+    // Free the bike so it becomes available again and ensure it is safely locked
     if (rental?.bike_id) {
-      await supabase.from("bikes").update({ status: "available" }).eq("id", rental.bike_id);
+      await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("id", rental.bike_id);
+      try {
+        await iotService.lockBike(rental.bike_id);
+      } catch (iotErr) {
+        console.warn("[admin.cancelBooking] IoT lock attempt non-fatal error:", iotErr.message);
+      }
     }
-    return res.json({ success: true, message: "Booking cancelled" });
+    return res.json({ success: true, message: "Booking cancelled and bike secured" });
   } catch (err) {
     console.error("[admin.cancelBooking]", err);
     return res.status(500).json({ success: false, message: err.message || "Failed" });
@@ -4994,7 +5004,7 @@ export async function markBikeFixed(req, res) {
     // First update the bike safely
     const numericId = Number(bikeId);
     if (Number.isInteger(numericId) && String(bikeId).trim() !== "" && !isNaN(numericId)) {
-      const { error: bikeErr } = await supabase.from("bikes").update({ status: "available" }).eq("id", numericId);
+      const { error: bikeErr } = await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("id", numericId);
       if (bikeErr) throw bikeErr;
     } else {
       // Fallback: try updating by checking code from maintenance record
@@ -5004,7 +5014,7 @@ export async function markBikeFixed(req, res) {
         .eq("bike_id", bikeId)
         .maybeSingle();
       if (mTicket && mTicket.bike_code) {
-        await supabase.from("bikes").update({ status: "available" }).eq("bike_code", mTicket.bike_code);
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("bike_code", mTicket.bike_code);
       }
     }
 
@@ -5124,9 +5134,9 @@ export async function updateMaintenanceStatus(req, res) {
     if (status === "completed") {
       fixedDate = req.body.fixedDate ? req.body.fixedDate.replace("T", " ") : new Date().toISOString().slice(0, 16).replace("T", " ");
       if (hasNumericId) {
-        await supabase.from("bikes").update({ status: "available" }).eq("id", numericId);
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("id", numericId);
       } else if (ticket.bike_code) {
-        await supabase.from("bikes").update({ status: "available" }).eq("bike_code", ticket.bike_code);
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("bike_code", ticket.bike_code);
       }
     } else {
       fixedDate = null;
@@ -5192,9 +5202,9 @@ export async function removeMaintenanceTicket(req, res) {
     if (ticket.status !== "completed") {
       const numericId = Number(ticket.bike_id);
       if (Number.isInteger(numericId) && String(ticket.bike_id).trim() !== "" && !isNaN(numericId)) {
-        await supabase.from("bikes").update({ status: "available" }).eq("id", numericId);
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("id", numericId);
       } else if (ticket.bike_code) {
-        await supabase.from("bikes").update({ status: "available" }).eq("bike_code", ticket.bike_code);
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("bike_code", ticket.bike_code);
       }
     }
 

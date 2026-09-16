@@ -1117,6 +1117,36 @@ export async function dashboard(req, res) {
       }
     }
 
+    // Fleet Status Breakdown for Fleet Doughnut Chart (100% mutually exclusive, 0 double counting)
+    const activeRentedBikeIds = new Set((assignedBikes || []).map(b => String(b.bikeId)).filter(Boolean));
+    const maintenanceBikeIds = new Set((activeMaintenance || []).map(m => String(m.bikeId)).filter(Boolean));
+
+    let fleetInUse = 0;
+    let fleetAvailable = 0;
+    let fleetNeedsCharge = 0;
+    let fleetMaintenance = 0;
+
+    bikes.forEach(b => {
+      const bId = String(b.id);
+      const isRented = activeRentedBikeIds.has(bId) || b.status === "in_use" || b.status === "rented";
+      const isMaint = maintenanceBikeIds.has(bId) || b.status === "maintenance";
+
+      if (isRented) {
+        fleetInUse++;
+      } else if (isMaint) {
+        fleetMaintenance++;
+      } else if (Number(b.battery || 0) < 25) {
+        fleetNeedsCharge++;
+      } else {
+        fleetAvailable++;
+      }
+    });
+
+    const fleetChart = {
+      labels: ["Active Rentals", "Available", "Needs Charge", "Maintenance"],
+      data: [fleetInUse, fleetAvailable, fleetNeedsCharge, fleetMaintenance],
+    };
+
     return renderPage(res, {
       title: "Dashboard",
       active: "dashboard",
@@ -1153,6 +1183,7 @@ export async function dashboard(req, res) {
           orderBuckets.cancelled,
         ],
       },
+      fleetChart,
     });
   } catch (error) {
     console.error("[admin.dashboard] unexpected error", error);

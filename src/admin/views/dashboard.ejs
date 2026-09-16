@@ -19,6 +19,7 @@
   var stats = locals.stats || { usersCount: 0, bikesCount: 0, activeRentalsCount: 0, totalEarnings: 0, pendingKycCount: 0 };
   var revenueChart = locals.revenueChart || { labels: [], data: [] };
   var ordersChart = locals.ordersChart || { labels: [], data: [] };
+  var fleetChart = locals.fleetChart || { labels: [], data: [] };
 %>
 
 <style>
@@ -1223,13 +1224,9 @@ body.dark-mode .db-badge-pending { color:#fbbf24; }
   // Fleet Doughnut Chart
   var fleetCtx = document.getElementById("fleetChart");
   if (window.Chart && fleetCtx) {
-    var activeCount = <%- JSON.stringify(stats&&stats.activeRentalsCount||0) %>;
-    var totalBikes  = <%- JSON.stringify(stats&&stats.bikesCount||0) %>;
-    var maintCount  = <%- JSON.stringify((lowBatteryBikes||[]).length) %>;
-    var available   = Math.max(0, totalBikes - activeCount - maintCount);
-    var fLabels = ["Active Rentals","Available","Low Battery"];
-    var fData   = [activeCount, available, maintCount];
-    var fColors = ["#f26d21","#10b981","#ef4444"];
+    var fLabels = <%- JSON.stringify(fleetChart && fleetChart.labels && fleetChart.labels.length ? fleetChart.labels : ["Active Rentals","Available","Needs Charge","Maintenance"]) %>;
+    var fData   = <%- JSON.stringify(fleetChart && fleetChart.data && fleetChart.data.length ? fleetChart.data : [0,0,0,0]) %>;
+    var fColors = ["#f26d21","#10b981","#fbbf24","#ef4444"];
     new Chart(fleetCtx, {
       type: "doughnut",
       data: { labels: fLabels, datasets:[{ data:fData, backgroundColor:fColors, borderWidth:2, borderColor: isDark?"#141414":"#fff", hoverOffset:6}]},

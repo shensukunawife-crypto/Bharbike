@@ -1516,22 +1516,8 @@ export async function users(req, res) {
       })
       .sort((a, b) => (b.lastActivityMs || 0) - (a.lastActivityMs || 0));
 
-    // Multi-Property Cluster Deduplication:
-    // Groups user records if they share the same valid Email, same Phone number, or same Full Name.
-    const computeInfoScore = (u) => {
-      let score = 0;
-      if (u.phone && String(u.phone).trim() && u.phone !== "null" && u.phone !== "N/A") score += 20;
-      if (u.location && String(u.location).trim() && u.location !== "None" && u.location !== "N/A") score += 15;
-      if (u.subscriptionText && !u.subscriptionText.includes("None / Inactive")) score += 15;
-      if (u.assignedBikeCode && u.assignedBikeCode !== "-") score += 15;
-      if (u.totalOrders > 0) score += 10 + u.totalOrders;
-      if (u.walletBalance > 0) score += 5;
-      if (u.email && !u.email.endsWith("@app.local")) score += 10;
-      if (u.image_url) score += 5;
-      score += (u.lastActivityMs || 0) / 1000000000000;
-      return score;
-    };
-
+    // Show every account as its own distinct row (Never merge or hide accounts!)
+    // Detect duplicate accounts sharing email, normalized phone, or full name and tag them
     const getNormEmail = (u) => {
       const email = (u.email || "").trim().toLowerCase();
       return email && !email.endsWith("@app.local") ? email : null;
@@ -1547,79 +1533,39 @@ export async function users(req, res) {
       return name && name !== "user" && name.length > 2 ? name : null;
     };
 
-    const clusters = [];
+    const emailCounts = new Map();
+    const phoneCounts = new Map();
+    const nameCounts = new Map();
+
     users.forEach(u => {
       const email = getNormEmail(u);
       const phone = getNormPhone(u);
       const name = getNormName(u);
-
-      const matchingClusters = clusters.filter(cluster => 
-        cluster.some(item => {
-          const itemEmail = getNormEmail(item);
-          const itemPhone = getNormPhone(item);
-          const itemName = getNormName(item);
-
-          if (email && itemEmail && email === itemEmail) return true;
-          if (phone && itemPhone && phone === itemPhone) return true;
-          if (name && itemName && name === itemName) return true;
-          return false;
-        })
-      );
-
-      if (matchingClusters.length === 0) {
-        clusters.push([u]);
-      } else if (matchingClusters.length === 1) {
-        matchingClusters[0].push(u);
-      } else {
-        const merged = [u];
-        matchingClusters.forEach(c => {
-          merged.push(...c);
-          const idx = clusters.indexOf(c);
-          if (idx !== -1) clusters.splice(idx, 1);
-        });
-        clusters.push(merged);
-      }
+      if (email) emailCounts.set(email, (emailCounts.get(email) || 0) + 1);
+      if (phone) phoneCounts.set(phone, (phoneCounts.get(phone) || 0) + 1);
+      if (name) nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
     });
 
-    const deduplicatedUsers = clusters.map(cluster => {
-      cluster.sort((a, b) => computeInfoScore(b) - computeInfoScore(a));
-      const winner = { ...cluster[0] };
-      
-      for (let i = 1; i < cluster.length; i++) {
-        const loser = cluster[i];
+    const finalUsers = users
+      .map(u => {
+        const email = getNormEmail(u);
+        const phone = getNormPhone(u);
+        const name = getNormName(u);
+        const reasons = [];
+        if (email && emailCounts.get(email) > 1) reasons.push(`Duplicate Email (${email})`);
+        if (phone && phoneCounts.get(phone) > 1) reasons.push(`Duplicate Phone (${phone})`);
+        if (name && nameCounts.get(name) > 1 && !reasons.length) reasons.push(`Duplicate Name (${name})`);
 
-        const winnerNeedsSub = !winner.subscriptionText || winner.subscriptionText.includes("None / Inactive") || winner.subscriptionText === "Bike Assigned";
-        const loserHasSub = loser.subscriptionText && !loser.subscriptionText.includes("None / Inactive") && loser.subscriptionText !== "Bike Assigned";
-        if (winnerNeedsSub && loserHasSub) {
-          winner.subscriptionText = loser.subscriptionText;
-          winner.subscription = loser.subscription;
-        }
-        if ((!winner.assignedBikeCode || winner.assignedBikeCode === "-") && loser.assignedBikeCode && loser.assignedBikeCode !== "-") {
-          winner.assignedBikeCode = loser.assignedBikeCode;
-        }
-        if ((!winner.phone || winner.phone === "null" || winner.phone === "N/A") && loser.phone && loser.phone !== "null" && loser.phone !== "N/A") {
-          winner.phone = loser.phone;
-        }
-        if ((!winner.location || winner.location === "None" || winner.location === "N/A") && loser.location && loser.location !== "None" && loser.location !== "N/A") {
-          winner.location = loser.location;
-        }
-        if ((!winner.email || winner.email.endsWith("@app.local")) && loser.email && !loser.email.endsWith("@app.local")) {
-          winner.email = loser.email;
-        }
-
-        winner.totalOrders = (winner.totalOrders || 0) + (loser.totalOrders || 0);
-        winner.totalSpent = (winner.totalSpent || 0) + (loser.totalSpent || 0);
-        winner.walletBalance = Math.max(winner.walletBalance || 0, loser.walletBalance || 0);
-        winner.overdueAmount = Math.max(winner.overdueAmount || 0, loser.overdueAmount || 0);
-        winner.daysSinceInactive = Math.max(winner.daysSinceInactive || 0, loser.daysSinceInactive || 0);
-      }
-      return winner;
-    });
-
-    const finalUsers = deduplicatedUsers
+        return {
+          ...u,
+          isDuplicate: reasons.length > 0,
+          duplicateBadge: reasons.length > 0 ? "⚠️ Duplicate" : null,
+          duplicateTooltip: reasons.join(", ")
+        };
+      })
       .sort((a, b) => (b.lastActivityMs || 0) - (a.lastActivityMs || 0));
 
-    console.log(`ADMIN USERS: ${users.length} raw -> ${finalUsers.length} deduplicated`);
+    console.log(`ADMIN USERS: Showing all ${finalUsers.length} accounts (${finalUsers.filter(u => u.isDuplicate).length} flagged as duplicates)`);
 
     const stats = {
       total: finalUsers.length,

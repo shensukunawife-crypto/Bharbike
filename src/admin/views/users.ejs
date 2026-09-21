@@ -76,6 +76,9 @@
         <tr style="border-bottom:1px solid var(--border-light);" data-user-id="<%= user.id %>" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background=''">
           <td style="padding:13px 16px;font-size:13px;font-weight:600;color:var(--text);">
             <%= user.full_name || 'N/A' %>
+            <% if (user.duplicateBadge) { %>
+              <span class="badge" style="font-size:10px; font-weight:700; background-color:#fef3c7; color:#b45309; border:1px solid #fcd34d; margin-left:6px; padding:2px 6px; border-radius:4px; vertical-align:middle; cursor:help;" title="<%= user.duplicateTooltip || 'Multiple accounts found' %>"><%= user.duplicateBadge %></span>
+            <% } %>
             <div style="font-size:11px;color:var(--text-muted);font-weight:400;margin-top:2px;"><%= user.email || 'N/A' %></div>
           </td>
           <td style="padding:13px 16px;font-size:13px;color:var(--text-muted);"><%= user.phone || 'N/A' %></td>

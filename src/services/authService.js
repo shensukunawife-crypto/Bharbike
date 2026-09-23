@@ -135,8 +135,10 @@ async function findProfileByPhone(phone) {
 
   const match = (allProfiles || []).find(p => {
     const cleanDb = String(p.phone || "").replace(/\D/g, "");
-    if (!cleanDb) return false;
-    return cleanDb.endsWith(cleanTarget) || cleanTarget.endsWith(cleanDb);
+    const cleanAlt = String(p.emergency_contact_phone || "").replace(/\D/g, "");
+    if (cleanDb && (cleanDb.endsWith(cleanTarget) || cleanTarget.endsWith(cleanDb))) return true;
+    if (cleanAlt && (cleanAlt.endsWith(cleanTarget) || cleanTarget.endsWith(cleanAlt))) return true;
+    return false;
   });
 
   return match ? shapePublicUser(match) : null;

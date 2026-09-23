@@ -976,10 +976,14 @@ export async function dashboard(req, res) {
           let assignedBikeCode = "None";
           let bikeId = null;
           if (activeRental) {
-             const b = bikes.find(bike => bike.id === activeRental.bike_id);
-             if (b && b.status === "in_use") {
-               assignedBikeCode = b.bike_code || b.code || "Bike";
-               bikeId = b.id;
+             const latestRentalForBike = (activeRentals || []).find(r => r.bike_id === activeRental.bike_id);
+             const bikeReassigned = latestRentalForBike && String(latestRentalForBike.user_id).toLowerCase() !== String(uid).toLowerCase();
+             if (!bikeReassigned) {
+               const b = bikes.find(bike => bike.id === activeRental.bike_id);
+               if (b && b.status === "in_use") {
+                 assignedBikeCode = b.bike_code || b.code || "Bike";
+                 bikeId = b.id;
+               }
              }
           }
 
@@ -1364,18 +1368,26 @@ export async function users(req, res) {
         // Find assigned bike for this user
         const userRentals = (rentalsData || []).filter(r => String(r.user_id).toLowerCase() === String(base.id).toLowerCase());
         const ongoingRental = userRentals.find(r => r.status === "ongoing" || r.status === "active");
-        const activeRental = ongoingRental || userRentals.find(r => r.status === "expired");
         let assignedBikeCode = "-";
-        if (activeRental) {
-          const bike = (bikesData || []).find(b => b.id === activeRental.bike_id);
+        if (ongoingRental) {
+          const bike = (bikesData || []).find(b => b.id === ongoingRental.bike_id);
           if (bike) {
-            if (activeRental.status === "ongoing" || activeRental.status === "active") {
-              assignedBikeCode = bike.bike_code || "Bike";
-              if (bike.status !== "in_use") {
-                supabase.from("bikes").update({ status: "in_use" }).eq("id", bike.id).then(() => {});
+            assignedBikeCode = bike.bike_code || "Bike";
+            if (bike.status !== "in_use") {
+              supabase.from("bikes").update({ status: "in_use" }).eq("id", bike.id).then(() => {});
+            }
+          }
+        } else {
+          // If no ongoing rental, check if user has an expired rental whose bike has NOT been reassigned to another rider
+          const expiredRental = userRentals.find(r => r.status === "expired");
+          if (expiredRental) {
+            const latestRentalForBike = (rentalsData || []).find(r => r.bike_id === expiredRental.bike_id);
+            const bikeReassigned = latestRentalForBike && String(latestRentalForBike.user_id).toLowerCase() !== String(base.id).toLowerCase();
+            if (!bikeReassigned) {
+              const bike = (bikesData || []).find(b => b.id === expiredRental.bike_id);
+              if (bike && bike.status === "in_use") {
+                assignedBikeCode = bike.bike_code || "Bike";
               }
-            } else if (bike.status === "in_use") {
-              assignedBikeCode = bike.bike_code || "Bike";
             }
           }
         }
@@ -1444,7 +1456,7 @@ export async function users(req, res) {
           subText = `Expired: ${planName} (${formatReadableDate(userSub.start_date)} to ${formatReadableDate(new Date(displayEndMs))})`;
         } else if (userSub && userSub.status === "cancelled") {
           subText = "None / Inactive"; // Admin explicitly set to none — treat as inactive
-        } else if (!userSub && activeRental) {
+        } else if (!userSub && assignedBikeCode !== "-") {
           // No subscription at all, but bike is manually assigned
           subText = `Bike Assigned`;
         }
@@ -1455,7 +1467,8 @@ export async function users(req, res) {
         if (userSub && userSub.updated_at) activityDates.push(new Date(userSub.updated_at).getTime());
         else if (userSub && userSub.created_at) activityDates.push(new Date(userSub.created_at).getTime());
         if (userWallet && userWallet.updated_at) activityDates.push(new Date(userWallet.updated_at).getTime());
-        if (activeRental && activeRental.created_at) activityDates.push(new Date(activeRental.created_at).getTime());
+        if (ongoingRental && ongoingRental.created_at) activityDates.push(new Date(ongoingRental.created_at).getTime());
+        else if (userRentals[0]?.created_at) activityDates.push(new Date(userRentals[0].created_at).getTime());
         
         const lastActivityMs = Math.max(...activityDates.filter(d => !isNaN(d)));
 

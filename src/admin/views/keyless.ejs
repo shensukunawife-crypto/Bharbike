@@ -6,10 +6,8 @@
 
 <style>
   :root {
-    --kb-saffron: #ff6d00;
+    --kb-saffron: #f26d21;
     --kb-saffron-light: #ff851a;
-    --kb-dark-card: #111726;
-    --kb-dark-border: #1f2a3f;
   }
 
   .keyless-page-wrapper {
@@ -26,34 +24,37 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
-    background: linear-gradient(135deg, rgba(255, 109, 0, 0.08) 0%, rgba(17, 23, 38, 0.6) 100%);
-    border: 1px solid rgba(255, 109, 0, 0.2);
-    border-radius: 16px;
-    padding: 22px 24px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-left: 5px solid var(--accent, #f26d21);
+    border-radius: var(--radius-lg, 14px);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
   }
 
   .keyless-header-left h1 {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
-    color: var(--text, #ffffff);
+    color: var(--text, #111827);
     margin: 0 0 6px 0;
     display: flex;
     align-items: center;
     gap: 10px;
+    letter-spacing: -0.3px;
   }
 
   .keyless-header-left p {
     font-size: 13.5px;
-    color: var(--text-muted, #94a3b8);
+    color: var(--text-muted, #6b7280);
     margin: 0;
     max-width: 680px;
     line-height: 1.5;
   }
 
   .keyless-header-badge {
-    background: rgba(255, 109, 0, 0.15);
-    border: 1px solid var(--kb-saffron);
-    color: var(--kb-saffron-light);
+    background: rgba(242, 109, 33, 0.12);
+    border: 1px solid var(--accent, #f26d21);
+    color: var(--accent, #f26d21);
     font-size: 11px;
     font-weight: 800;
     padding: 3px 8px;
@@ -76,19 +77,21 @@
   }
 
   .stat-card-box {
-    background: var(--bg-card, #141b2d);
-    border: 1px solid var(--border, #1f2a3f);
-    border-radius: 14px;
-    padding: 16px 20px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-lg, 14px);
+    padding: 18px 20px;
     display: flex;
     align-items: center;
     gap: 16px;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
   .stat-card-box:hover {
     transform: translateY(-2px);
-    border-color: rgba(255, 109, 0, 0.4);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+    border-color: rgba(242, 109, 33, 0.4);
   }
 
   .stat-icon-wrapper {
@@ -102,46 +105,48 @@
     flex-shrink: 0;
   }
 
-  .stat-icon-fleet { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-  .stat-icon-mobilized { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-  .stat-icon-locked { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-  .stat-icon-gps { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+  .stat-icon-fleet { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+  .stat-icon-mobilized { background: rgba(16, 185, 129, 0.12); color: #059669; }
+  .stat-icon-locked { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+  .stat-icon-gps { background: rgba(245, 158, 11, 0.12); color: #d97706; }
 
   .stat-info .stat-value {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 800;
-    color: var(--text, #ffffff);
+    color: var(--text, #111827);
     line-height: 1.1;
+    letter-spacing: -0.5px;
   }
 
   .stat-info .stat-label {
-    font-size: 12px;
-    color: var(--text-muted, #94a3b8);
-    font-weight: 600;
+    font-size: 11px;
+    color: var(--text-muted, #6b7280);
+    font-weight: 700;
     margin-top: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
   }
 
   /* Navigation Tabs */
   .keyless-nav-tabs {
     display: flex;
-    gap: 8px;
-    background: #0d121f;
+    gap: 6px;
+    background: var(--surface, #ffffff);
     padding: 6px;
-    border-radius: 12px;
-    border: 1px solid #1f2a3f;
+    border-radius: var(--radius, 10px);
+    border: 1px solid var(--border, #e5e7eb);
+    box-shadow: var(--shadow-sm);
     width: fit-content;
   }
 
   .keyless-tab-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
-    padding: 10px 20px;
+    color: var(--text-muted, #6b7280);
+    padding: 9px 18px;
     font-size: 13.5px;
     font-weight: 700;
-    border-radius: 8px;
+    border-radius: var(--radius-sm, 6px);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -150,9 +155,9 @@
   }
 
   .keyless-tab-btn.active {
-    background: var(--kb-saffron);
+    background: var(--accent, #f26d21);
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(255, 109, 0, 0.35);
+    box-shadow: 0 2px 8px rgba(242, 109, 33, 0.35);
   }
 
   .keyless-tab-content {
@@ -180,22 +185,23 @@
 
   /* Left Config Panel */
   .studio-config-card {
-    background: var(--bg-card, #141b2d);
-    border: 1px solid var(--border, #1f2a3f);
-    border-radius: 16px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-lg, 14px);
     padding: 22px;
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
   }
 
   .config-section-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
-    color: var(--text, #ffffff);
+    color: var(--text, #111827);
     text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 10px;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -210,23 +216,24 @@
   .studio-label {
     font-size: 12px;
     font-weight: 600;
-    color: #cbd5e1;
+    color: var(--text-muted, #4b5563);
   }
 
   .studio-select, .studio-input {
-    background: #0d121f;
-    border: 1px solid #23304a;
-    color: #ffffff;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 14px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #d1d5db);
+    color: var(--text, #111827);
+    padding: 9px 12px;
+    border-radius: var(--radius, 8px);
+    font-size: 13.5px;
     font-weight: 600;
     outline: none;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
   .studio-select:focus, .studio-input:focus {
-    border-color: var(--kb-saffron);
+    border-color: var(--accent, #f26d21);
+    box-shadow: 0 0 0 3px rgba(242, 109, 33, 0.12);
   }
 
   /* Theme Radio Selector */
@@ -237,10 +244,10 @@
   }
 
   .theme-radio-card {
-    border: 2px solid #23304a;
-    background: #0d121f;
+    border: 2px solid var(--border, #e5e7eb);
+    background: var(--surface, #ffffff);
     border-radius: 10px;
-    padding: 12px;
+    padding: 10px 12px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -249,13 +256,13 @@
   }
 
   .theme-radio-card.active {
-    border-color: var(--kb-saffron);
-    background: rgba(255, 109, 0, 0.08);
+    border-color: var(--accent, #f26d21);
+    background: rgba(242, 109, 33, 0.05);
   }
 
   .theme-radio-card .theme-preview-pill {
     width: 100%;
-    height: 24px;
+    height: 22px;
     border-radius: 6px;
     display: flex;
     align-items: center;
@@ -265,13 +272,13 @@
     letter-spacing: 0.5px;
   }
 
-  .pill-dark { background: #0b0f19; color: #ff6d00; border: 1px solid #ff6d00; }
-  .pill-white { background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; }
+  .pill-white { background: #ffffff; color: #0f172a; border: 1.5px solid #cbd5e1; }
+  .pill-dark { background: #0f172a; color: #f26d21; border: 1.5px solid #f26d21; }
 
   .theme-title {
     font-size: 12px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text, #111827);
   }
 
   /* Studio Quick Actions */
@@ -279,7 +286,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-top: 10px;
+    margin-top: 6px;
   }
 
   .btn-studio-action {
@@ -287,9 +294,9 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 12px 18px;
-    border-radius: 10px;
-    font-size: 13.5px;
+    padding: 11px 16px;
+    border-radius: var(--radius, 8px);
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
     border: none;
@@ -298,49 +305,50 @@
   }
 
   .btn-studio-primary {
-    background: linear-gradient(135deg, #ff6d00 0%, #ff8c42 100%);
+    background: linear-gradient(135deg, #f26d21 0%, #ff8c42 100%);
     color: #ffffff;
-    box-shadow: 0 4px 14px rgba(255, 109, 0, 0.4);
+    box-shadow: 0 3px 10px rgba(242, 109, 33, 0.35);
   }
 
   .btn-studio-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(255, 109, 0, 0.5);
+    box-shadow: 0 5px 14px rgba(242, 109, 33, 0.45);
   }
 
   .btn-studio-secondary {
-    background: #1f2a3f;
-    color: #ffffff;
-    border: 1px solid #2d3b55;
+    background: var(--surface, #ffffff);
+    color: var(--text, #111827);
+    border: 1px solid var(--border, #d1d5db);
   }
 
   .btn-studio-secondary:hover {
-    background: #283750;
+    background: var(--border-light, #f9fafb);
+    border-color: #9ca3af;
   }
 
   .btn-studio-outline {
     background: transparent;
-    color: #38bdf8;
-    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #0284c7;
+    border: 1px solid rgba(2, 132, 199, 0.35);
   }
 
   .btn-studio-outline:hover {
-    background: rgba(56, 189, 248, 0.1);
+    background: rgba(2, 132, 199, 0.08);
   }
 
   /* Right Visualizer Stage */
   .studio-preview-stage {
-    background: #080c14;
-    border: 1px solid #1f2a3f;
-    border-radius: 16px;
+    background: var(--bg, #f4f6f9);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-lg, 14px);
     padding: 30px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 580px;
+    min-height: 560px;
     position: relative;
-    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
   }
 
   .stage-watermark {
@@ -348,7 +356,7 @@
     bottom: 12px;
     right: 16px;
     font-size: 11px;
-    color: #475569;
+    color: var(--text-light, #9ca3af);
     font-weight: 600;
   }
 
@@ -363,26 +371,26 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 109, 0, 0.2);
     position: relative;
     user-select: none;
     transition: all 0.25s ease;
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  /* Theme: Dark */
+  /* Theme: Pure White (Default - Clean Workshop Vinyl) */
+  .vinyl-decal-card.theme-white {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    color: #0f172a;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.09), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Theme: Obsidian Dark */
   .vinyl-decal-card.theme-dark {
     background: radial-gradient(circle at top right, #1a233a 0%, #0c111d 75%);
     border: 2px solid #23304a;
     color: #ffffff;
-  }
-
-  /* Theme: White */
-  .vinyl-decal-card.theme-white {
-    background: #ffffff;
-    border: 2px solid #cbd5e1;
-    color: #0f172a;
-    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(242, 109, 33, 0.2);
   }
 
   /* Decal Top Header */
@@ -399,33 +407,30 @@
   }
 
   .decal-logo-icon {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
-    background: #ff6d00;
+    background: #f26d21;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 800;
   }
 
   .decal-brand-name {
     font-family: 'Outfit', sans-serif;
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 800;
     letter-spacing: -0.3px;
   }
 
   .decal-brand-name .hi-r {
-    color: #ff6d00;
+    color: #f26d21;
   }
 
   .decal-bike-pill {
-    background: rgba(255, 109, 0, 0.15);
-    border: 1.5px solid #ff6d00;
-    color: #ff6d00;
     font-family: 'Outfit', sans-serif;
     font-size: 14px;
     font-weight: 800;
@@ -436,8 +441,14 @@
 
   .theme-white .decal-bike-pill {
     background: #fff4ea;
-    border-color: #ff6d00;
-    color: #ff6d00;
+    border: 1.5px solid #f26d21;
+    color: #f26d21;
+  }
+
+  .theme-dark .decal-bike-pill {
+    background: rgba(242, 109, 33, 0.15);
+    border: 1.5px solid #f26d21;
+    color: #ff851a;
   }
 
   /* Decal Middle Showcase */
@@ -446,7 +457,7 @@
     grid-template-columns: 180px 1fr;
     gap: 16px;
     align-items: center;
-    margin: 10px 0;
+    margin: 8px 0;
   }
 
   .decal-qr-box {
@@ -457,11 +468,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     position: relative;
   }
 
-  #dynamicQrCanvas, #dynamicQrContainer {
+  #dynamicQrContainer {
     width: 155px;
     height: 155px;
     display: flex;
@@ -495,24 +507,24 @@
   }
 
   .decal-bike-img {
-    max-width: 150px;
+    max-width: 155px;
     max-height: 100px;
     object-fit: contain;
-    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
   }
 
   .decal-feature-title {
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 800;
     letter-spacing: -0.2px;
   }
 
-  .theme-dark .decal-feature-title { color: #f8fafc; }
   .theme-white .decal-feature-title { color: #0f172a; }
+  .theme-dark .decal-feature-title { color: #f8fafc; }
 
   .decal-feature-sub {
     font-size: 10.5px;
-    color: #ff6d00;
+    color: #f26d21;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -536,21 +548,21 @@
     gap: 2px;
   }
 
-  .theme-dark .decal-step-cell {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
   .theme-white .decal-step-cell {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
+  }
+
+  .theme-dark .decal-step-cell {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .decal-step-num {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #ff6d00;
+    background: #f26d21;
     color: #ffffff;
     font-size: 9px;
     font-weight: 800;
@@ -560,13 +572,13 @@
   }
 
   .decal-step-text {
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: 700;
     line-height: 1.2;
   }
 
-  .theme-dark .decal-step-text { color: #e2e8f0; }
   .theme-white .decal-step-text { color: #1e293b; }
+  .theme-dark .decal-step-text { color: #e2e8f0; }
 
   /* Decal Footer */
   .decal-bottom-bar {
@@ -576,17 +588,17 @@
     font-size: 10px;
     font-weight: 700;
     padding-top: 8px;
-    border-top: 1px dashed rgba(255, 109, 0, 0.3);
+    border-top: 1px dashed rgba(242, 109, 33, 0.35);
   }
 
-  .theme-dark .decal-bottom-bar { color: #94a3b8; }
   .theme-white .decal-bottom-bar { color: #64748b; }
+  .theme-dark .decal-bottom-bar { color: #94a3b8; }
 
   .decal-tagline {
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #ff6d00;
+    color: #f26d21;
   }
 
   /* ---------------------------------------------------- */
@@ -609,20 +621,26 @@
   }
 
   .switchboard-search {
-    background: #0d121f;
-    border: 1px solid #23304a;
-    color: #ffffff;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #d1d5db);
+    color: var(--text, #111827);
     padding: 8px 14px;
-    border-radius: 8px;
+    border-radius: var(--radius, 8px);
     font-size: 13px;
-    min-width: 200px;
+    min-width: 220px;
+    outline: none;
+  }
+
+  .switchboard-search:focus {
+    border-color: var(--accent, #f26d21);
   }
 
   .table-keyless-wrap {
-    background: var(--bg-card, #141b2d);
-    border: 1px solid var(--border, #1f2a3f);
-    border-radius: 14px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--radius-lg, 14px);
     overflow-x: auto;
+    box-shadow: var(--shadow-sm);
   }
 
   .table-keyless {
@@ -633,25 +651,25 @@
   }
 
   .table-keyless th {
-    background: #0d121f;
+    background: var(--border-light, #f9fafb);
     padding: 12px 16px;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
-    color: #94a3b8;
+    color: var(--text-muted, #4b5563);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid #1f2a3f;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border, #e5e7eb);
   }
 
   .table-keyless td {
     padding: 12px 16px;
-    border-bottom: 1px solid #172237;
-    color: var(--text, #ffffff);
+    border-bottom: 1px solid var(--border-light, #f3f4f6);
+    color: var(--text, #111827);
     vertical-align: middle;
   }
 
   .table-keyless tr:hover td {
-    background: rgba(255, 109, 0, 0.03);
+    background: var(--accent-light, rgba(242, 109, 33, 0.04));
   }
 
   .badge-relay {
@@ -665,15 +683,15 @@
   }
 
   .badge-relay-mobilized {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
   }
 
   .badge-relay-locked {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
   }
 
   .relay-btn-group {
@@ -696,32 +714,32 @@
   }
 
   .btn-relay-on {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
   }
   .btn-relay-on:hover {
-    background: #10b981;
+    background: #059669;
     color: #ffffff;
   }
 
   .btn-relay-off {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
   }
   .btn-relay-off:hover {
-    background: #ef4444;
+    background: #dc2626;
     color: #ffffff;
   }
 
   .btn-relay-qr {
-    background: rgba(255, 109, 0, 0.15);
-    color: #ff851a;
-    border: 1px solid rgba(255, 109, 0, 0.3);
+    background: rgba(242, 109, 33, 0.1);
+    color: var(--accent, #f26d21);
+    border: 1px solid rgba(242, 109, 33, 0.3);
   }
   .btn-relay-qr:hover {
-    background: #ff6d00;
+    background: var(--accent, #f26d21);
     color: #ffffff;
   }
 
@@ -735,7 +753,7 @@
     color: #ffffff;
     padding: 12px 20px;
     border-radius: 10px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -758,7 +776,8 @@
   <div class="keyless-header">
     <div class="keyless-header-left">
       <h1>
-        <span>⚡ BharBike Keyless & QR Decal Studio</span>
+        <span style="color: var(--accent, #f26d21);">⚡</span>
+        <span>BharBike Keyless & QR Decal Studio</span>
         <span class="keyless-header-badge">LIVE ON BHARBIKE.COM</span>
       </h1>
       <p>
@@ -766,10 +785,10 @@
       </p>
     </div>
     <div class="keyless-header-actions">
-      <a href="/keyless" target="_blank" class="btn-studio-action btn-studio-secondary" style="padding: 9px 15px; font-size: 12.5px;">
+      <a href="/keyless" target="_blank" class="btn-studio-action btn-studio-secondary">
         <span>📱 Open Rider Web App</span>
       </a>
-      <a href="/keyless/placard" target="_blank" class="btn-studio-action btn-studio-outline" style="padding: 9px 15px; font-size: 12.5px;">
+      <a href="/keyless/placard" target="_blank" class="btn-studio-action btn-studio-outline">
         <span>📄 Open Standalone Placard</span>
       </a>
     </div>
@@ -845,17 +864,17 @@
           <input type="text" class="studio-input" id="customBikeCode" placeholder="e.g. TNA074" value="<%= bikes.length ? bikes[0].bike_code : 'TNA074' %>" oninput="onCustomBikeCodeInput(this.value)" />
         </div>
 
-        <!-- Theme Selection -->
+        <!-- Theme Selection (Default to Pure White as requested) -->
         <div class="studio-form-group">
           <label class="studio-label">Decal Surface Style:</label>
           <div class="theme-radio-grid">
-            <div class="theme-radio-card active" id="radioThemeDark" onclick="setDecalTheme('dark')">
-              <div class="theme-preview-pill pill-dark">OBSIDIAN SAFFRON</div>
-              <div class="theme-title">Dark Luxe (Vinyl)</div>
-            </div>
-            <div class="theme-radio-card" id="radioThemeWhite" onclick="setDecalTheme('white')">
+            <div class="theme-radio-card active" id="radioThemeWhite" onclick="setDecalTheme('white')">
               <div class="theme-preview-pill pill-white">PURE WHITE</div>
               <div class="theme-title">Workshop Print</div>
+            </div>
+            <div class="theme-radio-card" id="radioThemeDark" onclick="setDecalTheme('dark')">
+              <div class="theme-preview-pill pill-dark">OBSIDIAN SAFFRON</div>
+              <div class="theme-title">Dark Luxe (Vinyl)</div>
             </div>
           </div>
         </div>
@@ -863,7 +882,7 @@
         <!-- Target Destination URL -->
         <div class="studio-form-group">
           <label class="studio-label">QR Decodes To:</label>
-          <input type="text" class="studio-input" id="targetQrUrl" readonly style="font-size: 11.5px; color: #94a3b8; background: #080c14;" />
+          <input type="text" class="studio-input" id="targetQrUrl" readonly style="font-size: 11.5px; color: var(--text-muted, #6b7280); background: var(--border-light, #f9fafb);" />
         </div>
 
         <!-- Quick Action Buttons -->
@@ -883,8 +902,8 @@
       <!-- Right Visualizer Stage -->
       <div class="studio-preview-stage">
         
-        <!-- Live Vinyl Decal Preview Card -->
-        <div class="vinyl-decal-card theme-dark" id="vinylDecalCard">
+        <!-- Live Vinyl Decal Preview Card (Default: Pure White) -->
+        <div class="vinyl-decal-card theme-white" id="vinylDecalCard">
           
           <!-- Decal Top Bar -->
           <div class="decal-top-bar">
@@ -893,7 +912,7 @@
               <span class="decal-brand-name">Bha<span class="hi-r">र</span>Bike</span>
             </div>
             <div class="decal-bike-pill" id="previewBikeBadge">
-              ⚡ TNA074
+              ⚡ <%= bikes.length ? bikes[0].bike_code : 'TNA074' %>
             </div>
           </div>
 
@@ -904,7 +923,7 @@
               <span class="decal-qr-helper">Point Camera to Start</span>
             </div>
             <div class="decal-bike-feature">
-              <img class="decal-bike-img" src="/keyless/assets/ev_bike_hero.png" alt="Velociti EV" />
+              <img class="decal-bike-img" id="decalBikeHeroImg" src="/admin/static/images/ev_bike_hero.png" onerror="this.onerror=null; this.src='/keyless/assets/ev_bike_hero.png'; if(!this.src) this.src='/admin/static/images/bike_isometric.png';" alt="Velociti EV" />
               <div class="decal-feature-title">Velociti EV • Keyless Go</div>
               <div class="decal-feature-sub">100% Smart Electric</div>
             </div>
@@ -960,7 +979,7 @@
         </select>
       </div>
       <div>
-        <span style="font-size: 12px; color: #94a3b8; font-weight: 600;">
+        <span style="font-size: 12px; color: var(--text-muted, #6b7280); font-weight: 600;">
           Showing <span id="visibleBikeCount"><%= bikes.length %></span> of <%= bikes.length %> bikes
         </span>
       </div>
@@ -982,22 +1001,22 @@
         </thead>
         <tbody>
           <% if (!bikes.length) { %>
-            <tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 24px;">No bikes registered in system.</td></tr>
+            <tr><td colspan="8" style="text-align: center; color: var(--text-muted, #6b7280); padding: 24px;">No bikes registered in system.</td></tr>
           <% } %>
           <% bikes.forEach((bike) => { %>
             <tr class="bike-row" data-code="<%= bike.bike_code.toLowerCase() %>" data-locked="<%= bike.is_locked %>" data-gps="<%= bike.hasGps %>" data-rider="<%= bike.currentRider ? bike.currentRider.name.toLowerCase() : '' %>">
               <td>
-                <span style="font-family: 'Outfit', sans-serif; font-size: 14.5px; font-weight: 800; color: #ff6d00;">
+                <span style="font-family: 'Outfit', sans-serif; font-size: 14.5px; font-weight: 800; color: var(--accent, #f26d21);">
                   <%= bike.bike_code %>
                 </span>
               </td>
-              <td><%= bike.name %></td>
+              <td style="font-weight: 600;"><%= bike.name %></td>
               <td>
                 <% if (bike.currentRider) { %>
-                  <div style="font-weight: 700; color: #ffffff;"><%= bike.currentRider.name %></div>
-                  <div style="font-size: 11px; color: #94a3b8;"><%= bike.currentRider.phone || "No phone" %></div>
+                  <div style="font-weight: 700; color: var(--text, #111827);"><%= bike.currentRider.name %></div>
+                  <div style="font-size: 11px; color: var(--text-muted, #6b7280);"><%= bike.currentRider.phone || "No phone" %></div>
                 <% } else { %>
-                  <span style="color: #64748b; font-style: italic;">Unassigned</span>
+                  <span style="color: var(--text-light, #9ca3af); font-style: italic;">Unassigned</span>
                 <% } %>
               </td>
               <td>
@@ -1006,15 +1025,15 @@
                 </span>
               </td>
               <td>
-                <span style="font-weight: 700; color: <%= bike.battery < 25 ? '#ef4444' : '#10b981' %>;">
+                <span style="font-weight: 700; color: <%= bike.battery < 25 ? '#dc2626' : '#059669' %>;">
                   <%= bike.battery %>%
                 </span>
               </td>
               <td>
                 <% if (bike.hasGps) { %>
-                  <span style="color: #10b981; font-weight: 600; font-size: 12px;">🛰️ Linked</span>
+                  <span style="color: #059669; font-weight: 600; font-size: 12px;">🛰️ Linked</span>
                 <% } else { %>
-                  <span style="color: #64748b; font-size: 12px;">Manual Relay</span>
+                  <span style="color: var(--text-muted, #9ca3af); font-size: 12px;">Manual Relay</span>
                 <% } %>
               </td>
               <td>
@@ -1050,7 +1069,7 @@
 
 <script>
   let currentBikeCode = "<%= bikes.length ? bikes[0].bike_code : 'TNA074' %>";
-  let currentTheme = "dark";
+  let currentTheme = "white"; // Default to Pure White as requested
   let qrCodeInstance = null;
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -1149,11 +1168,10 @@
   }
 
   function downloadDecalImage() {
-    // Open printable placard URL which prints or saves 1:1 image
     const baseOrigin = window.location.origin || "https://bharbike.com";
     const placardUrl = baseOrigin + "/keyless/placard?bike=" + encodeURIComponent(currentBikeCode);
     const win = window.open(placardUrl, "_blank");
-    showToast("Opening high-resolution placard sheet for " + currentBikeCode + "...");
+    showToast("Opening printable sheet for " + currentBikeCode + "...");
   }
 
   function printDecalCard() {
@@ -1257,7 +1275,7 @@
       toast.style.borderColor = "#ef4444";
     } else {
       iconEl.textContent = "⚡";
-      toast.style.borderColor = "#ff6d00";
+      toast.style.borderColor = "#f26d21";
     }
 
     msgEl.textContent = msg;

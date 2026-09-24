@@ -3,6 +3,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 <!-- QRCode.js for client-side instant QR rendering -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- html5-qrcode for live device camera QR scanning -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <style>
   :root {
@@ -67,6 +69,7 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
   }
 
   /* Stats Cards Grid */
@@ -137,6 +140,7 @@
     border: 1px solid var(--border, #e5e7eb);
     box-shadow: var(--shadow-sm);
     width: fit-content;
+    flex-wrap: wrap;
   }
 
   .keyless-tab-btn {
@@ -290,11 +294,11 @@
   }
 
   .btn-studio-action {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 11px 16px;
+    gap: 8px;
+    padding: 10px 16px;
     border-radius: var(--radius, 8px);
     font-size: 13px;
     font-weight: 700;
@@ -743,6 +747,48 @@
     color: #ffffff;
   }
 
+  /* ---------------------------------------------------- */
+  /* TAB 3: LIVE CAMERA SCANNER                           */
+  /* ---------------------------------------------------- */
+  .admin-scanner-grid {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 980px) {
+    .admin-scanner-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .admin-scanner-viewport-box {
+    background: #000000;
+    border-radius: 12px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border: 2px dashed #cbd5e1;
+  }
+
+  .scanner-idle-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px 20px;
+    background: var(--surface, #ffffff);
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+  }
+
   /* Toast Notification */
   #keylessToast {
     position: fixed;
@@ -781,10 +827,13 @@
         <span class="keyless-header-badge">LIVE ON BHARBIKE.COM</span>
       </h1>
       <p>
-        Design & print official 1:1 vehicle decals for the fleet, generate dynamic permanent QR codes, and remotely mobilize or immobilize bikes via BharBike's in-house IoT dispatch engine.
+        Design & print official 1:1 vehicle decals for the fleet, scan bike QR codes with device camera, and remotely mobilize or immobilize bikes via BharBike's in-house IoT dispatch engine.
       </p>
     </div>
     <div class="keyless-header-actions">
+      <button type="button" class="btn-studio-action btn-studio-primary" onclick="switchKeylessTab('scanner')">
+        <span>📷 Scan Bike QR</span>
+      </button>
       <a href="/keyless" target="_blank" class="btn-studio-action btn-studio-secondary">
         <span>📱 Open Rider Web App</span>
       </a>
@@ -834,6 +883,9 @@
     <button class="keyless-tab-btn" id="tabBtnSwitchboard" onclick="switchKeylessTab('switchboard')">
       <span>⚡ Fleet Remote Switchboard</span>
     </button>
+    <button class="keyless-tab-btn" id="tabBtnScanner" onclick="switchKeylessTab('scanner')">
+      <span>📷 Live Camera QR Scanner</span>
+    </button>
   </div>
 
   <!-- TAB 1: 1:1 QR DECAL STUDIO -->
@@ -846,16 +898,21 @@
           <span>⚙️ Decal Specifications</span>
         </div>
 
-        <!-- Bike Selector -->
+        <!-- Bike Selector with Quick Scan Button -->
         <div class="studio-form-group">
           <label class="studio-label" for="decalBikeSelect">Select Fleet Bike:</label>
-          <select class="studio-select" id="decalBikeSelect" onchange="onDecalBikeChange(this.value)">
-            <% bikes.forEach((b) => { %>
-              <option value="<%= b.bike_code %>" data-locked="<%= b.is_locked %>" data-rider="<%= b.currentRider ? b.currentRider.name : '' %>">
-                <%= b.bike_code %> — <%= b.name %> (<%= b.is_locked ? "🔒 Locked" : "⚡ ON" %>)
-              </option>
-            <% }) %>
-          </select>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select class="studio-select" id="decalBikeSelect" style="flex: 1;" onchange="onDecalBikeChange(this.value)">
+              <% bikes.forEach((b) => { %>
+                <option value="<%= b.bike_code %>" data-locked="<%= b.is_locked %>" data-rider="<%= b.currentRider ? b.currentRider.name : '' %>">
+                  <%= b.bike_code %> — <%= b.name %> (<%= b.is_locked ? "🔒 Locked" : "⚡ ON" %>)
+                </option>
+              <% }) %>
+            </select>
+            <button type="button" class="btn-studio-action btn-studio-secondary" style="padding: 9px 12px; font-size: 12px; flex-shrink: 0;" onclick="switchKeylessTab('scanner')" title="Scan Bike Decal with Camera">
+              <span>📷 Scan</span>
+            </button>
+          </div>
         </div>
 
         <!-- Custom Bike Code Input (for custom bikes or testing) -->
@@ -1059,6 +1116,125 @@
 
   </div>
 
+  <!-- TAB 3: LIVE CAMERA QR SCANNER (From Netlify) -->
+  <div class="keyless-tab-content" id="tabContentScanner">
+    <div class="admin-scanner-grid">
+      
+      <!-- Left: Camera Viewfinder & Controls -->
+      <div class="studio-config-card">
+        <div class="config-section-title">
+          <span>📷 Camera QR Scanner</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted, #6b7280); margin: 0 0 6px 0; line-height: 1.5;">
+          Point your webcam or mobile camera at any bike's decal sticker to instantly identify the vehicle, inspect live battery/telematics, and toggle ignition.
+        </p>
+
+        <!-- Viewport -->
+        <div class="admin-scanner-viewport-box">
+          <div id="admin-qr-reader" style="width: 100%; display: none;"></div>
+          <div id="scannerIdlePlaceholder" class="scanner-idle-placeholder">
+            <div style="font-size: 44px; margin-bottom: 8px;">📷</div>
+            <div style="font-size: 14.5px; font-weight: 800; color: var(--text, #111827);">Camera is Idle</div>
+            <div style="font-size: 12px; color: var(--text-muted, #6b7280); max-width: 250px; margin-top: 4px;">
+              Click below to activate live camera feed
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
+          <button type="button" class="btn-studio-action btn-studio-primary" id="btnAdminCamToggle" onclick="toggleAdminCameraScanner()">
+            <span id="adminCamIcon">📷</span> <span id="adminCamText">Start Camera Scanner</span>
+          </button>
+          
+          <div style="display: flex; align-items: center; gap: 10px; margin: 4px 0;">
+            <hr style="flex: 1; border: 0; border-top: 1px solid var(--border, #e5e7eb);" />
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted, #6b7280); text-transform: uppercase;">or upload image</span>
+            <hr style="flex: 1; border: 0; border-top: 1px solid var(--border, #e5e7eb);" />
+          </div>
+
+          <label class="btn-studio-action btn-studio-secondary" style="cursor: pointer; text-align: center;">
+            <span>📁 Select QR Image / Photo</span>
+            <input type="file" id="qrFileInput" accept="image/*" style="display: none;" onchange="onScanImageFile(this)" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Right: Scanned Bike Live Intelligence & Controls -->
+      <div class="studio-preview-stage" style="align-items: stretch; justify-content: flex-start; padding: 24px; min-height: 480px;">
+        
+        <!-- Empty State -->
+        <div id="scannedBikeEmpty" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 380px; text-align: center; color: var(--text-muted, #6b7280);">
+          <div style="font-size: 52px; margin-bottom: 12px; opacity: 0.6;">🔍</div>
+          <div style="font-size: 17px; font-weight: 800; color: var(--text, #111827);">No Bike Scanned Yet</div>
+          <p style="font-size: 13px; max-width: 320px; margin-top: 6px; line-height: 1.5;">
+            Start the camera and point it at the QR decal on the bike, or choose a photo of the QR code.
+          </p>
+        </div>
+
+        <!-- Active Scanned Bike Card -->
+        <div id="scannedBikeActive" style="display: none; flex-direction: column; gap: 18px;">
+          
+          <!-- Scanned Bike Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface, #ffffff); padding: 18px 20px; border-radius: var(--radius-lg, 14px); border: 1px solid var(--border, #e5e7eb); box-shadow: var(--shadow-sm);">
+            <div>
+              <div style="font-size: 11px; font-weight: 800; color: var(--accent, #f26d21); text-transform: uppercase; letter-spacing: 0.5px;">SCANNED FLEET BIKE</div>
+              <div style="font-size: 26px; font-weight: 900; color: var(--text, #111827); font-family: 'Outfit', sans-serif;" id="scanResCode">TNA074</div>
+              <div style="font-size: 13px; color: var(--text-muted, #6b7280); font-weight: 600;" id="scanResName">BharBike Velociti EV</div>
+            </div>
+            <div style="text-align: right;">
+              <span id="scanResBadge" class="badge-relay badge-relay-locked" style="font-size: 12.5px; padding: 6px 14px;">
+                🔒 Locked (Relay OFF)
+              </span>
+            </div>
+          </div>
+
+          <!-- Quick Telematics Grid -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+            <div style="background: var(--surface, #ffffff); border: 1px solid var(--border, #e5e7eb); border-radius: var(--radius, 10px); padding: 14px; text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted, #6b7280); text-transform: uppercase;">Battery Level</div>
+              <div style="font-size: 22px; font-weight: 800; color: #10b981; margin-top: 4px;" id="scanResBattery">--%</div>
+            </div>
+            <div style="background: var(--surface, #ffffff); border: 1px solid var(--border, #e5e7eb); border-radius: var(--radius, 10px); padding: 14px; text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted, #6b7280); text-transform: uppercase;">GPS Telematics</div>
+              <div style="font-size: 13.5px; font-weight: 700; color: var(--text, #111827); margin-top: 8px;" id="scanResGps">Checking...</div>
+            </div>
+            <div style="background: var(--surface, #ffffff); border: 1px solid var(--border, #e5e7eb); border-radius: var(--radius, 10px); padding: 14px; text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted, #6b7280); text-transform: uppercase;">Assigned Rider</div>
+              <div style="font-size: 13.5px; font-weight: 700; color: var(--text, #111827); margin-top: 8px;" id="scanResRider">Unassigned</div>
+            </div>
+          </div>
+
+          <!-- Ignition Override Actions -->
+          <div style="background: var(--surface, #ffffff); border: 1px solid var(--border, #e5e7eb); border-radius: var(--radius-lg, 14px); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-sm);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted, #6b7280); text-transform: uppercase;">Instant Relay Ignition Control:</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <button type="button" class="btn-studio-action" style="background: #10b981; color: #ffffff; padding: 12px;" onclick="dispatchScanRelay('ON')">
+                ⚡ Turn ON Ignition
+              </button>
+              <button type="button" class="btn-studio-action" style="background: #ef4444; color: #ffffff; padding: 12px;" onclick="dispatchScanRelay('OFF')">
+                🔒 Turn OFF Ignition
+              </button>
+            </div>
+          </div>
+
+          <!-- Shortcuts -->
+          <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn-studio-action btn-studio-secondary" style="flex: 1;" onclick="openDecalForScannedBike()">
+              🖨️ View & Print Decal
+            </button>
+            <a id="scanResRiderLink" href="/keyless" target="_blank" class="btn-studio-action btn-studio-outline" style="flex: 1;">
+              📱 Test Rider Keyless View
+            </a>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <!-- Floating Toast -->
@@ -1071,6 +1247,9 @@
   let currentBikeCode = "<%= bikes.length ? bikes[0].bike_code : 'TNA074' %>";
   let currentTheme = "white"; // Default to Pure White as requested
   let qrCodeInstance = null;
+  let adminHtml5QrScanner = null;
+  let isAdminCameraActive = false;
+  let scannedActiveCode = null;
 
   document.addEventListener("DOMContentLoaded", () => {
     updateDecalPreview(currentBikeCode);
@@ -1080,12 +1259,20 @@
     document.querySelectorAll(".keyless-tab-btn").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".keyless-tab-content").forEach(c => c.classList.remove("active"));
 
+    // If leaving scanner tab, stop camera
+    if (tabName !== "scanner" && isAdminCameraActive) {
+      stopAdminCameraScanner();
+    }
+
     if (tabName === "decal") {
       document.getElementById("tabBtnDecal").classList.add("active");
       document.getElementById("tabContentDecal").classList.add("active");
-    } else {
+    } else if (tabName === "switchboard") {
       document.getElementById("tabBtnSwitchboard").classList.add("active");
       document.getElementById("tabContentSwitchboard").classList.add("active");
+    } else if (tabName === "scanner") {
+      document.getElementById("tabBtnScanner").classList.add("active");
+      document.getElementById("tabContentScanner").classList.add("active");
     }
   }
 
@@ -1183,6 +1370,197 @@
     }
   }
 
+  /* ---------------------------------------------------- */
+  /* LIVE CAMERA QR SCANNER LOGIC                         */
+  /* ---------------------------------------------------- */
+  async function toggleAdminCameraScanner() {
+    if (isAdminCameraActive) {
+      stopAdminCameraScanner();
+    } else {
+      startAdminCameraScanner();
+    }
+  }
+
+  async function startAdminCameraScanner() {
+    const btnText = document.getElementById("adminCamText");
+    const btnIcon = document.getElementById("adminCamIcon");
+    const readerDiv = document.getElementById("admin-qr-reader");
+    const placeholder = document.getElementById("scannerIdlePlaceholder");
+
+    if (!adminHtml5QrScanner) {
+      adminHtml5QrScanner = new Html5Qrcode("admin-qr-reader");
+    }
+
+    try {
+      btnText.textContent = "Starting Camera...";
+      placeholder.style.display = "none";
+      readerDiv.style.display = "block";
+
+      await adminHtml5QrScanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 240, height: 240 }
+        },
+        (decodedText) => {
+          onAdminQrCodeScanned(decodedText);
+        },
+        () => {}
+      );
+
+      isAdminCameraActive = true;
+      btnText.textContent = "Stop Camera Scanner";
+      btnIcon.textContent = "⏹️";
+      showToast("📷 Camera active. Aim at any bike's QR sticker.", "info");
+    } catch (err) {
+      console.error("Camera error:", err);
+      btnText.textContent = "Start Camera Scanner";
+      btnIcon.textContent = "📷";
+      isAdminCameraActive = false;
+      readerDiv.style.display = "none";
+      placeholder.style.display = "flex";
+      alert("Camera permission denied or camera not found: " + (err.message || err));
+    }
+  }
+
+  async function stopAdminCameraScanner() {
+    if (adminHtml5QrScanner && isAdminCameraActive) {
+      try {
+        await adminHtml5QrScanner.stop();
+      } catch (e) {}
+      isAdminCameraActive = false;
+      const btnText = document.getElementById("adminCamText");
+      const btnIcon = document.getElementById("adminCamIcon");
+      const readerDiv = document.getElementById("admin-qr-reader");
+      const placeholder = document.getElementById("scannerIdlePlaceholder");
+
+      if (btnText) btnText.textContent = "Start Camera Scanner";
+      if (btnIcon) btnIcon.textContent = "📷";
+      if (readerDiv) readerDiv.style.display = "none";
+      if (placeholder) placeholder.style.display = "flex";
+    }
+  }
+
+  async function onAdminQrCodeScanned(qrText) {
+    let extractedCode = (qrText || "").trim();
+    try {
+      if (qrText.includes("http://") || qrText.includes("https://")) {
+        const url = new URL(qrText);
+        extractedCode = url.searchParams.get("bike") || 
+                        url.searchParams.get("bikeCode") || 
+                        url.pathname.split("/").filter(Boolean).pop() || 
+                        extractedCode;
+      }
+    } catch (e) {}
+
+    extractedCode = extractedCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    if (/^\d{1,3}$/.test(extractedCode)) {
+      extractedCode = `TNA${extractedCode.padStart(3, "0")}`;
+    }
+
+    if (extractedCode) {
+      if ("vibrate" in navigator) {
+        navigator.vibrate([100, 50, 100]);
+      }
+      stopAdminCameraScanner();
+      showToast(`✅ Scanned Bike: ${extractedCode}!`, "success");
+      loadScannedBikeIntelligence(extractedCode);
+    }
+  }
+
+  async function onScanImageFile(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+
+    if (!adminHtml5QrScanner) {
+      adminHtml5QrScanner = new Html5Qrcode("admin-qr-reader");
+    }
+
+    showToast("Analyzing QR photo...", "info");
+    try {
+      const decodedText = await adminHtml5QrScanner.scanFile(file, true);
+      onAdminQrCodeScanned(decodedText);
+    } catch (err) {
+      showToast("❌ Could not detect a valid QR code in this image.", "error");
+    }
+    input.value = "";
+  }
+
+  async function loadScannedBikeIntelligence(bikeCode) {
+    scannedActiveCode = bikeCode;
+
+    // Show active panel
+    document.getElementById("scannedBikeEmpty").style.display = "none";
+    const activePanel = document.getElementById("scannedBikeActive");
+    activePanel.style.display = "flex";
+
+    document.getElementById("scanResCode").textContent = bikeCode;
+    document.getElementById("scanResName").textContent = "Loading telematics...";
+    document.getElementById("scanResBattery").textContent = "--%";
+    document.getElementById("scanResGps").textContent = "Querying IoT...";
+    document.getElementById("scanResRider").textContent = "Checking...";
+    document.getElementById("scanResRiderLink").href = `/keyless?bike=${encodeURIComponent(bikeCode)}`;
+
+    try {
+      const res = await fetch(`/api/keyless/status?bikeCode=${encodeURIComponent(bikeCode)}`);
+      const data = await res.json();
+
+      if (data.success && data.bike) {
+        document.getElementById("scanResName").textContent = data.bike.name || `BharBike ${bikeCode}`;
+        document.getElementById("scanResBattery").textContent = `${data.bike.battery || 85}%`;
+
+        const badge = document.getElementById("scanResBadge");
+        if (data.bike.isLocked) {
+          badge.className = "badge-relay badge-relay-locked";
+          badge.textContent = "🔒 Locked (Relay OFF)";
+        } else {
+          badge.className = "badge-relay badge-relay-mobilized";
+          badge.textContent = "⚡ Mobilized (Relay ON)";
+        }
+
+        if (data.telematics?.hasGps) {
+          document.getElementById("scanResGps").innerHTML = "🛰️ Live GPS Active";
+        } else {
+          document.getElementById("scanResGps").innerHTML = "Manual Relay";
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch telematics for scanned bike:", err);
+    }
+
+    // Match assigned rider from switchboard table if available
+    const tableRow = document.querySelector(`.bike-row[data-code="${bikeCode.toLowerCase()}"]`);
+    if (tableRow) {
+      const riderAttr = tableRow.getAttribute("data-rider");
+      document.getElementById("scanResRider").textContent = riderAttr ? riderAttr.toUpperCase() : "Unassigned";
+    }
+  }
+
+  async function dispatchScanRelay(action) {
+    if (!scannedActiveCode) return;
+    dispatchRelayOverride(scannedActiveCode, action);
+    
+    // Update scanned card badge directly
+    const badge = document.getElementById("scanResBadge");
+    if (badge) {
+      if (action === "ON") {
+        badge.className = "badge-relay badge-relay-mobilized";
+        badge.textContent = "⚡ Mobilized (Relay ON)";
+      } else {
+        badge.className = "badge-relay badge-relay-locked";
+        badge.textContent = "🔒 Locked (Relay OFF)";
+      }
+    }
+  }
+
+  function openDecalForScannedBike() {
+    if (!scannedActiveCode) return;
+    jumpToDecalStudio(scannedActiveCode);
+  }
+
+  /* ---------------------------------------------------- */
+  /* RELAY OVERRIDE & SWITCHBOARD ACTIONS                 */
+  /* ---------------------------------------------------- */
   async function dispatchRelayOverride(bikeCode, action) {
     if (!confirm(`Are you sure you want to turn ${action} ignition for bike ${bikeCode}?`)) {
       return;

@@ -960,23 +960,39 @@ export async function dashboard(req, res) {
           return !isExpired;
         });
 
+        // Find all users who currently have ANY active subscription (future end_date or status: active)
+        const activeSubUserIds = new Set();
+        for (const [uid, list] of Object.entries(subsByUser)) {
+          if (list.some(s => s.status === 'active' && (!s.end_date || new Date(s.end_date) > now))) {
+            activeSubUserIds.add(String(uid).toLowerCase());
+          }
+        }
+
         const expiredUsersList = [];
         for (const [uid, list] of Object.entries(subsByUser)) {
-          const userSub = list.find(s => s.status === 'active') || list[0];
+          // If the user currently has an active subscription, they are NOT expired!
+          if (activeSubUserIds.has(String(uid).toLowerCase())) continue;
+
+          // Find their latest subscription by end_date
+          const sorted = [...list].sort((a, b) => new Date(b.end_date || b.created_at) - new Date(a.end_date || a.created_at));
+          const latestSub = sorted[0];
           const userExists = (allUsersData || []).some(u => String(u.id) === String(uid));
-          if (userExists && userSub && userSub.status === 'expired') {
-            expiredUsersList.push({ uid, sub: userSub });
+          if (userExists && latestSub && latestSub.status === 'expired') {
+            expiredUsersList.push({ uid, sub: latestSub });
           }
         }
 
         expiryOrders = expiredUsersList.map(({ uid, sub }) => {
-          const u = allUsers.find(user => user.id === uid);
+          const u = allUsers.find(user => String(user.id).toLowerCase() === String(uid).toLowerCase());
           // Does the user have a bike currently marked as in_use?
-          const activeRental = activeRentals.find(r => r.user_id === uid && (r.status === "ongoing" || r.status === "active" || r.status === "expired"));
+          const userRentals = (activeRentals || []).filter(r => String(r.user_id).toLowerCase() === String(uid).toLowerCase() && (r.status === "ongoing" || r.status === "active" || r.status === "expired"));
           let assignedBikeCode = "None";
           let bikeId = null;
-          if (activeRental) {
-             const latestRentalForBike = (activeRentals || []).find(r => r.bike_id === activeRental.bike_id);
+          if (userRentals.length > 0) {
+             const activeRental = userRentals[0];
+             const bikeRentals = (activeRentals || []).filter(r => r.bike_id === activeRental.bike_id);
+             bikeRentals.sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time));
+             const latestRentalForBike = bikeRentals[0];
              const bikeReassigned = latestRentalForBike && String(latestRentalForBike.user_id).toLowerCase() !== String(uid).toLowerCase();
              if (!bikeReassigned) {
                const b = bikes.find(bike => bike.id === activeRental.bike_id);
@@ -997,12 +1013,23 @@ export async function dashboard(req, res) {
           };
         });
 
-        const expiredUserIds = new Set(expiredUsersList.map(e => String(e.uid)));
+        const expiredUserIds = new Set(expiredUsersList.map(e => String(e.uid).toLowerCase()));
         activeRentals.forEach(r => {
-          if (r.status === "expired" && r.user_id && !expiredUserIds.has(String(r.user_id))) {
+          const rUid = String(r.user_id).toLowerCase();
+          // STRICT FILTER: If the user currently has an active subscription, NEVER show them as expired!
+          if (activeSubUserIds.has(rUid) || expiredUserIds.has(rUid)) return;
+
+          if (r.status === "expired" && r.user_id) {
+            // Verify the bike is actually still associated with this user, and wasn't reassigned to someone else!
+            const bikeRentals = (activeRentals || []).filter(other => other.bike_id === r.bike_id);
+            bikeRentals.sort((a, b) => new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time));
+            const latestRentalForBike = bikeRentals[0];
+            const bikeReassigned = latestRentalForBike && String(latestRentalForBike.user_id).toLowerCase() !== rUid;
+            if (bikeReassigned) return; // Bike has been reassigned to a different rider!
+
             const b = bikes.find(bike => bike.id === r.bike_id);
             if (b && b.status === "in_use") {
-              const u = allUsers.find(user => String(user.id) === String(r.user_id));
+              const u = allUsers.find(user => String(user.id).toLowerCase() === rUid);
               if (u) {
                 expiryOrders.push({
                   id: r.id,
@@ -1012,7 +1039,7 @@ export async function dashboard(req, res) {
                   userPhone: u.phone || "—",
                   endDate: r.end_time ? new Date(r.end_time).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Expired"
                 });
-                expiredUserIds.add(String(r.user_id));
+                expiredUserIds.add(rUid);
               }
             }
           }

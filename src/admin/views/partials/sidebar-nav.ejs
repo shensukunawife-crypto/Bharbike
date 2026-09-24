@@ -1,6 +1,6 @@
 <%
   const gOperations = ['orders', 'bookings', 'delivery-partners'].includes(active);
-  const gVehicle    = ['bikes', 'live-tracking', 'lock-logs', 'maintenance', 'hubs'].includes(active);
+  const gVehicle    = ['bikes', 'live-tracking', 'keyless', 'lock-logs', 'maintenance', 'hubs'].includes(active);
   const gUsers      = ['users', 'kyc-documents', 'subscriptions', 'payments', 'skipped-days', 'subscription-brain'].includes(active);
   const gFinancial  = ['earnings', 'analytics'].includes(active);
   const gSystem     = ['system-workflow', 'backend-monitor', 'activity-logs', 'sql-editor'].includes(active);
@@ -47,6 +47,7 @@
     engage:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
     config:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`,
     ads:        `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V21M12 19C7.02944 19 3 14.9706 3 10C3 5.02944 7.02944 1 12 1C16.9706 1 21 5.02944 21 10C21 14.9706 16.9706 19 12 19Z" fill="none"/><path d="M19 10C19 13.866 15.866 17 12 17C8.13401 17 5 13.866 5 10C5 6.13401 8.13401 3 12 3C15.866 3 19 6.13401 19 10Z"/><path d="M12 6V11L15.5 13.5"/></svg>`,
+    keyless:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>`,
   };
 %>
 
@@ -80,6 +81,9 @@
       </a>
       <a class="nav-link nav-link-sub <%= active === 'live-tracking' ? 'active' : '' %>" href="/admin/live-tracking" data-label="Live Tracking">
         <span class="nav-icon"><%- icons.liveTracking %></span><span style="flex:1;">Live Tracking</span><span class="sidebar-badge" style="background:#10b981; box-shadow:0 0 6px rgba(16,185,129,0.5); font-size:9.5px; padding:2px 6px;">LIVE</span>
+      </a>
+      <a class="nav-link nav-link-sub <%= active === 'keyless' ? 'active' : '' %>" href="/admin/keyless" data-label="Keyless & QR Studio">
+        <span class="nav-icon"><%- icons.keyless %></span><span style="flex:1;">Keyless & QR Studio</span><span class="sidebar-badge" style="background:#ff6d00; box-shadow:0 0 6px rgba(255,109,0,0.5); font-size:9.5px; padding:2px 6px;">NEW</span>
       </a>
       <a class="nav-link nav-link-sub <%= active === 'lock-logs' ? 'active' : '' %>" href="/admin/lock-logs" data-label="Lock Logs">
         <span class="nav-icon"><%- icons.monitor %></span><span style="flex:1;">Lock Logs</span>

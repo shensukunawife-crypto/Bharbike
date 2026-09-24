@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BharBike Keyless • 3D Ignition Switch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <base href="/keyless/">
+  <link rel="stylesheet" href="/keyless/style.css">
+  <!-- html5-qrcode for browser camera QR scanning -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Clean Minimal Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">
+          <h1>Bha<span class="hindi-r">र</span>Bike</h1>
+          <span class="sub-brand">SMART KEYLESS FLEET</span>
+        </div>
+      </div>
+      <div class="live-pill" id="headerPill">
+        <span class="live-dot"></span>
+        <span id="headerPillText">TEST PORTAL</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Scan or Select Bike Card (Shown when no bike has been scanned) -->
+      <section class="card clean-card scanner-card" id="scannerCard">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="eyebrow">STEP 1 • KEYLESS RIDE</span>
+            <h2 class="card-title">Scan QR to Unlock</h2>
+          </div>
+          <div class="tab-pill-container">
+            <button class="tab-pill active" id="tabScan" onclick="switchTab('scan')">📷 Camera</button>
+            <button class="tab-pill" id="tabManual" onclick="switchTab('manual')">⌨️ Enter Code</button>
+          </div>
+        </div>
+
+        <!-- Camera Scanner Viewport -->
+        <div class="scanner-viewport-container" id="scannerView">
+          <div id="qr-reader"></div>
+          <div class="scanner-actions">
+            <button class="btn btn-3d btn-primary" id="btnToggleCamera" onclick="toggleCameraScanner()">
+              <span id="camBtnIcon">📷</span> <span id="camBtnText">Start Camera Scanner</span>
+            </button>
+          </div>
+          <p class="helper-text">Point camera at the QR code sticker on the bike's handle to unlock ignition.</p>
+        </div>
+
+        <!-- Manual Bike Selector View -->
+        <div class="manual-select-container hidden" id="manualView">
+          <div class="input-group">
+            <label for="bikeSelect">Select Registered Bike:</label>
+            <div class="select-wrapper-3d">
+              <select id="bikeSelect" onchange="onSelectBike(this.value)">
+                <option value="">-- Choose a Registered Bike --</option>
+                <option value="TNA074" selected>TNA074 (Connected Test Bike)</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-divider"><span>OR ENTER CODE</span></div>
+          <div class="input-row">
+            <input type="text" id="manualBikeInput" class="input-3d" placeholder="e.g. TNA074" style="text-transform: uppercase;">
+            <button class="btn btn-3d btn-primary" onclick="confirmManualInput()">Unlock</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3D Ignition Control Hero Card (Hidden until bike is scanned) -->
+      <section class="card clean-card hero-control-card hidden" id="controlCard">
+        
+        <!-- Bike Identity Header -->
+        <div class="bike-identity-row">
+          <div class="bike-info">
+            <div class="bike-tag-row">
+              <span class="bike-label">SCANNED BIKE</span>
+              <button class="btn-rescan" onclick="returnToScanner()" title="Scan another bike">📷 Scan Another</button>
+            </div>
+            <h2 class="bike-code" id="displayBikeCode">TNA074</h2>
+            <span class="bike-model" id="displayBikeName">BharBike EV-TNA074</span>
+          </div>
+          <div class="bike-badge-container">
+            <div class="status-badge" id="ignitionBadge">
+              <span class="badge-dot"></span>
+              <span id="ignitionText">CHECKING...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Cards Row -->
+        <div class="metrics-row">
+          <div class="metric-card">
+            <span class="metric-label">BATTERY</span>
+            <div class="metric-val-row">
+              <span class="metric-icon">🔋</span>
+              <span class="metric-val" id="telemBattery">--%</span>
+            </div>
+            <div class="battery-bar-container">
+              <div class="battery-bar-fill" id="batteryBar" style="width: 50%;"></div>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">SPEED</span>
+            <div class="metric-val-row">
+              <span class="metric-icon">⚡</span>
+              <span class="metric-val" id="telemSpeed">0 km/h</span>
+            </div>
+            <span class="metric-sub" id="speedStatus">Stationary</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">GPS TELEMATICS</span>
+            <div class="metric-val-row">
+              <span class="metric-icon">📡</span>
+              <span class="metric-val" id="telemGps">Checking</span>
+            </div>
+            <span class="metric-sub" id="lastPingText">loconav live</span>
+          </div>
+        </div>
+
+        <!-- Hardware Mode Toggle Banner (LIVE by default) -->
+        <div class="sim-mode-banner" id="simBanner">
+          <div class="sim-toggle-left">
+            <span class="sim-icon" id="simIcon">⚡</span>
+            <div class="sim-text-group">
+              <span class="sim-title" id="simTitle">Hardware Dispatch: LIVE</span>
+              <span class="sim-subtitle" id="simSubtitle">Real physical ignition commands enabled</span>
+            </div>
+          </div>
+          <label class="sim-switch">
+            <input type="checkbox" id="simModeCheckbox" onchange="toggleSimMode(this.checked)">
+            <span class="sim-slider"></span>
+          </label>
+        </div>
+
+        <div class="hero-divider"></div>
+
+        <!-- 3D TACTILE NEUMORPHIC TOGGLE SWITCH (HERO COMPONENT) -->
+        <div class="switch-section">
+          <h3 class="switch-section-title">Ignition Power Control</h3>
+          <p class="switch-section-desc">Tap the 3D toggle or slide between ON and OFF</p>
+
+          <div class="tactile-switch-container">
+            <!-- ON Label -->
+            <div class="switch-label switch-label-top" id="labelOn" onclick="triggerSwitchAction('ON')">
+              <span>ON</span>
+            </div>
+
+            <!-- Inset 3D Track -->
+            <div class="tactile-switch-track state-off" id="switchTrack" onclick="handleTrackClick(event)">
+              <!-- Floating 3D Knob -->
+              <div class="tactile-switch-knob" id="switchKnob">
+                <div class="tactile-knob-dot" id="knobDot"></div>
+                <div class="knob-pulse" id="knobPulse"></div>
+              </div>
+            </div>
+
+            <!-- OFF Label -->
+            <div class="switch-label switch-label-bottom active" id="labelOff" onclick="triggerSwitchAction('OFF')">
+              <span>OFF</span>
+            </div>
+          </div>
+
+          <!-- Switch Status Text -->
+          <div class="switch-feedback-row">
+            <span id="switchFeedback">Current State: <strong>OFF</strong> (Relay Open)</span>
+          </div>
+        </div>
+
+        <!-- Explicit Dual 3D Buttons for Instant 1-Click Access -->
+        <div class="dual-buttons-row">
+          <button class="btn-3d-action btn-3d-on" id="btn3dOn" onclick="confirmBikeAction('ON')">
+            <div class="btn-3d-inner">
+              <span class="btn-3d-icon">⚡</span>
+              <div class="btn-3d-text">
+                <span class="btn-3d-main">POWER ON</span>
+                <span class="btn-3d-sub">Mobilize Relay</span>
+              </div>
+            </div>
+            <div class="btn-3d-spinner hidden" id="spinnerOn"></div>
+          </button>
+
+          <button class="btn-3d-action btn-3d-off" id="btn3dOff" onclick="confirmBikeAction('OFF')">
+            <div class="btn-3d-inner">
+              <span class="btn-3d-icon">🛑</span>
+              <div class="btn-3d-text">
+                <span class="btn-3d-main">POWER OFF</span>
+                <span class="btn-3d-sub">Immobilize Relay</span>
+              </div>
+            </div>
+            <div class="btn-3d-spinner hidden" id="spinnerOff"></div>
+          </button>
+        </div>
+
+        <!-- Refresh and Safety bar -->
+        <div class="bottom-utility-row">
+          <button class="btn-refresh-clean" onclick="refreshBikeStatus()" id="btnRefresh">
+            🔄 Refresh Status
+          </button>
+          <span class="safety-tip">⚠️ Ensure bike is parked</span>
+        </div>
+
+        <!-- Smart Battery Protection & Wake-Up Info -->
+        <div class="wake-up-hint-box">
+          <span class="hint-icon">💡</span>
+          <span class="hint-text"><strong>Smart Battery Protection:</strong> When parked, the GPS tracker sleeps to preserve 12V battery. Touching the bike or tapping Power ON wakes the tracker within 2–3s.</span>
+        </div>
+
+      </section>
+
+      <!-- Clean Activity & Hardware Response Stream -->
+      <section class="card clean-card logs-card">
+        <div class="logs-header">
+          <div class="logs-header-left">
+            <span class="logs-icon">📋</span>
+            <h3 class="logs-title">Hardware Response Stream</h3>
+          </div>
+          <button class="clear-logs-btn" onclick="clearLogs()">Clear Log</button>
+        </div>
+        <div class="logs-container" id="logsFeed">
+          <div class="log-entry system">
+            <span class="log-time" id="initTime">Ready</span>
+            <span class="log-text">Portal initialized. Scan or select a bike to begin hardware testing.</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay hidden" id="confirmModal">
+      <div class="modal-box-3d">
+        <div class="modal-icon-bubble" id="modalIconBubble">⚡</div>
+        <h3 class="modal-title" id="modalTitle">Confirm Power Control</h3>
+        <p class="modal-desc" id="modalDesc">Are you sure you want to turn ON ignition for bike TNA074?</p>
+        <div class="modal-actions-row">
+          <button class="btn btn-3d btn-soft" onclick="closeConfirmModal()">Cancel</button>
+          <button class="btn btn-3d" id="modalConfirmBtn" onclick="executeConfirmedAction()">Proceed</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast hidden" id="toast">
+      <span class="toast-icon" id="toastIcon">✅</span>
+      <span class="toast-text" id="toastText">Action completed successfully</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>BharBike Fleet Telematics • Keyless IoT Control</p>
+    </footer>
+
+  </div>
+
+  <script src="/keyless/app.js"></script>
+</body>
+</html>

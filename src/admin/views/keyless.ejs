@@ -1,0 +1,1269 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<!-- QRCode.js for client-side instant QR rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+  :root {
+    --kb-saffron: #ff6d00;
+    --kb-saffron-light: #ff851a;
+    --kb-dark-card: #111726;
+    --kb-dark-border: #1f2a3f;
+  }
+
+  .keyless-page-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-bottom: 50px;
+  }
+
+  /* Header Section */
+  .keyless-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(255, 109, 0, 0.08) 0%, rgba(17, 23, 38, 0.6) 100%);
+    border: 1px solid rgba(255, 109, 0, 0.2);
+    border-radius: 16px;
+    padding: 22px 24px;
+  }
+
+  .keyless-header-left h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text, #ffffff);
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .keyless-header-left p {
+    font-size: 13.5px;
+    color: var(--text-muted, #94a3b8);
+    margin: 0;
+    max-width: 680px;
+    line-height: 1.5;
+  }
+
+  .keyless-header-badge {
+    background: rgba(255, 109, 0, 0.15);
+    border: 1px solid var(--kb-saffron);
+    color: var(--kb-saffron-light);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .keyless-header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Stats Cards Grid */
+  .keyless-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .stat-card-box {
+    background: var(--bg-card, #141b2d);
+    border: 1px solid var(--border, #1f2a3f);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  .stat-card-box:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 109, 0, 0.4);
+  }
+
+  .stat-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .stat-icon-fleet { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+  .stat-icon-mobilized { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+  .stat-icon-locked { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+  .stat-icon-gps { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+
+  .stat-info .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text, #ffffff);
+    line-height: 1.1;
+  }
+
+  .stat-info .stat-label {
+    font-size: 12px;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 600;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Navigation Tabs */
+  .keyless-nav-tabs {
+    display: flex;
+    gap: 8px;
+    background: #0d121f;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #1f2a3f;
+    width: fit-content;
+  }
+
+  .keyless-tab-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 10px 20px;
+    font-size: 13.5px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+  }
+
+  .keyless-tab-btn.active {
+    background: var(--kb-saffron);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(255, 109, 0, 0.35);
+  }
+
+  .keyless-tab-content {
+    display: none;
+  }
+  .keyless-tab-content.active {
+    display: block;
+  }
+
+  /* ---------------------------------------------------- */
+  /* TAB 1: QR DECAL STUDIO LAYOUT                         */
+  /* ---------------------------------------------------- */
+  .decal-studio-container {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 980px) {
+    .decal-studio-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Left Config Panel */
+  .studio-config-card {
+    background: var(--bg-card, #141b2d);
+    border: 1px solid var(--border, #1f2a3f);
+    border-radius: 16px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .config-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text, #ffffff);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .studio-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .studio-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #cbd5e1;
+  }
+
+  .studio-select, .studio-input {
+    background: #0d121f;
+    border: 1px solid #23304a;
+    color: #ffffff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .studio-select:focus, .studio-input:focus {
+    border-color: var(--kb-saffron);
+  }
+
+  /* Theme Radio Selector */
+  .theme-radio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .theme-radio-card {
+    border: 2px solid #23304a;
+    background: #0d121f;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .theme-radio-card.active {
+    border-color: var(--kb-saffron);
+    background: rgba(255, 109, 0, 0.08);
+  }
+
+  .theme-radio-card .theme-preview-pill {
+    width: 100%;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+
+  .pill-dark { background: #0b0f19; color: #ff6d00; border: 1px solid #ff6d00; }
+  .pill-white { background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; }
+
+  .theme-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  /* Studio Quick Actions */
+  .studio-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .btn-studio-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+
+  .btn-studio-primary {
+    background: linear-gradient(135deg, #ff6d00 0%, #ff8c42 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(255, 109, 0, 0.4);
+  }
+
+  .btn-studio-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(255, 109, 0, 0.5);
+  }
+
+  .btn-studio-secondary {
+    background: #1f2a3f;
+    color: #ffffff;
+    border: 1px solid #2d3b55;
+  }
+
+  .btn-studio-secondary:hover {
+    background: #283750;
+  }
+
+  .btn-studio-outline {
+    background: transparent;
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+  }
+
+  .btn-studio-outline:hover {
+    background: rgba(56, 189, 248, 0.1);
+  }
+
+  /* Right Visualizer Stage */
+  .studio-preview-stage {
+    background: #080c14;
+    border: 1px solid #1f2a3f;
+    border-radius: 16px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 580px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stage-watermark {
+    position: absolute;
+    bottom: 12px;
+    right: 16px;
+    font-size: 11px;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  /* ---------------------------------------------------- */
+  /* VINYL DECAL 1:1 CARD CONTAINER                       */
+  /* ---------------------------------------------------- */
+  .vinyl-decal-card {
+    width: 440px;
+    height: 440px;
+    border-radius: 24px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 109, 0, 0.2);
+    position: relative;
+    user-select: none;
+    transition: all 0.25s ease;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  /* Theme: Dark */
+  .vinyl-decal-card.theme-dark {
+    background: radial-gradient(circle at top right, #1a233a 0%, #0c111d 75%);
+    border: 2px solid #23304a;
+    color: #ffffff;
+  }
+
+  /* Theme: White */
+  .vinyl-decal-card.theme-white {
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    color: #0f172a;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Decal Top Header */
+  .decal-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .decal-logo-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .decal-logo-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #ff6d00;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .decal-brand-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+
+  .decal-brand-name .hi-r {
+    color: #ff6d00;
+  }
+
+  .decal-bike-pill {
+    background: rgba(255, 109, 0, 0.15);
+    border: 1.5px solid #ff6d00;
+    color: #ff6d00;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+  }
+
+  .theme-white .decal-bike-pill {
+    background: #fff4ea;
+    border-color: #ff6d00;
+    color: #ff6d00;
+  }
+
+  /* Decal Middle Showcase */
+  .decal-middle-grid {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 16px;
+    align-items: center;
+    margin: 10px 0;
+  }
+
+  .decal-qr-box {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    position: relative;
+  }
+
+  #dynamicQrCanvas, #dynamicQrContainer {
+    width: 155px;
+    height: 155px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #dynamicQrContainer img, #dynamicQrContainer canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+
+  .decal-qr-helper {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #64748b;
+    margin-top: 4px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .decal-bike-feature {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+  }
+
+  .decal-bike-img {
+    max-width: 150px;
+    max-height: 100px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4));
+  }
+
+  .decal-feature-title {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+  }
+
+  .theme-dark .decal-feature-title { color: #f8fafc; }
+  .theme-white .decal-feature-title { color: #0f172a; }
+
+  .decal-feature-sub {
+    font-size: 10.5px;
+    color: #ff6d00;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* 3 Steps Row */
+  .decal-steps-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 8px 0;
+  }
+
+  .decal-step-cell {
+    border-radius: 8px;
+    padding: 6px 4px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .theme-dark .decal-step-cell {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .theme-white .decal-step-cell {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+
+  .decal-step-num {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ff6d00;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .decal-step-text {
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .theme-dark .decal-step-text { color: #e2e8f0; }
+  .theme-white .decal-step-text { color: #1e293b; }
+
+  /* Decal Footer */
+  .decal-bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 109, 0, 0.3);
+  }
+
+  .theme-dark .decal-bottom-bar { color: #94a3b8; }
+  .theme-white .decal-bottom-bar { color: #64748b; }
+
+  .decal-tagline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #ff6d00;
+  }
+
+  /* ---------------------------------------------------- */
+  /* TAB 2: REMOTE SWITCHBOARD TABLE                      */
+  /* ---------------------------------------------------- */
+  .switchboard-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .switchboard-filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .switchboard-search {
+    background: #0d121f;
+    border: 1px solid #23304a;
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    min-width: 200px;
+  }
+
+  .table-keyless-wrap {
+    background: var(--bg-card, #141b2d);
+    border: 1px solid var(--border, #1f2a3f);
+    border-radius: 14px;
+    overflow-x: auto;
+  }
+
+  .table-keyless {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .table-keyless th {
+    background: #0d121f;
+    padding: 12px 16px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #1f2a3f;
+  }
+
+  .table-keyless td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #172237;
+    color: var(--text, #ffffff);
+    vertical-align: middle;
+  }
+
+  .table-keyless tr:hover td {
+    background: rgba(255, 109, 0, 0.03);
+  }
+
+  .badge-relay {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .badge-relay-mobilized {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .badge-relay-locked {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .relay-btn-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .btn-relay-toggle {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-relay-on {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .btn-relay-on:hover {
+    background: #10b981;
+    color: #ffffff;
+  }
+
+  .btn-relay-off {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .btn-relay-off:hover {
+    background: #ef4444;
+    color: #ffffff;
+  }
+
+  .btn-relay-qr {
+    background: rgba(255, 109, 0, 0.15);
+    color: #ff851a;
+    border: 1px solid rgba(255, 109, 0, 0.3);
+  }
+  .btn-relay-qr:hover {
+    background: #ff6d00;
+    color: #ffffff;
+  }
+
+  /* Toast Notification */
+  #keylessToast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    z-index: 99999;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.25s ease;
+  }
+  #keylessToast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+</style>
+
+<div class="keyless-page-wrapper">
+
+  <!-- Top Hero Bar -->
+  <div class="keyless-header">
+    <div class="keyless-header-left">
+      <h1>
+        <span>⚡ BharBike Keyless & QR Decal Studio</span>
+        <span class="keyless-header-badge">LIVE ON BHARBIKE.COM</span>
+      </h1>
+      <p>
+        Design & print official 1:1 vehicle decals for the fleet, generate dynamic permanent QR codes, and remotely mobilize or immobilize bikes via BharBike's in-house IoT dispatch engine.
+      </p>
+    </div>
+    <div class="keyless-header-actions">
+      <a href="/keyless" target="_blank" class="btn-studio-action btn-studio-secondary" style="padding: 9px 15px; font-size: 12.5px;">
+        <span>📱 Open Rider Web App</span>
+      </a>
+      <a href="/keyless/placard" target="_blank" class="btn-studio-action btn-studio-outline" style="padding: 9px 15px; font-size: 12.5px;">
+        <span>📄 Open Standalone Placard</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="keyless-stats-grid">
+    <div class="stat-card-box">
+      <div class="stat-icon-wrapper stat-icon-fleet">🚲</div>
+      <div class="stat-info">
+        <div class="stat-value"><%= stats.totalBikes %></div>
+        <div class="stat-label">Total Fleet Bikes</div>
+      </div>
+    </div>
+    <div class="stat-card-box">
+      <div class="stat-icon-wrapper stat-icon-mobilized">⚡</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statMobilizedCount"><%= stats.mobilizedCount %></div>
+        <div class="stat-label">Mobilized (Ignition ON)</div>
+      </div>
+    </div>
+    <div class="stat-card-box">
+      <div class="stat-icon-wrapper stat-icon-locked">🔒</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statLockedCount"><%= stats.immobilizedCount %></div>
+        <div class="stat-label">Immobilized (Locked)</div>
+      </div>
+    </div>
+    <div class="stat-card-box">
+      <div class="stat-icon-wrapper stat-icon-gps">🛰️</div>
+      <div class="stat-info">
+        <div class="stat-value"><%= stats.gpsCount %></div>
+        <div class="stat-label">GPS Trackers Linked</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="keyless-nav-tabs">
+    <button class="keyless-tab-btn active" id="tabBtnDecal" onclick="switchKeylessTab('decal')">
+      <span>🖨️ 1:1 QR Decal Studio</span>
+    </button>
+    <button class="keyless-tab-btn" id="tabBtnSwitchboard" onclick="switchKeylessTab('switchboard')">
+      <span>⚡ Fleet Remote Switchboard</span>
+    </button>
+  </div>
+
+  <!-- TAB 1: 1:1 QR DECAL STUDIO -->
+  <div class="keyless-tab-content active" id="tabContentDecal">
+    <div class="decal-studio-container">
+      
+      <!-- Left Config Controls -->
+      <div class="studio-config-card">
+        <div class="config-section-title">
+          <span>⚙️ Decal Specifications</span>
+        </div>
+
+        <!-- Bike Selector -->
+        <div class="studio-form-group">
+          <label class="studio-label" for="decalBikeSelect">Select Fleet Bike:</label>
+          <select class="studio-select" id="decalBikeSelect" onchange="onDecalBikeChange(this.value)">
+            <% bikes.forEach((b) => { %>
+              <option value="<%= b.bike_code %>" data-locked="<%= b.is_locked %>" data-rider="<%= b.currentRider ? b.currentRider.name : '' %>">
+                <%= b.bike_code %> — <%= b.name %> (<%= b.is_locked ? "🔒 Locked" : "⚡ ON" %>)
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- Custom Bike Code Input (for custom bikes or testing) -->
+        <div class="studio-form-group">
+          <label class="studio-label" for="customBikeCode">Or Type Custom Bike Code:</label>
+          <input type="text" class="studio-input" id="customBikeCode" placeholder="e.g. TNA074" value="<%= bikes.length ? bikes[0].bike_code : 'TNA074' %>" oninput="onCustomBikeCodeInput(this.value)" />
+        </div>
+
+        <!-- Theme Selection -->
+        <div class="studio-form-group">
+          <label class="studio-label">Decal Surface Style:</label>
+          <div class="theme-radio-grid">
+            <div class="theme-radio-card active" id="radioThemeDark" onclick="setDecalTheme('dark')">
+              <div class="theme-preview-pill pill-dark">OBSIDIAN SAFFRON</div>
+              <div class="theme-title">Dark Luxe (Vinyl)</div>
+            </div>
+            <div class="theme-radio-card" id="radioThemeWhite" onclick="setDecalTheme('white')">
+              <div class="theme-preview-pill pill-white">PURE WHITE</div>
+              <div class="theme-title">Workshop Print</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target Destination URL -->
+        <div class="studio-form-group">
+          <label class="studio-label">QR Decodes To:</label>
+          <input type="text" class="studio-input" id="targetQrUrl" readonly style="font-size: 11.5px; color: #94a3b8; background: #080c14;" />
+        </div>
+
+        <!-- Quick Action Buttons -->
+        <div class="studio-actions-list">
+          <button type="button" class="btn-studio-action btn-studio-primary" onclick="downloadDecalImage()">
+            <span>📥 Download Decal PNG (Print-Ready)</span>
+          </button>
+          <button type="button" class="btn-studio-action btn-studio-secondary" onclick="printDecalCard()">
+            <span>🖨️ Print Decal Placard Sheet</span>
+          </button>
+          <a id="btnTestRiderLink" href="/keyless" target="_blank" class="btn-studio-action btn-studio-outline">
+            <span>📱 Test Scanned Rider Flow</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Right Visualizer Stage -->
+      <div class="studio-preview-stage">
+        
+        <!-- Live Vinyl Decal Preview Card -->
+        <div class="vinyl-decal-card theme-dark" id="vinylDecalCard">
+          
+          <!-- Decal Top Bar -->
+          <div class="decal-top-bar">
+            <div class="decal-logo-group">
+              <div class="decal-logo-icon">⚡</div>
+              <span class="decal-brand-name">Bha<span class="hi-r">र</span>Bike</span>
+            </div>
+            <div class="decal-bike-pill" id="previewBikeBadge">
+              ⚡ TNA074
+            </div>
+          </div>
+
+          <!-- Decal Middle Showcase -->
+          <div class="decal-middle-grid">
+            <div class="decal-qr-box">
+              <div id="dynamicQrContainer"></div>
+              <span class="decal-qr-helper">Point Camera to Start</span>
+            </div>
+            <div class="decal-bike-feature">
+              <img class="decal-bike-img" src="/keyless/assets/ev_bike_hero.png" alt="Velociti EV" />
+              <div class="decal-feature-title">Velociti EV • Keyless Go</div>
+              <div class="decal-feature-sub">100% Smart Electric</div>
+            </div>
+          </div>
+
+          <!-- 3 Steps -->
+          <div class="decal-steps-row">
+            <div class="decal-step-cell">
+              <span class="decal-step-num">1</span>
+              <span class="decal-step-text">Scan QR Code</span>
+            </div>
+            <div class="decal-step-cell">
+              <span class="decal-step-num">2</span>
+              <span class="decal-step-text">Tap Turn ON</span>
+            </div>
+            <div class="decal-step-cell">
+              <span class="decal-step-num">3</span>
+              <span class="decal-step-text">Ride Keyless</span>
+            </div>
+          </div>
+
+          <!-- Decal Footer -->
+          <div class="decal-bottom-bar">
+            <div class="decal-tagline">
+              <span>🛡️ IoT Protected Vehicle</span>
+            </div>
+            <div class="decal-helpline">
+              24/7 Helpline: <strong>+91 98920 00000</strong>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="stage-watermark">
+          Decal Dimension: 100mm × 100mm Square Vinyl Decal Standard
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TAB 2: REMOTE FLEET SWITCHBOARD -->
+  <div class="keyless-tab-content" id="tabContentSwitchboard">
+    
+    <div class="switchboard-controls">
+      <div class="switchboard-filter-group">
+        <input type="text" class="switchboard-search" id="switchboardSearch" placeholder="🔍 Search Bike ID or Rider..." oninput="filterSwitchboard()" />
+        <select class="studio-select" id="switchboardStatusFilter" onchange="filterSwitchboard()" style="padding: 7px 12px; font-size: 13px;">
+          <option value="all">All States</option>
+          <option value="mobilized">⚡ Mobilized (ON)</option>
+          <option value="locked">🔒 Immobilized (Locked)</option>
+          <option value="gps">🛰️ Has GPS Linked</option>
+        </select>
+      </div>
+      <div>
+        <span style="font-size: 12px; color: #94a3b8; font-weight: 600;">
+          Showing <span id="visibleBikeCount"><%= bikes.length %></span> of <%= bikes.length %> bikes
+        </span>
+      </div>
+    </div>
+
+    <div class="table-keyless-wrap">
+      <table class="table-keyless" id="switchboardTable">
+        <thead>
+          <tr>
+            <th>Bike Code</th>
+            <th>Fleet Model</th>
+            <th>Active Rider</th>
+            <th>Ignition Relay State</th>
+            <th>Battery</th>
+            <th>GPS Hardware</th>
+            <th>Remote Action</th>
+            <th>Decal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!bikes.length) { %>
+            <tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 24px;">No bikes registered in system.</td></tr>
+          <% } %>
+          <% bikes.forEach((bike) => { %>
+            <tr class="bike-row" data-code="<%= bike.bike_code.toLowerCase() %>" data-locked="<%= bike.is_locked %>" data-gps="<%= bike.hasGps %>" data-rider="<%= bike.currentRider ? bike.currentRider.name.toLowerCase() : '' %>">
+              <td>
+                <span style="font-family: 'Outfit', sans-serif; font-size: 14.5px; font-weight: 800; color: #ff6d00;">
+                  <%= bike.bike_code %>
+                </span>
+              </td>
+              <td><%= bike.name %></td>
+              <td>
+                <% if (bike.currentRider) { %>
+                  <div style="font-weight: 700; color: #ffffff;"><%= bike.currentRider.name %></div>
+                  <div style="font-size: 11px; color: #94a3b8;"><%= bike.currentRider.phone || "No phone" %></div>
+                <% } else { %>
+                  <span style="color: #64748b; font-style: italic;">Unassigned</span>
+                <% } %>
+              </td>
+              <td>
+                <span id="relayBadge-<%= bike.bike_code %>" class="badge-relay <%= bike.is_locked ? 'badge-relay-locked' : 'badge-relay-mobilized' %>">
+                  <%= bike.is_locked ? "🔒 Locked (Relay OFF)" : "⚡ Mobilized (Relay ON)" %>
+                </span>
+              </td>
+              <td>
+                <span style="font-weight: 700; color: <%= bike.battery < 25 ? '#ef4444' : '#10b981' %>;">
+                  <%= bike.battery %>%
+                </span>
+              </td>
+              <td>
+                <% if (bike.hasGps) { %>
+                  <span style="color: #10b981; font-weight: 600; font-size: 12px;">🛰️ Linked</span>
+                <% } else { %>
+                  <span style="color: #64748b; font-size: 12px;">Manual Relay</span>
+                <% } %>
+              </td>
+              <td>
+                <div class="relay-btn-group">
+                  <button type="button" class="btn-relay-toggle btn-relay-on" onclick="dispatchRelayOverride('<%= bike.bike_code %>', 'ON')">
+                    ⚡ Turn ON
+                  </button>
+                  <button type="button" class="btn-relay-toggle btn-relay-off" onclick="dispatchRelayOverride('<%= bike.bike_code %>', 'OFF')">
+                    🔒 Turn OFF
+                  </button>
+                </div>
+              </td>
+              <td>
+                <button type="button" class="btn-relay-toggle btn-relay-qr" onclick="jumpToDecalStudio('<%= bike.bike_code %>')">
+                  🏷️ Print QR
+                </button>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Floating Toast -->
+<div id="keylessToast">
+  <span id="toastIcon">⚡</span>
+  <span id="toastMessage">Command executed successfully.</span>
+</div>
+
+<script>
+  let currentBikeCode = "<%= bikes.length ? bikes[0].bike_code : 'TNA074' %>";
+  let currentTheme = "dark";
+  let qrCodeInstance = null;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    updateDecalPreview(currentBikeCode);
+  });
+
+  function switchKeylessTab(tabName) {
+    document.querySelectorAll(".keyless-tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".keyless-tab-content").forEach(c => c.classList.remove("active"));
+
+    if (tabName === "decal") {
+      document.getElementById("tabBtnDecal").classList.add("active");
+      document.getElementById("tabContentDecal").classList.add("active");
+    } else {
+      document.getElementById("tabBtnSwitchboard").classList.add("active");
+      document.getElementById("tabContentSwitchboard").classList.add("active");
+    }
+  }
+
+  function onDecalBikeChange(code) {
+    if (!code) return;
+    currentBikeCode = code.trim().toUpperCase();
+    document.getElementById("customBikeCode").value = currentBikeCode;
+    updateDecalPreview(currentBikeCode);
+  }
+
+  function onCustomBikeCodeInput(val) {
+    if (!val) return;
+    currentBikeCode = val.trim().toUpperCase();
+    updateDecalPreview(currentBikeCode);
+  }
+
+  function jumpToDecalStudio(code) {
+    switchKeylessTab("decal");
+    const sel = document.getElementById("decalBikeSelect");
+    if (sel) sel.value = code;
+    const inp = document.getElementById("customBikeCode");
+    if (inp) inp.value = code;
+    onDecalBikeChange(code);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setDecalTheme(theme) {
+    currentTheme = theme;
+    const card = document.getElementById("vinylDecalCard");
+    const rDark = document.getElementById("radioThemeDark");
+    const rWhite = document.getElementById("radioThemeWhite");
+
+    if (theme === "white") {
+      card.classList.remove("theme-dark");
+      card.classList.add("theme-white");
+      rWhite.classList.add("active");
+      rDark.classList.remove("active");
+    } else {
+      card.classList.remove("theme-white");
+      card.classList.add("theme-dark");
+      rDark.classList.add("active");
+      rWhite.classList.remove("active");
+    }
+  }
+
+  function updateDecalPreview(code) {
+    if (!code) return;
+    document.getElementById("previewBikeBadge").textContent = "⚡ " + code;
+
+    const baseOrigin = window.location.origin || "https://bharbike.com";
+    const fullTargetUrl = baseOrigin + "/keyless?bike=" + encodeURIComponent(code);
+    document.getElementById("targetQrUrl").value = fullTargetUrl;
+    document.getElementById("btnTestRiderLink").href = fullTargetUrl;
+
+    const container = document.getElementById("dynamicQrContainer");
+    container.innerHTML = "";
+
+    // Generate high quality QR code client-side
+    try {
+      if (window.QRCode) {
+        qrCodeInstance = new QRCode(container, {
+          text: fullTargetUrl,
+          width: 155,
+          height: 155,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } else {
+        // Fallback image
+        const img = document.createElement("img");
+        img.src = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=H&margin=0&data=" + encodeURIComponent(fullTargetUrl);
+        img.style.width = "155px";
+        img.style.height = "155px";
+        container.appendChild(img);
+      }
+    } catch (e) {
+      console.error("QR Generation error:", e);
+    }
+  }
+
+  function downloadDecalImage() {
+    // Open printable placard URL which prints or saves 1:1 image
+    const baseOrigin = window.location.origin || "https://bharbike.com";
+    const placardUrl = baseOrigin + "/keyless/placard?bike=" + encodeURIComponent(currentBikeCode);
+    const win = window.open(placardUrl, "_blank");
+    showToast("Opening high-resolution placard sheet for " + currentBikeCode + "...");
+  }
+
+  function printDecalCard() {
+    const baseOrigin = window.location.origin || "https://bharbike.com";
+    const placardUrl = baseOrigin + "/keyless/placard?bike=" + encodeURIComponent(currentBikeCode);
+    const printWin = window.open(placardUrl, "_blank");
+    if (printWin) {
+      printWin.focus();
+    }
+  }
+
+  async function dispatchRelayOverride(bikeCode, action) {
+    if (!confirm(`Are you sure you want to turn ${action} ignition for bike ${bikeCode}?`)) {
+      return;
+    }
+
+    showToast(`Sending ${action} command for ${bikeCode}...`, "info");
+
+    try {
+      const res = await fetch("/api/keyless/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bikeCode, action })
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        showToast(`✅ Successfully turned ${action} ignition for ${bikeCode}!`, "success");
+        
+        // Update badge in switchboard table
+        const badge = document.getElementById("relayBadge-" + bikeCode);
+        if (badge) {
+          if (action === "ON") {
+            badge.className = "badge-relay badge-relay-mobilized";
+            badge.textContent = "⚡ Mobilized (Relay ON)";
+          } else {
+            badge.className = "badge-relay badge-relay-locked";
+            badge.textContent = "🔒 Locked (Relay OFF)";
+          }
+        }
+
+        // Recalculate stats counts
+        const allBadges = document.querySelectorAll(".badge-relay");
+        let mob = 0, loc = 0;
+        allBadges.forEach(b => {
+          if (b.classList.contains("badge-relay-mobilized")) mob++;
+          if (b.classList.contains("badge-relay-locked")) loc++;
+        });
+        const mobEl = document.getElementById("statMobilizedCount");
+        const locEl = document.getElementById("statLockedCount");
+        if (mobEl) mobEl.textContent = mob;
+        if (locEl) locEl.textContent = loc;
+      } else {
+        showToast("⚠️ " + (json.message || "Failed to execute relay command"), "error");
+      }
+    } catch (e) {
+      showToast("❌ Network error: " + e.message, "error");
+    }
+  }
+
+  function filterSwitchboard() {
+    const query = (document.getElementById("switchboardSearch").value || "").trim().toLowerCase();
+    const status = document.getElementById("switchboardStatusFilter").value;
+    const rows = document.querySelectorAll(".bike-row");
+    let visibleCount = 0;
+
+    rows.forEach(r => {
+      const code = r.getAttribute("data-code") || "";
+      const rider = r.getAttribute("data-rider") || "";
+      const isLocked = r.getAttribute("data-locked") === "true";
+      const hasGps = r.getAttribute("data-gps") === "true";
+
+      let matchesQuery = code.includes(query) || rider.includes(query);
+      let matchesStatus = true;
+
+      if (status === "mobilized" && isLocked) matchesStatus = false;
+      if (status === "locked" && !isLocked) matchesStatus = false;
+      if (status === "gps" && !hasGps) matchesStatus = false;
+
+      if (matchesQuery && matchesStatus) {
+        r.style.display = "";
+        visibleCount++;
+      } else {
+        r.style.display = "none";
+      }
+    });
+
+    document.getElementById("visibleBikeCount").textContent = visibleCount;
+  }
+
+  function showToast(msg, type = "info") {
+    const toast = document.getElementById("keylessToast");
+    const msgEl = document.getElementById("toastMessage");
+    const iconEl = document.getElementById("toastIcon");
+
+    if (type === "success") {
+      iconEl.textContent = "✅";
+      toast.style.borderColor = "#10b981";
+    } else if (type === "error") {
+      iconEl.textContent = "❌";
+      toast.style.borderColor = "#ef4444";
+    } else {
+      iconEl.textContent = "⚡";
+      toast.style.borderColor = "#ff6d00";
+    }
+
+    msgEl.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => {
+      toast.classList.remove("show");
+    }, 3500);
+  }
+</script>

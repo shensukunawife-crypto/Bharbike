@@ -54,6 +54,8 @@ import {
   isUniqueViolation,
 } from "../utils/ticketNumber.js";
 import { handleLoconavWebhook } from "../controllers/iotWebhookController.js";
+import keylessRoutes from "./keylessRoutes.js";
+import { getBikesList, getBikeStatus, controlBike } from "../controllers/keylessController.js";
 
 const api = Router();
 api.get("/health", (req, res) => res.json({ status: "ok" }));
@@ -61,6 +63,12 @@ api.get("/health", (req, res) => res.json({ status: "ok" }));
 // LocoNav & IoT Webhook Listeners (Captures real-time portal mobilizations / immobilizations)
 api.post("/iot/webhook", handleLoconavWebhook);
 api.post("/loconav/webhook", handleLoconavWebhook);
+
+// BharBike Keyless Go System (Web App & QR Controls)
+api.use("/keyless", keylessRoutes);
+api.get("/bike-status", getBikeStatus);
+api.post("/bike-control", controlBike);
+api.get("/bikes-list", getBikesList);
 
 api.get("/ads", async (req, res) => {
   try {

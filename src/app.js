@@ -63,6 +63,14 @@ const __dirname = path.dirname(__filename);
 // Serve compliance landing page static files
 app.use(express.static(path.join(__dirname, "public")));
 
+// Direct Keyless Portal & Decal routes
+app.get("/keyless", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "keyless", "index.html"));
+});
+app.get("/keyless/placard", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "keyless", "placard.html"));
+});
+
 app.use(express.json({ limit: "15mb" }));
 
 app.set("view engine", "ejs");

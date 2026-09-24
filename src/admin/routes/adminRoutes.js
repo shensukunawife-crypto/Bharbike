@@ -57,6 +57,7 @@ router.get("/api/telematics/fleet/all", requirePermission("manage_bikes"), liveT
 router.get("/api/telematics/:bikeId/live", requirePermission("manage_bikes"), liveTrackingController.getLiveBikeTelematics);
 router.post("/api/telematics/:bikeId/control", requirePermission("manage_bikes"), liveTrackingController.remoteControlBike);
 router.get("/bikes", requirePermission("manage_bikes"), adminController.bikes);
+router.get("/keyless", requirePermission("manage_bikes"), adminController.keylessStudioPage);
 router.get("/lock-logs", requirePermission("manage_bikes"), adminController.bikeLockLogsPage);
 router.post("/api/lock-pool/retry", requirePermission("manage_bikes"), adminController.forceRetryLockPool);
 router.get("/hubs", requirePermission("manage_bikes"), adminController.hubsPage);

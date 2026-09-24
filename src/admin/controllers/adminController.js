@@ -6602,6 +6602,79 @@ export async function saveSocials(req, res) {
   }
 }
 
+export async function keylessStudioPage(req, res) {
+  try {
+    const [
+      { data: bikesData, error: bikesError },
+      { data: vehiclesData, error: vehiclesError },
+      { data: rentalsData, error: rentalsError }
+    ] = await Promise.all([
+      supabase.from("bikes").select("*").order("bike_code", { ascending: true }),
+      supabase.from("vehicles").select("bike_id, vehicle_uuid, vehicle_number, name"),
+      supabase.from("rentals").select("*, users ( id, full_name, phone )").in("status", ["ongoing", "active"]).order("created_at", { ascending: false })
+    ]);
+
+    if (bikesError) console.error("[keylessStudioPage] bikes fetch error:", bikesError);
+    if (vehiclesError) console.error("[keylessStudioPage] vehicles fetch error:", vehiclesError);
+    if (rentalsError) console.error("[keylessStudioPage] rentals fetch error:", rentalsError);
+
+    const vehicleMap = new Map();
+    (vehiclesData || []).forEach(v => {
+      if (v.bike_id && !vehicleMap.has(v.bike_id)) {
+        vehicleMap.set(v.bike_id, v);
+      }
+    });
+
+    const activeRentalMap = new Map();
+    (rentalsData || []).forEach(r => {
+      if (r.bike_id && !activeRentalMap.has(r.bike_id)) {
+        activeRentalMap.set(r.bike_id, r);
+      }
+    });
+
+    const enrichedBikes = (bikesData || []).map(b => {
+      const v = vehicleMap.get(b.id);
+      const r = activeRentalMap.get(b.id);
+      const riderUser = r?.users || null;
+
+      return {
+        id: b.id,
+        bike_code: b.bike_code || `TNA${String(b.id).padStart(3, "0")}`,
+        name: b.name || `BharBike ${b.bike_code}`,
+        status: b.status || "available",
+        is_locked: b.is_locked === true,
+        battery: b.battery != null ? Number(b.battery) : 80,
+        location: b.location || "Thane Hub",
+        hasGps: Boolean(v?.vehicle_uuid),
+        vehicleUuid: v?.vehicle_uuid || null,
+        vehicleNumber: v?.vehicle_number || null,
+        currentRider: riderUser ? {
+          name: riderUser.full_name || "Active Rider",
+          phone: riderUser.phone || ""
+        } : null
+      };
+    });
+
+    const stats = {
+      totalBikes: enrichedBikes.length,
+      mobilizedCount: enrichedBikes.filter(b => b.is_locked === false).length,
+      immobilizedCount: enrichedBikes.filter(b => b.is_locked === true).length,
+      gpsCount: enrichedBikes.filter(b => b.hasGps).length
+    };
+
+    return renderPage(res, {
+      title: "Keyless & QR Decal Studio",
+      active: "keyless",
+      bodyView: "keyless",
+      bikes: enrichedBikes,
+      stats
+    });
+  } catch (err) {
+    console.error("[keylessStudioPage] unexpected error:", err);
+    return res.status(500).send("Unable to load Keyless & QR Studio");
+  }
+}
+
 export async function bikeLockLogsPage(req, res) {
   try {
     const [

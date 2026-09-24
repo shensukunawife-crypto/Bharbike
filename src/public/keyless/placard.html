@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BharBike Keyless Go — Square Vehicle Decal</title>
+  <base href="/keyless/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-dark: #111726;
+      --card-white: #ffffff;
+      --orange: #ff6d00;
+      --orange-light: #ff851a;
+      --border-dark: #1f2a3f;
+      --border-white: #e2e8f0;
+      --text-dark: #ffffff;
+      --text-white: #0f172a;
+      --subtext-dark: #94a3b8;
+      --subtext-white: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: var(--bg);
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 16px 60px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Action Bar */
+    .top-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 760px;
+      width: 100%;
+      margin-bottom: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .theme-toggle-group {
+      display: flex;
+      background: #141b2d;
+      border: 1px solid #23304a;
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .theme-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 7px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .theme-btn.active {
+      background: var(--orange);
+      color: #0b0f17;
+      font-weight: 800;
+      box-shadow: 0 2px 10px rgba(255, 109, 0, 0.45);
+    }
+
+    .actions-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-action {
+      background: #1e293b;
+      color: #ffffff;
+      border: 1px solid #334155;
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      background: #334155;
+      transform: translateY(-1px);
+    }
+
+    .btn-action.btn-primary {
+      background: linear-gradient(135deg, #ff6d00, #e65100);
+      border-color: #ff6d00;
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .btn-action.btn-primary:hover {
+      box-shadow: 0 4px 18px rgba(255, 109, 0, 0.45);
+    }
+
+    .print-tip {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* ─── SQUARE DECAL CONTAINER (1:1 Aspect Ratio) ─── */
+    .square-decal {
+      width: 720px;
+      height: 720px;
+      background: var(--bg);
+      border-radius: 36px;
+      border: 3.5px solid var(--border-dark);
+      padding: 30px 34px 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    body.theme-white {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    body.theme-white .square-decal {
+      background: #ffffff;
+      border-color: #cbd5e1;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
+    }
+
+    body.theme-white .brand-title { color: #0f172a; }
+    body.theme-white .qr-showcase, body.theme-white .bike-showcase {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+    body.theme-white .step-card {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+    body.theme-white .step-title { color: #0f172a; }
+    body.theme-white .qr-scan-label { color: #0f172a; }
+    body.theme-white .decal-footer { border-color: #e2e8f0; }
+
+    .square-decal::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, var(--orange), transparent);
+      border-radius: 999px;
+    }
+
+    /* Header */
+    .decal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-img {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 4px 16px rgba(255, 109, 0, 0.35);
+      border: 2px solid #222f46;
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 25px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .brand-title span { color: var(--orange); }
+
+    .brand-tagline {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.8px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .header-badge-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .bike-id-pill {
+      background: var(--orange);
+      color: #0b0f17;
+      font-family: 'Outfit', sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      box-shadow: 0 4px 14px rgba(255, 109, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bike-submeta {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* Main Content */
+    .main-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 10px 0;
+      width: 100%;
+      height: 350px;
+    }
+
+    .qr-showcase {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 330px;
+      height: 100%;
+      background: var(--card-dark);
+      border: 2px solid var(--border-dark);
+      border-radius: 26px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .qr-frame {
+      width: 250px;
+      height: 250px;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      border: 2px solid #334155;
+    }
+
+    .qr-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: -webkit-optimize-contrast;
+      display: block;
+    }
+
+    .qr-center-logo {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+      object-fit: cover;
+      background: #ffffff;
+    }
+
+    .qr-scan-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .qr-scan-label svg {
+      width: 15px;
+      height: 15px;
+      fill: var(--orange);
+    }
+
+    .bike-showcase {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      width: 330px;
+      height: 100%;
+      background: var(--card-dark);
+      border: 2px solid var(--border-dark);
+      border-radius: 26px;
+      padding: 14px 12px 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bike-pill-tag {
+      background: rgba(255, 109, 0, 0.12);
+      border: 1px solid rgba(255, 109, 0, 0.35);
+      color: var(--orange);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 4px 11px;
+      border-radius: 999px;
+      align-self: flex-start;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .bike-pill-tag .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--orange);
+      border-radius: 50%;
+    }
+
+    .bike-img-frame {
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bike-img {
+      max-width: 96%;
+      max-height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.6));
+    }
+
+    .bike-caption {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-dark);
+      padding-top: 8px;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+
+    .bike-specs-badge {
+      color: var(--orange);
+      font-weight: 800;
+    }
+
+    /* 3 Steps */
+    .steps-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+    }
+
+    .step-card {
+      background: var(--card-dark);
+      border: 1.5px solid var(--border-dark);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      background: rgba(255, 109, 0, 0.15);
+      color: var(--orange);
+      border: 1px solid rgba(255, 109, 0, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .step-subtitle {
+      font-size: 9px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+
+    /* Footer */
+    .decal-footer {
+      width: 100%;
+      border-top: 1px dashed var(--border-dark);
+      padding-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+
+    .security-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .security-badge svg {
+      width: 12px;
+      height: 12px;
+      fill: var(--orange);
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .top-controls, .print-tip {
+        display: none !important;
+      }
+      .square-decal {
+        box-shadow: none !important;
+        border: 2px solid #000000 !important;
+        page-break-inside: avoid;
+        margin: 0 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls Bar -->
+  <div class="top-controls">
+    <div class="theme-toggle-group">
+      <button class="theme-btn active" id="btnDark" onclick="setTheme('dark')">🌙 Dark Edition</button>
+      <button class="theme-btn" id="btnWhite" onclick="setTheme('white')">☀️ White Edition</button>
+    </div>
+    <div class="actions-group">
+      <button class="btn-action" onclick="window.print()">
+        🖨️ Print Decal
+      </button>
+      <a class="btn-action btn-primary" id="downloadBtn" href="bharbike_square_decal_dark_tna074.png" download="bharbike_square_decal_TNA074.png">
+        ⬇️ Download Square PNG
+      </a>
+    </div>
+  </div>
+
+  <div class="print-tip">
+    ⚡ <strong>Square Format (1:1):</strong> Engineered for motorcycle tank center, battery casing, or handlebar stem.
+  </div>
+
+  <!-- Real Square Decal -->
+  <div class="square-decal" id="decalCard">
+    <div class="decal-header">
+      <div class="brand-section">
+        <img class="brand-logo-img" src="assets/app_icon.png" alt="BharBike Logo" />
+        <div class="brand-text-block">
+          <div class="brand-title">BHAR<span>BIKE</span></div>
+          <div class="brand-tagline">Smart Electric Mobility</div>
+        </div>
+      </div>
+      <div class="header-badge-group">
+        <div class="bike-id-pill" id="displayBadgeCode">
+          ⚡ TNA074
+        </div>
+        <div class="bike-submeta">Thane Fleet Hub • Keyless Go</div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-body">
+      <div class="qr-showcase">
+        <div class="qr-frame">
+          <img class="qr-image" id="qrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=0&data=https%3A%2F%2Fbharbike.com%2Fkeyless%3Fbike%3DTNA074" alt="QR Code" />
+          <img class="qr-center-logo" src="assets/app_icon.png" alt="Center Bhar Logo" />
+        </div>
+        <div class="qr-scan-label">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+          </svg>
+          Point Phone Camera to Scan
+        </div>
+      </div>
+
+      <div class="bike-showcase">
+        <div class="bike-pill-tag">
+          <span class="dot"></span> 100% Electric Fleet
+        </div>
+        <div class="bike-img-frame">
+          <img class="bike-img" src="assets/ev_bike_hero.png" alt="BharBike EV" />
+        </div>
+        <div class="bike-caption">
+          <span>Velociti EV • Keyless</span>
+          <span class="bike-specs-badge">Chassis: ...KE000111</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Steps -->
+    <div class="steps-row">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <div class="step-title">Scan QR Code</div>
+          <div class="step-subtitle">With standard camera app</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <div class="step-title">Tap Turn ON</div>
+          <div class="step-subtitle">Activates ignition relay</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <div class="step-title">Ride Keyless</div>
+          <div class="step-subtitle">No physical key required</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="decal-footer">
+      <div class="security-badge">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+        </svg>
+        <span>IoT Protected Smart Vehicle</span>
+      </div>
+      <div class="support-contact">
+        24/7 Helpline: <strong>+91 98920 00000</strong>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const bikeCode = (urlParams.get('bike') || 'TNA074').toUpperCase();
+    document.getElementById('displayBadgeCode').textContent = '⚡ ' + bikeCode;
+
+    const baseOrigin = (window.location.origin && window.location.origin !== "null") ? window.location.origin : "https://bharbike.com";
+    const targetUrl = baseOrigin + '/keyless?bike=' + encodeURIComponent(bikeCode);
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=0&data=' + encodeURIComponent(targetUrl);
+    document.getElementById('qrImg').src = qrUrl;
+
+    function setTheme(theme) {
+      if (theme === 'white') {
+        document.body.classList.add('theme-white');
+        document.getElementById('btnWhite').classList.add('active');
+        document.getElementById('btnDark').classList.remove('active');
+        document.getElementById('downloadBtn').href = 'bharbike_square_decal_white_tna074.png';
+      } else {
+        document.body.classList.remove('theme-white');
+        document.getElementById('btnDark').classList.add('active');
+        document.getElementById('btnWhite').classList.remove('active');
+        document.getElementById('downloadBtn').href = 'bharbike_square_decal_dark_tna074.png';
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
   <base href="/keyless/">
-  <link rel="stylesheet" href="/keyless/style.css">
+  <link rel="stylesheet" href="/keyless/style.css?v=3.0">
   <!-- html5-qrcode for browser camera QR scanning -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -246,7 +246,7 @@
   </div>
 
   <!-- Confirmation Modal (Direct child of body to prevent stacking context or layout issues) -->
-  <div class="modal-overlay hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-overlay hidden" id="confirmModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal-box-3d" onclick="event.stopPropagation()">
       <button type="button" class="modal-close-btn" id="modalCloseBtn" onclick="closeConfirmModal()" aria-label="Close confirmation dialog">✕</button>
       <div class="modal-icon-bubble" id="modalIconBubble">⚡</div>
@@ -265,6 +265,6 @@
     <span class="toast-text" id="toastText">Action completed successfully</span>
   </div>
 
-  <script src="/keyless/app.js"></script>
+  <script src="/keyless/app.js?v=3.0"></script>
 </body>
 </html>

@@ -1039,7 +1039,13 @@ body {
   text-align: center;
   padding: 8px 0;
   font-size: 0.72rem;
-.hidden {
+}
+
+/* Visibility Utilities */
+.hidden,
+.modal-overlay.hidden,
+.card.hidden,
+.toast.hidden {
   display: none !important;
 }
 

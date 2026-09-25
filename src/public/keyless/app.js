@@ -480,12 +480,14 @@ function confirmBikeAction(action) {
   }
 
   modal.classList.remove("hidden");
+  modal.style.display = "flex";
 }
 
 function closeConfirmModal() {
   const modal = document.getElementById("confirmModal");
   if (modal) {
     modal.classList.add("hidden");
+    modal.style.display = "none";
   }
   pendingAction = null;
 }

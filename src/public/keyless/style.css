@@ -903,24 +903,61 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(6px);
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  z-index: 1000;
+  z-index: 999999;
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 .modal-box-3d {
+  position: relative;
   background: #ffffff;
   border-radius: var(--radius-xl);
-  padding: 26px;
-  max-width: 360px;
+  padding: 28px 22px 24px;
+  max-width: 380px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
-  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+  pointer-events: auto;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+  z-index: 10;
+}
+
+.modal-close-btn:hover,
+.modal-close-btn:active {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: scale(1.05);
 }
 
 @keyframes modalPop {
@@ -958,11 +995,18 @@ body {
 
 .modal-actions-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .modal-actions-row .btn {
   flex: 1;
+  padding: 14px 16px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Toast */

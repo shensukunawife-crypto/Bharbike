@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTimeDisplay();
   checkUrlParams();
   loadBikesDropdown();
+  initModalListeners();
   
   if (activeBikeCode) {
     // User scanned bike QR code with phone camera (or clicked link with ?bike=...)
@@ -377,7 +378,56 @@ function triggerSwitchAction(targetAction) {
   confirmBikeAction(targetAction);
 }
 
-// 8. Action Confirmation Modal
+// 8. Action Confirmation Modal & Event Listeners
+function initModalListeners() {
+  const modal = document.getElementById("confirmModal");
+  const cancelBtn = document.getElementById("modalCancelBtn");
+  const closeBtn = document.getElementById("modalCloseBtn");
+  const confirmBtn = document.getElementById("modalConfirmBtn");
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeConfirmModal();
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeConfirmModal();
+    });
+  }
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      executeConfirmedAction();
+    });
+  }
+
+  // Backdrop click dismisses modal
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeConfirmModal();
+      }
+    });
+  }
+
+  // Escape key closes modal
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeConfirmModal();
+    }
+  });
+}
+
 function confirmBikeAction(action) {
   pendingAction = action;
   const modal = document.getElementById("confirmModal");
@@ -386,28 +436,47 @@ function confirmBikeAction(action) {
   const modalDesc = document.getElementById("modalDesc");
   const confirmBtn = document.getElementById("modalConfirmBtn");
 
+  if (!modal) return;
+  const bike = activeBikeCode || "TNA074";
+
   if (action === "ON") {
-    iconBubble.textContent = "⚡";
-    iconBubble.style.color = "var(--accent-green-dark)";
-    modalTitle.textContent = isSimModeActive ? "Simulate: Turn ON Ignition?" : "Turn ON Ignition?";
-    modalDesc.innerHTML = isSimModeActive
-      ? `<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;">🧪 SAFE TEST MODE</span><br><br>Simulating <strong>MOBILIZE</strong> command for <strong>${activeBikeCode}</strong>. Real bike relay will <strong>NOT</strong> be triggered.`
-      : `This will send a <strong>MOBILIZE</strong> command to <strong>${activeBikeCode}</strong> to close the relay and supply ignition power.`;
-    confirmBtn.className = "btn btn-3d";
-    confirmBtn.style.background = "linear-gradient(135deg, #00d293, #059669)";
-    confirmBtn.style.color = "#ffffff";
-    confirmBtn.textContent = isSimModeActive ? "Simulate Power ON" : "Yes, Power ON";
+    if (iconBubble) {
+      iconBubble.textContent = "⚡";
+      iconBubble.style.color = "var(--accent-green-dark)";
+    }
+    if (modalTitle) {
+      modalTitle.textContent = isSimModeActive ? "Simulate: Turn ON Ignition?" : "Turn ON Ignition?";
+    }
+    if (modalDesc) {
+      modalDesc.innerHTML = isSimModeActive
+        ? `<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;">🧪 SAFE TEST MODE</span><br><br>Simulating <strong>MOBILIZE</strong> command for <strong>${bike}</strong>. Real bike relay will <strong>NOT</strong> be triggered.`
+        : `This will send a <strong>MOBILIZE</strong> command to <strong>${bike}</strong> to close the relay and supply ignition power.`;
+    }
+    if (confirmBtn) {
+      confirmBtn.className = "btn btn-3d";
+      confirmBtn.style.background = "linear-gradient(135deg, #00d293, #059669)";
+      confirmBtn.style.color = "#ffffff";
+      confirmBtn.textContent = isSimModeActive ? "Simulate Power ON" : "Yes, Power ON";
+    }
   } else {
-    iconBubble.textContent = "🛑";
-    iconBubble.style.color = "var(--accent-red)";
-    modalTitle.textContent = isSimModeActive ? "Simulate: Turn OFF Ignition?" : "Turn OFF Ignition?";
-    modalDesc.innerHTML = isSimModeActive
-      ? `<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;">🧪 SAFE TEST MODE</span><br><br>Simulating <strong>IMMOBILIZE</strong> command for <strong>${activeBikeCode}</strong>. Real bike relay will <strong>NOT</strong> be triggered.`
-      : `This will send an <strong>IMMOBILIZE</strong> command to <strong>${activeBikeCode}</strong> to cut power and lock ignition.<br><br><span style="color:#d97706;font-weight:700;">⚠️ Please ensure bike is safely parked!</span>`;
-    confirmBtn.className = "btn btn-3d";
-    confirmBtn.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
-    confirmBtn.style.color = "#ffffff";
-    confirmBtn.textContent = isSimModeActive ? "Simulate Power OFF" : "Yes, Power OFF";
+    if (iconBubble) {
+      iconBubble.textContent = "🛑";
+      iconBubble.style.color = "var(--accent-red)";
+    }
+    if (modalTitle) {
+      modalTitle.textContent = isSimModeActive ? "Simulate: Turn OFF Ignition?" : "Turn OFF Ignition?";
+    }
+    if (modalDesc) {
+      modalDesc.innerHTML = isSimModeActive
+        ? `<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;">🧪 SAFE TEST MODE</span><br><br>Simulating <strong>IMMOBILIZE</strong> command for <strong>${bike}</strong>. Real bike relay will <strong>NOT</strong> be triggered.`
+        : `This will send an <strong>IMMOBILIZE</strong> command to <strong>${bike}</strong> to cut power and lock ignition.<br><br><span style="color:#d97706;font-weight:700;">⚠️ Please ensure bike is safely parked!</span>`;
+    }
+    if (confirmBtn) {
+      confirmBtn.className = "btn btn-3d";
+      confirmBtn.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
+      confirmBtn.style.color = "#ffffff";
+      confirmBtn.textContent = isSimModeActive ? "Simulate Power OFF" : "Yes, Power OFF";
+    }
   }
 
   modal.classList.remove("hidden");
@@ -415,15 +484,29 @@ function confirmBikeAction(action) {
 
 function closeConfirmModal() {
   const modal = document.getElementById("confirmModal");
-  modal.classList.add("hidden");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
   pendingAction = null;
 }
 
 // 9. Execute Confirmed Action
 async function executeConfirmedAction() {
   const action = pendingAction;
+  const bikeCode = activeBikeCode;
+
+  // Always close modal first so user is never locked in modal
   closeConfirmModal();
-  if (!action || !activeBikeCode) return;
+
+  if (!action) {
+    console.warn("No pending action to execute");
+    return;
+  }
+
+  if (!bikeCode) {
+    alert("Please select or scan a bike first!");
+    return;
+  }
 
   const spinnerOn = document.getElementById("spinnerOn");
   const spinnerOff = document.getElementById("spinnerOff");
@@ -536,3 +619,19 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// Global window bindings for foolproof HTML inline handlers and PWA/mobile compatibility
+window.confirmBikeAction = confirmBikeAction;
+window.closeConfirmModal = closeConfirmModal;
+window.executeConfirmedAction = executeConfirmedAction;
+window.toggleSimMode = toggleSimMode;
+window.switchTab = switchTab;
+window.toggleCameraScanner = toggleCameraScanner;
+window.onSelectBike = onSelectBike;
+window.confirmManualInput = confirmManualInput;
+window.refreshBikeStatus = refreshBikeStatus;
+window.handleTrackClick = handleTrackClick;
+window.triggerSwitchAction = triggerSwitchAction;
+window.clearLogs = clearLogs;
+window.returnToScanner = returnToScanner;
+

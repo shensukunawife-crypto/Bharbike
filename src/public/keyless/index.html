@@ -238,30 +238,31 @@
 
     </main>
 
-    <!-- Confirmation Modal -->
-    <div class="modal-overlay hidden" id="confirmModal">
-      <div class="modal-box-3d">
-        <div class="modal-icon-bubble" id="modalIconBubble">⚡</div>
-        <h3 class="modal-title" id="modalTitle">Confirm Power Control</h3>
-        <p class="modal-desc" id="modalDesc">Are you sure you want to turn ON ignition for bike TNA074?</p>
-        <div class="modal-actions-row">
-          <button class="btn btn-3d btn-soft" onclick="closeConfirmModal()">Cancel</button>
-          <button class="btn btn-3d" id="modalConfirmBtn" onclick="executeConfirmedAction()">Proceed</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div class="toast hidden" id="toast">
-      <span class="toast-icon" id="toastIcon">✅</span>
-      <span class="toast-text" id="toastText">Action completed successfully</span>
-    </div>
-
     <!-- Footer -->
     <footer class="footer">
       <p>BharBike Fleet Telematics • Keyless IoT Control</p>
     </footer>
 
+  </div>
+
+  <!-- Confirmation Modal (Direct child of body to prevent stacking context or layout issues) -->
+  <div class="modal-overlay hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box-3d" onclick="event.stopPropagation()">
+      <button type="button" class="modal-close-btn" id="modalCloseBtn" onclick="closeConfirmModal()" aria-label="Close confirmation dialog">✕</button>
+      <div class="modal-icon-bubble" id="modalIconBubble">⚡</div>
+      <h3 class="modal-title" id="modalTitle">Confirm Power Control</h3>
+      <p class="modal-desc" id="modalDesc">Are you sure you want to turn ON ignition?</p>
+      <div class="modal-actions-row">
+        <button type="button" class="btn btn-3d btn-soft" id="modalCancelBtn" onclick="closeConfirmModal()">Cancel</button>
+        <button type="button" class="btn btn-3d" id="modalConfirmBtn" onclick="executeConfirmedAction()">Proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast hidden" id="toast" role="status" aria-live="polite">
+    <span class="toast-icon" id="toastIcon">✅</span>
+    <span class="toast-text" id="toastText">Action completed successfully</span>
   </div>
 
   <script src="/keyless/app.js"></script>

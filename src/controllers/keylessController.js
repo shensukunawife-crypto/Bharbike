@@ -297,8 +297,20 @@ export async function controlBike(req, res) {
           .eq("id", bike.id);
 
         try {
+          let logUserId = "fdb7b8a2-895b-483b-8afb-98ef3a27c3fa";
+          const { data: activeRental } = await supabase
+            .from("rentals")
+            .select("user_id")
+            .eq("bike_id", bike.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (activeRental?.user_id) logUserId = activeRental.user_id;
+
           await supabase.from("bike_lock_logs").insert({
             bike_id: bike.id,
+            user_id: logUserId,
+            method: "app",
             action: isMobilize ? "unlock" : "lock",
             success: true,
             error_message: null,
@@ -400,8 +412,20 @@ export async function controlBike(req, res) {
         .eq("id", bike.id);
 
       try {
+        let logUserId = "fdb7b8a2-895b-483b-8afb-98ef3a27c3fa";
+        const { data: activeRental } = await supabase
+          .from("rentals")
+          .select("user_id")
+          .eq("bike_id", bike.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (activeRental?.user_id) logUserId = activeRental.user_id;
+
         await supabase.from("bike_lock_logs").insert({
           bike_id: bike.id,
+          user_id: logUserId,
+          method: "app",
           action: isMobilize ? "unlock" : "lock",
           success: true,
           error_message: null,

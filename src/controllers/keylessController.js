@@ -243,6 +243,7 @@ export async function controlBike(req, res) {
     const isMobilize = rawAction === "ON" || rawAction === "MOBILIZE";
     const loconavValue = isMobilize ? "MOBILIZE" : "IMMOBILIZE";
     const iotAction = isMobilize ? "unlock" : "lock";
+    const actionLabel = isMobilize ? "Turn ON Ignition" : "Turn OFF Ignition";
     const isDryRun = false; // Real hardware commands are permanently enforced
 
     // 1. Resolve bike from Supabase

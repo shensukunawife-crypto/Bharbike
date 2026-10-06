@@ -178,8 +178,14 @@ export async function getBikeStatus(req, res) {
             telematics.speed = Math.round(Number(gps.speed.value));
           }
 
-          const pingTs = coords?.lat?.timestamp || gps.ignition?.timestamp || gps.speed?.timestamp;
-          if (pingTs) {
+          const pingTs = Math.max(
+            coords?.lat?.timestamp || 0,
+            gps.ignition?.timestamp || 0,
+            gps.speed?.timestamp || 0,
+            gps.movement?.timestamp || 0,
+            gps.orientation?.timestamp || 0
+          );
+          if (pingTs > 0) {
             const ageMs = Date.now() - pingTs * 1000;
             telematics.isOnline = ageMs < 15 * 60 * 1000;
             const minsAgo = Math.round(ageMs / 60000);

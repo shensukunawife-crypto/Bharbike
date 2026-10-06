@@ -209,7 +209,7 @@ export async function getBikeStatus(req, res) {
         name: bike?.name || `BharBike ${bikeCode}`,
         status: bike?.status || "available",
         isLocked: bike?.is_locked === true,
-        battery: bike?.battery != null ? Number(bike.battery) : 85,
+        battery: (bike?.battery != null && Number(bike.battery) > 0) ? Number(bike.battery) : 85,
         location:
           bike?.location ||
           (telematics.lat ? `${Number(telematics.lat).toFixed(4)}, ${Number(telematics.lng).toFixed(4)}` : "Thane Hub"),

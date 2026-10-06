@@ -171,8 +171,10 @@ export async function getBikeStatus(req, res) {
           }
 
           if (gps.ignition?.value) {
-            telematics.ignition = gps.ignition.value.toUpperCase();
+            telematics.physicalIgnition = gps.ignition.value.toUpperCase();
           }
+          // The keyless toggle represents the remote relay power/mobilize state
+          telematics.ignition = (bike?.is_locked === false) ? "ON" : (gps.ignition?.value?.toUpperCase() || "OFF");
 
           if (gps.speed?.value != null) {
             telematics.speed = Math.round(Number(gps.speed.value));
@@ -396,19 +398,61 @@ export async function controlBike(req, res) {
     // 4. Update Database State
     if (bike?.id) {
       const newLockedState = !isMobilize;
-      await supabase
+      const updatePayload = {
+        is_locked: newLockedState,
+      };
+
+      // last_lock_request_id is a BIGINT column in postgres
+      const numericRequestId = Number(requestId);
+      if (!isNaN(numericRequestId) && Number.isInteger(numericRequestId) && numericRequestId > 0) {
+        updatePayload.last_lock_request_id = numericRequestId;
+      }
+
+      const { error: updateErr } = await supabase
         .from("bikes")
-        .update({
-          is_locked: newLockedState,
-          last_lock_request_id: requestId,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", bike.id);
 
+      if (updateErr) {
+        console.warn(`[Keyless] Failed to update bikes.is_locked:`, updateErr.message);
+      } else {
+        console.log(`[Keyless] Successfully updated bike ${bike.id} is_locked=${newLockedState}`);
+      }
+
+      // Resolve user for audit log
+      let logUserId = null;
       try {
-        await supabase.from("bike_lock_logs").insert({
+        const { data: latestRental } = await supabase
+          .from("rentals")
+          .select("user_id")
+          .eq("bike_id", bike.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestRental?.user_id) {
+          logUserId = latestRental.user_id;
+        }
+      } catch (e) {}
+
+      if (!logUserId) {
+        try {
+          const { data: fallbackUser } = await supabase
+            .from("users")
+            .select("id")
+            .limit(1)
+            .maybeSingle();
+          if (fallbackUser?.id) {
+            logUserId = fallbackUser.id;
+          }
+        } catch (e) {}
+      }
+
+      try {
+        const { error: logErr } = await supabase.from("bike_lock_logs").insert({
           bike_id: bike.id,
+          user_id: logUserId,
           action: isMobilize ? "unlock" : "lock",
+          method: "app",
           success: true,
           error_message: null,
           metadata: {
@@ -421,8 +465,11 @@ export async function controlBike(req, res) {
             timestamp: new Date().toISOString(),
           },
         });
+        if (logErr) {
+          console.warn("[Keyless] Failed to write bike_lock_logs:", logErr.message);
+        }
       } catch (logErr) {
-        console.warn("[Keyless] Failed to write bike_lock_logs:", logErr.message);
+        console.warn("[Keyless] Exception writing bike_lock_logs:", logErr.message);
       }
     }
 

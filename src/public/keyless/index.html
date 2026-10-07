@@ -6,9 +6,8 @@
   <title>BharBike Keyless • 3D Ignition Switch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
-  <base href="/keyless/">
-  <link rel="stylesheet" href="/keyless/style.css?v=3.0">
+  <link rel="stylesheet" href="/keyless/style.css?v=3.2">
+  <link rel="stylesheet" href="style.css?v=3.2">
   <!-- html5-qrcode for browser camera QR scanning -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -26,7 +25,7 @@
       </div>
       <div class="live-pill" id="headerPill">
         <span class="live-dot"></span>
-        <span id="headerPillText">TEST PORTAL</span>
+        <span id="headerPillText">LIVE HARDWARE</span>
       </div>
     </header>
 
@@ -64,13 +63,12 @@
             <div class="select-wrapper-3d">
               <select id="bikeSelect" onchange="onSelectBike(this.value)">
                 <option value="">-- Choose a Registered Bike --</option>
-                <option value="TNA074" selected>TNA074 (Connected Test Bike)</option>
               </select>
             </div>
           </div>
           <div class="input-divider"><span>OR ENTER CODE</span></div>
           <div class="input-row">
-            <input type="text" id="manualBikeInput" class="input-3d" placeholder="e.g. TNA074" style="text-transform: uppercase;">
+            <input type="text" id="manualBikeInput" class="input-3d" placeholder="Enter Bike Code" style="text-transform: uppercase;">
             <button class="btn btn-3d btn-primary" onclick="confirmManualInput()">Unlock</button>
           </div>
         </div>
@@ -86,8 +84,8 @@
               <span class="bike-label">SCANNED BIKE</span>
               <button class="btn-rescan" onclick="returnToScanner()" title="Scan another bike">📷 Scan Another</button>
             </div>
-            <h2 class="bike-code" id="displayBikeCode">TNA074</h2>
-            <span class="bike-model" id="displayBikeName">BharBike EV-TNA074</span>
+            <h2 class="bike-code" id="displayBikeCode">--</h2>
+            <span class="bike-model" id="displayBikeName">Loading Fleet Telematics...</span>
           </div>
           <div class="bike-badge-container">
             <div class="status-badge" id="ignitionBadge">
@@ -129,20 +127,7 @@
           </div>
         </div>
 
-        <!-- Hardware Mode Toggle Banner (LIVE by default) -->
-        <div class="sim-mode-banner" id="simBanner">
-          <div class="sim-toggle-left">
-            <span class="sim-icon" id="simIcon">⚡</span>
-            <div class="sim-text-group">
-              <span class="sim-title" id="simTitle">Hardware Dispatch: LIVE</span>
-              <span class="sim-subtitle" id="simSubtitle">Real physical ignition commands enabled</span>
-            </div>
-          </div>
-          <label class="sim-switch">
-            <input type="checkbox" id="simModeCheckbox" onchange="toggleSimMode(this.checked)">
-            <span class="sim-slider"></span>
-          </label>
-        </div>
+
 
         <div class="hero-divider"></div>
 
@@ -265,6 +250,13 @@
     <span class="toast-text" id="toastText">Action completed successfully</span>
   </div>
 
-  <script src="/keyless/app.js?v=3.0"></script>
+  <script src="/keyless/app.js?v=3.2"></script>
+  <script>
+    if (typeof window.confirmBikeAction === 'undefined') {
+      var fb = document.createElement('script');
+      fb.src = 'app.js?v=3.2';
+      document.body.appendChild(fb);
+    }
+  </script>
 </body>
 </html>

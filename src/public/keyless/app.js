@@ -4,6 +4,7 @@
 
 let activeBikeCode = null; // No bike active until QR is scanned or URL param provided
 let currentIgnitionState = "OFF"; // 'ON' or 'OFF' or 'UNKNOWN'
+let latestPhysicalIgnition = null; // 'ON' or 'OFF'
 let html5QrScanner = null;
 let isCameraActive = false;
 let pendingAction = null; // 'ON' or 'OFF'
@@ -24,8 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showScannerView();
   }
 
-  const chk = document.getElementById("simModeCheckbox");
-  if (chk) chk.checked = isSimModeActive;
+  // Real physical hardware mode is always active
 });
 
 function showControlView(bikeCode) {
@@ -57,26 +57,7 @@ function returnToScanner() {
   startCameraScanner();
 }
 
-function toggleSimMode(checked) {
-  isSimModeActive = Boolean(checked);
-  const banner = document.getElementById("simBanner");
-  const title = document.getElementById("simTitle");
-  const subtitle = document.getElementById("simSubtitle");
-  const icon = document.getElementById("simIcon");
-  if (isSimModeActive) {
-    if (banner) banner.classList.add("active");
-    if (icon) icon.textContent = "🧪";
-    if (title) title.textContent = "Hardware Dispatch: SAFE TEST";
-    if (subtitle) subtitle.textContent = "Hardware bypass active (No real relay signals sent)";
-    addLog("🧪 Safe Test Mode ENABLED: Real bike relay signals are bypassed.", "system");
-  } else {
-    if (banner) banner.classList.remove("active");
-    if (icon) icon.textContent = "⚡";
-    if (title) title.textContent = "Hardware Dispatch: LIVE";
-    if (subtitle) subtitle.textContent = "Real physical ignition commands enabled";
-    addLog("⚡ LIVE MODE ACTIVATED: Real physical ignition commands will be sent!", "system");
-  }
-}
+// Real hardware dispatch is permanently enforced
 
 function initTimeDisplay() {
   const initElem = document.getElementById("initTime");
@@ -238,7 +219,7 @@ function confirmManualInput() {
   const input = document.getElementById("manualBikeInput");
   let val = (input?.value || "").trim().toUpperCase();
   if (!val) {
-    alert("Please enter a valid bike code (e.g. TNA074)");
+    alert("Please enter a valid bike code (e.g. TNA077)");
     return;
   }
   if (/^\d{1,3}$/.test(val)) {
@@ -311,24 +292,23 @@ async function fetchBikeStatus(bikeCode) {
     }
 
     // Ignition state
-    const igState = (telematics.ignition || "UNKNOWN").toUpperCase();
-    currentIgnitionState = igState;
+    latestPhysicalIgnition = telematics?.physicalIgnition || null;
+    const isRelayMobilized = (bike?.isLocked === false || bike?.is_locked === false);
+    const igState = (telematics?.ignition || (isRelayMobilized ? "ON" : "OFF")).toUpperCase();
 
-    if (igState === "ON") {
+    if (igState === "ON" || isRelayMobilized) {
+      currentIgnitionState = "ON";
       ignitionBadge.className = "status-badge state-on";
       ignitionText.textContent = "🟢 IGNITION ON";
       setSwitchVisualState("ON");
-    } else if (igState === "OFF") {
+    } else {
+      currentIgnitionState = "OFF";
       ignitionBadge.className = "status-badge state-off";
       ignitionText.textContent = "🔴 IGNITION OFF";
       setSwitchVisualState("OFF");
-    } else {
-      ignitionBadge.className = "status-badge";
-      ignitionText.textContent = `⚪ ${igState}`;
-      setSwitchVisualState("OFF");
     }
 
-    addLog(`Live telematics: Bike ${bikeCode} is ${igState} • ${speedVal} km/h`, "system");
+    addLog(`Live telematics: Bike ${bikeCode} is ${currentIgnitionState} • ${speedVal} km/h`, "system");
 
   } catch (err) {
     console.error("fetchBikeStatus error:", err);
@@ -354,12 +334,16 @@ function setSwitchVisualState(state) {
     track.className = "tactile-switch-track state-on";
     labelOn.classList.add("active");
     labelOff.classList.remove("active");
-    feedback.innerHTML = `Current State: <strong style="color:var(--accent-green-dark)">IGNITION ON</strong> (Relay Closed)`;
+    if (latestPhysicalIgnition === "ON") {
+      feedback.innerHTML = `Current State: <strong style="color:var(--accent-green-dark)">IGNITION ON</strong> (Relay Closed • Ready to Ride ⚡)`;
+    } else {
+      feedback.innerHTML = `Current State: <strong style="color:var(--accent-green-dark)">IGNITION ON</strong> (Relay Closed • Turn Handlebar Key to Ride)`;
+    }
   } else {
     track.className = "tactile-switch-track state-off";
     labelOff.classList.add("active");
     labelOn.classList.remove("active");
-    feedback.innerHTML = `Current State: <strong style="color:var(--text-secondary)">IGNITION OFF</strong> (Relay Open)`;
+    feedback.innerHTML = `Current State: <strong style="color:var(--text-secondary)">IGNITION OFF</strong> (Relay Open • Power Cut 🛑)`;
   }
 }
 
@@ -437,7 +421,11 @@ function confirmBikeAction(action) {
   const confirmBtn = document.getElementById("modalConfirmBtn");
 
   if (!modal) return;
-  const bike = activeBikeCode || "TNA074";
+  if (!activeBikeCode) {
+    alert("Please select or scan a bike first!");
+    return;
+  }
+  const bike = activeBikeCode;
 
   if (action === "ON") {
     if (iconBubble) {
@@ -445,18 +433,16 @@ function confirmBikeAction(action) {
       iconBubble.style.color = "var(--accent-green-dark)";
     }
     if (modalTitle) {
-      modalTitle.textContent = isSimModeActive ? "Simulate: Turn ON Ignition?" : "Turn ON Ignition?";
+      modalTitle.textContent = "Turn ON Ignition?";
     }
     if (modalDesc) {
-      modalDesc.innerHTML = isSimModeActive
-        ? `<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;">🧪 SAFE TEST MODE</span><br><br>Simulating <strong>MOBILIZE</strong> command for <strong>${bike}</strong>. Real bike relay will <strong>NOT</strong> be triggered.`
-        : `This will send a <strong>MOBILIZE</strong> command to <strong>${bike}</strong> to close the relay and supply ignition power.`;
+      modalDesc.innerHTML = `This will send a <strong>MOBILIZE</strong> command to <strong>${bike}</strong> to close the relay and supply ignition power.`;
     }
     if (confirmBtn) {
       confirmBtn.className = "btn btn-3d";
       confirmBtn.style.background = "linear-gradient(135deg, #00d293, #059669)";
       confirmBtn.style.color = "#ffffff";
-      confirmBtn.textContent = isSimModeActive ? "Simulate Power ON" : "Yes, Power ON";
+      confirmBtn.textContent = "Yes, Power ON";
     }
   } else {
     if (iconBubble) {
@@ -464,18 +450,16 @@ function confirmBikeAction(action) {
       iconBubble.style.color = "var(--accent-red)";
     }
     if (modalTitle) {
-      modalTitle.textContent = isSimModeActive ? "Simulate: Turn OFF Ignition?" : "Turn OFF Ignition?";
+      modalTitle.textContent = "Turn OFF Ignition?";
     }
     if (modalDesc) {
-      modalDesc.innerHTML = isSimModeActive
-        ? `<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;">🧪 SAFE TEST MODE</span><br><br>Simulating <strong>IMMOBILIZE</strong> command for <strong>${bike}</strong>. Real bike relay will <strong>NOT</strong> be triggered.`
-        : `This will send an <strong>IMMOBILIZE</strong> command to <strong>${bike}</strong> to cut power and lock ignition.<br><br><span style="color:#d97706;font-weight:700;">⚠️ Please ensure bike is safely parked!</span>`;
+      modalDesc.innerHTML = `This will send an <strong>IMMOBILIZE</strong> command to <strong>${bike}</strong> to cut power and lock ignition.<br><br><span style="color:#d97706;font-weight:700;">⚠️ Please ensure bike is safely parked!</span>`;
     }
     if (confirmBtn) {
       confirmBtn.className = "btn btn-3d";
       confirmBtn.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
       confirmBtn.style.color = "#ffffff";
-      confirmBtn.textContent = isSimModeActive ? "Simulate Power OFF" : "Yes, Power OFF";
+      confirmBtn.textContent = "Yes, Power OFF";
     }
   }
 
@@ -523,8 +507,7 @@ async function executeConfirmedAction() {
     btn3dOff.disabled = true;
   }
 
-  const modeTag = isSimModeActive ? "[TEST DRY-RUN]" : "[LIVE HARDWARE]";
-  addLog(`${modeTag} [Step 1/3] Waking up bike & transmitting ${action === 'ON' ? 'MOBILIZE' : 'IMMOBILIZE'} for ${activeBikeCode}...`, "system");
+  addLog(`⚡ [LIVE HARDWARE] [Step 1/3] Waking up bike & transmitting ${action === 'ON' ? 'MOBILIZE' : 'IMMOBILIZE'} for ${activeBikeCode}...`, "system");
   showToast(`Waking up bike & sending ignition signal...`, "⚡");
 
   try {
@@ -534,15 +517,14 @@ async function executeConfirmedAction() {
       body: JSON.stringify({
         bikeCode: activeBikeCode,
         action: action,
-        dryRun: isSimModeActive
+        dryRun: false
       })
     });
 
     const data = await res.json();
 
     if (data.success) {
-      const ackTag = data.simulation ? "🧪 SIMULATED" : "⚡ ACK";
-      addLog(`📡 [Step 2/3] Ignition command dispatched (${ackTag}) [ReqId: ${data.requestId || 'ack'}]. Verifying relay response...`, "system");
+      addLog(`📡 [Step 2/3] Ignition command dispatched [ReqId: ${data.requestId || 'ack'}]. Verifying relay response...`, "system");
       showToast(data.message, action === "ON" ? "⚡" : "🛑");
 
       // Haptic confirmation
@@ -626,7 +608,6 @@ function escapeHtml(text) {
 window.confirmBikeAction = confirmBikeAction;
 window.closeConfirmModal = closeConfirmModal;
 window.executeConfirmedAction = executeConfirmedAction;
-window.toggleSimMode = toggleSimMode;
 window.switchTab = switchTab;
 window.toggleCameraScanner = toggleCameraScanner;
 window.onSelectBike = onSelectBike;

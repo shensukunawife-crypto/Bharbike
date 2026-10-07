@@ -2,7 +2,7 @@ import axios from "axios";
 import supabase from "../utils/supabaseClient.js";
 import * as iotService from "../services/iotService.js";
 
-const IOT_SERVER_URL = process.env.IOT_SERVER_URL || "https://iotserver-33zq.onrender.com";
+const IOT_SERVER_URL = process.env.IOT_SERVER_URL || "http://65.0.32.96:5000";
 const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://app.loconav.sensorise.net/integration/api/v1";
 const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN || "ZBC5heBXfKDx8qcGWcjy";
 

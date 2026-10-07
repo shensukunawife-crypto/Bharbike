@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BharBike Keyless Go — Square Vehicle Decal</title>
   <base href="/keyless/">
+  <title>BharBike Keyless Go — Square Vehicle Decal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     :root {
       --bg: #090d16;
@@ -485,6 +486,10 @@
 
   <!-- Controls Bar -->
   <div class="top-controls">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:12px; font-weight:800; color:var(--orange);">BIKE:</span>
+      <input type="text" id="bikeInput" style="background:#141b2d; border:1px solid #23304a; color:#fff; padding:6px 14px; border-radius:999px; font-weight:800; font-size:13px; width:110px; text-transform:uppercase; outline:none;" placeholder="TNA077" oninput="onBikeInputChange(this.value)" />
+    </div>
     <div class="theme-toggle-group">
       <button class="theme-btn active" id="btnDark" onclick="setTheme('dark')">🌙 Dark Edition</button>
       <button class="theme-btn" id="btnWhite" onclick="setTheme('white')">☀️ White Edition</button>
@@ -493,9 +498,12 @@
       <button class="btn-action" onclick="window.print()">
         🖨️ Print Decal
       </button>
-      <a class="btn-action btn-primary" id="downloadBtn" href="bharbike_square_decal_dark_tna074.png" download="bharbike_square_decal_TNA074.png">
-        ⬇️ Download Square PNG
-      </a>
+      <button class="btn-action btn-primary" id="downloadDecalBtn" onclick="downloadDecalPng()">
+        ⬇️ Download Decal PNG
+      </button>
+      <button class="btn-action" id="downloadQrBtn" onclick="downloadQrOnly()">
+        ⬇️ QR Code Only
+      </button>
     </div>
   </div>
 
@@ -525,7 +533,8 @@
     <div class="main-body">
       <div class="qr-showcase">
         <div class="qr-frame">
-          <img class="qr-image" id="qrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=0&data=https%3A%2F%2Fbharbike.com%2Fkeyless%3Fbike%3DTNA074" alt="QR Code" />
+          <img class="qr-image" id="qrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=0&data=https%3A%2F%2Fbharbike.com%2Fkeyless%2F%3Fbike%3DTNA074" alt="QR Code" />
+
           <img class="qr-center-logo" src="assets/app_icon.png" alt="Center Bhar Logo" />
         </div>
         <div class="qr-scan-label">
@@ -590,28 +599,132 @@
   </div>
 
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const bikeCode = (urlParams.get('bike') || 'TNA074').toUpperCase();
-    document.getElementById('displayBadgeCode').textContent = '⚡ ' + bikeCode;
+    let currentBikeCode = "TNA077";
+    let currentTheme = "dark";
 
-    const baseOrigin = (window.location.origin && window.location.origin !== "null") ? window.location.origin : "https://bharbike.com";
-    const targetUrl = baseOrigin + '/keyless?bike=' + encodeURIComponent(bikeCode);
-    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=0&data=' + encodeURIComponent(targetUrl);
-    document.getElementById('qrImg').src = qrUrl;
+    function onBikeInputChange(val) {
+      let code = (val || "").trim().toUpperCase();
+      if (/^\d{1,3}$/.test(code)) {
+        code = `TNA${code.padStart(3, "0")}`;
+      }
+      if (code) {
+        updateDecal(code);
+      }
+    }
+
+    function updateDecal(code) {
+      currentBikeCode = code;
+      const badge = document.getElementById('displayBadgeCode');
+      if (badge) badge.textContent = '⚡ ' + code;
+      document.title = 'BharBike Decal — ' + code;
+
+      const targetUrl = 'https://bharbike.com/keyless/?bike=' + encodeURIComponent(code);
+      const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=0&data=' + encodeURIComponent(targetUrl);
+      const qrImg = document.getElementById('qrImg');
+      if (qrImg) qrImg.src = qrUrl;
+
+      // Update URL in address bar without reload
+      try {
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('bike', code);
+        window.history.replaceState({}, '', newUrl);
+      } catch (e) {}
+    }
 
     function setTheme(theme) {
+      currentTheme = theme;
       if (theme === 'white') {
         document.body.classList.add('theme-white');
         document.getElementById('btnWhite').classList.add('active');
         document.getElementById('btnDark').classList.remove('active');
-        document.getElementById('downloadBtn').href = 'bharbike_square_decal_white_tna074.png';
       } else {
         document.body.classList.remove('theme-white');
         document.getElementById('btnDark').classList.add('active');
         document.getElementById('btnWhite').classList.remove('active');
-        document.getElementById('downloadBtn').href = 'bharbike_square_decal_dark_tna074.png';
       }
     }
+
+    async function downloadDecalPng() {
+      const btn = document.getElementById('downloadDecalBtn');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) { btn.innerHTML = '⏳ Generating HD Decal...'; btn.disabled = true; }
+
+      try {
+        const card = document.getElementById('decalCard');
+        if (typeof html2canvas === 'function') {
+          const canvas = await html2canvas(card, {
+            scale: 2, // 2x high-resolution crisp output (1440x1440)
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null
+          });
+
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              downloadQrOnly();
+              return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bharbike_square_decal_${currentBikeCode}_${currentTheme}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            if (btn) {
+              btn.innerHTML = '✅ Decal Downloaded!';
+              setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+            }
+          }, 'image/png');
+        } else {
+          await downloadQrOnly();
+          if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+        }
+      } catch (err) {
+        console.error('Decal generation error, downloading QR code:', err);
+        await downloadQrOnly();
+        if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+      }
+    }
+
+    async function downloadQrOnly() {
+      const btn = document.getElementById('downloadQrBtn');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) { btn.innerHTML = '⏳ Fetching QR...'; btn.disabled = true; }
+
+      try {
+        const targetUrl = 'https://bharbike.com/keyless/?bike=' + encodeURIComponent(currentBikeCode);
+        const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&ecc=H&margin=0&data=' + encodeURIComponent(targetUrl);
+        const res = await fetch(qrUrl);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bharbike_qr_${currentBikeCode}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (btn) {
+          btn.innerHTML = '✅ QR Downloaded!';
+          setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+        }
+      } catch (err) {
+        alert('Failed to download QR image: ' + err.message);
+        if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+      }
+    }
+
+    // Initialize on page load
+    const urlParams = new URLSearchParams(window.location.search);
+    let initialBike = (urlParams.get('bike') || urlParams.get('bikeCode') || 'TNA077').trim().toUpperCase();
+    if (/^\d{1,3}$/.test(initialBike)) {
+      initialBike = `TNA${initialBike.padStart(3, "0")}`;
+    }
+    const bikeInput = document.getElementById('bikeInput');
+    if (bikeInput) bikeInput.value = initialBike;
+    updateDecal(initialBike);
   </script>
 
 </body>

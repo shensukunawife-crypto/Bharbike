@@ -1,5 +1,6 @@
 import axios from "axios";
 import supabase from "../utils/supabaseClient.js";
+import * as iotService from "../services/iotService.js";
 
 const IOT_SERVER_URL = process.env.IOT_SERVER_URL || "https://iotserver-33zq.onrender.com";
 const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://app.loconav.sensorise.net/integration/api/v1";
@@ -369,31 +370,37 @@ export async function controlBike(req, res) {
       console.warn(`[Keyless] BharBike IoT Server call failed:`, iotErr.message);
     }
 
-    // 3. STEP B: Smart Dual-Bridge to ensure physical hardware triggers
+    // 3. STEP B: Smart Dual-Bridge to ensure physical hardware triggers (Parity with Admin Dashboard)
     let requestId = iotResult?.requestId || `iot-${Date.now()}`;
     let feedbackMessage = `${actionLabel} executed successfully via BharBike IoT Server.`;
     let bridgeDispatched = false;
 
-    if (!socketSent && vehicleUuid) {
+    if (!socketSent && bike?.id) {
       try {
-        console.log(`[Keyless] Physical socket inactive on custom server; bridging via carrier gateway for UUID ${vehicleUuid}...`);
-        const bridgeRes = await axios.post(
-          `${LOCONAV_API_URL}/vehicles/${vehicleUuid}/immobilizer_requests`,
-          { value: loconavValue },
-          {
-            headers: {
-              "User-Authentication": LOCONAV_TOKEN,
-              "Content-Type": "application/json",
-            },
-            timeout: 12000,
+        console.log(`[Keyless] Physical socket inactive on custom server; dispatching via admin IoT service for bike ${bike.id}...`);
+        const serviceResult = isMobilize
+          ? await iotService.unlockBike(bike.id)
+          : await iotService.lockBike(bike.id);
+
+        console.log(`[Keyless] iotService result:`, serviceResult);
+
+        if (serviceResult) {
+          bridgeDispatched = true;
+          serverUsed = "BharBike IoT Bridge (Carrier Gateway)";
+          if (serviceResult.requestId && serviceResult.requestId !== "active-request-present") {
+            requestId = serviceResult.requestId;
           }
-        );
-        bridgeDispatched = true;
-        requestId = bridgeRes.data?.data?.id || requestId;
-        feedbackMessage = `${actionLabel} command accepted and queued via IoT bridge. Relay will toggle in 2-5 seconds.`;
-        serverUsed = "BharBike IoT Bridge (Carrier Gateway)";
+
+          if (serviceResult.isAlreadyActive) {
+            feedbackMessage = `LocoNav currently has an active pending command for this vehicle in its queue (waiting for tracker to acknowledge over cellular).`;
+          } else if (serviceResult.ok) {
+            feedbackMessage = `${actionLabel} command accepted and queued via IoT bridge. Relay will toggle in 2-5 seconds. (Req #${serviceResult.requestId})`;
+          } else {
+            feedbackMessage = `Hardware dispatch alert: ${serviceResult.message || 'Queued'}`;
+          }
+        }
       } catch (bridgeErr) {
-        console.warn(`[Keyless] Bridge dispatch to carrier gateway failed:`, bridgeErr.response?.data || bridgeErr.message);
+        console.warn(`[Keyless] Bridge dispatch via iotService failed:`, bridgeErr.message);
       }
     }
 

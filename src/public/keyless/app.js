@@ -291,12 +291,12 @@ async function fetchBikeStatus(bikeCode) {
       lastPingText.textContent = telematics.lastPingText ? `Asleep • Ping ${telematics.lastPingText}` : "Touch bike to wake";
     }
 
-    // Ignition state
+    // Ignition / Relay mobilization state
     latestPhysicalIgnition = telematics?.physicalIgnition || null;
+    // The keyless toggle represents the electronic relay state (Mobilized vs Cut)
     const isRelayMobilized = (bike?.isLocked === false || bike?.is_locked === false);
-    const igState = (telematics?.ignition || (isRelayMobilized ? "ON" : "OFF")).toUpperCase();
 
-    if (igState === "ON" || isRelayMobilized) {
+    if (isRelayMobilized) {
       currentIgnitionState = "ON";
       ignitionBadge.className = "status-badge state-on";
       ignitionText.textContent = "🟢 IGNITION ON";

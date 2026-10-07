@@ -174,7 +174,9 @@ export async function getBikeStatus(req, res) {
             telematics.physicalIgnition = gps.ignition.value.toUpperCase();
           }
           // The keyless toggle represents the remote relay power/mobilize state
-          telematics.ignition = (bike?.is_locked === false) ? "ON" : (gps.ignition?.value?.toUpperCase() || "OFF");
+          // When is_locked is true, the relay is CUT / IMMOBILIZED -> ignition is OFF
+          // When is_locked is false, the relay is CLOSED / MOBILIZED -> ignition is ON
+          telematics.ignition = (bike?.is_locked === true) ? "OFF" : "ON";
 
           if (gps.speed?.value != null) {
             telematics.speed = Math.round(Number(gps.speed.value));

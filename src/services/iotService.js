@@ -8,6 +8,7 @@ import supabase from "../utils/supabaseClient.js";
 
 const LOCONAV_API_URL = process.env.LOCONAV_API_URL || "https://app.loconav.sensorise.net/integration/api/v1";
 const LOCONAV_TOKEN = process.env.LOCONAV_TOKEN;
+const IOT_SERVER_URL = process.env.IOT_SERVER_URL || "http://65.0.32.96:5000";
 
 /**
  * Helper to get LocoNav vehicle_uuid from our bikes/vehicles mapping
@@ -170,6 +171,30 @@ export async function lockBike(bikeId) {
   }
 
   const promise = (async () => {
+    // 0. Check self-hosted BharBike EC2 IoT Gateway first
+    try {
+      const iotCheck = await axios.get(`${IOT_SERVER_URL}/api/status/${bikeId}`, { timeout: 2500 }).catch(() => null);
+      if (iotCheck?.data?.connected) {
+        console.log(`[IoT] Bike ${bikeId} is connected to BharBike EC2 IoT Gateway. Dispatching instant DYD# lock...`);
+        const iotRes = await axios.post(`${IOT_SERVER_URL}/api/lock`, { bikeId: Number(bikeId) }, { timeout: 8500 });
+        if (iotRes.data?.success && iotRes.data?.socketSent) {
+          const res = {
+            ok: true,
+            bikeId,
+            action: "lock",
+            requestId: "bharbike-ec2-lock",
+            confirmed: Boolean(iotRes.data.confirmed),
+            relayState: iotRes.data.relayState,
+            message: iotRes.data.message || "Lock confirmed by BharBike IoT Gateway"
+          };
+          recentLockDispatches.set(bikeKey, { timestamp: Date.now(), result: res });
+          return res;
+        }
+      }
+    } catch (gatewayErr) {
+      console.warn(`[IoT] EC2 Gateway lock failed for bike ${bikeId}, falling back to LocoNav:`, gatewayErr.message);
+    }
+
     console.log(`[IoT] Attempting to LOCK (IMMOBILIZE) bike_id=${bikeId} via LocoNav API`);
     try {
       const loconavUuid = await getLocoNavId(bikeId);
@@ -305,6 +330,28 @@ export async function unlockBike(bikeId) {
   }
 
   const promise = (async () => {
+    // 0. Check self-hosted BharBike EC2 IoT Gateway first
+    try {
+      const iotCheck = await axios.get(`${IOT_SERVER_URL}/api/status/${bikeId}`, { timeout: 2500 }).catch(() => null);
+      if (iotCheck?.data?.connected) {
+        console.log(`[IoT] Bike ${bikeId} is connected to BharBike EC2 IoT Gateway. Dispatching instant HFYD# unlock...`);
+        const iotRes = await axios.post(`${IOT_SERVER_URL}/api/unlock`, { bikeId: Number(bikeId) }, { timeout: 8500 });
+        if (iotRes.data?.success && iotRes.data?.socketSent) {
+          return {
+            ok: true,
+            bikeId,
+            action: "unlock",
+            requestId: "bharbike-ec2-unlock",
+            confirmed: Boolean(iotRes.data.confirmed),
+            relayState: iotRes.data.relayState,
+            message: iotRes.data.message || "Unlock confirmed by BharBike IoT Gateway"
+          };
+        }
+      }
+    } catch (gatewayErr) {
+      console.warn(`[IoT] EC2 Gateway unlock failed for bike ${bikeId}, falling back to LocoNav:`, gatewayErr.message);
+    }
+
     console.log(`[IoT] Attempting to UNLOCK (MOBILIZE) bike_id=${bikeId} via LocoNav API`);
     try {
       const loconavUuid = await getLocoNavId(bikeId);
@@ -419,6 +466,23 @@ export async function unlockBike(bikeId) {
  */
 export async function checkDeviceOnline(bikeId) {
   try {
+    // 0. Check self-hosted BharBike EC2 IoT Gateway first
+    try {
+      const iotCheck = await axios.get(`${IOT_SERVER_URL}/api/status/${bikeId}`, { timeout: 2500 }).catch(() => null);
+      if (iotCheck?.data?.connected) {
+        return {
+          online: true,
+          status: 'online',
+          speed: 0,
+          ignition: 'ON',
+          lastPingAt: iotCheck.data.timestamp || new Date().toISOString(),
+          pingAgeMinutes: 0,
+          loconavUuid: 'self-hosted-ec2',
+          reason: 'fresh_socket_telemetry'
+        };
+      }
+    } catch (e) {}
+
     const loconavUuid = await getLocoNavId(bikeId);
     if (!loconavUuid) {
       return { online: false, reason: 'no_uuid_mapped', loconavUuid: null };

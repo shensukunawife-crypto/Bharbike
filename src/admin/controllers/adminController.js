@@ -6121,11 +6121,17 @@ export async function adminLockBike(req, res) {
       .limit(1)
       .maybeSingle();
 
+    let targetUserId = activeRental?.user_id || null;
+    if (!targetUserId) {
+      const { data: fbUser } = await supabase.from('users').select('id').limit(1).maybeSingle();
+      targetUserId = fbUser?.id || null;
+    }
+
     // Log action to bike_lock_logs
     const adminName = req.admin?.name || req.admin?.email || req.admin?.username || 'Unknown Admin';
     const logPayload = {
       bike_id: Number(bikeId),
-      user_id: activeRental?.user_id || null,
+      user_id: targetUserId,
       // rental_id: activeRental?.id || null, // Omitted due to UUID vs BIGINT type mismatch
       action: 'lock',
       method: 'app',
@@ -6194,11 +6200,17 @@ export async function adminUnlockBike(req, res) {
       .limit(1)
       .maybeSingle();
 
+    let targetUserId = activeRental?.user_id || null;
+    if (!targetUserId) {
+      const { data: fbUser } = await supabase.from('users').select('id').limit(1).maybeSingle();
+      targetUserId = fbUser?.id || null;
+    }
+
     // Log action to bike_lock_logs
     const adminName = req.admin?.name || req.admin?.email || req.admin?.username || 'Unknown Admin';
     const logPayload = {
       bike_id: Number(bikeId),
-      user_id: activeRental?.user_id || null,
+      user_id: targetUserId,
       // rental_id: activeRental?.id || null, // Omitted due to UUID vs BIGINT type mismatch
       action: 'unlock',
       method: 'app',

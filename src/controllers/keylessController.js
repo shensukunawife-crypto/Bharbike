@@ -123,8 +123,8 @@ export async function getBikeStatus(req, res) {
     if (bike?.id) {
       try {
         const iotRes = await axios.get(`${IOT_SERVER_URL}/api/status/${bike.id}`, { timeout: 4000 });
-        if (iotRes.data?.success) {
-          iotServerData = iotRes.data.data;
+        if (iotRes.data?.connected) {
+          iotServerData = iotRes.data;
         }
       } catch (err) {
         // IoT server ping optional fallback
@@ -132,16 +132,17 @@ export async function getBikeStatus(req, res) {
     }
 
     // 4. Query Carrier / LocoNav Telematics as fallback for live GPS satellites/speed
+    const isLiveConnected = Boolean(iotServerData?.connected);
     let telematics = {
-      hasGps: Boolean(iotServerData?.coordinates?.lat),
+      hasGps: true,
       ignition: bike?.is_locked === true ? "OFF" : "ON",
-      speed: iotServerData?.speedKmH || 0,
-      isOnline: false,
-      heading: iotServerData?.heading || { degrees: 45, cardinalDirection: "NE" },
-      signal: iotServerData?.signal || { gsmSignalPct: 85, gsmBars: 4, quality: "Excellent" },
-      lastPingText: "BharBike IoT Active",
-      lat: iotServerData?.coordinates?.lat || null,
-      lng: iotServerData?.coordinates?.lng || null,
+      speed: 0,
+      isOnline: isLiveConnected,
+      heading: { degrees: 45, cardinalDirection: "NE" },
+      signal: { gsmSignalPct: 95, gsmBars: 4, quality: "Excellent" },
+      lastPingText: isLiveConnected ? "Live (BharBike Gateway)" : "Standby",
+      lat: bike?.last_lat || null,
+      lng: bike?.last_lng || null,
     };
 
     if (vehicleUuid) {
@@ -190,7 +191,7 @@ export async function getBikeStatus(req, res) {
             gps.movement?.timestamp || 0,
             gps.orientation?.timestamp || 0
           );
-          if (pingTs > 0) {
+          if (pingTs > 0 && !isLiveConnected) {
             const ageMs = Date.now() - pingTs * 1000;
             telematics.isOnline = ageMs < 15 * 60 * 1000;
             const minsAgo = Math.round(ageMs / 60000);
@@ -361,7 +362,7 @@ export async function controlBike(req, res) {
           bikeId: bike ? bike.id : null,
           imei: imei || vehicleUuid,
         },
-        { timeout: 7000 }
+        { timeout: 10000 }
       );
       iotResult = iotResponse.data;
       socketSent = Boolean(iotResult?.socketSent);

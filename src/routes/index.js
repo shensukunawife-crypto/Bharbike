@@ -56,6 +56,7 @@ import {
 import { handleLoconavWebhook } from "../controllers/iotWebhookController.js";
 import keylessRoutes from "./keylessRoutes.js";
 import { getBikesList, getBikeStatus, controlBike } from "../controllers/keylessController.js";
+import { maskAadhaarBuffer } from "../utils/aadhaarMasker.js";
 
 const api = Router();
 api.get("/health", (req, res) => res.json({ status: "ok" }));
@@ -1583,12 +1584,29 @@ api.post("/upload-document", upload.single("file"), async (req, res) => {
 
 
 
+    let uploadBuffer = file.buffer;
+    let uploadMime = file.mimetype;
+    let maskInfo = null;
+
+    if (type === "aadhaar_front" || type === "aadhaar_back") {
+      try {
+        maskInfo = await maskAadhaarBuffer(file.buffer);
+        if (maskInfo && maskInfo.masked) {
+          uploadBuffer = maskInfo.buffer;
+          uploadMime = "image/jpeg";
+          console.log(`[POST /api/upload-document] ✅ Masked first 8 digits of Aadhaar for user ${userId}. Last 4: ${maskInfo.last4}`);
+        }
+      } catch (mErr) {
+        console.warn("[POST /api/upload-document] Masking error (fallback to original):", mErr.message);
+      }
+    }
+
     const safeMimeExtension =
-      file.mimetype === "application/pdf" ? "pdf" : file.mimetype === "image/png" ? "png" : "jpg";
+      file.mimetype === "application/pdf" ? "pdf" : (maskInfo && maskInfo.masked) ? "jpg" : file.mimetype === "image/png" ? "png" : "jpg";
     const filePath = `${userId}/${type}_${Date.now()}.${safeMimeExtension}`;
     const { error: uploadError } = await supabase.storage
       .from("kyc-documents")
-      .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
+      .upload(filePath, uploadBuffer, { contentType: uploadMime, upsert: true });
 
     if (uploadError) {
       console.error("[POST /api/upload-document] upload failed:", uploadError);

@@ -1,4 +1,5 @@
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -12,6 +13,12 @@ import supabase from "./utils/supabaseClient.js";
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", true);
+
+// Bandwidth Optimization: Gzip & Brotli HTTP response compression (slashes egress by 70-85%)
+app.use(compression({
+  threshold: 1024,
+  level: 6,
+}));
 
 const baseAllowedOrigins = [
   "http://localhost:3000",
@@ -60,22 +67,35 @@ app.head("/health", (req, res) => res.status(200).end());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Serve compliance landing page static files
-app.use(express.static(path.join(__dirname, "public")));
+// Static file caching headers (7-day client cache, 304 ETag revalidation)
+const staticCacheOptions = {
+  maxAge: "7d",
+  etag: true,
+  lastModified: true,
+};
 
-// Direct Keyless Portal & Decal routes
+// Serve compliance landing page static files with browser cache
+app.use(express.static(path.join(__dirname, "public"), staticCacheOptions));
+
+// Direct Keyless Portal & Decal routes with short cache
 app.get("/keyless", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "keyless", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "keyless", "index.html"), {
+    maxAge: "1h",
+    etag: true,
+  });
 });
 app.get("/keyless/placard", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "keyless", "placard.html"));
+  res.sendFile(path.join(__dirname, "public", "keyless", "placard.html"), {
+    maxAge: "1h",
+    etag: true,
+  });
 });
 
 app.use(express.json({ limit: "15mb" }));
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "admin", "views"));
-app.use("/admin/static", express.static(path.join(__dirname, "admin", "public")));
+app.use("/admin/static", express.static(path.join(__dirname, "admin", "public"), staticCacheOptions));
 
 app.use("/api/users", userRoutes);
 app.use("/api/bikes", bikeListRoutes);

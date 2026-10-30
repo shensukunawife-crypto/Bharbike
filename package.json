@@ -16,6 +16,7 @@
     "@zavudev/sdk": "^0.38.0",
     "axios": "^1.7.9",
     "bcryptjs": "^3.0.3",
+    "compression": "^1.8.2",
     "cors": "^2.8.5",
     "docx": "^9.7.1",
     "dotenv": "^16.6.1",
@@ -29,6 +30,8 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^9.0.1",
     "razorpay": "^2.9.6",
+    "sharp": "^0.35.5",
+    "tesseract.js": "^7.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

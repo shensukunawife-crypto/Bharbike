@@ -274,26 +274,26 @@ export async function controlBike(req, res) {
     if (bike) {
       const { data: vehicles } = await supabase
         .from("vehicles")
-        .select("vehicle_uuid, vehicle_number, name")
+        .select("vehicle_uuid, vehicle_number, registration_number, name")
         .eq("bike_id", bike.id)
         .order("created_at", { ascending: false });
 
       if (vehicles && vehicles.length > 0) {
         vehicleUuid = vehicles[0].vehicle_uuid;
-        imei = vehicles[0].vehicle_number || vehicles[0].vehicle_uuid;
+        imei = vehicles[0].registration_number || vehicles[0].vehicle_number || vehicles[0].vehicle_uuid;
       }
     }
 
     if (!vehicleUuid) {
       const { data: directVehicles } = await supabase
         .from("vehicles")
-        .select("bike_id, vehicle_uuid, vehicle_number")
+        .select("bike_id, vehicle_uuid, vehicle_number, registration_number")
         .or(`name.ilike.%${rawBikeCode}%,vehicle_number.ilike.%${rawBikeCode}%`)
         .limit(1);
 
       if (directVehicles && directVehicles.length > 0) {
         vehicleUuid = directVehicles[0].vehicle_uuid;
-        imei = directVehicles[0].vehicle_number || directVehicles[0].vehicle_uuid;
+        imei = directVehicles[0].registration_number || directVehicles[0].vehicle_number || directVehicles[0].vehicle_uuid;
       }
     }
 

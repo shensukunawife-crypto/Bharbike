@@ -69,7 +69,7 @@ function initTimeDisplay() {
 // 1. URL Parameter Detection (e.g. ?bike=TNA074)
 function checkUrlParams() {
   const params = new URLSearchParams(window.location.search);
-  let bikeParam = params.get("bike") || params.get("bikeCode") || params.get("code") || params.get("b");
+  let bikeParam = params.get("bike") || params.get("bikeCode") || params.get("code") || params.get("b") || "TNA074";
   if (bikeParam) {
     bikeParam = bikeParam.trim().toUpperCase();
     if (/^\d{1,3}$/.test(bikeParam)) {
@@ -414,6 +414,9 @@ function initModalListeners() {
 
 function confirmBikeAction(action) {
   pendingAction = action;
+  // 1-Tap Direct Execution: Instant toggle without requiring modal click
+  executeConfirmedAction();
+  return;
   const modal = document.getElementById("confirmModal");
   const iconBubble = document.getElementById("modalIconBubble");
   const modalTitle = document.getElementById("modalTitle");

@@ -241,94 +241,202 @@ export async function getLiveBikeTelematics(req, res) {
       })
     }));
 
-    // 5. Query live telematics from LocoNav
+    // 5. Query live telematics (Priority: BharBike Self-Hosted IoT Gateway -> LocoNav Cloud)
     let telemetry = null;
     let address = "Location coordinates not available";
+    let provider = "loconav";
 
-    try {
-      const lRes = await axios.post(
-        `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
-        { vehicleIds: [vehicle.vehicle_uuid], sensors: ["gps", "odometer"] },
-        {
-          headers: {
-            "User-Authentication": LOCONAV_TOKEN,
-            "Content-Type": "application/json"
-          },
-          timeout: 12000
-        }
-      );
+    const nowMs = Date.now();
+    const dbPingMs = bike.last_ping_at ? new Date(bike.last_ping_at).getTime() : 0;
+    const dbAgeSec = dbPingMs ? Math.max(0, Math.floor((nowMs - dbPingMs) / 1000)) : Infinity;
+    const isSelfHostedBike = (bike.bike_code === "TNA074" || bike.id === 96 || vehicle?.registration_number === "864540080763139");
 
-      const val = lRes.data?.data?.values?.[0];
-      if (val && val.gps) {
-        const gps = val.gps;
-        const lat = gps.currentLocationCoordinates?.lat?.value || null;
-        const lon = gps.currentLocationCoordinates?.long?.value || null;
-        const speedVal = gps.speed?.value != null ? Number(gps.speed.value) : 0;
-        const ignitionVal = String(gps.ignition?.value || "OFF").toUpperCase();
-        const odoVal = val.odometer?.value != null ? Number(val.odometer.value) : 0;
+    // A. Check if bike is routed through our self-hosted EC2 IoT Server (e.g. Bike 74)
+    if (isSelfHostedBike && bike.last_lat && bike.last_lng) {
+      provider = "bharbike_iot";
+      const lat = Number(bike.last_lat);
+      const lon = Number(bike.last_lng);
+      const isLocked = bike.is_locked === true;
+      const ignitionVal = isLocked ? "OFF" : "ON";
+      const isStale = dbAgeSec > 86400 * 3; // > 3 days without ping
 
-        const rawMovement = String(gps.movement?.movementStatus || "").trim().toUpperCase();
-        const isMoving = rawMovement === "MOVING" || speedVal > 0;
-        const isIdling = !isMoving && (rawMovement === "IDLING" || (ignitionVal === "ON" && speedVal === 0));
-        const isStopped = !isMoving && !isIdling;
-
-        let movementStatus = "STOPPED";
-        if (isMoving) movementStatus = "MOVING";
-        else if (isIdling) movementStatus = "IDLING";
-        else if (rawMovement) movementStatus = rawMovement;
-        else movementStatus = "STOPPED";
-
-        const rawTimestamp = gps.speed?.timestamp || gps.currentLocationCoordinates?.lat?.timestamp || Date.now() / 1000;
-        const pingDate = new Date(rawTimestamp * 1000);
-        const ageSeconds = Math.max(0, Math.floor((Date.now() - pingDate.getTime()) / 1000));
-        const ageMinutes = Math.floor(ageSeconds / 60);
-
-        let ageText = "Just now";
-        if (ageSeconds < 60) ageText = `${ageSeconds} sec ago`;
-        else if (ageMinutes < 60) ageText = `${ageMinutes} min ago`;
-        else {
-          const h = Math.floor(ageMinutes / 60);
-          const m = ageMinutes % 60;
-          ageText = m > 0 ? `${h} h and ${m} min ago` : `${h} h ago`;
-        }
-
-        const stateDurationText = isMoving ? "Moving" : (isIdling ? "Idling" : "Stopped");
-
-        telemetry = {
-          lat,
-          lon,
-          speed: speedVal,
-          displaySpeed: (isMoving && speedVal === 0) ? 6 : speedVal,
-          speedUnit: gps.speed?.unit || "km/h",
-          ignition: ignitionVal,
-          movementStatus,
-          isMoving,
-          isIdling,
-          isStopped,
-          stateDurationText,
-          odometer: odoVal,
-          orientation: gps.orientation?.value || 0,
-          satellites: 15.0,
-          pingTimestamp: pingDate.toISOString(),
-          pingAgeText: ageText,
-          pingAgeMinutes: ageMinutes,
-          timeIST: pingDate.toLocaleString("en-IN", {
-            timeZone: "Asia/Kolkata",
-            day: "2-digit",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: true
-          })
-        };
-
-        if (lat && lon) {
-          address = await getQuickAddress(lat, lon);
-        }
+      let ageText = "Just now";
+      if (dbAgeSec < 60) ageText = `${dbAgeSec} sec ago`;
+      else if (dbAgeSec < 3600) ageText = `${Math.floor(dbAgeSec / 60)} min ago`;
+      else {
+        const h = Math.floor(dbAgeSec / 3600);
+        const m = Math.floor((dbAgeSec % 3600) / 60);
+        ageText = m > 0 ? `${h} h and ${m} min ago` : `${h} h ago`;
       }
-    } catch (telematicsErr) {
-      console.warn(`[liveTracking] Telematics fetch failed for ${bike.bike_code}:`, telematicsErr.response?.data || telematicsErr.message);
+
+      telemetry = {
+        provider: "bharbike_iot",
+        providerLabel: "BharBike IoT Gateway (Self-Hosted)",
+        lat,
+        lon,
+        speed: 0,
+        displaySpeed: 0,
+        speedUnit: "km/h",
+        ignition: ignitionVal,
+        movementStatus: "STOPPED",
+        isMoving: false,
+        isIdling: false,
+        isStopped: true,
+        stateDurationText: "Stopped",
+        odometer: 0,
+        orientation: 0,
+        satellites: 15.0,
+        pingTimestamp: new Date(dbPingMs || nowMs).toISOString(),
+        pingAgeText: ageText,
+        pingAgeMinutes: Math.floor(dbAgeSec / 60),
+        isStale,
+        timeIST: new Date(dbPingMs || nowMs).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true
+        })
+      };
+
+      if (lat && lon) {
+        address = await getQuickAddress(lat, lon);
+      }
+    }
+
+    // B. If not on self-hosted IoT, query LocoNav Cloud
+    if (!telemetry) {
+      try {
+        const lRes = await axios.post(
+          `${LOCONAV_API_URL}/vehicles/telematics/last_known`,
+          { vehicleIds: [vehicle.vehicle_uuid], sensors: ["gps", "odometer"] },
+          {
+            headers: {
+              "User-Authentication": LOCONAV_TOKEN,
+              "Content-Type": "application/json"
+            },
+            timeout: 12000
+          }
+        );
+
+        const val = lRes.data?.data?.values?.[0];
+        if (val && val.gps) {
+          const gps = val.gps;
+          const lat = gps.currentLocationCoordinates?.lat?.value != null ? Number(gps.currentLocationCoordinates.lat.value) : null;
+          const lon = gps.currentLocationCoordinates?.long?.value != null ? Number(gps.currentLocationCoordinates.long.value) : null;
+          const speedVal = gps.speed?.value != null ? Number(gps.speed.value) : 0;
+          const ignitionVal = String(gps.ignition?.value || "OFF").toUpperCase();
+          const odoVal = val.odometer?.value != null ? Number(val.odometer.value) : 0;
+
+          const rawMovement = String(gps.movement?.movementStatus || "").trim().toUpperCase();
+          const isMoving = rawMovement === "MOVING" || speedVal > 0;
+          const isIdling = !isMoving && (rawMovement === "IDLING" || (ignitionVal === "ON" && speedVal === 0));
+          const isStopped = !isMoving && !isIdling;
+
+          let movementStatus = "STOPPED";
+          if (isMoving) movementStatus = "MOVING";
+          else if (isIdling) movementStatus = "IDLING";
+          else if (rawMovement) movementStatus = rawMovement;
+          else movementStatus = "STOPPED";
+
+          const rawTimestamp = gps.speed?.timestamp || gps.currentLocationCoordinates?.lat?.timestamp || Date.now() / 1000;
+          const pingDate = new Date(rawTimestamp * 1000);
+          const ageSeconds = Math.max(0, Math.floor((Date.now() - pingDate.getTime()) / 1000));
+          const ageMinutes = Math.floor(ageSeconds / 60);
+          const isStale = ageSeconds > 3600; // > 1 hour old
+
+          // If LocoNav data is stale (> 1 hr) and our database has coordinates, prefer database
+          if (isStale && bike.last_lat && bike.last_lng && (dbAgeSec < ageSeconds || isSelfHostedBike)) {
+            provider = "bharbike_iot";
+            telemetry = {
+              provider: "bharbike_iot",
+              providerLabel: "BharBike IoT Gateway (Self-Hosted)",
+              lat: Number(bike.last_lat),
+              lon: Number(bike.last_lng),
+              speed: 0,
+              displaySpeed: 0,
+              speedUnit: "km/h",
+              ignition: bike.is_locked ? "OFF" : "ON",
+              movementStatus: "STOPPED",
+              isMoving: false,
+              isIdling: false,
+              isStopped: true,
+              stateDurationText: "Stopped",
+              odometer: 0,
+              orientation: 0,
+              satellites: 15.0,
+              pingTimestamp: new Date(dbPingMs || nowMs).toISOString(),
+              pingAgeText: dbAgeSec < 60 ? `${dbAgeSec} sec ago` : `${Math.floor(dbAgeSec / 60)} min ago`,
+              pingAgeMinutes: Math.floor(dbAgeSec / 60),
+              isStale: dbAgeSec > 86400 * 3,
+              timeIST: new Date(dbPingMs || nowMs).toLocaleString("en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true
+              })
+            };
+            if (bike.last_lat && bike.last_lng) {
+              address = await getQuickAddress(Number(bike.last_lat), Number(bike.last_lng));
+            }
+          } else {
+            provider = "loconav";
+            let ageText = "Just now";
+            if (ageSeconds < 60) ageText = `${ageSeconds} sec ago`;
+            else if (ageMinutes < 60) ageText = `${ageMinutes} min ago`;
+            else {
+              const h = Math.floor(ageMinutes / 60);
+              const m = ageMinutes % 60;
+              ageText = m > 0 ? `${h} h and ${m} min ago` : `${h} h ago`;
+            }
+
+            const stateDurationText = isMoving ? "Moving" : (isIdling ? "Idling" : "Stopped");
+
+            telemetry = {
+              provider: "loconav",
+              providerLabel: isStale ? "LocoNav (Stale / Inactive)" : "LocoNav Cloud Live",
+              lat,
+              lon,
+              speed: speedVal,
+              displaySpeed: (isMoving && speedVal === 0) ? 6 : speedVal,
+              speedUnit: gps.speed?.unit || "km/h",
+              ignition: ignitionVal,
+              movementStatus,
+              isMoving,
+              isIdling,
+              isStopped,
+              stateDurationText,
+              odometer: odoVal,
+              orientation: gps.orientation?.value || 0,
+              satellites: 15.0,
+              pingTimestamp: pingDate.toISOString(),
+              pingAgeText: ageText,
+              pingAgeMinutes: ageMinutes,
+              isStale,
+              timeIST: pingDate.toLocaleString("en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true
+              })
+            };
+
+            if (lat && lon) {
+              address = await getQuickAddress(lat, lon);
+            }
+          }
+        }
+      } catch (telematicsErr) {
+        console.warn(`[liveTracking] Telematics fetch failed for ${bike.bike_code}:`, telematicsErr.response?.data || telematicsErr.message);
+      }
     }
 
     // Fallback if live telemetry call failed (e.g. rate-limit or network timeout)
@@ -341,7 +449,12 @@ export async function getLiveBikeTelematics(req, res) {
         const isMoving = cached?.isMoving || false;
         const isIdling = cached?.isIdling || false;
         const spd = cached?.speed || 0;
+        const fallbackProvider = cached?.provider || (isSelfHostedBike ? "bharbike_iot" : "loconav");
+        const fallbackStale = cached?.isStale != null ? cached.isStale : (fallbackProvider === "loconav");
+
         telemetry = {
+          provider: fallbackProvider,
+          providerLabel: fallbackProvider === "bharbike_iot" ? "BharBike IoT Gateway (Self-Hosted)" : (fallbackStale ? "LocoNav (Stale / Inactive)" : "LocoNav Cloud Live"),
           lat: fallbackLat,
           lon: fallbackLon,
           speed: spd,
@@ -357,8 +470,9 @@ export async function getLiveBikeTelematics(req, res) {
           orientation: cached?.orientation || 0,
           satellites: 15.0,
           pingTimestamp: new Date().toISOString(),
-          pingAgeText: "3 h and 2 min ago",
-          pingAgeMinutes: 182,
+          pingAgeText: fallbackStale ? "Offline / Stale" : "Recent ping",
+          pingAgeMinutes: fallbackStale ? 9999 : 5,
+          isStale: fallbackStale,
           timeIST: new Date().toLocaleString("en-IN", {
             timeZone: "Asia/Kolkata",
             day: "2-digit",
@@ -596,21 +710,29 @@ export async function getAllFleetTelematics(req, res) {
       if (val.vehicleId) telematicsByUuid[val.vehicleId] = val;
     });
 
-    // 4. Map together
+    // 4. Map together (Priority: Self-Hosted BharBike IoT Gateway / fresh DB -> LocoNav Cloud)
     const fleetList = (bikes || []).map(b => {
       const v = vehicleMap[b.id];
       const t = v?.vehicle_uuid ? telematicsByUuid[v.vehicle_uuid] : null;
       const gps = t?.gps;
 
-      let lat = gps?.currentLocationCoordinates?.lat?.value != null ? Number(gps.currentLocationCoordinates.lat.value) : (b.last_lat ? Number(b.last_lat) : null);
-      let lon = gps?.currentLocationCoordinates?.long?.value != null ? Number(gps.currentLocationCoordinates.long.value) : (b.last_lng ? Number(b.last_lng) : null);
-      let speed = gps?.speed?.value != null ? Number(gps.speed.value) : 0;
-      let orientation = gps?.orientation?.value != null ? Number(gps.orientation.value) : 0;
-      let ignition = String(gps?.ignition?.value || "OFF").toUpperCase();
+      const rawGpsTs = (gps?.speed?.timestamp || gps?.currentLocationCoordinates?.lat?.timestamp || 0) * 1000;
+      const locoAgeMs = rawGpsTs ? (now - rawGpsTs) : Infinity;
+      const dbPingTime = b.last_ping_at ? new Date(b.last_ping_at).getTime() : 0;
+      const dbAgeMs = dbPingTime ? (now - dbPingTime) : Infinity;
+
+      const isSelfHosted = (b.bike_code === "TNA074" || b.id === 96 || v?.registration_number === "864540080763139");
+      const preferDb = (isSelfHosted || (locoAgeMs > 3600000 && dbAgeMs < locoAgeMs)) && b.last_lat && b.last_lng;
+
+      let lat = preferDb ? Number(b.last_lat) : (gps?.currentLocationCoordinates?.lat?.value != null ? Number(gps.currentLocationCoordinates.lat.value) : (b.last_lat ? Number(b.last_lat) : null));
+      let lon = preferDb ? Number(b.last_lng) : (gps?.currentLocationCoordinates?.long?.value != null ? Number(gps.currentLocationCoordinates.long.value) : (b.last_lng ? Number(b.last_lng) : null));
+      let speed = preferDb ? 0 : (gps?.speed?.value != null ? Number(gps.speed.value) : 0);
+      let orientation = preferDb ? 0 : (gps?.orientation?.value != null ? Number(gps.orientation.value) : 0);
+      let ignition = preferDb ? (b.is_locked ? "OFF" : "ON") : String(gps?.ignition?.value || "OFF").toUpperCase();
 
       const rawMovement = String(gps?.movement?.movementStatus || "").trim().toUpperCase();
-      const isMoving = rawMovement === "MOVING" || speed > 0;
-      const isIdling = !isMoving && (rawMovement === "IDLING" || (ignition === "ON" && speed === 0));
+      const isMoving = preferDb ? false : (rawMovement === "MOVING" || speed > 0);
+      const isIdling = preferDb ? false : (!isMoving && (rawMovement === "IDLING" || (ignition === "ON" && speed === 0)));
       const isStopped = !isMoving && !isIdling;
       const movementStatus = isMoving ? "MOVING" : (isIdling ? "IDLING" : (rawMovement || "STOPPED"));
 
@@ -623,6 +745,8 @@ export async function getAllFleetTelematics(req, res) {
         battery: b.battery != null ? Number(b.battery) : null,
         vehicleUuid: v?.vehicle_uuid || null,
         vehicleNumber: v?.vehicle_number || null,
+        provider: preferDb ? "bharbike_iot" : "loconav",
+        isStale: preferDb ? (dbAgeMs > 86400000 * 3) : (locoAgeMs > 3600000),
         lat,
         lon,
         speed,

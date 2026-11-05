@@ -1281,8 +1281,16 @@
 
       if (!data || !data.success) throw new Error(data?.message || 'Failed to load telemetry');
 
-      cloudStatus.className = 'lt-status-pill';
-      cloudStatusText.textContent = 'LocoNav Cloud Live';
+      if (data.telemetry?.provider === 'bharbike_iot' || data.provider === 'bharbike_iot') {
+        cloudStatus.className = 'lt-status-pill';
+        cloudStatusText.textContent = '🟢 BharBike IoT Live';
+      } else if (data.telemetry?.isStale) {
+        cloudStatus.className = 'lt-status-pill offline';
+        cloudStatusText.textContent = `LocoNav Stale (${data.telemetry.pingAgeText || 'Offline'})`;
+      } else {
+        cloudStatus.className = 'lt-status-pill';
+        cloudStatusText.textContent = 'LocoNav Cloud Live';
+      }
       const nowStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
       lastUpdatedTime.textContent = `Updated: ${nowStr} IST`;
 
@@ -1338,7 +1346,13 @@
           <span id="stateDurationVal" style="color:#f59e0b; font-weight:800;">${telemetry.stateDurationText || 'Stopped'}</span>
         `;
       }
-      dataAgeText.textContent = `Status last refreshed: ${telemetry.pingAgeText}`;
+      if (telemetry.provider === 'bharbike_iot') {
+        dataAgeText.innerHTML = `Status last refreshed: <strong style="color: #10b981;">${telemetry.pingAgeText}</strong> <span style="font-size: 11px; color: var(--text-muted);">(BharBike IoT Gateway)</span>`;
+      } else if (telemetry.isStale) {
+        dataAgeText.innerHTML = `Status last refreshed: <strong style="color: #ef4444;">${telemetry.pingAgeText}</strong> <span style="font-size: 11px; color: #ef4444;">(LocoNav Stale)</span>`;
+      } else {
+        dataAgeText.textContent = `Status last refreshed: ${telemetry.pingAgeText}`;
+      }
 
       // Real GPS Satellites Sensor (Chip 1)
       const satVal = telemetry.satellites != null ? Number(telemetry.satellites).toFixed(1) : '15.0';

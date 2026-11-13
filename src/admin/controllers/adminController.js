@@ -976,8 +976,12 @@ export async function dashboard(req, res) {
           // Find their latest subscription by end_date
           const sorted = [...list].sort((a, b) => new Date(b.end_date || b.created_at) - new Date(a.end_date || a.created_at));
           const latestSub = sorted[0];
-          const userExists = (allUsersData || []).some(u => String(u.id) === String(uid));
-          if (userExists && latestSub && latestSub.status === 'expired') {
+          // Exclude blocked or inactive users
+          const u = allUsers.find(user => String(user.id).toLowerCase() === String(uid).toLowerCase());
+          if (!u || u.is_blocked === true || u.status === 'blocked' || u.status === 'inactive') continue;
+          // If latest subscription is cancelled, rider is inactive
+          if (latestSub && latestSub.status === 'cancelled') continue;
+          if (latestSub && latestSub.status === 'expired') {
             expiredUsersList.push({ uid, sub: latestSub });
           }
         }
@@ -1018,6 +1022,17 @@ export async function dashboard(req, res) {
           const rUid = String(r.user_id).toLowerCase();
           // STRICT FILTER: If the user currently has an active subscription, NEVER show them as expired!
           if (activeSubUserIds.has(rUid) || expiredUserIds.has(rUid)) return;
+
+          // STRICT FILTER: Exclude blocked or inactive accounts
+          const u = allUsers.find(user => String(user.id).toLowerCase() === rUid);
+          if (!u || u.is_blocked === true || u.status === 'blocked' || u.status === 'inactive') return;
+
+          // STRICT FILTER: Exclude users whose latest subscription is cancelled (inactive riders)
+          const userSubs = subsByUser[u.id] || [];
+          if (userSubs.length > 0) {
+            const sorted = [...userSubs].sort((a, b) => new Date(b.end_date || b.created_at) - new Date(a.end_date || a.created_at));
+            if (sorted[0] && sorted[0].status === 'cancelled') return;
+          }
 
           if (r.status === "expired" && r.user_id) {
             // Verify the bike is actually still associated with this user, and wasn't reassigned to someone else!
@@ -1406,7 +1421,9 @@ export async function users(req, res) {
           }
         } else {
           // If no ongoing rental, check if user has an expired rental whose bike has NOT been reassigned to another rider
-          const expiredRental = userRentals.find(r => r.status === "expired");
+          // Exclude users who are blocked, inactive, or cancelled from showing an expired rental bike
+          const isUserInactiveOrCancelled = row.is_blocked === true || row.status === 'blocked' || row.status === 'inactive' || (userSub && userSub.status === 'cancelled');
+          const expiredRental = !isUserInactiveOrCancelled ? userRentals.find(r => r.status === 'expired') : null;
           if (expiredRental) {
             const latestRentalForBike = (rentalsData || []).find(r => r.bike_id === expiredRental.bike_id);
             const bikeReassigned = latestRentalForBike && String(latestRentalForBike.user_id).toLowerCase() !== String(base.id).toLowerCase();
@@ -7019,6 +7036,23 @@ export async function cancelSubscription(req, res) {
     }).eq("id", subId);
     
     if (error) throw error;
+
+    // Auto-release any bike/rental held by cancelled user so fleet and dashboard stay clean
+    if (cancelledSub?.user_id) {
+      try {
+        const { data: userRentals } = await supabase.from('rentals').select('id, bike_id').eq('user_id', cancelledSub.user_id).in('status', ['active', 'ongoing', 'expired']);
+        if (userRentals && userRentals.length > 0) {
+          const rentalIds = userRentals.map(r => r.id);
+          const bikeIds = userRentals.map(r => r.bike_id).filter(Boolean);
+          await supabase.from('rentals').update({ status: 'completed', end_time: new Date().toISOString() }).in('id', rentalIds);
+          if (bikeIds.length > 0) {
+            await supabase.from('bikes').update({ status: 'available', is_locked: true }).in('id', bikeIds);
+          }
+        }
+      } catch (cleanErr) {
+        console.warn('[cancelSubscription] Error auto-releasing bike:', cleanErr.message);
+      }
+    }
 
     // Audit log
     fileLogAdminAction(req, "ADMIN_CANCEL_PLAN", cancelledSub?.user_id || "Unknown", { subId });

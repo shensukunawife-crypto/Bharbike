@@ -152,7 +152,7 @@ export const getActiveSubscription = async (req, res) => {
           } catch { /* plan table may not exist yet */ }
 
           const isPastEnd = endDate < now;
-          const canRenew = isPastEnd || daysRemaining <= 2;
+          const canRenew = isPastEnd || daysRemaining <= 2 || (typeof subscription !== "undefined" && subscription?.status === "expired") || (typeof rawSub !== "undefined" && rawSub?.status === "expired");
 
           return res.json({
             success: true,
@@ -199,7 +199,7 @@ export const getActiveSubscription = async (req, res) => {
     const diffDays = Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24));
     const daysRemaining = Math.max(0, diffDays + 1);
     const isPastEnd = endDate < now;
-    const canRenew = isPastEnd || daysRemaining <= 2;
+    const canRenew = isPastEnd || daysRemaining <= 2 || (typeof subscription !== "undefined" && subscription?.status === "expired") || (typeof rawSub !== "undefined" && rawSub?.status === "expired");
 
     return res.json({
       success: true,
@@ -354,7 +354,7 @@ export const createSubscription = async (req, res) => {
       const isPastEnd = endDate < now;
 
       // Allow renewal on Day 6 & 7 (daysRemaining <= 2) or during overnight grace before 9:30 AM (isPastEnd)
-      const canRenew = isPastEnd || daysRemaining <= 2;
+      const canRenew = isPastEnd || daysRemaining <= 2 || (typeof subscription !== "undefined" && subscription?.status === "expired") || (typeof rawSub !== "undefined" && rawSub?.status === "expired");
 
       if (!canRenew) {
         return res.status(400).json({

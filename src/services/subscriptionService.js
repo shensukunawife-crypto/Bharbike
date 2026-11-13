@@ -277,7 +277,7 @@ export async function getUserActiveSubscription(userId) {
         .maybeSingle();
 
       if (rawData) {
-        if (hasPassedGracePeriod(rawData.end_date)) return null;
+        if (rawData.status === "expired" || hasPassedGracePeriod(rawData.end_date)) return null;
         let planData = null;
         try {
           planData = await getSubscriptionPlanById(rawData.plan_id);
@@ -293,7 +293,7 @@ export async function getUserActiveSubscription(userId) {
       return null;
     }
 
-    if (!data || hasPassedGracePeriod(data.end_date)) {
+    if (!data || data.status === "expired" || hasPassedGracePeriod(data.end_date)) {
       return null;
     }
 

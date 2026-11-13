@@ -1388,7 +1388,7 @@ export async function users(req, res) {
               new Date(a.createdAt || a.created_at || now).getTime()
           )[0]?.createdAt;
         // Always pick the most recent ACTIVE subscription; fall back to most recent of any status
-        const userSubsForUser = (subsData || []).filter(s => String(s.user_id).toLowerCase() === String(base.id).toLowerCase());
+        const userSubsForUser = (subsData || []).filter(s => String(s.user_id).toLowerCase() === String(base.id).toLowerCase()).sort((a, b) => new Date(b.end_date || b.created_at || 0) - new Date(a.end_date || a.created_at || 0));
         const userSub = userSubsForUser.find(s => s.status === 'active') || userSubsForUser[0] || null;
         const userWallet = (walletsData || []).find(w => String(w.user_id).toLowerCase() === String(base.id).toLowerCase());
         

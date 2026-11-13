@@ -444,10 +444,29 @@ export async function createSubscription(userId, planId, paymentId = null, paidA
           const lastEndDate = new Date(activeOrRecentSub.end_date);
           const now = nowIST();
           
-          // If still active or within 7 day grace period
-          if (lastEndDate >= now || (now - lastEndDate) / (1000 * 60 * 60 * 24) <= 7) {
+          // Check if user currently holds a bike (has an ongoing, active, or unreturned rental)
+          let hasBike = false;
+          try {
+            const { data: unreturnedRental } = await supabase
+              .from("rentals")
+              .select("id, bike_id, status")
+              .eq("user_id", userId)
+              .in("status", ["ongoing", "active", "expired"])
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            hasBike = !!unreturnedRental;
+          } catch (rErr) {
+            console.warn("[createSubscription] Bike rental check warning:", rErr?.message);
+          }
+
+          // If rider STILL HAS THE BIKE:
+          // They possessed the vehicle during the unpaid gap! Any payment MUST extend continuously
+          // from the day after their last subscription ended (lastEndDate + 1), regardless of how many days late.
+          // If rider does NOT have a bike, only extend if within 7 days of expiry; otherwise fresh start.
+          if (hasBike || lastEndDate >= now || (now - lastEndDate) / (1000 * 60 * 60 * 24) <= 7) {
             startDate = addISTDays(lastEndDate, 1);
-            console.log(`[createSubscription] Extending subscription. Starting on ${toISTDateStr(startDate)} IST`);
+            console.log(`[createSubscription] Extending subscription. Starting on ${toISTDateStr(startDate)} IST (hasBike: ${hasBike})`);
           } else {
             // Beyond grace — fresh start.
             // If admin passed a payment date override, backdate to that date (max 30 days back, not future).

@@ -97,8 +97,12 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
       needsHeal = true;
       healReason = `Found ${activeSubs.length} active subscriptions (duplicates detected)`;
     } else if (!latestActive) {
-      needsHeal = true;
-      healReason = `Status is '${subs[0]?.status}' instead of active`;
+      // If the newest subscription was paid for past debt while keeping the bike, it will legitimately be 'expired'
+      const isPastDebtSettlement = subs[0]?.status === "expired" && (now - new Date(subs[0]?.created_at || 0)) < 15 * 60 * 1000;
+      if (!isPastDebtSettlement) {
+        needsHeal = true;
+        healReason = `Status is '${subs[0]?.status}' instead of active`;
+      }
     } else if (new Date(latestActive.end_date) <= now) {
       needsHeal = true;
       healReason = `End date is in the past (${new Date(latestActive.end_date).toISOString()})`;
@@ -165,13 +169,14 @@ export async function verifyAndHealSubscription(userId, paymentAmount) {
         console.log(`[SubscriptionBrain] Expired ${activeIds.length} old active subscription(s) before healing.`);
       }
 
+      const subStatus = endDate > now ? "active" : "expired";
       // Step 2: Insert a fresh new subscription record (preserves full history)
       const { error: insertErr } = await supabase
         .from("user_subscriptions")
         .insert({
           user_id: userId,
           plan_id: String(expectedPlanId),
-          status: "active",
+          status: subStatus,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           auto_renew: false,

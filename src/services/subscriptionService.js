@@ -348,6 +348,30 @@ export async function getUserSubscriptions(userId) {
  */
 export async function createSubscription(userId, planId, paymentId = null, paidAmount = null, overrideStartDate = null) {
   try {
+    // Idempotency check: prevent duplicate subscription activation if this payment was already billed
+    if (paymentId) {
+      try {
+        const { data: existingBill } = await supabase
+          .from("subscription_billing")
+          .select("id, subscription_id")
+          .or(`razorpay_payment_id.eq.${paymentId},razorpay_order_id.eq.${paymentId}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (existingBill && existingBill.subscription_id) {
+          console.warn(`[createSubscription] Payment ${paymentId} already activated sub ${existingBill.subscription_id}. Returning existing.`);
+          const { data: existingSub } = await supabase
+            .from("user_subscriptions")
+            .select("*")
+            .eq("id", existingBill.subscription_id)
+            .maybeSingle();
+          if (existingSub) return existingSub;
+        }
+      } catch (checkErr) {
+        console.warn("[createSubscription] Idempotency check skipped:", checkErr.message);
+      }
+    }
+
     // Get plan details
     const plan = await getSubscriptionPlanById(planId);
     if (!plan) {

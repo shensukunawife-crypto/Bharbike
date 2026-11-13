@@ -1340,6 +1340,7 @@ export async function users(req, res) {
     const [
       mappings,
       { data: usersData, error: usersError },
+      { data: profilesData, error: profilesError },
       { data: ordersData, error: ordersError },
       { data: subsData, error: subsError },
       { data: walletsData, error: walletsError },
@@ -1349,6 +1350,7 @@ export async function users(req, res) {
     ] = await Promise.all([
       getIdMappings(),
       supabase.from("users").select("*"),
+      supabase.from("profiles").select("*"),
       supabase.from("orders").select("*"),
       supabase.from("user_subscriptions").select("*").order("created_at", { ascending: false }),
       supabase.from("wallet_balances").select("*"),
@@ -1377,7 +1379,30 @@ export async function users(req, res) {
       return Math.round((s1.getTime() - s2.getTime()) / (24 * 60 * 60 * 1000));
     }
 
-    const users = safeData(usersData)
+    // Merge profiles for riders that may be missing in users table (prevents disappearing users)
+    const existingUserIds = new Set(safeData(usersData).map(u => String(u.id).toLowerCase()));
+    const allUsersCombined = [...safeData(usersData)];
+    for (const p of safeData(profilesData)) {
+      if (!existingUserIds.has(String(p.id).toLowerCase())) {
+        allUsersCombined.push({
+          id: p.id,
+          name: p.full_name,
+          full_name: p.full_name,
+          phone: p.phone,
+          email: p.email,
+          location: p.location || "",
+          address: p.location || "",
+          created_at: p.created_at,
+          status: "active",
+          is_blocked: false,
+          is_delivery_partner: false,
+          is_online: false
+        });
+        existingUserIds.add(String(p.id).toLowerCase());
+      }
+    }
+
+    const users = allUsersCombined
       .filter((row) => row.is_delivery_partner !== true)
       .map((row) => {
         const normalizedRow = {
@@ -7266,6 +7291,21 @@ export async function editPayment(req, res) {
     // Activate subscription whenever ANY payment is transitioned TO success by admin
     if (status === "success" && oldPayment.status !== "success") {
       const { user_id, razorpay_order_id, razorpay_payment_id, order_id } = oldPayment;
+
+      // Idempotency: Prevent duplicate subscription activation if this payment was already billed/processed
+      if (razorpay_payment_id && razorpay_payment_id !== "Cash") {
+        const { data: existingBill } = await supabase
+          .from("subscription_billing")
+          .select("id, subscription_id")
+          .eq("razorpay_payment_id", razorpay_payment_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (existingBill && existingBill.subscription_id) {
+          console.warn("[admin.editPayment] Payment already activated subscription " + existingBill.subscription_id + ". Skipping duplicate activation.");
+          return res.json({ success: true, message: "Payment updated to success (subscription already active)" });
+        }
+      }
       
       if (user_id) {
         // Auto-reject any duplicate pending payments for this user with the same amount to prevent dashboard spam

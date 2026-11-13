@@ -411,6 +411,46 @@ export async function expireRentalsPastEnd() {
         continue;
       }
 
+      // Safety Check: Check if this bike is currently assigned to or held by another active paid rider!
+      if (r.bike_id) {
+        const { data: otherRentalsOnBike } = await supabase
+          .from("rentals")
+          .select("id, user_id, start_time")
+          .eq("bike_id", r.bike_id)
+          .in("status", ["ongoing", "active"])
+          .neq("id", r.id)
+          .order("start_time", { ascending: false });
+
+        if (otherRentalsOnBike && otherRentalsOnBike.length > 0) {
+          let hasActivePaidRider = false;
+          for (const otherR of otherRentalsOnBike) {
+            const { data: otherSub } = await supabase
+              .from("user_subscriptions")
+              .select("id, status, end_date")
+              .eq("user_id", otherR.user_id)
+              .eq("status", "active")
+              .gt("end_date", now.toISOString())
+              .maybeSingle();
+
+            if (otherSub) {
+              hasActivePaidRider = true;
+              console.log(`[rentalService.expireRentalsPastEnd] Bike #${r.bike_id} is currently held by active paid rider ${otherR.user_id} (sub valid until ${otherSub.end_date}). Completing stale rental ${r.id} without locking bike.`);
+              break;
+            }
+          }
+
+          if (hasActivePaidRider) {
+            // Auto-complete the stale rental for the previous user so it never interferes again
+            await supabase.from("rentals").update({
+              status: RentalStatus.completed,
+              end_time: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }).eq("id", r.id);
+            continue;
+          }
+        }
+      }
+
       // Past 9:30 AM grace period for a subscription user — expire the rental and lock the bike
       results.push(await finalizeRental(r.id, RentalStatus.expired));
       await new Promise(r => setTimeout(r, 2000)); // Rate limit buffer

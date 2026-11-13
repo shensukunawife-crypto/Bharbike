@@ -4662,6 +4662,14 @@ export async function assignBike(req, res) {
       }
     }
 
+    // Also complete any previous rentals on THIS bike for other users so stale records never linger or trigger expiry locks
+    await supabase
+      .from("rentals")
+      .update({ status: "completed", end_time: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("bike_id", bikeId)
+      .neq("user_id", user_id)
+      .in("status", ["active", "ongoing", "expired"]);
+
 
     // Check if user has an active subscription to sync end_time
     const { data: userSub } = await supabase
@@ -7495,6 +7503,14 @@ export async function assignBikeToUser(req, res) {
           await supabase.from("bikes").update({ status: "available", is_locked: true }).in("id", oldBikeIds);
         }
       }
+
+      // Also complete any previous rentals on THIS bike for other users so stale records never linger or trigger expiry locks
+      await supabase
+        .from("rentals")
+        .update({ status: "completed", end_time: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("bike_id", bike.id)
+        .neq("user_id", userId)
+        .in("status", ["active", "ongoing", "expired"]);
       return res.json({ success: true, message: "Bike unassigned successfully" });
     }
 

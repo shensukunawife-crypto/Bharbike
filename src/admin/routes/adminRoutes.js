@@ -79,6 +79,11 @@ router.post("/maintenance/:bikeId/fixed", requirePermission("manage_bikes"), adm
 router.post("/maintenance/add", requirePermission("manage_bikes"), adminController.addMaintenanceTicket);
 router.post("/maintenance/:ticketId/status", requirePermission("manage_bikes"), adminController.updateMaintenanceStatus);
 router.post("/maintenance/:ticketId/remove", requirePermission("manage_bikes"), adminController.removeMaintenanceTicket);
+router.get("/maintenance/parts", requirePermission("manage_bikes"), adminController.getPartsCatalog);
+router.get("/maintenance/job-card/:id", requirePermission("manage_bikes"), adminController.getJobCardDetails);
+router.post("/maintenance/job-card/create", requirePermission("manage_bikes"), adminController.createJobCard);
+router.post("/maintenance/job-card/:id/close", requirePermission("manage_bikes"), adminController.closeJobCard);
+router.post("/maintenance/job-card/:id/record-payment", requirePermission("manage_bikes"), adminController.recordJobCardPayment);
 
 // Operations & Orders
 router.get("/orders", requirePermission("manage_orders"), adminController.orders);

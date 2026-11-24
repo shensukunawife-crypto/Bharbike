@@ -3352,17 +3352,42 @@ export async function maintenance(req, res) {
     const [
       { data, error },
       { data: supportRows, error: supportError },
-      { data: dbTickets, error: dbTicketsError }
+      { data: dbTickets, error: dbTicketsError },
+      { data: partsCatalog, error: partsError },
+      { data: componentsUsed, error: compError },
+      { data: rentalsData }
     ] = await Promise.all([
       supabase.from("bikes").select("*"),
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }).limit(20),
-      supabase.from("maintenance").select("*").order("created_at", { ascending: false })
+      supabase.from("maintenance").select("*").order("created_at", { ascending: false }),
+      supabase.from("maintenance_parts_catalog").select("*").order("name"),
+      supabase.from("maintenance_components_used").select("*"),
+      supabase.from("rentals").select("bike_id, user_id").in("status", ["active", "ongoing"])
     ]);
     if (error || supportError || dbTicketsError) {
       console.error("[admin.maintenance] fetch failed", error || supportError || dbTicketsError);
     }
     const bikes = safeData(data).map(normalizeBike);
     const supportTickets = safeData(supportRows);
+
+    // Map active riders per bike
+    const userIds = [...new Set((rentalsData || []).map(r => r.user_id).filter(Boolean))];
+    const { data: usersData } = userIds.length > 0
+      ? await supabase.from("users").select("id, full_name, phone").in("id", userIds)
+      : { data: [] };
+    const uMap = new Map((usersData || []).map(u => [u.id, u]));
+    const bikeRiderMap = {};
+    (rentalsData || []).forEach(r => {
+      const u = uMap.get(r.user_id);
+      if (u) bikeRiderMap[String(r.bike_id)] = { riderId: u.id, riderName: u.full_name, phone: u.phone };
+    });
+
+    // Group components by ticket ID
+    const componentsByTicketId = {};
+    (componentsUsed || []).forEach(c => {
+      if (!componentsByTicketId[c.ticket_id]) componentsByTicketId[c.ticket_id] = [];
+      componentsByTicketId[c.ticket_id].push(c);
+    });
 
     const mapDbTicket = (row) => ({
       id: row.id,
@@ -3378,6 +3403,26 @@ export async function maintenance(req, res) {
       reportedDate: row.reported_date,
       expectedFixDate: row.expected_fix_date,
       fixedDate: row.fixed_date,
+      jobCardNumber: row.job_card_number || row.ticket_id,
+      shift: row.shift || "morning",
+      serviceType: row.service_type || "repair",
+      startTime: row.start_time,
+      completionTime: row.completion_time,
+      riderId: row.rider_id,
+      riderName: row.rider_name,
+      boxNumber: row.box_number,
+      boxService: Boolean(row.box_service),
+      ledService: Boolean(row.led_service),
+      boxServiceReason: row.box_service_reason,
+      deliveryStatus: row.delivery_status,
+      deliveryDatetime: row.delivery_datetime,
+      riderAmount: Number(row.rider_amount || 0),
+      companyAmount: Number(row.company_amount || 0),
+      paymentStatus: row.payment_status || (row.status === "payment_pending" ? "payment_pending" : "not_applicable"),
+      paymentMethod: row.payment_method,
+      paymentRef: row.payment_ref,
+      amountCollected: Number(row.amount_collected || 0),
+      components: componentsByTicketId[row.id] || []
     });
 
     // Clear and reload global maintenanceTickets array from database
@@ -3396,7 +3441,8 @@ export async function maintenance(req, res) {
         const newTicket = {
           id: randomUUID(),
           ticket_id: ticketId,
-          bike_id: bike.id,
+          job_card_number: `JC-${ticketId}`,
+          bike_id: String(bike.id),
           bike_code: bike.bike_code || bike.id,
           issue_type: "General Maintenance",
           description: "Sent to maintenance from Admin Panel",
@@ -3417,22 +3463,32 @@ export async function maintenance(req, res) {
     const filter = req.query.filter || "all";
     const search = String(req.query.search || "").trim().toLowerCase();
     const filteredTickets = maintenanceTickets.filter((ticket) => {
-      if (search && !String(ticket.bikeCode || "").toLowerCase().includes(search)) return false;
+      if (search) {
+        const matchesBike = String(ticket.bikeCode || "").toLowerCase().includes(search);
+        const matchesJc = String(ticket.jobCardNumber || "").toLowerCase().includes(search);
+        const matchesRider = String(ticket.riderName || "").toLowerCase().includes(search);
+        if (!matchesBike && !matchesJc && !matchesRider) return false;
+      }
       if (filter === "completed") {
         return ticket.status === "completed";
       }
-      if (filter === "active") {
-        return ticket.status === "under_repair" || ticket.status === "in_progress";
+      if (filter === "payment_pending") {
+        return ticket.status === "payment_pending";
       }
-      // Default (all) -> show only active maintenance tickets in the top table
-      return ticket.status === "under_repair" || ticket.status === "in_progress";
+      if (filter === "active") {
+        return ticket.status === "under_repair" || ticket.status === "in_progress" || ticket.status === "payment_pending";
+      }
+      // Default (all) -> show active and payment pending tickets in the active table
+      return ticket.status === "under_repair" || ticket.status === "in_progress" || ticket.status === "payment_pending";
     });
     const history = maintenanceTickets.filter((item) => item.status === "completed");
     const maintenanceStats = {
       total: maintenanceTickets.filter((x) => x.status !== "completed").length,
-      inProgress: maintenanceTickets.filter((x) => x.status === "in_progress").length,
+      inProgress: maintenanceTickets.filter((x) => x.status === "in_progress" || x.status === "under_repair").length,
+      paymentPending: maintenanceTickets.filter((x) => x.status === "payment_pending").length,
       completed: maintenanceTickets.filter((x) => x.status === "completed").length,
       totalCost: maintenanceTickets.reduce((sum, x) => sum + Number(x.repairCost || 0), 0),
+      totalRiderCost: maintenanceTickets.reduce((sum, x) => sum + Number(x.riderAmount || 0), 0),
     };
     return renderPage(res, {
       title: "Maintenance",
@@ -3445,6 +3501,8 @@ export async function maintenance(req, res) {
       search,
       supportTickets,
       maintenanceStats,
+      partsCatalog: partsCatalog || [],
+      bikeRiderMap
     });
   } catch (error) {
     console.error("[admin.maintenance] unexpected error", error);
@@ -5262,6 +5320,289 @@ export async function removeMaintenanceTicket(req, res) {
   } catch (error) {
     console.error("[admin.removeMaintenanceTicket] failed", error);
     return res.status(500).json({ success: false, message: "Unable to remove ticket" });
+  }
+}
+
+export async function getPartsCatalog(req, res) {
+  try {
+    const { category } = req.query;
+    let query = supabase.from("maintenance_parts_catalog").select("*").order("name");
+    if (category) {
+      query = query.eq("category", category);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    return res.json({ success: true, data: data || [] });
+  } catch (err) {
+    console.error("[admin.getPartsCatalog] failed:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function getJobCardDetails(req, res) {
+  try {
+    const { id } = req.params;
+    const { data: ticket, error } = await supabase.from("maintenance").select("*").eq("id", id).maybeSingle();
+    if (error || !ticket) return res.status(404).json({ success: false, message: "Job card not found" });
+
+    const { data: components } = await supabase.from("maintenance_components_used").select("*").eq("ticket_id", id);
+    return res.json({ success: true, data: { ...ticket, components: components || [] } });
+  } catch (err) {
+    console.error("[admin.getJobCardDetails] failed:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function createJobCard(req, res) {
+  try {
+    const {
+      bikeId,
+      shift,
+      serviceType,
+      technicianName,
+      startTime,
+      completionTime,
+      boxNumber,
+      boxService,
+      ledService,
+      boxServiceReason,
+      deliveryStatus,
+      deliveryDatetime,
+      components,
+      issueType,
+      description
+    } = req.body;
+
+    let targetBikeId = bikeId;
+    let bikeCode = "UNKNOWN";
+    if (typeof bikeId === "object" && bikeId !== null) {
+      targetBikeId = bikeId.id;
+      bikeCode = bikeId.bike_code || bikeId.id;
+    } else if (typeof bikeId === "string" && (bikeId.startsWith("{") || bikeId.startsWith("["))) {
+      try {
+        const parsed = JSON.parse(bikeId);
+        targetBikeId = parsed.id;
+        bikeCode = parsed.bike_code || parsed.id;
+      } catch (e) {
+        targetBikeId = bikeId;
+      }
+    } else {
+      const { data: bData } = await supabase.from("bikes").select("id, bike_code").eq("id", bikeId).maybeSingle();
+      if (bData) {
+        bikeCode = bData.bike_code;
+      }
+    }
+
+    // Auto-detect assigned rider/driver for this bike
+    let riderId = req.body.riderId || null;
+    let riderName = req.body.riderName || null;
+    if (!riderName && targetBikeId) {
+      const { data: activeRentals } = await supabase
+        .from("rentals")
+        .select("user_id, status")
+        .eq("bike_id", targetBikeId)
+        .in("status", ["active", "ongoing"])
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (activeRentals && activeRentals.length > 0) {
+        riderId = activeRentals[0].user_id;
+        const { data: uData } = await supabase.from("users").select("full_name").eq("id", riderId).maybeSingle();
+        riderName = uData?.full_name || null;
+      }
+    }
+
+    // Generate Job Card Number: JC-YYYYMM-XXXX
+    const now = new Date();
+    const datePrefix = `JC-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const { count } = await supabase.from("maintenance").select("id", { count: "exact", head: true });
+    const jobCardNumber = `${datePrefix}-${String((count || 0) + 1).padStart(4, "0")}`;
+    const ticketId = `MT-${1000 + (count || 0) + 1}`;
+
+    // Parse components
+    let parsedComponents = Array.isArray(components) ? components : [];
+    if (typeof components === "string") {
+      try { parsedComponents = JSON.parse(components); } catch (e) {}
+    }
+
+    let companyAmount = 0;
+    let riderAmount = 0;
+    parsedComponents.forEach(c => {
+      const qty = Number(c.quantity || 1);
+      const unitPrice = Number(c.unit_price || 0);
+      const total = qty * unitPrice;
+      if (c.charge_to === "rider") {
+        riderAmount += total;
+      } else {
+        companyAmount += total;
+      }
+    });
+
+    const maintenanceId = randomUUID();
+    const isBoxService = boxService === true || boxService === "true" || boxService === "yes" || boxService === "1";
+    const isLedService = ledService === true || ledService === "true" || ledService === "yes" || ledService === "1";
+
+    const newJobCard = {
+      id: maintenanceId,
+      ticket_id: ticketId,
+      job_card_number: jobCardNumber,
+      bike_id: String(targetBikeId),
+      bike_code: bikeCode,
+      shift: shift || "morning",
+      service_type: serviceType || "repair",
+      technician_name: technicianName || "Unassigned",
+      start_time: startTime ? new Date(startTime).toISOString() : now.toISOString(),
+      completion_time: completionTime ? new Date(completionTime).toISOString() : null,
+      rider_id: riderId,
+      rider_name: riderName || "Unassigned",
+      box_number: boxNumber || null,
+      box_service: isBoxService,
+      led_service: isLedService,
+      box_service_reason: boxServiceReason || null,
+      delivery_status: deliveryStatus || null,
+      delivery_datetime: deliveryDatetime ? new Date(deliveryDatetime).toISOString() : null,
+      issue_type: issueType || (serviceType === "regular_service" ? "Regular Service" : "Repair"),
+      description: description || "Workshop maintenance job card",
+      status: "under_repair",
+      repair_cost: companyAmount + riderAmount,
+      company_amount: companyAmount,
+      rider_amount: riderAmount,
+      payment_status: riderAmount > 0 ? "payment_pending" : "not_applicable",
+      reported_date: now.toISOString().slice(0, 16).replace("T", " "),
+      expected_fix_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    };
+
+    const { error: insErr } = await supabase.from("maintenance").insert(newJobCard);
+    if (insErr) throw insErr;
+
+    // Insert line-item components if any
+    if (parsedComponents.length > 0) {
+      const compRows = parsedComponents.map(c => ({
+        ticket_id: maintenanceId,
+        category: c.category || "bike",
+        component_name: c.component_name || c.name,
+        quantity: Number(c.quantity || 1),
+        charge_to: c.charge_to === "rider" ? "rider" : "company",
+        unit_price: Number(c.unit_price || 0),
+        total_price: Number(c.quantity || 1) * Number(c.unit_price || 0)
+      }));
+      await supabase.from("maintenance_components_used").insert(compRows);
+    }
+
+    // Set bike to maintenance status
+    if (targetBikeId) {
+      const numId = Number(targetBikeId);
+      if (Number.isInteger(numId) && !isNaN(numId)) {
+        await supabase.from("bikes").update({ status: "maintenance" }).eq("id", numId);
+      } else {
+        await supabase.from("bikes").update({ status: "maintenance" }).eq("bike_code", bikeCode);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: "Job card created successfully",
+      data: { id: maintenanceId, jobCardNumber, ticketId }
+    });
+  } catch (err) {
+    console.error("[admin.createJobCard] failed:", err);
+    return res.status(500).json({ success: false, message: "Unable to create job card: " + err.message });
+  }
+}
+
+export async function closeJobCard(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      hasRiderPaid, // "yes" | "no" | "na"
+      paymentMethod, // "cash" | "gpay"
+      paymentRef,
+      amountCollected,
+      completionTime
+    } = req.body;
+
+    const { data: ticket, error: fErr } = await supabase.from("maintenance").select("*").eq("id", id).maybeSingle();
+    if (fErr || !ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
+
+    const nowIso = new Date().toISOString();
+    const compTime = completionTime ? new Date(completionTime).toISOString() : nowIso;
+
+    let updateFields = {
+      completion_time: compTime,
+    };
+
+    const riderAmt = Number(ticket.rider_amount || 0);
+
+    if (hasRiderPaid === "no" || (riderAmt > 0 && hasRiderPaid !== "yes")) {
+      // Payment is pending! Ticket MUST remain marked "payment_pending" even though repair is finished
+      updateFields.status = "payment_pending";
+      updateFields.payment_status = "payment_pending";
+    } else {
+      // Payment received or not applicable (company pays)
+      updateFields.status = "completed";
+      updateFields.payment_status = riderAmt > 0 ? "paid" : "company_paid";
+      updateFields.payment_method = paymentMethod || (riderAmt > 0 ? "cash" : "none");
+      updateFields.payment_ref = paymentRef || null;
+      updateFields.amount_collected = Number(amountCollected || riderAmt);
+      updateFields.fixed_date = nowIso.slice(0, 16).replace("T", " ");
+
+      // Release bike to available
+      const numericId = Number(ticket.bike_id);
+      if (Number.isInteger(numericId) && !isNaN(numericId)) {
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("id", numericId);
+      } else if (ticket.bike_code) {
+        await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("bike_code", ticket.bike_code);
+      }
+    }
+
+    const { error: upErr } = await supabase.from("maintenance").update(updateFields).eq("id", id);
+    if (upErr) throw upErr;
+
+    return res.json({
+      success: true,
+      message: updateFields.status === "completed" ? "Ticket closed and marked completed" : "Repair completed — Ticket marked Payment Pending",
+      status: updateFields.status,
+      paymentStatus: updateFields.payment_status
+    });
+  } catch (err) {
+    console.error("[admin.closeJobCard] failed:", err);
+    return res.status(500).json({ success: false, message: "Unable to close job card: " + err.message });
+  }
+}
+
+export async function recordJobCardPayment(req, res) {
+  try {
+    const { id } = req.params;
+    const { paymentMethod, paymentRef, amountCollected } = req.body;
+
+    const { data: ticket, error: fErr } = await supabase.from("maintenance").select("*").eq("id", id).maybeSingle();
+    if (fErr || !ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
+
+    const nowIso = new Date().toISOString();
+    const updateFields = {
+      status: "completed",
+      payment_status: "paid",
+      payment_method: paymentMethod || "cash",
+      payment_ref: paymentRef || null,
+      amount_collected: Number(amountCollected || ticket.rider_amount || 0),
+      fixed_date: nowIso.slice(0, 16).replace("T", " ")
+    };
+
+    const { error: upErr } = await supabase.from("maintenance").update(updateFields).eq("id", id);
+    if (upErr) throw upErr;
+
+    // Release bike to available
+    const numericId = Number(ticket.bike_id);
+    if (Number.isInteger(numericId) && !isNaN(numericId)) {
+      await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("id", numericId);
+    } else if (ticket.bike_code) {
+      await supabase.from("bikes").update({ status: "available", is_locked: true }).eq("bike_code", ticket.bike_code);
+    }
+
+    return res.json({ success: true, message: "Payment recorded and ticket marked completed" });
+  } catch (err) {
+    console.error("[admin.recordJobCardPayment] failed:", err);
+    return res.status(500).json({ success: false, message: "Unable to record payment: " + err.message });
   }
 }
 

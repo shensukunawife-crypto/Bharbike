@@ -18,6 +18,212 @@
     return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
   }
 %>
+
+<style>
+  /* Modern styling for Maintenance & Job Card workflow */
+  .jc-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .jc-badge-pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  .jc-badge-repair {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  .jc-badge-completed {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  /* Modal & Drawer styles */
+  .jc-tab-nav {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+    gap: 6px;
+  }
+  .jc-tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+  .jc-tab-btn.active {
+    background: var(--gold, #D4AF37);
+    color: #000;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+  }
+
+  .jc-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gold, #D4AF37);
+    margin: 16px 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .catalog-search-wrap {
+    margin-bottom: 12px;
+  }
+
+  .catalog-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .catalog-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light, #333);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .catalog-item .item-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .catalog-item .item-name {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .catalog-item .item-price {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .selected-components-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+  .selected-item-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .selected-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .selected-item-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .qty-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .qty-stepper button {
+    background: none;
+    border: none;
+    padding: 4px 10px;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .qty-stepper button:hover {
+    background: var(--border-light);
+  }
+  .qty-stepper span {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold, #D4AF37);
+  }
+  .charge-radio-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+  }
+  .charge-radio-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+  .btn-remove-item {
+    color: #ef4444;
+    background: none;
+    border: none;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    font-weight: 500;
+  }
+  .btn-remove-item:hover {
+    text-decoration: underline;
+  }
+
+  /* Payment box in modal */
+  .payment-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 14px;
+  }
+  .status-preview-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+</style>
+
 <div class="page-stat-bar">
   <div class="page-stat">
     <p class="page-stat-label">🛠️ Total in Maintenance</p>
@@ -27,6 +233,10 @@
     <p class="page-stat-label">⌛ In Progress</p>
     <p class="page-stat-value"><%= maintenanceStats?.inProgress || 0 %></p>
   </div>
+  <div class="page-stat" style="border-left: 3px solid #f59e0b;">
+    <p class="page-stat-label" style="color: #f59e0b;">⚠️ Payment Pending</p>
+    <p class="page-stat-value" style="color: #f59e0b;"><%= maintenanceStats?.paymentPending || 0 %></p>
+  </div>
   <div class="page-stat">
     <p class="page-stat-label">✅ Completed</p>
     <p class="page-stat-value"><%= maintenanceStats?.completed || 0 %></p>
@@ -35,57 +245,124 @@
     <p class="page-stat-label">💰 Total Repair Cost</p>
     <p class="page-stat-value">₹<%= Number(maintenanceStats?.totalCost || 0).toLocaleString('en-IN') %></p>
   </div>
+  <div class="page-stat">
+    <p class="page-stat-label">👤 Rider Liability</p>
+    <p class="page-stat-value">₹<%= Number(maintenanceStats?.totalRiderCost || 0).toLocaleString('en-IN') %></p>
+  </div>
 </div>
 
 <div class="toolbar">
-  <button class="btn btn-gold" data-modal-target="add-maintenance-modal">+ Add Bike to Maintenance</button>
+  <button class="btn btn-gold glow" id="btn-open-job-card-modal">+ Open Maintenance Job Card</button>
   <a class="btn <%= filter === 'all' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=all">All</a>
   <a class="btn <%= filter === 'active' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=active">Active</a>
+  <a class="btn <%= filter === 'payment_pending' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=payment_pending">Payment Pending (<%= maintenanceStats?.paymentPending || 0 %>)</a>
   <a class="btn <%= filter === 'completed' ? 'btn-gold' : 'btn-ghost' %>" href="/admin/maintenance?filter=completed">Completed</a>
   <form method="GET" action="/admin/maintenance" class="inline-form">
     <input type="hidden" name="filter" value="<%= filter %>" />
-    <input class="filter-input" type="text" name="search" value="<%= search || '' %>" placeholder="Search Bike ID" />
+    <input class="filter-input" type="text" name="search" value="<%= search || '' %>" placeholder="Search Bike ID, Job Card #, Rider" />
     <button class="btn btn-ghost" type="submit">Search</button>
   </form>
 </div>
 
+<!-- Active Tickets Table -->
 <div class="table-wrap">
   <table class="table">
     <thead>
       <tr>
+        <th>Job Card #</th>
         <th>Bike ID</th>
-        <th>Issue Type</th>
-        <th>Description</th>
-        <th>Particulars of Work</th>
+        <th>Rider / Driver</th>
+        <th>Shift & Service</th>
+        <th>Components Used</th>
+        <th>Cost (Company / Rider)</th>
         <th>Status</th>
-        <th>Technician</th>
-        <th>Repair Cost</th>
-        <th>Time In</th>
-        <th>Expected Fix Date</th>
+        <th>Payment Status</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       <% if (!tickets.length) { %>
-      <tr><td colspan="10" class="empty">No maintenance tickets found</td></tr>
+      <tr><td colspan="9" class="empty">No maintenance tickets found</td></tr>
       <% } %>
       <% tickets.forEach((ticket, idx) => { %>
       <tr class="<%= idx % 2 ? 'zebra' : '' %>">
-        <td>🛵 <%= ticket.bikeCode %></td>
-        <td><span class="badge badge-soft"><%= ticket.issueType %></span></td>
-        <td><%= ticket.description %></td>
-        <td><%= ticket.workDetails || '-' %></td>
         <td>
-          <span class="badge <%= ticket.status === 'under_repair' ? 'danger' : ticket.status === 'in_progress' ? 'warning' : 'success' %>">
-            <%= ticket.status === 'under_repair' ? 'Under Repair' : ticket.status === 'in_progress' ? 'In Progress' : 'Completed' %>
-          </span>
+          <span style="font-weight: 700; color: var(--gold);"><%= ticket.jobCardNumber || ticket.ticketId %></span>
+          <br>
+          <span style="font-size: 11px; color: var(--text-muted);"><%= ticket.reportedDate ? ticket.reportedDate.slice(0, 10) : '' %></span>
         </td>
-        <td><%= ticket.technicianName %></td>
-        <td>₹<%= ticket.repairCost %></td>
-        <td><%= ticket.reportedDate %></td>
-        <td><%= ticket.expectedFixDate %></td>
+        <td>
+          <strong>🛵 <%= ticket.bikeCode %></strong>
+        </td>
+        <td>
+          <span style="font-weight: 600;"><%= ticket.riderName && ticket.riderName !== 'Unassigned' ? ticket.riderName : '—' %></span>
+        </td>
+        <td>
+          <span class="badge badge-soft" style="text-transform: capitalize;"><%= ticket.shift || 'morning' %></span>
+          <br>
+          <span style="font-size: 11px; color: var(--text-muted); text-transform: capitalize;"><%= (ticket.serviceType || 'repair').replace('_', ' ') %></span>
+        </td>
+        <td>
+          <% if (ticket.components && ticket.components.length > 0) { %>
+            <span class="badge badge-soft" title="<%= ticket.components.map(c => c.component_name + ' (x' + c.quantity + ')').join(', ') %>">
+              📦 <%= ticket.components.length %> parts
+            </span>
+            <div style="font-size: 11px; color: var(--text-muted); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              <%= ticket.components.map(c => c.component_name).join(', ') %>
+            </div>
+          <% } else { %>
+            <span style="color: var(--text-muted); font-size: 12px;">—</span>
+          <% } %>
+        </td>
+        <td>
+          <strong>₹<%= ticket.repairCost %></strong>
+          <br>
+          <span style="font-size: 11px; color: #10b981;">Co: ₹<%= ticket.companyAmount || 0 %></span> | 
+          <span style="font-size: 11px; color: #f59e0b;">Rider: ₹<%= ticket.riderAmount || 0 %></span>
+        </td>
+        <td>
+          <% if (ticket.status === 'payment_pending') { %>
+            <span class="jc-pill-badge jc-badge-pending">⚠️ Payment Pending</span>
+          <% } else if (ticket.status === 'completed') { %>
+            <span class="jc-pill-badge jc-badge-completed">✅ Completed</span>
+          <% } else { %>
+            <span class="jc-pill-badge jc-badge-repair">🔧 Under Repair</span>
+          <% } %>
+        </td>
+        <td>
+          <% if (ticket.paymentStatus === 'paid') { %>
+            <span class="badge success">Paid (<%= (ticket.paymentMethod || 'cash').toUpperCase() %>)</span>
+          <% } else if (ticket.paymentStatus === 'payment_pending') { %>
+            <span class="badge warning">Pending ₹<%= ticket.riderAmount || 0 %></span>
+          <% } else { %>
+            <span class="badge badge-soft">Company Paid</span>
+          <% } %>
+        </td>
         <td class="actions">
-          <button class="btn btn-success admin-action" data-url="/admin/maintenance/<%= ticket.bikeId %>/fixed" data-method="POST">🔧 Fix</button>
+          <% if (ticket.status === 'payment_pending') { %>
+            <button 
+              class="btn btn-warning open-collect-payment" 
+              data-id="<%= ticket.id %>"
+              data-job-card="<%= ticket.jobCardNumber || ticket.ticketId %>"
+              data-bike="<%= ticket.bikeCode %>"
+              data-rider="<%= ticket.riderName || 'Rider' %>"
+              data-amount="<%= ticket.riderAmount || 0 %>"
+            >
+              💳 Collect
+            </button>
+          <% } else if (ticket.status !== 'completed') { %>
+            <button 
+              class="btn btn-success open-close-ticket" 
+              data-id="<%= ticket.id %>"
+              data-job-card="<%= ticket.jobCardNumber || ticket.ticketId %>"
+              data-bike="<%= ticket.bikeCode %>"
+              data-rider="<%= ticket.riderName || 'Rider' %>"
+              data-rider-amt="<%= ticket.riderAmount || 0 %>"
+              data-co-amt="<%= ticket.companyAmount || 0 %>"
+            >
+              🔧 Close
+            </button>
+          <% } %>
           <button
             class="btn btn-outline open-maintenance-status"
             data-id="<%= ticket.id %>"
@@ -102,7 +379,7 @@
           >
             🔍 Details
           </button>
-          <button class="btn btn-danger-ghost admin-action" data-url="/admin/maintenance/<%= ticket.id %>/remove" data-method="POST">🗑️ Delete</button>
+          <button class="btn btn-danger-ghost admin-action" data-url="/admin/maintenance/<%= ticket.id %>/remove" data-method="POST" data-confirm="Delete this maintenance record?">🗑️</button>
         </td>
       </tr>
       <% }) %>
@@ -110,16 +387,19 @@
   </table>
 </div>
 
+<!-- Maintenance History Table -->
 <div class="chart-card">
   <h3>Maintenance History</h3>
   <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
+          <th>Job Card #</th>
           <th>Bike ID</th>
-          <th>Issue</th>
-          <th>Particulars of Work</th>
-          <th>Cost</th>
+          <th>Rider</th>
+          <th>Service / Issue</th>
+          <th>Cost Breakdown</th>
+          <th>Payment</th>
           <th>Time In</th>
           <th>Time Out</th>
           <th>Actions</th>
@@ -127,14 +407,27 @@
       </thead>
       <tbody>
         <% if (!history.length) { %>
-        <tr><td colspan="7" class="empty">No maintenance history found</td></tr>
+        <tr><td colspan="9" class="empty">No completed maintenance history found</td></tr>
         <% } %>
         <% history.forEach((item) => { %>
         <tr>
+          <td><strong style="color:var(--gold);"><%= item.jobCardNumber || item.ticketId %></strong></td>
           <td>🛵 <%= item.bikeCode %></td>
+          <td><%= item.riderName && item.riderName !== 'Unassigned' ? item.riderName : '—' %></td>
           <td><span class="badge badge-soft"><%= item.issueType %></span></td>
-          <td><%= item.workDetails || '-' %></td>
-          <td>₹<%= item.repairCost %></td>
+          <td>
+            <strong>₹<%= item.repairCost %></strong>
+            <br>
+            <span style="font-size:11px; color:#10b981;">Co: ₹<%= item.companyAmount || 0 %></span> | 
+            <span style="font-size:11px; color:#f59e0b;">Rider: ₹<%= item.riderAmount || 0 %></span>
+          </td>
+          <td>
+            <% if (item.paymentStatus === 'paid') { %>
+              <span class="badge success">Paid (<%= (item.paymentMethod || 'cash').toUpperCase() %>)</span>
+            <% } else { %>
+              <span class="badge badge-soft">Company Paid</span>
+            <% } %>
+          </td>
           <td><%= item.reportedDate || '-' %></td>
           <td><%= item.fixedDate || '-' %></td>
           <td class="actions">
@@ -163,6 +456,7 @@
   </div>
 </div>
 
+<!-- User Support Requests -->
 <div class="chart-card">
   <h3>User Support Requests</h3>
   <div class="table-wrap">
@@ -198,46 +492,338 @@
   </div>
 </div>
 
-<div class="modal" id="add-maintenance-modal">
-  <div class="modal-card">
-    <h3>Add Bike to Maintenance</h3>
-    <form class="admin-form ajax-form" data-url="/admin/maintenance/add">
-      <select name="bikeId" required>
-        <% bikes.forEach((bike) => { %>
-        <option value='<%- JSON.stringify({ id: bike.id, bike_code: bike.bike_code }) %>'><%= bike.bike_code %></option>
-        <% }) %>
-      </select>
-      <input name="issueType" placeholder="Issue Type" required />
-      <textarea name="description" rows="3" placeholder="Issue Description / Symptoms" required></textarea>
-      <textarea name="workDetails" rows="2" placeholder="Particulars of Work / Details of Work Done (Optional)"></textarea>
-      <input type="text" name="technicianName" placeholder="Technician Name" />
-      <input type="number" name="repairCost" placeholder="Repair Cost" />
-      
-      <div style="margin-bottom:20px;">
-        <label style="display:block; margin-bottom:5px; font-weight:600; font-size:13px;">Fixed Date (if completed)</label>
-        <input type="date" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+<!-- ========================================== -->
+<!-- MODAL 1: NEW JOB CARD (MATCHING WIREFRAME) -->
+<!-- ========================================== -->
+<div class="modal" id="new-job-card-modal">
+  <div class="modal-content" style="max-width: 600px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0; font-size: 18px;">Maintenance Ticket</h3>
+          <span class="badge badge-soft" style="font-size: 11px;">Draft</span>
+        </div>
+        <div style="font-size: 12px; color: var(--gold); margin-top: 2px;">
+          Job Card # — <span id="jc-preview-number">Auto-generated</span>
+        </div>
       </div>
-      
-      <div style="margin-bottom: 15px;">
-        <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Expected Fix Date</label>
-        <input type="date" name="expectedFixDate" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
+      <button type="button" class="close-modal-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+
+    <form id="job-card-form" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; margin: 0;">
+      <div style="overflow-y: auto; padding: 20px; flex: 1;">
+
+        <!-- Step 1: Core Ticket Details -->
+        <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Bike Number *</label>
+              <select name="bikeId" id="jc-bike-select" required style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+                <option value="">-- Select Bike --</option>
+                <% bikes.forEach((b) => { %>
+                  <option value="<%= b.id %>" data-bike-code="<%= b.bike_code %>"><%= b.bike_code %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Rider / Driver Name</label>
+              <input type="text" name="riderName" id="jc-rider-name" placeholder="Auto-detected on bike select" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Technician Name *</label>
+              <input type="text" name="technicianName" id="jc-tech-name" placeholder="Technician name" required style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);" />
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Shift *</label>
+              <select name="shift" id="jc-shift" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+                <option value="morning">Morning Shift</option>
+                <option value="evening">Evening Shift</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Service Type *</label>
+              <select name="serviceType" id="jc-service-type" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+                <option value="regular_service">Regular Service</option>
+                <option value="repair" selected>Repair</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Start Time</label>
+              <input type="datetime-local" name="startTime" id="jc-start-time" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Switcher: [ Bike Parts ] vs [ LED Box ] -->
+        <div class="jc-tab-nav">
+          <button type="button" class="jc-tab-btn active" id="tab-btn-bike-parts" onclick="switchJcTab('bike')">Bike Parts</button>
+          <button type="button" class="jc-tab-btn" id="tab-btn-led-box" onclick="switchJcTab('led_box')">LED Box</button>
+        </div>
+
+        <!-- TAB 1: BIKE PARTS -->
+        <div id="jc-pane-bike-parts">
+          <div class="catalog-search-wrap">
+            <input type="text" id="bike-parts-search" placeholder="🔍 Search component list..." onkeyup="filterParts('bike')" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);" />
+          </div>
+
+          <div class="jc-section-title">Component List</div>
+          <div class="catalog-list" id="bike-parts-catalog-list">
+            <!-- Populated via JS from partsCatalog -->
+          </div>
+
+          <div class="jc-section-title" style="margin-top: 16px;">Selected Components (<span id="bike-selected-count">0</span>)</div>
+          <div class="selected-components-wrap" id="bike-selected-wrap">
+            <div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 12px;">No components selected yet. Tap '+ Add' above.</div>
+          </div>
+        </div>
+
+        <!-- TAB 2: LED BOX -->
+        <div id="jc-pane-led-box" style="display: none;">
+          <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">BharBike / Box Number</label>
+                <input type="text" name="boxNumber" id="jc-box-number" placeholder="e.g. BOX-074" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Delivery Status</label>
+                <select name="deliveryStatus" id="jc-delivery-status" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+                  <option value="operational">Operational</option>
+                  <option value="needs_inspection">Needs Inspection</option>
+                  <option value="damaged">Damaged / Non-functional</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Box Service Required?</label>
+                <div style="display: flex; gap: 12px; font-size: 12px; margin-top: 6px;">
+                  <label><input type="radio" name="boxService" value="yes"> Yes</label>
+                  <label><input type="radio" name="boxService" value="no" checked> No</label>
+                </div>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">LED Service Required?</label>
+                <div style="display: flex; gap: 12px; font-size: 12px; margin-top: 6px;">
+                  <label><input type="radio" name="ledService" value="yes"> Yes</label>
+                  <label><input type="radio" name="ledService" value="no" checked> No</label>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 10px;">
+              <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Reason for Service</label>
+              <textarea name="boxServiceReason" id="jc-box-reason" rows="2" placeholder="Describe issue with Box or LED panel..." style="width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);"></textarea>
+            </div>
+          </div>
+
+          <div class="catalog-search-wrap">
+            <input type="text" id="led-parts-search" placeholder="🔍 Search LED box components..." onkeyup="filterParts('led_box')" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text);" />
+          </div>
+
+          <div class="jc-section-title">LED Box Component List</div>
+          <div class="catalog-list" id="led-parts-catalog-list">
+            <!-- Populated via JS -->
+          </div>
+
+          <div class="jc-section-title" style="margin-top: 16px;">Selected LED Components (<span id="led-selected-count">0</span>)</div>
+          <div class="selected-components-wrap" id="led-selected-wrap">
+            <div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 12px;">No LED components selected.</div>
+          </div>
+        </div>
+
+        <!-- Step 4: Rider Payment & Closure Section (Matching Mockup 2) -->
+        <div class="payment-box">
+          <div style="font-weight: 700; font-size: 14px; margin-bottom: 2px;">Rider payment</div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Payment section for the ticket closure process.</div>
+
+          <div style="display: flex; justify-content: space-between; background: var(--bg-card); padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px;">
+            <span>Company Pays: <strong id="summary-co-amt" style="color: #10b981;">₹0</strong></span>
+            <span>Rider Chargeable: <strong id="summary-rider-amt" style="color: #f59e0b;">₹0</strong></span>
+            <span>Total: <strong id="summary-total-amt">₹0</strong></span>
+          </div>
+
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Has rider payment been collected?</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="radio" name="paymentOption" value="received" id="opt-payment-received" onchange="onPaymentOptionChange()">
+              Yes, payment received
+            </label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="radio" name="paymentOption" value="pending" id="opt-payment-pending" checked onchange="onPaymentOptionChange()">
+              No, payment pending
+            </label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+              <input type="radio" name="paymentOption" value="na" id="opt-payment-na" onchange="onPaymentOptionChange()">
+              Not applicable — company pays
+            </label>
+          </div>
+
+          <!-- Extra details if Payment Received -->
+          <div id="payment-details-group" style="display: none; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Payment Method</label>
+                <select id="jc-pay-method" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 12px;">
+                  <option value="cash">Cash</option>
+                  <option value="gpay">GPay / UPI</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Amount Collected (₹)</label>
+                <input type="number" id="jc-pay-amount" placeholder="0" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 12px;" />
+              </div>
+            </div>
+            <div style="margin-top: 8px;">
+              <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Payment Reference / UTR (if GPay)</label>
+              <input type="text" id="jc-pay-ref" placeholder="UPI Reference / Transaction ID" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 12px;" />
+            </div>
+          </div>
+
+          <!-- Status preview card -->
+          <div class="status-preview-box">
+            <div>
+              <div style="font-size: 11px; color: var(--text-muted);">Ticket status preview</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">If payment is pending, ticket stays in Payment Pending even when repairs finish.</div>
+            </div>
+            <span id="jc-status-badge" class="jc-pill-badge jc-badge-pending">Payment Pending</span>
+          </div>
+        </div>
+
       </div>
-      
-      <button type="submit" class="btn btn-gold glow">Add Maintenance</button>
+
+      <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: var(--bg);">
+        <button type="button" class="btn btn-outline close-modal-btn">Cancel</button>
+        <button type="submit" class="btn btn-gold glow" id="btn-submit-job-card">Create Job Card</button>
+      </div>
     </form>
   </div>
 </div>
 
+<!-- ========================================== -->
+<!-- MODAL 2: QUICK COLLECT PAYMENT (FOR PENDING) -->
+<!-- ========================================== -->
+<div class="modal" id="collect-payment-modal">
+  <div class="modal-content" style="max-width: 440px; width: 90%;">
+    <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;">
+      <h3 style="margin: 0; font-size: 16px;">💳 Collect Rider Payment</h3>
+      <button type="button" class="close-modal-btn" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+    <form id="collect-payment-form" style="padding: 16px;">
+      <input type="hidden" id="collect-ticket-id" />
+      <div style="background: var(--bg); padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px;">
+        <div>Job Card: <strong id="collect-job-card" style="color: var(--gold);">—</strong></div>
+        <div>Bike: <strong id="collect-bike">—</strong> | Rider: <strong id="collect-rider">—</strong></div>
+        <div style="margin-top: 4px;">Pending Amount Due: <strong id="collect-amount-due" style="color: #f59e0b; font-size: 15px;">₹0</strong></div>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Payment Method *</label>
+        <select id="collect-method" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);">
+          <option value="cash">Cash</option>
+          <option value="gpay">GPay / UPI</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Amount Collected (₹) *</label>
+        <input type="number" id="collect-amount-input" required style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);" />
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600;">Transaction Reference / UTR (if GPay)</label>
+        <input type="text" id="collect-ref-input" placeholder="UTR or Transaction ID" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text);" />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline close-modal-btn">Cancel</button>
+        <button type="submit" class="btn btn-gold glow">Confirm Payment & Complete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 3: CLOSE TICKET MODAL -->
+<!-- ========================================== -->
+<div class="modal" id="close-ticket-modal">
+  <div class="modal-content" style="max-width: 440px; width: 90%;">
+    <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;">
+      <h3 style="margin: 0; font-size: 16px;">🔧 Close Maintenance Ticket</h3>
+      <button type="button" class="close-modal-btn" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+    <form id="close-ticket-form" style="padding: 16px;">
+      <input type="hidden" id="close-ticket-id" />
+      <div style="background: var(--bg); padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px;">
+        <div>Job Card: <strong id="close-job-card" style="color: var(--gold);">—</strong></div>
+        <div>Bike: <strong id="close-bike">—</strong> | Rider: <strong id="close-rider">—</strong></div>
+        <div style="margin-top: 4px;">Rider Charge: <strong id="close-rider-amt" style="color: #f59e0b;">₹0</strong> | Co Charge: <strong id="close-co-amt" style="color: #10b981;">₹0</strong></div>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">Has rider payment been collected?</label>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <input type="radio" name="closePaymentOpt" value="yes" id="close-opt-yes" onchange="onCloseOptChange()">
+            Yes, payment received
+          </label>
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <input type="radio" name="closePaymentOpt" value="no" id="close-opt-no" checked onchange="onCloseOptChange()">
+            No, payment pending (Keep ticket as Payment Pending)
+          </label>
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <input type="radio" name="closePaymentOpt" value="na" id="close-opt-na" onchange="onCloseOptChange()">
+            Not applicable — company pays
+          </label>
+        </div>
+      </div>
+
+      <div id="close-payment-fields" style="display: none; padding-top: 10px; border-top: 1px dashed var(--border); margin-bottom: 12px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Method</label>
+            <select id="close-pay-method" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 12px;">
+              <option value="cash">Cash</option>
+              <option value="gpay">GPay / UPI</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Amount (₹)</label>
+            <input type="number" id="close-pay-amount" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 12px;" />
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Reference / UTR</label>
+          <input type="text" id="close-pay-ref" placeholder="Transaction ID" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 12px;" />
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline close-modal-btn">Cancel</button>
+        <button type="submit" class="btn btn-gold glow">Save & Update Ticket</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 4: DETAILS MODAL (LEGACY VIEW) -->
+<!-- ========================================== -->
 <div class="modal" id="update-maintenance-modal">
   <div class="modal-content" style="max-width: 520px; width: 90%; height: 80vh;">
-    <!-- Modal Header (Fixed at top) -->
     <div class="modal-header">
       <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">🛠️ Maintenance Ticket Details</h3>
-      <button type="button" class="close-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 0 4px;">&times;</button>
+      <button type="button" class="close-modal close-modal-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); line-height: 1; padding: 0 4px;">&times;</button>
     </div>
     
     <form class="ajax-form" id="update-maintenance-form" data-url="" style="display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0;">
-      <!-- Modal Body (Scrollable in middle) -->
       <div class="modal-body admin-form" style="overflow-y: auto; flex: 1; padding: 20px;">
         
         <div style="margin-bottom: 12px;">
@@ -257,7 +843,7 @@
 
         <div style="margin-bottom: 12px;">
           <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Particulars of Work Done</label>
-          <textarea name="workDetails" id="maintenance-work-details" rows="2" placeholder="Particulars of Work Done (e.g., replaced tyres, oil change)" style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
+          <textarea name="workDetails" id="maintenance-work-details" rows="2" placeholder="Particulars of Work Done" style="width:100%; box-sizing:border-box; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-family:inherit;"></textarea>
         </div>
 
         <div style="margin-bottom: 12px;">
@@ -265,6 +851,7 @@
           <select name="status" id="maintenance-status" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
             <option value="under_repair">Under Repair</option>
             <option value="in_progress">In Progress</option>
+            <option value="payment_pending">Payment Pending</option>
             <option value="completed">Completed</option>
           </select>
         </div>
@@ -289,18 +876,491 @@
           <input type="date" name="expectedFixDate" id="maintenance-expected" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
         </div>
         
-        <div id="fixed-datetime-group" style="margin-bottom: 15px; display:none;">
+        <div id="fixed-datetime-group" style="margin-bottom: 15px;">
           <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Time Out (Completion Date & Time)</label>
           <input type="date" name="fixedDate" id="maintenance-fixed-date" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" />
         </div>
 
       </div>
 
-      <!-- Modal Footer (Fixed at bottom) -->
       <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 12px; background: var(--border-light);">
-        <button type="button" class="btn btn-outline close-modal" style="padding: 8px 16px;">Cancel</button>
+        <button type="button" class="btn btn-outline close-modal close-modal-btn" style="padding: 8px 16px;">Cancel</button>
         <button type="submit" class="btn btn-gold glow" style="padding: 8px 20px; font-weight: 600;">Save Changes</button>
       </div>
     </form>
   </div>
 </div>
+
+<!-- ========================================== -->
+<!-- CLIENT-SIDE SCRIPT FOR JOB CARD WORKFLOW   -->
+<!-- ========================================== -->
+<script>
+  // Server-injected data
+  const PARTS_CATALOG = <%- JSON.stringify(partsCatalog || []) %>;
+  const BIKE_RIDER_MAP = <%- JSON.stringify(bikeRiderMap || {}) %>;
+
+  // Selected components state: Map of key -> item object
+  let selectedComponents = [];
+
+  // Initialize
+  document.addEventListener("DOMContentLoaded", () => {
+    // Populate catalogs
+    renderCatalog('bike');
+    renderCatalog('led_box');
+
+    // Auto-detect rider on bike select
+    const bikeSelect = document.getElementById("jc-bike-select");
+    if (bikeSelect) {
+      bikeSelect.addEventListener("change", () => {
+        const bikeId = bikeSelect.value;
+        const riderInput = document.getElementById("jc-rider-name");
+        if (bikeId && BIKE_RIDER_MAP[bikeId]) {
+          riderInput.value = BIKE_RIDER_MAP[bikeId].riderName || "";
+        } else {
+          riderInput.value = "";
+        }
+      });
+    }
+
+    // Default start time to now
+    const startTimeInput = document.getElementById("jc-start-time");
+    if (startTimeInput) {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      startTimeInput.value = now.toISOString().slice(0, 16);
+    }
+
+    // Open Job Card modal button
+    const openBtn = document.getElementById("btn-open-job-card-modal");
+    if (openBtn) {
+      openBtn.addEventListener("click", () => {
+        // Reset form & cart
+        selectedComponents = [];
+        renderSelectedComponents();
+        document.getElementById("job-card-form").reset();
+        document.getElementById("jc-preview-number").innerText = "JC-" + new Date().getFullYear() + String(new Date().getMonth() + 1).padStart(2, '0') + "-AUTO";
+        switchJcTab('bike');
+        updatePaymentSummary();
+        openModal("new-job-card-modal");
+      });
+    }
+
+    // Modal close buttons
+    document.querySelectorAll(".close-modal-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const modal = e.target.closest(".modal");
+        if (modal) modal.style.display = "none";
+      });
+    });
+
+    // Close when clicking modal backdrop
+    document.querySelectorAll(".modal").forEach(modal => {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.style.display = "none";
+      });
+    });
+
+    // Wire Job Card Form Submission
+    const jcForm = document.getElementById("job-card-form");
+    if (jcForm) {
+      jcForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById("btn-submit-job-card");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Creating...";
+
+        try {
+          const bikeId = document.getElementById("jc-bike-select").value;
+          const riderName = document.getElementById("jc-rider-name").value;
+          const techName = document.getElementById("jc-tech-name").value;
+          const shift = document.getElementById("jc-shift").value;
+          const serviceType = document.getElementById("jc-service-type").value;
+          const startTime = document.getElementById("jc-start-time").value;
+
+          const boxNumber = document.getElementById("jc-box-number").value;
+          const deliveryStatus = document.getElementById("jc-delivery-status").value;
+          const boxService = document.querySelector("input[name='boxService']:checked")?.value === "yes";
+          const ledService = document.querySelector("input[name='ledService']:checked")?.value === "yes";
+          const boxReason = document.getElementById("jc-box-reason").value;
+
+          const paymentOption = document.querySelector("input[name='paymentOption']:checked")?.value;
+          const paymentMethod = document.getElementById("jc-pay-method").value;
+          const amountCollected = Number(document.getElementById("jc-pay-amount").value || 0);
+          const paymentRef = document.getElementById("jc-pay-ref").value;
+
+          const payload = {
+            bikeId,
+            riderName,
+            technicianName: techName,
+            shift,
+            serviceType,
+            startTime,
+            boxNumber,
+            deliveryStatus,
+            boxService,
+            ledService,
+            boxServiceReason: boxReason,
+            components: selectedComponents
+          };
+
+          const res = await fetch("/admin/maintenance/job-card/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json();
+          if (!json.success) throw new Error(json.message);
+
+          const ticketId = json.data.id;
+
+          // If payment was received right at creation time, close it immediately
+          if (paymentOption === "received") {
+            await fetch(`/admin/maintenance/job-card/${ticketId}/close`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                hasRiderPaid: "yes",
+                paymentMethod,
+                amountCollected,
+                paymentRef
+              })
+            });
+          }
+
+          alert("Job Card created successfully!");
+          window.location.reload();
+        } catch (err) {
+          alert("Error creating job card: " + err.message);
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Create Job Card";
+        }
+      });
+    }
+
+    // Wire Quick Collect Payment buttons in table
+    document.querySelectorAll(".open-collect-payment").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        document.getElementById("collect-ticket-id").value = id;
+        document.getElementById("collect-job-card").innerText = btn.dataset.jobCard || id;
+        document.getElementById("collect-bike").innerText = btn.dataset.bike || "Bike";
+        document.getElementById("collect-rider").innerText = btn.dataset.rider || "Rider";
+        document.getElementById("collect-amount-due").innerText = "₹" + btn.dataset.amount;
+        document.getElementById("collect-amount-input").value = btn.dataset.amount;
+        openModal("collect-payment-modal");
+      });
+    });
+
+    // Wire Collect Payment Form submission
+    const collectForm = document.getElementById("collect-payment-form");
+    if (collectForm) {
+      collectForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("collect-ticket-id").value;
+        const method = document.getElementById("collect-method").value;
+        const amountCollected = document.getElementById("collect-amount-input").value;
+        const paymentRef = document.getElementById("collect-ref-input").value;
+
+        try {
+          const res = await fetch(`/admin/maintenance/job-card/${id}/record-payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentMethod: method, amountCollected, paymentRef })
+          });
+          const json = await res.json();
+          if (!json.success) throw new Error(json.message);
+          alert(json.message);
+          window.location.reload();
+        } catch (err) {
+          alert("Error: " + err.message);
+        }
+      });
+    }
+
+    // Wire Close Ticket buttons in table
+    document.querySelectorAll(".open-close-ticket").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const riderAmt = Number(btn.dataset.riderAmt || 0);
+        const coAmt = Number(btn.dataset.coAmt || 0);
+        document.getElementById("close-ticket-id").value = id;
+        document.getElementById("close-job-card").innerText = btn.dataset.jobCard || id;
+        document.getElementById("close-bike").innerText = btn.dataset.bike || "Bike";
+        document.getElementById("close-rider").innerText = btn.dataset.rider || "Rider";
+        document.getElementById("close-rider-amt").innerText = "₹" + riderAmt;
+        document.getElementById("close-co-amt").innerText = "₹" + coAmt;
+        document.getElementById("close-pay-amount").value = riderAmt;
+
+        if (riderAmt === 0) {
+          document.getElementById("close-opt-na").checked = true;
+        } else {
+          document.getElementById("close-opt-no").checked = true;
+        }
+        onCloseOptChange();
+        openModal("close-ticket-modal");
+      });
+    });
+
+    // Wire Close Ticket Form submission
+    const closeForm = document.getElementById("close-ticket-form");
+    if (closeForm) {
+      closeForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("close-ticket-id").value;
+        const opt = document.querySelector("input[name='closePaymentOpt']:checked")?.value;
+        const method = document.getElementById("close-pay-method").value;
+        const amountCollected = document.getElementById("close-pay-amount").value;
+        const paymentRef = document.getElementById("close-pay-ref").value;
+
+        try {
+          const res = await fetch(`/admin/maintenance/job-card/${id}/close`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              hasRiderPaid: opt,
+              paymentMethod: method,
+              amountCollected,
+              paymentRef
+            })
+          });
+          const json = await res.json();
+          if (!json.success) throw new Error(json.message);
+          alert(json.message);
+          window.location.reload();
+        } catch (err) {
+          alert("Error: " + err.message);
+        }
+      });
+    }
+
+  });
+
+  // Helper to open modal
+  function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = "flex";
+  }
+
+  // Switch tabs between Bike Parts and LED Box
+  function switchJcTab(tab) {
+    const bikePane = document.getElementById("jc-pane-bike-parts");
+    const ledPane = document.getElementById("jc-pane-led-box");
+    const bikeBtn = document.getElementById("tab-btn-bike-parts");
+    const ledBtn = document.getElementById("tab-btn-led-box");
+
+    if (tab === 'bike') {
+      bikePane.style.display = "block";
+      ledPane.style.display = "none";
+      bikeBtn.classList.add("active");
+      ledBtn.classList.remove("active");
+    } else {
+      bikePane.style.display = "none";
+      ledPane.style.display = "block";
+      ledBtn.classList.add("active");
+      bikeBtn.classList.remove("active");
+    }
+  }
+
+  // Render parts catalog into grid
+  function renderCatalog(category) {
+    const listEl = document.getElementById(category === 'bike' ? 'bike-parts-catalog-list' : 'led-parts-catalog-list');
+    if (!listEl) return;
+    const parts = PARTS_CATALOG.filter(p => p.category === category);
+    listEl.innerHTML = "";
+
+    parts.forEach(part => {
+      const div = document.createElement("div");
+      div.className = "catalog-item";
+      div.setAttribute("data-name", part.name.toLowerCase());
+      div.innerHTML = `
+        <div class="item-info">
+          <span class="item-name">${part.name}</span>
+          <span class="item-price">₹${part.default_price || 0}</span>
+        </div>
+        <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: 11px; font-weight: 600;" onclick="addComponent('${part.category}', '${part.name}', ${part.default_price || 0})">+ Add</button>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+
+  // Filter parts search
+  function filterParts(category) {
+    const query = document.getElementById(category === 'bike' ? 'bike-parts-search' : 'led-parts-search').value.toLowerCase();
+    const listEl = document.getElementById(category === 'bike' ? 'bike-parts-catalog-list' : 'led-parts-catalog-list');
+    const items = listEl.querySelectorAll(".catalog-item");
+    items.forEach(it => {
+      const name = it.getAttribute("data-name") || "";
+      it.style.display = name.includes(query) ? "flex" : "none";
+    });
+  }
+
+  // Add component to selection
+  function addComponent(category, name, unitPrice) {
+    const existing = selectedComponents.find(c => c.category === category && c.component_name === name);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      selectedComponents.push({
+        category,
+        component_name: name,
+        unit_price: unitPrice,
+        quantity: 1,
+        charge_to: "rider" // Default to rider as in client mockup
+      });
+    }
+    renderSelectedComponents();
+    updatePaymentSummary();
+  }
+
+  // Change quantity with steppers
+  function updateQty(idx, delta) {
+    if (!selectedComponents[idx]) return;
+    selectedComponents[idx].quantity += delta;
+    if (selectedComponents[idx].quantity <= 0) {
+      selectedComponents.splice(idx, 1);
+    }
+    renderSelectedComponents();
+    updatePaymentSummary();
+  }
+
+  // Change charge allocation (company vs rider)
+  function updateChargeTo(idx, val) {
+    if (!selectedComponents[idx]) return;
+    selectedComponents[idx].charge_to = val;
+    updatePaymentSummary();
+  }
+
+  // Remove component from selection
+  function removeComponent(idx) {
+    selectedComponents.splice(idx, 1);
+    renderSelectedComponents();
+    updatePaymentSummary();
+  }
+
+  // Render selected components list matching mockups
+  function renderSelectedComponents() {
+    const bikeWrap = document.getElementById("bike-selected-wrap");
+    const ledWrap = document.getElementById("led-selected-wrap");
+
+    const bikeItems = selectedComponents.map((c, i) => ({ ...c, originalIndex: i })).filter(c => c.category === 'bike');
+    const ledItems = selectedComponents.map((c, i) => ({ ...c, originalIndex: i })).filter(c => c.category === 'led_box');
+
+    document.getElementById("bike-selected-count").innerText = bikeItems.length;
+    document.getElementById("led-selected-count").innerText = ledItems.length;
+
+    renderItemCards(bikeWrap, bikeItems, "No bike components selected.");
+    renderItemCards(ledWrap, ledItems, "No LED box components selected.");
+  }
+
+  function renderItemCards(wrapEl, items, emptyText) {
+    if (!wrapEl) return;
+    if (items.length === 0) {
+      wrapEl.innerHTML = `<div style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 12px;">${emptyText}</div>`;
+      return;
+    }
+
+    wrapEl.innerHTML = "";
+    items.forEach(item => {
+      const idx = item.originalIndex;
+      const card = document.createElement("div");
+      card.className = "selected-item-card";
+      card.innerHTML = `
+        <div class="selected-item-header">
+          <div>
+            <div class="selected-item-name">${item.component_name}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Quantity: ${item.quantity} × ₹${item.unit_price} = ₹${item.quantity * item.unit_price}</div>
+          </div>
+          <div class="qty-stepper">
+            <button type="button" onclick="updateQty(${idx}, -1)">-</button>
+            <span>${item.quantity}</span>
+            <button type="button" onclick="updateQty(${idx}, 1)">+</button>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Charge to:</div>
+        <div class="charge-radio-group">
+          <label>
+            <input type="radio" name="charge_${idx}" value="company" ${item.charge_to === 'company' ? 'checked' : ''} onchange="updateChargeTo(${idx}, 'company')">
+            Company
+          </label>
+          <label>
+            <input type="radio" name="charge_${idx}" value="rider" ${item.charge_to === 'rider' ? 'checked' : ''} onchange="updateChargeTo(${idx}, 'rider')">
+            Rider
+          </label>
+        </div>
+
+        <button type="button" class="btn-remove-item" onclick="removeComponent(${idx})">Remove component</button>
+      `;
+      wrapEl.appendChild(card);
+    });
+  }
+
+  // Update total calculation and payment summary
+  function updatePaymentSummary() {
+    let companyAmt = 0;
+    let riderAmt = 0;
+
+    selectedComponents.forEach(c => {
+      const total = Number(c.quantity || 1) * Number(c.unit_price || 0);
+      if (c.charge_to === 'rider') {
+        riderAmt += total;
+      } else {
+        companyAmt += total;
+      }
+    });
+
+    document.getElementById("summary-co-amt").innerText = `₹${companyAmt}`;
+    document.getElementById("summary-rider-amt").innerText = `₹${riderAmt}`;
+    document.getElementById("summary-total-amt").innerText = `₹${companyAmt + riderAmt}`;
+
+    // Auto-update radio options based on rider liability
+    const optReceived = document.getElementById("opt-payment-received");
+    const optPending = document.getElementById("opt-payment-pending");
+    const optNa = document.getElementById("opt-payment-na");
+
+    if (riderAmt === 0 && selectedComponents.length > 0) {
+      optNa.checked = true;
+    } else if (riderAmt > 0 && optNa.checked) {
+      optPending.checked = true;
+    }
+
+    const payAmtInput = document.getElementById("jc-pay-amount");
+    if (payAmtInput && (!payAmtInput.value || Number(payAmtInput.value) === 0)) {
+      payAmtInput.value = riderAmt;
+    }
+
+    onPaymentOptionChange();
+  }
+
+  // Payment option change in Job Card modal
+  function onPaymentOptionChange() {
+    const opt = document.querySelector("input[name='paymentOption']:checked")?.value;
+    const detailsGroup = document.getElementById("payment-details-group");
+    const badge = document.getElementById("jc-status-badge");
+
+    if (opt === 'received') {
+      detailsGroup.style.display = "block";
+      badge.className = "jc-pill-badge jc-badge-completed";
+      badge.innerText = "Completed";
+    } else if (opt === 'pending') {
+      detailsGroup.style.display = "none";
+      badge.className = "jc-pill-badge jc-badge-pending";
+      badge.innerText = "Payment Pending";
+    } else {
+      detailsGroup.style.display = "none";
+      badge.className = "jc-pill-badge jc-badge-repair";
+      badge.innerText = "Under Repair (Company Paid)";
+    }
+  }
+
+  // Payment option change in Close Ticket modal
+  function onCloseOptChange() {
+    const opt = document.querySelector("input[name='closePaymentOpt']:checked")?.value;
+    const fields = document.getElementById("close-payment-fields");
+    if (opt === 'yes') {
+      fields.style.display = "block";
+    } else {
+      fields.style.display = "none";
+    }
+  }
+</script>

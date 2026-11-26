@@ -375,11 +375,24 @@ export async function controlBike(req, res) {
     let requestId = iotResult?.requestId || `iot-${Date.now()}`;
     let feedbackMessage = `${actionLabel} executed successfully via BharBike IoT Server.`;
     let bridgeDispatched = false;
+    let serviceResult = null;
+
+    const hwResponse = String(iotResult?.hardwareResponse || iotResult?.message || "");
+    const isHardwareRejected =
+      socketSent &&
+      iotResult?.confirmed === false &&
+      /fail|delay|speed\s*>|not\s*fixed|rejected/i.test(hwResponse);
+
+    if (isHardwareRejected) {
+      feedbackMessage = `Tracker rejected ${actionLabel}: ${hwResponse}. Move bike outdoors for GPS lock (or ensure key/ACC is off) and try again.`;
+    } else if (socketSent && iotResult?.confirmed && iotResult?.hardwareResponse) {
+      feedbackMessage = `${actionLabel} confirmed by hardware: ${iotResult.hardwareResponse}`;
+    }
 
     if (!socketSent && bike?.id) {
       try {
         console.log(`[Keyless] Physical socket inactive on custom server; dispatching via admin IoT service for bike ${bike.id}...`);
-        const serviceResult = isMobilize
+        serviceResult = isMobilize
           ? await iotService.unlockBike(bike.id)
           : await iotService.lockBike(bike.id);
 
@@ -397,7 +410,7 @@ export async function controlBike(req, res) {
           } else if (serviceResult.ok) {
             feedbackMessage = `${actionLabel} command accepted and queued via IoT bridge. Relay will toggle in 2-5 seconds. (Req #${serviceResult.requestId})`;
           } else {
-            feedbackMessage = `Hardware dispatch alert: ${serviceResult.message || 'Queued'}`;
+            feedbackMessage = `Hardware dispatch alert: ${serviceResult.message || 'Command rejected'}`;
           }
         }
       } catch (bridgeErr) {
@@ -405,28 +418,38 @@ export async function controlBike(req, res) {
       }
     }
 
-    // 4. Update Database State
+    const isBridgeRejected =
+      !socketSent &&
+      bridgeDispatched &&
+      Boolean(serviceResult?.isAlreadyActive || !serviceResult?.ok);
+    const commandAccepted = !isHardwareRejected && !isBridgeRejected && (socketSent || (bridgeDispatched && Boolean(serviceResult?.ok)));
+
+    // 4. Update Database State ONLY when hardware/bridge did not reject the command
     if (bike?.id) {
-      const newLockedState = !isMobilize;
-      const updatePayload = {
-        is_locked: newLockedState,
-      };
+      if (commandAccepted) {
+        const newLockedState = !isMobilize;
+        const updatePayload = {
+          is_locked: newLockedState,
+        };
 
-      // last_lock_request_id is a BIGINT column in postgres
-      const numericRequestId = Number(requestId);
-      if (!isNaN(numericRequestId) && Number.isInteger(numericRequestId) && numericRequestId > 0) {
-        updatePayload.last_lock_request_id = numericRequestId;
-      }
+        // last_lock_request_id is a BIGINT column in postgres
+        const numericRequestId = Number(requestId);
+        if (!isNaN(numericRequestId) && Number.isInteger(numericRequestId) && numericRequestId > 0) {
+          updatePayload.last_lock_request_id = numericRequestId;
+        }
 
-      const { error: updateErr } = await supabase
-        .from("bikes")
-        .update(updatePayload)
-        .eq("id", bike.id);
+        const { error: updateErr } = await supabase
+          .from("bikes")
+          .update(updatePayload)
+          .eq("id", bike.id);
 
-      if (updateErr) {
-        console.warn(`[Keyless] Failed to update bikes.is_locked:`, updateErr.message);
+        if (updateErr) {
+          console.warn(`[Keyless] Failed to update bikes.is_locked:`, updateErr.message);
+        } else {
+          console.log(`[Keyless] Successfully updated bike ${bike.id} is_locked=${newLockedState}`);
+        }
       } else {
-        console.log(`[Keyless] Successfully updated bike ${bike.id} is_locked=${newLockedState}`);
+        console.warn(`[Keyless] Skipping DB is_locked flip for bike ${bike.id} because command was rejected: ${feedbackMessage}`);
       }
 
       // Resolve user for audit log
@@ -463,13 +486,15 @@ export async function controlBike(req, res) {
           user_id: logUserId,
           action: isMobilize ? "unlock" : "lock",
           method: "app",
-          success: true,
-          error_message: null,
+          success: commandAccepted,
+          error_message: commandAccepted ? null : feedbackMessage,
           metadata: {
             triggered_by: "bharbike_keyless_portal",
             engine: serverUsed,
             server_url: IOT_SERVER_URL,
             socket_sent: socketSent,
+            confirmed: Boolean(iotResult?.confirmed),
+            hardware_response: iotResult?.hardwareResponse || null,
             bridge_dispatched: bridgeDispatched,
             request_id: requestId,
             timestamp: new Date().toISOString(),
@@ -483,6 +508,24 @@ export async function controlBike(req, res) {
       }
     }
 
+    if (!commandAccepted) {
+      return res.status(409).json({
+        success: false,
+        bikeCode: rawBikeCode,
+        action: isMobilize ? "ON" : "OFF",
+        engine: serverUsed,
+        serverUrl: IOT_SERVER_URL,
+        socketSent,
+        confirmed: Boolean(iotResult?.confirmed),
+        hardwareRejected: isHardwareRejected,
+        hardwareResponse: iotResult?.hardwareResponse || null,
+        bridgeDispatched,
+        isAlreadyActive: Boolean(serviceResult?.isAlreadyActive),
+        requestId,
+        message: feedbackMessage,
+      });
+    }
+
     return res.json({
       success: true,
       bikeCode: rawBikeCode,
@@ -490,6 +533,8 @@ export async function controlBike(req, res) {
       engine: serverUsed,
       serverUrl: IOT_SERVER_URL,
       socketSent,
+      confirmed: Boolean(iotResult?.confirmed),
+      hardwareResponse: iotResult?.hardwareResponse || null,
       bridgeDispatched,
       requestId,
       message: feedbackMessage,
